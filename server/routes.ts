@@ -3,7 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBetSlipSchema } from "@shared/schema";
 import { z } from "zod";
-import { popularLeagues, fetchUpcomingEvents, fetchEventOdds } from "./sofascore";
+import { cache } from "./cache";
+
+const ODDS_API_KEY = process.env.ODDS_API_KEY;
+const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
+
+const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
+const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
 
 export async function registerRoutes(
   httpServer: Server,
@@ -12,16 +18,34 @@ export async function registerRoutes(
   
   app.get("/api/sports", async (req, res) => {
     try {
-      const sports = popularLeagues.map(league => ({
-        key: `league_${league.id}`,
-        group: "Soccer",
-        title: `${league.name} - ${league.country}`,
-        description: league.name,
-        active: true,
-        hasOutrights: false,
-      }));
+      if (!ODDS_API_KEY) {
+        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
+      }
       
-      res.json(sports);
+      const cached = cache.get<any[]>("sports");
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      const response = await fetch(
+        `${ODDS_API_BASE}/sports?apiKey=${ODDS_API_KEY}`
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Odds API error:", errorText);
+        return res.status(response.status).json({ error: "Failed to fetch sports" });
+      }
+      
+      const sports = await response.json();
+      
+      const soccerSports = sports.filter((sport: any) => 
+        sport.active && sport.group === "Soccer"
+      );
+      
+      cache.set("sports", soccerSports, CACHE_TTL_SPORTS);
+      
+      res.json(soccerSports);
     } catch (error) {
       console.error("Error fetching sports:", error);
       res.status(500).json({ error: "Failed to fetch sports" });
@@ -30,54 +54,60 @@ export async function registerRoutes(
 
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
+      if (!ODDS_API_KEY) {
+        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
+      }
+      
       const { sportKey } = req.params;
-      const leagueId = parseInt(sportKey.replace("league_", ""));
+      const cacheKey = `odds_${sportKey}`;
       
-      const league = popularLeagues.find(l => l.id === leagueId);
-      if (!league) {
-        return res.status(404).json({ error: "League not found" });
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) {
+        return res.json(cached);
       }
       
-      const events = await fetchUpcomingEvents(leagueId);
+      const regions = "us,uk,eu";
+      const markets = "h2h,spreads,totals";
+      const oddsFormat = "decimal";
       
-      if (events.length === 0) {
-        return res.json([]);
+      const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=${regions}&markets=${markets}&oddsFormat=${oddsFormat}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Odds API error:", errorText);
+        return res.status(response.status).json({ error: "Failed to fetch odds" });
       }
       
-      const gamesWithOdds = await Promise.all(
-        events.slice(0, 10).map(async (event) => {
-          const odds = await fetchEventOdds(event.id);
-          
-          const bookmakers = [{
-            key: "sofascore",
-            title: "SofaScore",
-            lastUpdate: new Date().toISOString(),
-            markets: [
-              {
-                key: "h2h",
-                lastUpdate: new Date().toISOString(),
-                outcomes: [
-                  { name: event.homeTeam, price: odds?.home || 2.0 },
-                  { name: "Empate", price: odds?.draw || 3.2 },
-                  { name: event.awayTeam, price: odds?.away || 3.5 },
-                ],
-              },
-            ],
-          }];
-          
-          return {
-            id: event.id.toString(),
-            sportKey: sportKey,
-            sportTitle: event.leagueName,
-            commenceTime: event.startTime,
-            homeTeam: event.homeTeam,
-            awayTeam: event.awayTeam,
-            bookmakers,
-          };
-        })
-      );
+      const oddsData = await response.json();
       
-      res.json(gamesWithOdds);
+      const games = oddsData.map((game: any) => ({
+        id: game.id,
+        sportKey: game.sport_key,
+        sportTitle: game.sport_title,
+        commenceTime: game.commence_time,
+        homeTeam: game.home_team,
+        awayTeam: game.away_team,
+        bookmakers: game.bookmakers?.slice(0, 2).map((bookmaker: any) => ({
+          key: bookmaker.key,
+          title: bookmaker.title,
+          lastUpdate: bookmaker.last_update,
+          markets: bookmaker.markets?.map((market: any) => ({
+            key: market.key,
+            lastUpdate: market.last_update,
+            outcomes: market.outcomes?.map((outcome: any) => ({
+              name: outcome.name,
+              price: outcome.price,
+              point: outcome.point,
+            })) || [],
+          })) || [],
+        })) || [],
+      }));
+      
+      cache.set(cacheKey, games, CACHE_TTL_ODDS);
+      
+      res.json(games);
     } catch (error) {
       console.error("Error fetching odds:", error);
       res.status(500).json({ error: "Failed to fetch odds" });
