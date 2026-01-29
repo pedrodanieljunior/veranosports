@@ -37,6 +37,7 @@ export default function Home() {
     },
     onSuccess: (data: BetSlipType) => {
       setPlacedBet(data);
+      setSelections([]);
       toast({
         title: "Bilhete gerado com sucesso!",
         description: `Código: #${data.id.slice(0, 8).toUpperCase()}`,
