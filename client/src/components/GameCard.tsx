@@ -1,9 +1,13 @@
 import { Game, Selection } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin } from "lucide-react";
+import { Clock, MapPin, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+function calculateBoostedOdd(originalOdd: number): number {
+  return originalOdd * 1.20;
+}
 
 interface GameCardProps {
   game: Game;
@@ -26,7 +30,8 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
     );
   };
 
-  const handleOddClick = (outcomeName: string, odds: number, marketKey: string) => {
+  const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string) => {
+    const boostedOdds = calculateBoostedOdd(originalOdds);
     const selection: Selection = {
       id: `${game.id}-${marketKey}-${outcomeName}`,
       gameId: game.id,
@@ -37,7 +42,7 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
       marketKey,
       bookmaker: bestBookmaker?.title || "Unknown",
       outcome: outcomeName,
-      odds,
+      odds: boostedOdds,
     };
     onToggleSelection(selection);
   };
@@ -101,6 +106,7 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {h2hMarket.outcomes.map((outcome) => {
                   const selected = isSelected(outcome.name, "h2h");
+                  const boostedOdd = calculateBoostedOdd(outcome.price);
                   return (
                     <button
                       key={outcome.name}
@@ -115,9 +121,15 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
                       <span className="text-xs text-muted-foreground truncate w-full text-center">
                         {outcome.name === "Draw" ? "Empate" : outcome.name}
                       </span>
-                      <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                        {outcome.price.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                          {boostedOdd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                          {outcome.price.toFixed(2)}
+                          <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -133,6 +145,7 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
               <div className="grid grid-cols-2 gap-2">
                 {spreadMarket.outcomes.map((outcome) => {
                   const selected = isSelected(outcome.name, "spreads");
+                  const boostedOdd = calculateBoostedOdd(outcome.price);
                   return (
                     <button
                       key={outcome.name}
@@ -147,9 +160,15 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
                       <span className="text-xs text-muted-foreground truncate w-full text-center">
                         {outcome.name} {outcome.point !== undefined && `(${outcome.point > 0 ? '+' : ''}${outcome.point})`}
                       </span>
-                      <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                        {outcome.price.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                          {boostedOdd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                          {outcome.price.toFixed(2)}
+                          <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -166,6 +185,7 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
                 {totalsMarket.outcomes.map((outcome) => {
                   const selected = isSelected(outcome.name, "totals");
                   const label = outcome.name === "Over" ? "Mais de" : "Menos de";
+                  const boostedOdd = calculateBoostedOdd(outcome.price);
                   return (
                     <button
                       key={outcome.name}
@@ -180,9 +200,15 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
                       <span className="text-xs text-muted-foreground truncate w-full text-center">
                         {label} {outcome.point}
                       </span>
-                      <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                        {outcome.price.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                          {boostedOdd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                          {outcome.price.toFixed(2)}
+                          <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
