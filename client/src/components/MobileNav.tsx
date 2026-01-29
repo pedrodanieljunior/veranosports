@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Menu, ChevronRight, Circle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
+import { translateLeagueName } from "@/lib/leagueTranslations";
 
 interface MobileNavProps {
   sports: Sport[];
@@ -56,7 +57,7 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
                   }`}
                   data-testid={`button-mobile-sport-${sport.key}`}
                 >
-                  <span className="truncate">{sport.title}</span>
+                  <span className="truncate">{translateLeagueName(sport.key, sport.title)}</span>
                   <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-transform ${
                     selectedSport === sport.key ? "text-primary" : "text-muted-foreground"
                   }`} />

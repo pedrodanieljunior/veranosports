@@ -2,6 +2,7 @@ import { Sport } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronRight, Circle } from "lucide-react";
+import { translateLeagueName } from "@/lib/leagueTranslations";
 
 interface SportsSidebarProps {
   sports: Sport[];
@@ -45,7 +46,7 @@ export function SportsSidebar({ sports, selectedSport, onSelectSport, isLoading 
               }`}
               data-testid={`button-sport-${sport.key}`}
             >
-              <span className="truncate">{sport.title}</span>
+              <span className="truncate">{translateLeagueName(sport.key, sport.title)}</span>
               <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-transform ${
                 selectedSport === sport.key ? "text-primary" : "text-muted-foreground"
               }`} />
