@@ -57,6 +57,10 @@ export default function Home() {
   };
 
   const handleToggleSelection = (selection: Selection) => {
+    if (placedBet) {
+      setPlacedBet(null);
+    }
+    
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
       if (exists) {
