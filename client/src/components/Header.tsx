@@ -1,12 +1,14 @@
-import { Trophy, Receipt } from "lucide-react";
+import { Trophy, Receipt, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {
   selectionsCount: number;
+  betsCount: number;
   onOpenBetSlip: () => void;
+  onOpenHistory: () => void;
 }
 
-export function Header({ selectionsCount, onOpenBetSlip }: HeaderProps) {
+export function Header({ selectionsCount, betsCount, onOpenBetSlip, onOpenHistory }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-card border-b border-card-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -20,23 +22,43 @@ export function Header({ selectionsCount, onOpenBetSlip }: HeaderProps) {
           </div>
         </div>
         
-        <button
-          onClick={onOpenBetSlip}
-          className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover-elevate active-elevate-2"
-          data-testid="button-open-betslip"
-        >
-          <Receipt className="w-5 h-5" />
-          <span className="hidden sm:inline">Bilhete</span>
-          {selectionsCount > 0 && (
-            <Badge 
-              variant="secondary" 
-              className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-accent text-accent-foreground"
-              data-testid="badge-selections-count"
-            >
-              {selectionsCount}
-            </Badge>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenHistory}
+            className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-muted text-foreground font-medium hover-elevate active-elevate-2"
+            data-testid="button-open-history"
+          >
+            <History className="w-5 h-5" />
+            <span className="hidden sm:inline">Meus Bilhetes</span>
+            {betsCount > 0 && (
+              <Badge 
+                variant="secondary" 
+                className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-accent text-accent-foreground"
+                data-testid="badge-bets-count"
+              >
+                {betsCount}
+              </Badge>
+            )}
+          </button>
+          
+          <button
+            onClick={onOpenBetSlip}
+            className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover-elevate active-elevate-2"
+            data-testid="button-open-betslip"
+          >
+            <Receipt className="w-5 h-5" />
+            <span className="hidden sm:inline">Bilhete</span>
+            {selectionsCount > 0 && (
+              <Badge 
+                variant="secondary" 
+                className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-accent text-accent-foreground"
+                data-testid="badge-selections-count"
+              >
+                {selectionsCount}
+              </Badge>
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );

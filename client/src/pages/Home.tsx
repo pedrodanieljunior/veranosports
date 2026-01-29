@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { SportsSidebar } from "@/components/SportsSidebar";
 import { GamesList } from "@/components/GamesList";
 import { BetSlip } from "@/components/BetSlip";
+import { BetHistory } from "@/components/BetHistory";
 import { MobileNav } from "@/components/MobileNav";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -13,6 +14,7 @@ export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selections, setSelections] = useState<Selection[]>([]);
   const [showBetSlip, setShowBetSlip] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const { toast } = useToast();
 
@@ -30,6 +32,10 @@ export default function Home() {
     enabled: !!selectedSport,
   });
 
+  const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/bets"],
+  });
+
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number }) => {
       const response = await apiRequest("POST", "/api/bets", data);
@@ -38,6 +44,7 @@ export default function Home() {
     onSuccess: (data: BetSlipType) => {
       setPlacedBet(data);
       setSelections([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
       toast({
         title: "Bilhete gerado com sucesso!",
         description: `Código: #${data.id.slice(0, 8).toUpperCase()}`,
@@ -104,25 +111,36 @@ export default function Home() {
             </div>
           </div>
           
-          <button
-            onClick={() => setShowBetSlip(true)}
-            className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover-elevate active-elevate-2"
-            data-testid="button-open-betslip-mobile"
-          >
-            <span>Bilhete</span>
-            {selections.length > 0 && (
-              <span className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs rounded-full bg-accent text-accent-foreground font-bold">
-                {selections.length}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+              className="relative flex items-center gap-2 px-3 py-2 rounded-md bg-muted text-foreground font-medium hover-elevate active-elevate-2"
+              data-testid="button-open-history-mobile"
+            >
+              <span className="text-sm">{betHistory.length}</span>
+            </button>
+            <button
+              onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
+              className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover-elevate active-elevate-2"
+              data-testid="button-open-betslip-mobile"
+            >
+              <span>Bilhete</span>
+              {selections.length > 0 && (
+                <span className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs rounded-full bg-accent text-accent-foreground font-bold">
+                  {selections.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="hidden lg:block">
         <Header 
-          selectionsCount={selections.length} 
-          onOpenBetSlip={() => setShowBetSlip(true)} 
+          selectionsCount={selections.length}
+          betsCount={betHistory.length}
+          onOpenBetSlip={() => { setShowBetSlip(true); setShowHistory(false); }}
+          onOpenHistory={() => { setShowHistory(true); setShowBetSlip(false); }}
         />
       </div>
       
@@ -156,6 +174,14 @@ export default function Home() {
           onPlaceBet={handlePlaceBet}
           placedBet={placedBet}
           isPlacing={placeBetMutation.isPending}
+        />
+      )}
+      
+      {showHistory && (
+        <BetHistory
+          bets={betHistory}
+          isLoading={historyLoading}
+          onClose={() => setShowHistory(false)}
         />
       )}
     </div>
