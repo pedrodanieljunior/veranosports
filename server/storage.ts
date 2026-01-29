@@ -1,37 +1,43 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type Selection } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createBetSlip(data: InsertBetSlip): Promise<BetSlip>;
+  getBetSlip(id: string): Promise<BetSlip | undefined>;
+  getAllBetSlips(): Promise<BetSlip[]>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private betSlips: Map<string, BetSlip>;
 
   constructor() {
-    this.users = new Map();
+    this.betSlips = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createBetSlip(data: InsertBetSlip): Promise<BetSlip> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const totalOdds = data.selections.reduce((acc, sel) => acc * sel.odds, 1);
+    const potentialWin = data.stake * totalOdds;
+    
+    const betSlip: BetSlip = {
+      id,
+      selections: data.selections,
+      stake: data.stake,
+      totalOdds,
+      potentialWin,
+      createdAt: new Date().toISOString(),
+    };
+    
+    this.betSlips.set(id, betSlip);
+    return betSlip;
+  }
+
+  async getBetSlip(id: string): Promise<BetSlip | undefined> {
+    return this.betSlips.get(id);
+  }
+
+  async getAllBetSlips(): Promise<BetSlip[]> {
+    return Array.from(this.betSlips.values());
   }
 }
 
