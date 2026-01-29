@@ -28,7 +28,7 @@ export function GamesList({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <Trophy className="w-20 h-20 text-muted-foreground/20 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Bem-vindo ao BetPro</h2>
+        <h2 className="text-xl font-semibold mb-2">Bem-vindo ao GANHE MAIS AQUI</h2>
         <p className="text-muted-foreground max-w-md">
           Selecione uma liga de futebol no menu lateral para ver os jogos e odds disponíveis.
         </p>

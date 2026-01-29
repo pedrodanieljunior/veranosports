@@ -95,7 +95,7 @@ export default function Home() {
               isLoading={sportsLoading}
             />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">BetPro</h1>
+              <h1 className="text-lg font-bold tracking-tight">GANHE MAIS AQUI</h1>
               <p className="text-xs text-muted-foreground">Apostas Esportivas</p>
             </div>
           </div>
