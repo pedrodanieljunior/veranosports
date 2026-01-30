@@ -2,11 +2,12 @@
 
 ## Overview
 
-BetPro is a sports betting web application that displays live odds from various sports events and allows users to create bet slips. The application fetches real-time odds data from two sources:
+BetPro is a sports betting web application that displays live odds from various sports events and allows users to create bet slips. The application fetches real-time odds data from three sources:
 1. **The Odds API** - Primary data for main leagues with moneyline, spreads, and totals markets
 2. **API-Football** - Additional markets including First Half Winner, HT/FT Double, BTTS, and Over/Under goals
+3. **BoltOdds WebSocket** - Real-time odds from multiple bookmakers (300+ games) including 3 Way, Spread, Total, 1st Half markets
 
-The UI features a tabbed interface ("Principais Ligas" and "Mercados Extra") to switch between data sources. All odds are boosted by 20% with original values shown.
+The UI features a modal interface showing all available markets from multiple sources. All odds are boosted by 20% with original values shown crossed out.
 
 ## User Preferences
 
@@ -75,6 +76,14 @@ The server handles:
   - Rate limit: 100 requests/day (free tier)
   - Caching: 15 minutes
   - Markets: First Half Winner, HT/FT Double, BTTS, Over/Under Goals
+
+- **BoltOdds WebSocket**: Real-time odds from multiple bookmakers
+  - Requires `BOLTODDS_API_KEY` environment variable
+  - WebSocket connection with auto-reconnect
+  - Data format: American odds converted to decimal
+  - Leagues: EPL, La Liga, Serie A, Bundesliga, Ligue 1, Champions League, MLS, Brazil Serie A
+  - Markets: 3 Way, Spread, Total, 1st Half Moneyline, 1st Half Total, BTTS
+  - Caching: 3 minutes
 
 ### Database
 - **PostgreSQL**: Configured via Drizzle ORM
