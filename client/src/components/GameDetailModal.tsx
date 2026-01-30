@@ -1,11 +1,10 @@
 import { Game, Selection } from "@shared/schema";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, TrendingUp, X } from "lucide-react";
+import { Clock, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
 
 function calculateBoostedOdd(originalOdd: number): number {
   return originalOdd * 1.20;
@@ -25,10 +24,22 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   const gameDate = new Date(game.commenceTime);
   const isLive = gameDate <= new Date();
   
-  const bestBookmaker = game.bookmakers[0];
-  const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
-  const spreadMarket = bestBookmaker?.markets.find(m => m.key === "spreads");
-  const totalsMarket = bestBookmaker?.markets.find(m => m.key === "totals");
+  const allMarkets: Record<string, { outcomes: any[]; bookmaker: string }> = {};
+  
+  game.bookmakers.forEach((bookmaker) => {
+    bookmaker.markets.forEach((market) => {
+      if (!allMarkets[market.key]) {
+        allMarkets[market.key] = {
+          outcomes: market.outcomes,
+          bookmaker: bookmaker.title
+        };
+      }
+    });
+  });
+  
+  const h2hMarket = allMarkets["h2h"];
+  const spreadMarket = allMarkets["spreads"];
+  const totalsMarket = allMarkets["totals"];
   
   const isSelected = (outcomeName: string, marketKey: string) => {
     return selections.some(
@@ -36,7 +47,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
-  const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string) => {
+  const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
     const boostedOdds = calculateBoostedOdd(originalOdds);
     const selection: Selection = {
       id: `${game.id}-${marketKey}-${outcomeName}`,
@@ -46,150 +57,174 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       commenceTime: game.commenceTime,
       sportTitle: game.sportTitle,
       marketKey,
-      bookmaker: bestBookmaker?.title || "Unknown",
+      bookmaker,
       outcome: outcomeName,
       odds: boostedOdds,
     };
     onToggleSelection(selection);
   };
 
-  const renderOddButton = (
-    outcome: { name: string; price: number; point?: number },
-    marketKey: string,
-    label: string,
-    testId: string
-  ) => {
-    const selected = isSelected(outcome.name, marketKey);
-    const boostedOdd = calculateBoostedOdd(outcome.price);
-    
-    return (
-      <button
-        key={`${marketKey}-${outcome.name}-${outcome.point || ''}`}
-        onClick={() => handleOddClick(outcome.name, outcome.price, marketKey)}
-        className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all hover-elevate active-elevate-2 ${
-          selected
-            ? "bg-primary/10 border-primary text-foreground"
-            : "bg-muted/50 border-transparent"
-        }`}
-        data-testid={testId}
-      >
-        <span className="text-xs text-muted-foreground truncate w-full text-center">
-          {label}
-        </span>
-        <div className="flex flex-col items-center">
-          <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-            {boostedOdd.toFixed(2)}
-          </span>
-          <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
-            {outcome.price.toFixed(2)}
-            <TrendingUp className="w-2.5 h-2.5 text-green-500" />
-          </span>
-        </div>
-      </button>
-    );
+  const marketLabels: Record<string, string> = {
+    h2h: "Resultado Final (1X2)",
+    spreads: "Handicap Asiático",
+    totals: "Total de Gols"
   };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0">
-        <DialogHeader className="p-4 pb-2 border-b border-card-border sticky top-0 bg-background z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isLive ? (
-                <Badge variant="destructive" className="animate-pulse">
-                  AO VIVO
-                </Badge>
-              ) : (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{format(gameDate, "dd MMM HH:mm", { locale: ptBR })}</span>
-                </div>
-              )}
-              <Badge variant="secondary" className="text-xs">
-                {game.sportTitle}
+      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0">
+        <DialogHeader className="p-4 border-b border-card-border bg-muted/30">
+          <div className="flex items-center gap-2 mb-2">
+            {isLive ? (
+              <Badge variant="destructive" className="animate-pulse">
+                AO VIVO
               </Badge>
-            </div>
+            ) : (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{format(gameDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+              </div>
+            )}
+            <Badge variant="secondary" className="text-xs">
+              {game.sportTitle}
+            </Badge>
           </div>
-          <DialogTitle className="text-left mt-2">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-xs font-bold">
-                  {game.homeTeam.substring(0, 2).toUpperCase()}
-                </div>
-                <span className="font-semibold">{game.homeTeam}</span>
-              </div>
-              <div className="text-xs text-muted-foreground text-center">vs</div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-xs font-bold">
-                  {game.awayTeam.substring(0, 2).toUpperCase()}
-                </div>
-                <span className="font-semibold">{game.awayTeam}</span>
-              </div>
-            </div>
+          <DialogTitle className="text-lg">
+            {game.homeTeam} vs {game.awayTeam}
           </DialogTitle>
+          <DialogDescription className="text-xs">
+            Selecione uma odd para adicionar ao bilhete
+          </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 max-h-[60vh]">
+        <ScrollArea className="max-h-[60vh]">
           <div className="p-4 space-y-6">
             {h2hMarket && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-4 bg-primary rounded-full" />
-                  <span className="text-sm font-semibold uppercase tracking-wider">
-                    Vencedor do Jogo
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    {marketLabels.h2h}
                   </span>
+                  <span className="text-xs text-muted-foreground">{h2hMarket.bookmaker}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {h2hMarket.outcomes.map((outcome) => 
-                    renderOddButton(
-                      outcome,
-                      "h2h",
-                      outcome.name === "Draw" ? "Empate" : outcome.name,
-                      `button-modal-h2h-${outcome.name}`
-                    )
-                  )}
+                  {h2hMarket.outcomes.map((outcome: any) => {
+                    const selected = isSelected(outcome.name, "h2h");
+                    const boostedOdd = calculateBoostedOdd(outcome.price);
+                    const label = outcome.name === "Draw" ? "Empate" : 
+                                  outcome.name === game.homeTeam ? "1" : "2";
+                    return (
+                      <button
+                        key={outcome.name}
+                        onClick={() => handleOddClick(outcome.name, outcome.price, "h2h", h2hMarket.bookmaker)}
+                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
+                          selected
+                            ? "bg-primary/10 border-primary"
+                            : "bg-card border-transparent hover:border-muted-foreground/20"
+                        }`}
+                        data-testid={`button-modal-h2h-${outcome.name}`}
+                      >
+                        <span className="text-xs text-muted-foreground mb-1">
+                          {label === "1" ? game.homeTeam.substring(0, 10) : 
+                           label === "2" ? game.awayTeam.substring(0, 10) : "Empate"}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                            {boostedOdd.toFixed(2)}
+                          </span>
+                          <TrendingUp className="w-3 h-3 text-green-500" />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground/60 line-through">
+                          {outcome.price.toFixed(2)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
             
             {spreadMarket && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-4 bg-primary rounded-full" />
-                  <span className="text-sm font-semibold uppercase tracking-wider">
-                    Handicap Asiático
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    {marketLabels.spreads}
                   </span>
+                  <span className="text-xs text-muted-foreground">{spreadMarket.bookmaker}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {spreadMarket.outcomes.map((outcome) => 
-                    renderOddButton(
-                      outcome,
-                      "spreads",
-                      `${outcome.name} ${outcome.point !== undefined ? `(${outcome.point > 0 ? '+' : ''}${outcome.point})` : ''}`,
-                      `button-modal-spread-${outcome.name}`
-                    )
-                  )}
+                  {spreadMarket.outcomes.map((outcome: any) => {
+                    const selected = isSelected(`spread-${outcome.name}-${outcome.point}`, "spreads");
+                    const boostedOdd = calculateBoostedOdd(outcome.price);
+                    return (
+                      <button
+                        key={`${outcome.name}-${outcome.point}`}
+                        onClick={() => handleOddClick(`spread-${outcome.name}-${outcome.point}`, outcome.price, "spreads", spreadMarket.bookmaker)}
+                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
+                          selected
+                            ? "bg-primary/10 border-primary"
+                            : "bg-card border-transparent hover:border-muted-foreground/20"
+                        }`}
+                        data-testid={`button-modal-spread-${outcome.name}`}
+                      >
+                        <span className="text-xs text-muted-foreground mb-1">
+                          {outcome.name} ({outcome.point > 0 ? '+' : ''}{outcome.point})
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                            {boostedOdd.toFixed(2)}
+                          </span>
+                          <TrendingUp className="w-3 h-3 text-green-500" />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground/60 line-through">
+                          {outcome.price.toFixed(2)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
             
             {totalsMarket && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-4 bg-primary rounded-full" />
-                  <span className="text-sm font-semibold uppercase tracking-wider">
-                    Total de Gols
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    {marketLabels.totals}
                   </span>
+                  <span className="text-xs text-muted-foreground">{totalsMarket.bookmaker}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {totalsMarket.outcomes.map((outcome) => 
-                    renderOddButton(
-                      outcome,
-                      "totals",
-                      `${outcome.name === "Over" ? "Mais de" : "Menos de"} ${outcome.point}`,
-                      `button-modal-total-${outcome.name}`
-                    )
-                  )}
+                  {totalsMarket.outcomes.map((outcome: any) => {
+                    const selected = isSelected(`total-${outcome.name}-${outcome.point}`, "totals");
+                    const boostedOdd = calculateBoostedOdd(outcome.price);
+                    const label = outcome.name === "Over" ? `Mais de ${outcome.point}` : `Menos de ${outcome.point}`;
+                    return (
+                      <button
+                        key={`${outcome.name}-${outcome.point}`}
+                        onClick={() => handleOddClick(`total-${outcome.name}-${outcome.point}`, outcome.price, "totals", totalsMarket.bookmaker)}
+                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
+                          selected
+                            ? "bg-primary/10 border-primary"
+                            : "bg-card border-transparent hover:border-muted-foreground/20"
+                        }`}
+                        data-testid={`button-modal-total-${outcome.name}`}
+                      >
+                        <span className="text-xs text-muted-foreground mb-1">
+                          {label}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                            {boostedOdd.toFixed(2)}
+                          </span>
+                          <TrendingUp className="w-3 h-3 text-green-500" />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground/60 line-through">
+                          {outcome.price.toFixed(2)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -199,19 +234,14 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <p>Nenhum mercado disponível para este jogo</p>
               </div>
             )}
-            
-            <div className="pt-2 border-t border-card-border">
-              <p className="text-xs text-muted-foreground text-center">
-                Todas as odds incluem bônus de +20%
-              </p>
-              {bestBookmaker && (
-                <p className="text-xs text-muted-foreground text-center mt-1">
-                  Fonte: {bestBookmaker.title}
-                </p>
-              )}
-            </div>
           </div>
         </ScrollArea>
+        
+        <div className="p-3 border-t border-card-border bg-muted/30">
+          <p className="text-xs text-muted-foreground text-center">
+            Todas as odds incluem bônus de +20%
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );
