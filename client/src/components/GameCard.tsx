@@ -23,6 +23,11 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
   const spreadMarket = bestBookmaker?.markets.find(m => m.key === "spreads");
   const totalsMarket = bestBookmaker?.markets.find(m => m.key === "totals");
+  const bttsMarket = bestBookmaker?.markets.find(m => m.key === "btts");
+  const altTotalsMarket = bestBookmaker?.markets.find(m => m.key === "alternate_totals");
+  
+  const over15 = altTotalsMarket?.outcomes.filter(o => o.point === 1.5);
+  const over25 = altTotalsMarket?.outcomes.filter(o => o.point === 2.5);
   
   const isSelected = (outcomeName: string, marketKey: string) => {
     return selections.some(
@@ -176,10 +181,130 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
             </div>
           )}
           
+          {bttsMarket && (
+            <div className="space-y-2 mt-4">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Ambos Marcam
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {bttsMarket.outcomes.map((outcome) => {
+                  const selected = isSelected(`btts-${outcome.name}`, "btts");
+                  const label = outcome.name === "Yes" ? "Sim" : "Não";
+                  const boostedOdd = calculateBoostedOdd(outcome.price);
+                  return (
+                    <button
+                      key={outcome.name}
+                      onClick={() => handleOddClick(`btts-${outcome.name}`, outcome.price, "btts")}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all hover-elevate active-elevate-2 ${
+                        selected
+                          ? "bg-primary/10 border-primary text-foreground"
+                          : "bg-muted/50 border-transparent"
+                      }`}
+                      data-testid={`button-btts-${game.id}-${outcome.name}`}
+                    >
+                      <span className="text-xs text-muted-foreground truncate w-full text-center">
+                        {label}
+                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                          {boostedOdd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                          {outcome.price.toFixed(2)}
+                          <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {over15 && over15.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Over/Under 1.5 Gols
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {over15.map((outcome) => {
+                  const selected = isSelected(`alt15-${outcome.name}`, "alternate_totals");
+                  const label = outcome.name === "Over" ? "Mais de 1.5" : "Menos de 1.5";
+                  const boostedOdd = calculateBoostedOdd(outcome.price);
+                  return (
+                    <button
+                      key={outcome.name}
+                      onClick={() => handleOddClick(`alt15-${outcome.name}`, outcome.price, "alternate_totals")}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all hover-elevate active-elevate-2 ${
+                        selected
+                          ? "bg-primary/10 border-primary text-foreground"
+                          : "bg-muted/50 border-transparent"
+                      }`}
+                      data-testid={`button-over15-${game.id}-${outcome.name}`}
+                    >
+                      <span className="text-xs text-muted-foreground truncate w-full text-center">
+                        {label}
+                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                          {boostedOdd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                          {outcome.price.toFixed(2)}
+                          <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {over25 && over25.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Over/Under 2.5 Gols
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {over25.map((outcome) => {
+                  const selected = isSelected(`alt25-${outcome.name}`, "alternate_totals");
+                  const label = outcome.name === "Over" ? "Mais de 2.5" : "Menos de 2.5";
+                  const boostedOdd = calculateBoostedOdd(outcome.price);
+                  return (
+                    <button
+                      key={outcome.name}
+                      onClick={() => handleOddClick(`alt25-${outcome.name}`, outcome.price, "alternate_totals")}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all hover-elevate active-elevate-2 ${
+                        selected
+                          ? "bg-primary/10 border-primary text-foreground"
+                          : "bg-muted/50 border-transparent"
+                      }`}
+                      data-testid={`button-over25-${game.id}-${outcome.name}`}
+                    >
+                      <span className="text-xs text-muted-foreground truncate w-full text-center">
+                        {label}
+                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                          {boostedOdd.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                          {outcome.price.toFixed(2)}
+                          <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {totalsMarket && (
             <div className="space-y-2 mt-4">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total de Gols/Pontos
+                Total de Gols
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {totalsMarket.outcomes.map((outcome) => {
@@ -216,7 +341,7 @@ export function GameCard({ game, selections, onToggleSelection }: GameCardProps)
             </div>
           )}
           
-          {!h2hMarket && !spreadMarket && !totalsMarket && (
+          {!h2hMarket && !spreadMarket && !totalsMarket && !bttsMarket && (
             <div className="text-center py-4 text-muted-foreground">
               <p>Odds não disponíveis no momento</p>
             </div>

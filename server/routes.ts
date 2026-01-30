@@ -67,7 +67,7 @@ export async function registerRoutes(
       }
       
       const regions = "us,uk,eu";
-      const markets = "h2h,spreads,totals";
+      const markets = "h2h,spreads,totals,btts,alternate_totals";
       const oddsFormat = "decimal";
       
       const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=${regions}&markets=${markets}&oddsFormat=${oddsFormat}`;
