@@ -41,6 +41,24 @@ interface OddsBlazeResponse {
   markets: OddsBlazeMarket[];
 }
 
+interface BoltOddsMarket {
+  id: string;
+  name: string;
+  label: string;
+  values: Array<{ value: string; odd: number; point?: number; bookmaker?: string }>;
+}
+
+interface BoltOddsResponse {
+  gameId?: string;
+  gameKey?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  sport?: string;
+  source?: string;
+  wsConnected?: boolean;
+  markets: BoltOddsMarket[];
+}
+
 interface GameDetailModalProps {
   game: Game | null;
   open: boolean;
@@ -71,6 +89,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     queryKey: [oddsBlazeQueryKey],
     enabled: open && !!game && !!oddsBlazeQueryKey,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  // BoltOdds markets - dados via WebSocket em tempo real
+  const boltOddsQueryKey = game ? 
+    `/api/boltodds/game-odds?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&sportKey=${encodeURIComponent(game.sportKey || '')}` : 
+    null;
+  
+  const { data: boltOddsData, isLoading: loadingBoltOdds, isError: errorBoltOdds } = useQuery<BoltOddsResponse>({
+    queryKey: [boltOddsQueryKey],
+    enabled: open && !!game && !!boltOddsQueryKey,
+    staleTime: 3 * 60 * 1000,
     retry: 1,
   });
 
@@ -237,10 +267,72 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
+  const renderBoltOddsMarket = (market: BoltOddsMarket) => {
+    const marketKey = `boltodds-${market.id}`;
+    
+    return (
+      <div key={market.id} className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold">{market.label}</span>
+          <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30">BoltOdds</Badge>
+        </div>
+        <div className={`grid gap-2 ${market.values.length <= 2 ? 'grid-cols-2' : market.values.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          {market.values.slice(0, 6).map((value) => {
+            const outcomeKey = `${market.name}-${value.value}`;
+            const selected = isSelected(outcomeKey, marketKey);
+            const boostedOdd = calculateBoostedOdd(value.odd);
+            const bookmaker = value.bookmaker || "BoltOdds";
+            
+            let displayLabel = value.value;
+            if (value.value === "Home" || value.value === "home") displayLabel = game.homeTeam.substring(0, 10);
+            else if (value.value === "Away" || value.value === "away") displayLabel = game.awayTeam.substring(0, 10);
+            else if (value.value === "Draw" || value.value === "draw") displayLabel = "Empate";
+            else if (value.value === "Yes") displayLabel = "Sim";
+            else if (value.value === "No") displayLabel = "Não";
+            else if (value.value.toLowerCase().includes("over")) {
+              const point = value.point ? ` ${value.point}` : '';
+              displayLabel = `Mais de${point}`;
+            } else if (value.value.toLowerCase().includes("under")) {
+              const point = value.point ? ` ${value.point}` : '';
+              displayLabel = `Menos de${point}`;
+            }
+            
+            return (
+              <button
+                key={`${value.value}-${value.bookmaker}-${value.point}`}
+                onClick={() => handleOddClick(outcomeKey, value.odd, marketKey, bookmaker)}
+                className={`flex flex-col items-center p-2.5 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
+                  selected
+                    ? "bg-primary/10 border-primary"
+                    : "bg-card border-transparent hover:border-muted-foreground/20"
+                }`}
+                data-testid={`button-modal-boltodds-${market.id}-${value.value}`}
+              >
+                <span className="text-xs text-muted-foreground mb-1 text-center line-clamp-1">
+                  {displayLabel}
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className={`font-bold text-base ${selected ? "text-primary" : ""}`}>
+                    {boostedOdd.toFixed(2)}
+                  </span>
+                  <TrendingUp className="w-3 h-3 text-green-500" />
+                </div>
+                <span className="text-[10px] text-muted-foreground/60 line-through">
+                  {value.odd.toFixed(2)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const hasMainMarkets = h2hMarket || spreadMarket || totalsMarket;
   const hasExtraMarkets = extraMarkets?.markets && extraMarkets.markets.length > 0;
   const hasOddsBlazeMarkets = oddsBlazeData?.markets && oddsBlazeData.markets.length > 0;
-  const isLoadingAny = loadingExtra || loadingOddsBlaze;
+  const hasBoltOddsMarkets = boltOddsData?.markets && boltOddsData.markets.length > 0;
+  const isLoadingAny = loadingExtra || loadingOddsBlaze || loadingBoltOdds;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -421,8 +513,28 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {/* OddsBlaze markets */}
             {hasOddsBlazeMarkets && oddsBlazeData.markets.map(renderOddsBlazeMarket)}
 
+            {/* Separator for BoltOdds markets */}
+            {(hasMainMarkets || hasOddsBlazeMarkets) && (hasBoltOddsMarkets || loadingBoltOdds) && (
+              <div className="flex items-center gap-3 py-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground font-medium">Odds em Tempo Real (BoltOdds)</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            )}
+
+            {/* Loading state for BoltOdds */}
+            {loadingBoltOdds && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Buscando odds em tempo real...</span>
+              </div>
+            )}
+
+            {/* BoltOdds markets */}
+            {hasBoltOddsMarkets && boltOddsData.markets.map(renderBoltOddsMarket)}
+
             {/* Separator for API-Football extra markets */}
-            {(hasMainMarkets || hasOddsBlazeMarkets) && (hasExtraMarkets || loadingExtra) && (
+            {(hasMainMarkets || hasOddsBlazeMarkets || hasBoltOddsMarkets) && (hasExtraMarkets || loadingExtra) && (
               <div className="flex items-center gap-3 py-2">
                 <div className="flex-1 h-px bg-border" />
                 <span className="text-xs text-muted-foreground font-medium">Mercados Extras</span>
@@ -448,7 +560,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {/* Extra markets from API-Football */}
             {hasExtraMarkets && extraMarkets.markets.map(renderExtraMarket)}
             
-            {!hasMainMarkets && !hasExtraMarkets && !hasOddsBlazeMarkets && !isLoadingAny && (
+            {!hasMainMarkets && !hasExtraMarkets && !hasOddsBlazeMarkets && !hasBoltOddsMarkets && !isLoadingAny && (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Nenhum mercado disponível para este jogo</p>
               </div>

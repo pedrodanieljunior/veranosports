@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertBetSlipSchema } from "@shared/schema";
 import { z } from "zod";
 import { cache } from "./cache";
+import { boltOddsWS } from "./boltodds-ws";
 
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
@@ -889,9 +890,52 @@ export async function registerRoutes(
       
       console.log(`BoltOdds: Found game ${matchingKey} for ${homeTeam} vs ${awayTeam}`);
       
-      // BoltOdds get_games não retorna odds diretamente
-      // Para odds em tempo real, precisaríamos usar WebSocket
-      // Por enquanto, retornamos informações do jogo encontrado
+      // Verificar se temos dados do WebSocket para este jogo
+      const wsData = boltOddsWS.getGameData(matchingKey);
+      
+      // Formatar mercados para o frontend
+      const markets: any[] = [];
+      
+      if (wsData && wsData.markets.length > 0) {
+        const marketLabels: Record<string, string> = {
+          "Moneyline": "Vencedor",
+          "3 Way": "Resultado Final (1X2)",
+          "Spread": "Handicap",
+          "Total": "Total de Gols",
+          "1st Half": "Primeiro Tempo",
+          "1st Half Moneyline": "1º Tempo - Vencedor",
+          "1st Half Spread": "1º Tempo - Handicap",
+          "1st Half Total": "1º Tempo - Total",
+          "BTTS": "Ambas Marcam (BTTS)",
+          "Double Chance": "Dupla Chance",
+          "Draw No Bet": "Empate Anula Aposta"
+        };
+        
+        for (const market of wsData.markets) {
+          const marketLabel = marketLabels[market.market] || market.market;
+          const values = market.outcomes.map(o => ({
+            value: o.name,
+            odd: o.price,
+            point: o.point,
+            bookmaker: o.bookmaker
+          }));
+          
+          if (values.length > 0) {
+            markets.push({
+              id: market.market.replace(/\s+/g, '_').toLowerCase(),
+              name: market.market,
+              label: marketLabel,
+              values
+            });
+          }
+        }
+      }
+      
+      // Se não temos dados do WebSocket, inscrever para receber atualizações
+      if (!wsData && boltOddsWS.isActive()) {
+        boltOddsWS.subscribeToGame(matchingKey, () => {});
+      }
+      
       const result = {
         gameId: matchingGame.universal_id,
         gameKey: matchingKey,
@@ -900,7 +944,8 @@ export async function registerRoutes(
         when: matchingGame.when,
         sport: matchingGame.sport,
         source: "boltodds",
-        markets: [] // BoltOdds requer WebSocket para odds em tempo real
+        wsConnected: boltOddsWS.isActive(),
+        markets
       };
       
       cache.set(cacheKey, result, CACHE_TTL_BOLTODDS);
@@ -908,6 +953,32 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching BoltOdds game odds:", error);
       res.status(500).json({ error: "Failed to fetch BoltOdds game odds" });
+    }
+  });
+
+  // BoltOdds: Debug endpoint para ver jogos disponíveis
+  app.get("/api/boltodds/debug", async (req, res) => {
+    try {
+      const availableGames = boltOddsWS.getAvailableGames();
+      const allData = boltOddsWS.getAllGameData();
+      const gamesWithMarkets = Array.from(allData.entries())
+        .filter(([k, v]) => v.markets.length > 0)
+        .map(([k, v]) => ({
+          game: k,
+          marketsCount: v.markets.length,
+          markets: v.markets.map(m => m.market)
+        }));
+      
+      res.json({
+        wsConnected: boltOddsWS.isActive(),
+        totalGames: availableGames.length,
+        gamesWithMarkets: gamesWithMarkets.length,
+        sampleGames: availableGames.slice(0, 10),
+        sampleWithMarkets: gamesWithMarkets.slice(0, 5)
+      });
+    } catch (error) {
+      console.error("Error in BoltOdds debug:", error);
+      res.status(500).json({ error: "Debug endpoint error" });
     }
   });
 
