@@ -35,7 +35,7 @@ The frontend follows a component-based architecture with:
 - **Storage**: In-memory storage (MemStorage class) for bet slips
 
 The server handles:
-- Proxying requests to The Odds API for sports and odds data
+- Proxying requests to API-Football for sports odds and fixtures data
 - CRUD operations for bet slips
 - Static file serving in production
 - Vite dev server middleware in development
@@ -51,7 +51,7 @@ The server handles:
 
 2. **In-Memory Storage**: Currently uses MemStorage for simplicity. The Drizzle configuration is ready for PostgreSQL when database is provisioned.
 
-3. **API Proxy Pattern**: Backend proxies external API calls to The Odds API, keeping API keys secure on the server.
+3. **API Proxy Pattern**: Backend proxies external API calls to API-Football, keeping API keys secure on the server.
 
 4. **Dark Mode First**: The application defaults to dark mode, suitable for a betting platform interface.
 

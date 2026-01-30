@@ -275,8 +275,13 @@ export async function registerRoutes(
       const today = new Date().toISOString().split('T')[0];
       const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
+      // Determinar a temporada atual (ligas europeias vão de agosto a maio do ano seguinte)
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth(); // 0-11
+      const season = currentMonth >= 7 ? currentYear : currentYear - 1; // Se agosto ou depois, usa ano atual
+      
       const fixturesResponse = await fetch(
-        `${API_FOOTBALL_BASE}/fixtures?league=${leagueId}&season=2024&from=${today}&to=${nextWeek}`,
+        `${API_FOOTBALL_BASE}/fixtures?league=${leagueId}&season=${season}&from=${today}&to=${nextWeek}`,
         { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
       );
       
