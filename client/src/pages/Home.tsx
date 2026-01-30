@@ -7,11 +7,39 @@ import { GamesList } from "@/components/GamesList";
 import { BetSlip } from "@/components/BetSlip";
 import { BetHistory } from "@/components/BetHistory";
 import { MobileNav } from "@/components/MobileNav";
+import { FootballGameCard } from "@/components/FootballGameCard";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+
+interface FootballLeague {
+  id: number;
+  name: string;
+  country: string;
+  logo: string;
+  season: number;
+}
+
+interface FootballFixture {
+  id: number;
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  league: string;
+  odds: {
+    name: string;
+    values: { value: string; odd: number }[];
+  }[];
+}
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("odds-api");
   const [selections, setSelections] = useState<Selection[]>([]);
   const [showBetSlip, setShowBetSlip] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -34,6 +62,16 @@ export default function Home() {
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
     queryKey: ["/api/bets"],
+  });
+
+  const { data: footballLeagues = [], isLoading: leaguesLoading } = useQuery<FootballLeague[]>({
+    queryKey: ["/api/football/leagues"],
+    enabled: activeTab === "api-football",
+  });
+
+  const { data: footballFixtures = [], isLoading: fixturesLoading } = useQuery<FootballFixture[]>({
+    queryKey: ["/api/football/fixtures", selectedLeague],
+    enabled: activeTab === "api-football" && !!selectedLeague,
   });
 
   const placeBetMutation = useMutation({
@@ -145,24 +183,119 @@ export default function Home() {
       </div>
       
       <div className="flex flex-1 overflow-hidden">
-        <div className="hidden lg:block">
-          <SportsSidebar
-            sports={sports}
-            selectedSport={selectedSport}
-            onSelectSport={handleSelectSport}
-            isLoading={sportsLoading}
-          />
-        </div>
-        
-        <GamesList
-          games={games}
-          selections={selections}
-          onToggleSelection={handleToggleSelection}
-          isLoading={gamesLoading}
-          error={gamesError as Error | null}
-          selectedSport={selectedSport}
-          onRefresh={() => refetchGames()}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col overflow-hidden">
+          <div className="px-4 pt-4 bg-background">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="odds-api" data-testid="tab-odds-api">
+                Principais Ligas
+              </TabsTrigger>
+              <TabsTrigger value="api-football" data-testid="tab-api-football">
+                Mercados Extra
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <TabsContent value="odds-api" className="flex flex-1 overflow-hidden mt-0">
+            <div className="hidden lg:block">
+              <SportsSidebar
+                sports={sports}
+                selectedSport={selectedSport}
+                onSelectSport={handleSelectSport}
+                isLoading={sportsLoading}
+              />
+            </div>
+            
+            <GamesList
+              games={games}
+              selections={selections}
+              onToggleSelection={handleToggleSelection}
+              isLoading={gamesLoading}
+              error={gamesError as Error | null}
+              selectedSport={selectedSport}
+              onRefresh={() => refetchGames()}
+            />
+          </TabsContent>
+          
+          <TabsContent value="api-football" className="flex flex-1 overflow-hidden mt-0">
+            <div className="hidden lg:flex flex-col w-64 border-r border-card-border bg-card overflow-y-auto">
+              <div className="p-4 border-b border-card-border">
+                <h3 className="font-semibold text-sm">Ligas - Mercados Extra</h3>
+                <p className="text-xs text-muted-foreground">1º Tempo, Intervalo/Final</p>
+              </div>
+              {leaguesLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1 p-2">
+                  {footballLeagues.map((league) => (
+                    <button
+                      key={league.id}
+                      onClick={() => setSelectedLeague(league.id)}
+                      className={`flex items-center gap-2 p-2 rounded-md text-left text-sm transition-colors hover-elevate ${
+                        selectedLeague === league.id
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground"
+                      }`}
+                      data-testid={`button-league-${league.id}`}
+                    >
+                      {league.logo && (
+                        <img src={league.logo} alt="" className="w-5 h-5 object-contain" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate block">{league.name}</span>
+                        <span className="text-xs text-muted-foreground">{league.country}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {!selectedLeague ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">
+                    Selecione uma liga para ver os jogos com mercados de 1º Tempo e Intervalo/Final
+                  </p>
+                  <div className="lg:hidden mt-4 grid grid-cols-2 gap-2">
+                    {footballLeagues.slice(0, 8).map((league) => (
+                      <button
+                        key={league.id}
+                        onClick={() => setSelectedLeague(league.id)}
+                        className="flex items-center gap-2 p-3 rounded-md bg-muted text-left hover-elevate"
+                      >
+                        {league.logo && (
+                          <img src={league.logo} alt="" className="w-6 h-6 object-contain" />
+                        )}
+                        <span className="text-sm truncate">{league.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              ) : fixturesLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : footballFixtures.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">Nenhum jogo encontrado para esta liga</p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {footballFixtures.map((fixture) => (
+                    <FootballGameCard
+                      key={fixture.id}
+                      fixture={fixture}
+                      selections={selections}
+                      onToggleSelection={handleToggleSelection}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
       
       {showBetSlip && (
