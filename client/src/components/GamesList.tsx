@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 interface GamesListProps {
   games: Game[];
   selections: Selection[];
-  onToggleSelection: (selection: Selection) => void;
+  onGameClick: (game: Game) => void;
   isLoading: boolean;
   error: Error | null;
   selectedSport: string | null;
@@ -18,7 +18,7 @@ interface GamesListProps {
 export function GamesList({ 
   games, 
   selections, 
-  onToggleSelection, 
+  onGameClick, 
   isLoading, 
   error,
   selectedSport,
@@ -101,7 +101,7 @@ export function GamesList({
             {games.length} {games.length === 1 ? "Jogo" : "Jogos"} Disponíveis
           </h2>
           <p className="text-sm text-muted-foreground">
-            Clique nas odds para adicionar ao seu bilhete
+            Clique no jogo para ver todos os mercados
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onRefresh} data-testid="button-refresh-games">
@@ -116,7 +116,7 @@ export function GamesList({
             key={game.id}
             game={game}
             selections={selections}
-            onToggleSelection={onToggleSelection}
+            onClick={() => onGameClick(game)}
           />
         ))}
       </div>
