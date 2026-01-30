@@ -296,43 +296,79 @@ export async function registerRoutes(
         return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
       
-      const { homeTeam, awayTeam } = req.query;
+      const { homeTeam, awayTeam, commenceTime } = req.query;
       
       if (!homeTeam || !awayTeam) {
         return res.status(400).json({ error: "homeTeam and awayTeam are required" });
       }
       
-      const cacheKey = `extra_markets_${homeTeam}_${awayTeam}`;
+      const cacheKey = `extra_markets_${homeTeam}_${awayTeam}_${commenceTime || ''}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) {
         return res.json(cached);
       }
       
-      // Buscar jogos que correspondam aos times
-      const today = new Date().toISOString().split('T')[0];
-      const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // Parse game date if provided for better matching
+      let gameDate: Date | null = null;
+      if (commenceTime) {
+        gameDate = new Date(String(commenceTime));
+      }
       
-      // Buscar por nome do time da casa
+      // Buscar jogos num intervalo de 3 dias
+      const today = new Date();
+      const fromDate = gameDate ? new Date(gameDate.getTime() - 24 * 60 * 60 * 1000) : today;
+      const toDate = gameDate ? new Date(gameDate.getTime() + 24 * 60 * 60 * 1000) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      const from = fromDate.toISOString().split('T')[0];
+      const to = toDate.toISOString().split('T')[0];
+      
+      // Buscar por nome do time da casa (primeira palavra significativa)
+      const homeWords = String(homeTeam).toLowerCase().split(' ').filter(w => w.length > 2 && !['fc', 'sc', 'cf', 'ac', 'cd', 'rc'].includes(w));
+      const searchTerm = homeWords[0] || String(homeTeam).split(' ')[0];
+      
       const searchResponse = await fetch(
-        `${API_FOOTBALL_BASE}/fixtures?team=${encodeURIComponent(String(homeTeam).split(' ')[0])}&from=${today}&to=${nextMonth}&status=NS`,
+        `${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(searchTerm)}&from=${from}&to=${to}`,
         { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
       );
       
       if (!searchResponse.ok) {
-        return res.json({ markets: [] });
+        console.error("API-Football search failed:", await searchResponse.text());
+        return res.json({ markets: [], error: "search_failed" });
       }
       
       const searchData = await searchResponse.json();
       const fixtures = searchData.response || [];
       
-      // Encontrar o jogo que corresponde
+      // Função para normalizar nomes de times
+      const normalizeTeamName = (name: string): string[] => {
+        return name.toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '')
+          .split(' ')
+          .filter(w => w.length > 2 && !['fc', 'sc', 'cf', 'ac', 'cd', 'rc', 'united', 'city', 'real', 'sporting', 'athletic'].includes(w));
+      };
+      
+      const homeNorm = normalizeTeamName(String(homeTeam));
+      const awayNorm = normalizeTeamName(String(awayTeam));
+      
+      // Encontrar o jogo que corresponde - matching mais robusto
       const matchingFixture = fixtures.find((f: any) => {
-        const home = f.teams.home.name.toLowerCase();
-        const away = f.teams.away.name.toLowerCase();
-        const searchHome = String(homeTeam).toLowerCase();
-        const searchAway = String(awayTeam).toLowerCase();
-        return (home.includes(searchHome.split(' ')[0]) || searchHome.includes(home.split(' ')[0])) &&
-               (away.includes(searchAway.split(' ')[0]) || searchAway.includes(away.split(' ')[0]));
+        const fixtureHomeNorm = normalizeTeamName(f.teams.home.name);
+        const fixtureAwayNorm = normalizeTeamName(f.teams.away.name);
+        
+        // Verificar se há palavras significativas em comum
+        const homeMatch = homeNorm.some(w => fixtureHomeNorm.includes(w)) || 
+                         fixtureHomeNorm.some(w => homeNorm.includes(w));
+        const awayMatch = awayNorm.some(w => fixtureAwayNorm.includes(w)) ||
+                         fixtureAwayNorm.some(w => awayNorm.includes(w));
+        
+        // Se temos data do jogo, verificar se está no mesmo dia
+        if (gameDate && f.fixture.date) {
+          const fixtureDate = new Date(f.fixture.date);
+          const sameDayish = Math.abs(fixtureDate.getTime() - gameDate.getTime()) < 48 * 60 * 60 * 1000;
+          return homeMatch && awayMatch && sameDayish;
+        }
+        
+        return homeMatch && awayMatch;
       });
       
       if (!matchingFixture) {
