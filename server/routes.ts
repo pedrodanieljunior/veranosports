@@ -14,10 +14,14 @@ const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
 const ODDSBLAZE_API_KEY = process.env.ODDSBLAZE_API_KEY;
 const ODDSBLAZE_BASE = "https://odds.oddsblaze.com";
 
+const BOLTODDS_API_KEY = process.env.BOLTODDS_API_KEY;
+const BOLTODDS_BASE = "https://spro.agency/api";
+
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
 const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 const CACHE_TTL_ODDSBLAZE = 5 * 60 * 1000; // 5 minutos - dados mais rápidos
+const CACHE_TTL_BOLTODDS = 3 * 60 * 1000; // 3 minutos - dados em tempo real
 
 export async function registerRoutes(
   httpServer: Server,
@@ -731,6 +735,179 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching OddsBlaze game odds:", error);
       res.status(500).json({ error: "Failed to fetch OddsBlaze game odds" });
+    }
+  });
+
+  // BoltOdds: Buscar todos os jogos de futebol
+  app.get("/api/boltodds/games", async (req, res) => {
+    try {
+      if (!BOLTODDS_API_KEY) {
+        return res.status(500).json({ error: "BOLTODDS_API_KEY not configured" });
+      }
+      
+      const cacheKey = "boltodds_games";
+      const cached = cache.get<any>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      const response = await fetch(`${BOLTODDS_BASE}/get_games?key=${BOLTODDS_API_KEY}`);
+      
+      if (!response.ok) {
+        console.error("BoltOdds API error:", await response.text());
+        return res.status(502).json({ error: "BoltOdds API unavailable" });
+      }
+      
+      const data = await response.json();
+      
+      // Filtrar apenas jogos de futebol
+      const soccerSports = [
+        "EPL", "La Liga", "Serie A", "Bundesliga", "Ligue 1",
+        "Champions League", "Europa League", "Europa Conference",
+        "MLS", "Liga MX", "Primeira Liga", "Brazil Serie A",
+        "FA Cup", "EFL Championship", "World Cup", "World Cup Quals",
+        "LP Argentina", "Colombian Primera A"
+      ];
+      
+      const soccerGames = Object.entries(data)
+        .filter(([key, game]: [string, any]) => soccerSports.includes(game.sport))
+        .map(([key, game]: [string, any]) => ({
+          id: game.universal_id,
+          key: key,
+          when: game.when,
+          sport: game.sport,
+          teams: game.orig_teams || game.game
+        }));
+      
+      const result = {
+        source: "boltodds",
+        games: soccerGames,
+        timestamp: new Date().toISOString()
+      };
+      
+      cache.set(cacheKey, result, CACHE_TTL_BOLTODDS);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching BoltOdds games:", error);
+      res.status(500).json({ error: "Failed to fetch BoltOdds games" });
+    }
+  });
+
+  // BoltOdds: Buscar odds de um jogo específico
+  app.get("/api/boltodds/game-odds", async (req, res) => {
+    try {
+      if (!BOLTODDS_API_KEY) {
+        return res.status(500).json({ error: "BOLTODDS_API_KEY not configured" });
+      }
+      
+      const { homeTeam, awayTeam, sportKey } = req.query;
+      
+      if (!homeTeam || !awayTeam) {
+        return res.status(400).json({ error: "homeTeam and awayTeam are required" });
+      }
+      
+      const cacheKey = `boltodds_odds_${homeTeam}_${awayTeam}`;
+      const cached = cache.get<any>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      // Mapear sportKey para sport name da BoltOdds
+      const sportMapping: Record<string, string> = {
+        "soccer_epl": "EPL",
+        "soccer_spain_la_liga": "La Liga",
+        "soccer_italy_serie_a": "Serie A",
+        "soccer_germany_bundesliga": "Bundesliga",
+        "soccer_france_ligue_one": "Ligue 1",
+        "soccer_uefa_champs_league": "Champions League",
+        "soccer_uefa_europa_league": "Europa League",
+        "soccer_usa_mls": "MLS",
+        "soccer_mexico_ligamx": "Liga MX",
+        "soccer_portugal_primeira_liga": "Primeira Liga",
+        "soccer_brazil_campeonato": "Brazil Serie A",
+        "soccer_fa_cup": "FA Cup",
+        "soccer_efl_champ": "EFL Championship",
+        "soccer_argentina_primera_division": "LP Argentina"
+      };
+      
+      const boltSport = sportMapping[String(sportKey)] || null;
+      
+      // Buscar todos os jogos e encontrar o correspondente
+      const response = await fetch(`${BOLTODDS_BASE}/get_games?key=${BOLTODDS_API_KEY}`);
+      
+      if (!response.ok) {
+        console.error("BoltOdds API error:", await response.text());
+        return res.status(502).json({ markets: [], error: "api_error" });
+      }
+      
+      const data = await response.json();
+      
+      // Normalizar nome de time
+      const normalizeTeam = (name: string): string[] => {
+        return name.toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '')
+          .split(' ')
+          .filter(w => w.length > 2);
+      };
+      
+      const homeNorm = normalizeTeam(String(homeTeam));
+      const awayNorm = normalizeTeam(String(awayTeam));
+      
+      // Encontrar jogo correspondente
+      let matchingGame: any = null;
+      let matchingKey: string = '';
+      
+      for (const [key, game] of Object.entries(data) as [string, any][]) {
+        // Verificar se é do esporte correto (se especificado)
+        if (boltSport && game.sport !== boltSport) continue;
+        
+        const teamsStr = game.orig_teams || game.game || '';
+        const teamsParts = teamsStr.split(' vs ');
+        
+        if (teamsParts.length >= 2) {
+          const gameHome = normalizeTeam(teamsParts[0]);
+          const gameAway = normalizeTeam(teamsParts[1]);
+          
+          const homeMatch = homeNorm.some(w => gameHome.some(gw => gw.includes(w) || w.includes(gw))) ||
+                           gameHome.some(w => homeNorm.some(hw => hw.includes(w) || w.includes(hw)));
+          const awayMatch = awayNorm.some(w => gameAway.some(gw => gw.includes(w) || w.includes(gw))) ||
+                           gameAway.some(w => awayNorm.some(aw => aw.includes(w) || w.includes(aw)));
+          
+          if (homeMatch && awayMatch) {
+            matchingGame = game;
+            matchingKey = key;
+            break;
+          }
+        }
+      }
+      
+      if (!matchingGame) {
+        console.log(`BoltOdds: No matching game for ${homeTeam} vs ${awayTeam}`);
+        cache.set(cacheKey, { markets: [] }, CACHE_TTL_BOLTODDS);
+        return res.json({ markets: [] });
+      }
+      
+      console.log(`BoltOdds: Found game ${matchingKey} for ${homeTeam} vs ${awayTeam}`);
+      
+      // BoltOdds get_games não retorna odds diretamente
+      // Para odds em tempo real, precisaríamos usar WebSocket
+      // Por enquanto, retornamos informações do jogo encontrado
+      const result = {
+        gameId: matchingGame.universal_id,
+        gameKey: matchingKey,
+        homeTeam: String(homeTeam),
+        awayTeam: String(awayTeam),
+        when: matchingGame.when,
+        sport: matchingGame.sport,
+        source: "boltodds",
+        markets: [] // BoltOdds requer WebSocket para odds em tempo real
+      };
+      
+      cache.set(cacheKey, result, CACHE_TTL_BOLTODDS);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching BoltOdds game odds:", error);
+      res.status(500).json({ error: "Failed to fetch BoltOdds game odds" });
     }
   });
 
