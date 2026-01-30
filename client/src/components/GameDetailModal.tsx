@@ -26,6 +26,21 @@ interface ExtraMarketsResponse {
   markets: ExtraMarket[];
 }
 
+interface OddsBlazeMarket {
+  id: string;
+  name: string;
+  label: string;
+  values: Array<{ value: string; odd: number; bookmaker?: string }>;
+}
+
+interface OddsBlazeResponse {
+  gameId?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  source?: string;
+  markets: OddsBlazeMarket[];
+}
+
 interface GameDetailModalProps {
   game: Game | null;
   open: boolean;
@@ -35,6 +50,7 @@ interface GameDetailModalProps {
 }
 
 export function GameDetailModal({ game, open, onClose, selections, onToggleSelection }: GameDetailModalProps) {
+  // API-Football extra markets
   const extraMarketsQueryKey = game ? 
     `/api/football/extra-markets?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&commenceTime=${encodeURIComponent(game.commenceTime)}` : 
     null;
@@ -43,6 +59,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     queryKey: [extraMarketsQueryKey],
     enabled: open && !!game && !!extraMarketsQueryKey,
     staleTime: 15 * 60 * 1000,
+    retry: 1,
+  });
+
+  // OddsBlaze markets - dados em tempo real de múltiplas casas
+  const oddsBlazeQueryKey = game ? 
+    `/api/oddsblaze/game-odds?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&league=${encodeURIComponent(game.sportKey || '')}` : 
+    null;
+  
+  const { data: oddsBlazeData, isLoading: loadingOddsBlaze, isError: errorOddsBlaze } = useQuery<OddsBlazeResponse>({
+    queryKey: [oddsBlazeQueryKey],
+    enabled: open && !!game && !!oddsBlazeQueryKey,
+    staleTime: 5 * 60 * 1000,
     retry: 1,
   });
 
@@ -155,8 +183,64 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
+  const renderOddsBlazeMarket = (market: OddsBlazeMarket) => {
+    const marketKey = `oddsblaze-${market.id}`;
+    
+    return (
+      <div key={market.id} className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold">{market.label}</span>
+          <Badge variant="outline" className="text-[10px]">OddsBlaze</Badge>
+        </div>
+        <div className={`grid gap-2 ${market.values.length <= 2 ? 'grid-cols-2' : market.values.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          {market.values.slice(0, 6).map((value) => {
+            const outcomeKey = `${market.name}-${value.value}`;
+            const selected = isSelected(outcomeKey, marketKey);
+            const boostedOdd = calculateBoostedOdd(value.odd);
+            const bookmaker = value.bookmaker || "OddsBlaze";
+            
+            let displayLabel = value.value;
+            if (value.value === "Home" || value.value === "home") displayLabel = game.homeTeam.substring(0, 10);
+            else if (value.value === "Away" || value.value === "away") displayLabel = game.awayTeam.substring(0, 10);
+            else if (value.value === "Draw" || value.value === "draw") displayLabel = "Empate";
+            else if (value.value.toLowerCase().includes("over")) displayLabel = value.value.replace(/over/i, "Mais ");
+            else if (value.value.toLowerCase().includes("under")) displayLabel = value.value.replace(/under/i, "Menos ");
+            
+            return (
+              <button
+                key={`${value.value}-${value.bookmaker}`}
+                onClick={() => handleOddClick(outcomeKey, value.odd, marketKey, bookmaker)}
+                className={`flex flex-col items-center p-2.5 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
+                  selected
+                    ? "bg-primary/10 border-primary"
+                    : "bg-card border-transparent hover:border-muted-foreground/20"
+                }`}
+                data-testid={`button-modal-oddsblaze-${market.id}-${value.value}`}
+              >
+                <span className="text-xs text-muted-foreground mb-1 text-center line-clamp-1">
+                  {displayLabel}
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className={`font-bold text-base ${selected ? "text-primary" : ""}`}>
+                    {boostedOdd.toFixed(2)}
+                  </span>
+                  <TrendingUp className="w-3 h-3 text-green-500" />
+                </div>
+                <span className="text-[10px] text-muted-foreground/60 line-through">
+                  {value.odd.toFixed(2)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const hasMainMarkets = h2hMarket || spreadMarket || totalsMarket;
   const hasExtraMarkets = extraMarkets?.markets && extraMarkets.markets.length > 0;
+  const hasOddsBlazeMarkets = oddsBlazeData?.markets && oddsBlazeData.markets.length > 0;
+  const isLoadingAny = loadingExtra || loadingOddsBlaze;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -317,8 +401,28 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               </div>
             )}
 
-            {/* Separator for extra markets */}
-            {hasMainMarkets && (hasExtraMarkets || loadingExtra) && (
+            {/* Separator for OddsBlaze markets */}
+            {hasMainMarkets && (hasOddsBlazeMarkets || loadingOddsBlaze) && (
+              <div className="flex items-center gap-3 py-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground font-medium">Melhores Odds (OddsBlaze)</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            )}
+
+            {/* Loading state for OddsBlaze */}
+            {loadingOddsBlaze && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Buscando melhores odds...</span>
+              </div>
+            )}
+
+            {/* OddsBlaze markets */}
+            {hasOddsBlazeMarkets && oddsBlazeData.markets.map(renderOddsBlazeMarket)}
+
+            {/* Separator for API-Football extra markets */}
+            {(hasMainMarkets || hasOddsBlazeMarkets) && (hasExtraMarkets || loadingExtra) && (
               <div className="flex items-center gap-3 py-2">
                 <div className="flex-1 h-px bg-border" />
                 <span className="text-xs text-muted-foreground font-medium">Mercados Extras</span>
@@ -335,16 +439,16 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             )}
 
             {/* Error state for extra markets */}
-            {errorExtra && !loadingExtra && (
+            {(errorExtra || errorOddsBlaze) && !isLoadingAny && (
               <div className="text-center py-4 text-muted-foreground">
-                <p className="text-sm">Não foi possível carregar mercados extras</p>
+                <p className="text-sm">Alguns mercados extras não puderam ser carregados</p>
               </div>
             )}
 
             {/* Extra markets from API-Football */}
             {hasExtraMarkets && extraMarkets.markets.map(renderExtraMarket)}
             
-            {!hasMainMarkets && !hasExtraMarkets && !loadingExtra && (
+            {!hasMainMarkets && !hasExtraMarkets && !hasOddsBlazeMarkets && !isLoadingAny && (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Nenhum mercado disponível para este jogo</p>
               </div>

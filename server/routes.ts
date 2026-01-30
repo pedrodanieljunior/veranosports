@@ -12,7 +12,7 @@ const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
 
 const ODDSBLAZE_API_KEY = process.env.ODDSBLAZE_API_KEY;
-const ODDSBLAZE_BASE = "https://data.oddsblaze.com/v1";
+const ODDSBLAZE_BASE = "https://odds.oddsblaze.com";
 
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
 const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
@@ -491,20 +491,24 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      // OddsBlaze usa leagueID para filtrar - principais ligas de futebol
-      const leagues = ["EPL", "LaLiga", "SerieA", "Bundesliga", "Ligue1", "MLS", "ChampionsLeague"];
+      // OddsBlaze usa formato: ?sportsbook=X&league=Y&key=Z
+      const sportsbooks = ["draftkings", "fanduel", "betmgm"];
+      const leagues = ["epl", "laliga", "seriea", "bundesliga", "ligue1"];
       const allGames: any[] = [];
       
+      // Buscar de uma casa de apostas principal
       for (const league of leagues) {
         try {
           const response = await fetch(
-            `${ODDSBLAZE_BASE}/odds/soccer_${league.toLowerCase()}.json?key=${ODDSBLAZE_API_KEY}&main=true`,
+            `${ODDSBLAZE_BASE}/?sportsbook=draftkings&league=${league}&key=${ODDSBLAZE_API_KEY}`,
             { headers: { "Accept": "application/json" } }
           );
           
           if (response.ok) {
             const data = await response.json();
-            if (data.games && Array.isArray(data.games)) {
+            if (Array.isArray(data)) {
+              allGames.push(...data.map((g: any) => ({ ...g, leagueSource: league })));
+            } else if (data.games && Array.isArray(data.games)) {
               allGames.push(...data.games.map((g: any) => ({ ...g, leagueSource: league })));
             }
           }
@@ -540,7 +544,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "homeTeam and awayTeam are required" });
       }
       
-      const cacheKey = `oddsblaze_game_${homeTeam}_${awayTeam}`;
+      const cacheKey = `oddsblaze_game_${homeTeam}_${awayTeam}_${league || 'unknown'}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) {
         return res.json(cached);
@@ -554,24 +558,48 @@ export async function registerRoutes(
         "soccer_germany_bundesliga": "bundesliga",
         "soccer_france_ligue_one": "ligue1",
         "soccer_usa_mls": "mls",
-        "soccer_uefa_champs_league": "champions_league",
-        "soccer_uefa_europa_league": "europa_league"
+        "soccer_uefa_champs_league": "ucl",
+        "soccer_uefa_europa_league": "uel",
+        "soccer_brazil_campeonato": "brazil_serie_a",
+        "soccer_portugal_primeira_liga": "primeira_liga",
+        "soccer_netherlands_eredivisie": "eredivisie",
+        "soccer_argentina_primera_division": "argentina_liga"
       };
       
-      const oddsBlazeLeague = leagueMapping[String(league)] || "epl";
+      const oddsBlazeLeague = leagueMapping[String(league)];
       
+      // Se não temos mapeamento para a liga, retornar erro específico
+      if (!oddsBlazeLeague) {
+        const emptyResult = { markets: [], unsupported_league: true };
+        cache.set(cacheKey, emptyResult, CACHE_TTL_ODDSBLAZE);
+        return res.json(emptyResult);
+      }
+      
+      // Usar formato correto: ?sportsbook=X&league=Y&key=Z
       const response = await fetch(
-        `${ODDSBLAZE_BASE}/odds/soccer_${oddsBlazeLeague}.json?key=${ODDSBLAZE_API_KEY}`,
+        `${ODDSBLAZE_BASE}/?sportsbook=draftkings&league=${oddsBlazeLeague}&key=${ODDSBLAZE_API_KEY}`,
         { headers: { "Accept": "application/json" } }
       );
       
       if (!response.ok) {
-        console.error("OddsBlaze API error:", await response.text());
-        return res.json({ markets: [], error: "api_error" });
+        const errorText = await response.text();
+        console.error("OddsBlaze API error:", errorText);
+        return res.status(502).json({ markets: [], error: "api_error", message: "OddsBlaze API unavailable" });
       }
       
       const data = await response.json();
-      const games = data.games || [];
+      
+      // OddsBlaze pode retornar array direto ou objeto com games
+      let games: any[] = [];
+      if (Array.isArray(data)) {
+        games = data;
+      } else if (data.games && Array.isArray(data.games)) {
+        games = data.games;
+      } else if (data.odds && Array.isArray(data.odds)) {
+        games = data.odds;
+      }
+      
+      console.log(`OddsBlaze: Found ${games.length} games for league ${oddsBlazeLeague}`);
       
       // Normalizar nome de time
       const normalizeTeam = (name: string): string[] => {
@@ -584,10 +612,14 @@ export async function registerRoutes(
       const homeNorm = normalizeTeam(String(homeTeam));
       const awayNorm = normalizeTeam(String(awayTeam));
       
-      // Encontrar o jogo
+      // Encontrar o jogo - tentar diferentes formatos de dados
       const matchingGame = games.find((g: any) => {
-        const gameHome = normalizeTeam(g.teams?.home?.name || '');
-        const gameAway = normalizeTeam(g.teams?.away?.name || '');
+        // Formato 1: teams.home.name / teams.away.name
+        let gameHomeName = g.teams?.home?.name || g.home_team || g.homeTeam || g.home || '';
+        let gameAwayName = g.teams?.away?.name || g.away_team || g.awayTeam || g.away || '';
+        
+        const gameHome = normalizeTeam(gameHomeName);
+        const gameAway = normalizeTeam(gameAwayName);
         
         const homeMatch = homeNorm.some(w => gameHome.some(gw => gw.includes(w) || w.includes(gw)));
         const awayMatch = awayNorm.some(w => gameAway.some(gw => gw.includes(w) || w.includes(gw)));
@@ -596,30 +628,53 @@ export async function registerRoutes(
       });
       
       if (!matchingGame) {
+        console.log(`OddsBlaze: No matching game found for ${homeTeam} vs ${awayTeam}`);
         cache.set(cacheKey, { markets: [] }, CACHE_TTL_ODDSBLAZE);
         return res.json({ markets: [] });
       }
       
+      console.log(`OddsBlaze: Found matching game:`, JSON.stringify(matchingGame).substring(0, 200));
+      
       // Transformar odds para formato padrão
       const markets: any[] = [];
-      const sportsbooks = matchingGame.sportsbooks || [];
+      
+      // OddsBlaze pode ter odds em diferentes formatos
+      const sportsbooks = matchingGame.sportsbooks || matchingGame.bookmakers || [];
+      const directOdds = matchingGame.odds || matchingGame.markets || [];
       
       // Agregar odds de todas as casas
       const marketsByType: Record<string, any[]> = {};
       
-      sportsbooks.forEach((sb: any) => {
-        const odds = sb.odds || [];
-        odds.forEach((odd: any) => {
-          const marketType = odd.market || odd.type || 'unknown';
+      // Processar sportsbooks se existirem
+      if (sportsbooks.length > 0) {
+        sportsbooks.forEach((sb: any) => {
+          const odds = sb.odds || sb.markets || [];
+          odds.forEach((odd: any) => {
+            const marketType = odd.market || odd.type || odd.name || 'unknown';
+            if (!marketsByType[marketType]) {
+              marketsByType[marketType] = [];
+            }
+            marketsByType[marketType].push({
+              bookmaker: sb.name || sb.id || 'OddsBlaze',
+              ...odd
+            });
+          });
+        });
+      }
+      
+      // Processar odds diretas se existirem
+      if (directOdds.length > 0) {
+        directOdds.forEach((odd: any) => {
+          const marketType = odd.market || odd.type || odd.name || 'unknown';
           if (!marketsByType[marketType]) {
             marketsByType[marketType] = [];
           }
           marketsByType[marketType].push({
-            bookmaker: sb.name || sb.id,
+            bookmaker: 'OddsBlaze',
             ...odd
           });
         });
-      });
+      }
       
       // Mapear mercados para formato legível
       const marketLabels: Record<string, string> = {
