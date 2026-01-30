@@ -289,6 +289,126 @@ export async function registerRoutes(
     }
   });
 
+  // API-Football: Buscar mercados extras por nome dos times
+  app.get("/api/football/extra-markets", async (req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      }
+      
+      const { homeTeam, awayTeam } = req.query;
+      
+      if (!homeTeam || !awayTeam) {
+        return res.status(400).json({ error: "homeTeam and awayTeam are required" });
+      }
+      
+      const cacheKey = `extra_markets_${homeTeam}_${awayTeam}`;
+      const cached = cache.get<any>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      // Buscar jogos que correspondam aos times
+      const today = new Date().toISOString().split('T')[0];
+      const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      // Buscar por nome do time da casa
+      const searchResponse = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures?team=${encodeURIComponent(String(homeTeam).split(' ')[0])}&from=${today}&to=${nextMonth}&status=NS`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+      );
+      
+      if (!searchResponse.ok) {
+        return res.json({ markets: [] });
+      }
+      
+      const searchData = await searchResponse.json();
+      const fixtures = searchData.response || [];
+      
+      // Encontrar o jogo que corresponde
+      const matchingFixture = fixtures.find((f: any) => {
+        const home = f.teams.home.name.toLowerCase();
+        const away = f.teams.away.name.toLowerCase();
+        const searchHome = String(homeTeam).toLowerCase();
+        const searchAway = String(awayTeam).toLowerCase();
+        return (home.includes(searchHome.split(' ')[0]) || searchHome.includes(home.split(' ')[0])) &&
+               (away.includes(searchAway.split(' ')[0]) || searchAway.includes(away.split(' ')[0]));
+      });
+      
+      if (!matchingFixture) {
+        cache.set(cacheKey, { markets: [] }, CACHE_TTL_FOOTBALL);
+        return res.json({ markets: [] });
+      }
+      
+      // Buscar odds do jogo
+      const oddsResponse = await fetch(
+        `${API_FOOTBALL_BASE}/odds?fixture=${matchingFixture.fixture.id}`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+      );
+      
+      if (!oddsResponse.ok) {
+        cache.set(cacheKey, { markets: [] }, CACHE_TTL_FOOTBALL);
+        return res.json({ markets: [] });
+      }
+      
+      const oddsData = await oddsResponse.json();
+      const bookmaker = oddsData.response?.[0]?.bookmakers?.[0];
+      
+      if (!bookmaker) {
+        cache.set(cacheKey, { markets: [] }, CACHE_TTL_FOOTBALL);
+        return res.json({ markets: [] });
+      }
+      
+      // Mapear mercados extras relevantes
+      const relevantBets = [
+        { id: 1, name: "Match Winner", label: "Resultado Final" },
+        { id: 2, name: "Home/Away", label: "Casa/Fora" },
+        { id: 3, name: "Second Half Winner", label: "Vencedor 2º Tempo" },
+        { id: 4, name: "Goals Over/Under", label: "Total de Gols" },
+        { id: 5, name: "Goals Over/Under First Half", label: "Gols 1º Tempo" },
+        { id: 6, name: "Goals Over/Under Second Half", label: "Gols 2º Tempo" },
+        { id: 8, name: "Both Teams Score", label: "Ambas Marcam (BTTS)" },
+        { id: 9, name: "Exact Score", label: "Placar Exato" },
+        { id: 10, name: "Double Chance", label: "Dupla Chance" },
+        { id: 11, name: "First Half Winner", label: "Vencedor 1º Tempo" },
+        { id: 13, name: "HT/FT Double", label: "Intervalo/Final" },
+        { id: 16, name: "Clean Sheet - Home", label: "Sem Sofrer Gol - Casa" },
+        { id: 17, name: "Clean Sheet - Away", label: "Sem Sofrer Gol - Fora" },
+        { id: 21, name: "Correct Score - First Half", label: "Placar 1º Tempo" },
+        { id: 27, name: "Odd/Even", label: "Ímpar/Par" },
+      ];
+      
+      const markets = bookmaker.bets
+        .filter((bet: any) => relevantBets.some(r => r.id === bet.id))
+        .map((bet: any) => {
+          const relevantBet = relevantBets.find(r => r.id === bet.id);
+          return {
+            id: bet.id,
+            name: bet.name,
+            label: relevantBet?.label || bet.name,
+            values: bet.values?.map((v: any) => ({
+              value: v.value,
+              odd: parseFloat(v.odd)
+            })) || []
+          };
+        });
+      
+      const result = {
+        fixtureId: matchingFixture.fixture.id,
+        homeTeam: matchingFixture.teams.home.name,
+        awayTeam: matchingFixture.teams.away.name,
+        bookmaker: bookmaker.name,
+        markets
+      };
+      
+      cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching extra markets:", error);
+      res.status(500).json({ error: "Failed to fetch extra markets" });
+    }
+  });
+
   // API-Football: Buscar tipos de apostas disponíveis
   app.get("/api/football/bets", async (req, res) => {
     try {
