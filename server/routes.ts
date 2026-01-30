@@ -4,35 +4,36 @@ import { storage } from "./storage";
 import { insertBetSlipSchema } from "@shared/schema";
 import { z } from "zod";
 import { cache } from "./cache";
-import { boltOddsWS } from "./boltodds-ws";
-
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
-const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
 
-const ODDSBLAZE_API_KEY = process.env.ODDSBLAZE_API_KEY;
-const ODDSBLAZE_BASE = "https://odds.oddsblaze.com";
-
-const BOLTODDS_API_KEY = process.env.BOLTODDS_API_KEY;
-const BOLTODDS_BASE = "https://spro.agency/api";
-
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
-const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
-const CACHE_TTL_ODDSBLAZE = 5 * 60 * 1000; // 5 minutos - dados mais rápidos
-const CACHE_TTL_BOLTODDS = 3 * 60 * 1000; // 3 minutos - dados em tempo real
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
+  // Lista de ligas principais para exibir
+  const MAIN_LEAGUES = [
+    { id: 39, key: "soccer_england_premier_league", title: "Premier League", country: "England" },
+    { id: 140, key: "soccer_spain_la_liga", title: "La Liga", country: "Spain" },
+    { id: 135, key: "soccer_italy_serie_a", title: "Serie A", country: "Italy" },
+    { id: 78, key: "soccer_germany_bundesliga", title: "Bundesliga", country: "Germany" },
+    { id: 61, key: "soccer_france_ligue_one", title: "Ligue 1", country: "France" },
+    { id: 2, key: "soccer_uefa_champs_league", title: "UEFA Champions League", country: "Europe" },
+    { id: 3, key: "soccer_uefa_europa_league", title: "UEFA Europa League", country: "Europe" },
+    { id: 71, key: "soccer_brazil_campeonato", title: "Brasileirão Série A", country: "Brazil" },
+    { id: 253, key: "soccer_usa_mls", title: "MLS", country: "USA" },
+    { id: 94, key: "soccer_portugal_primeira_liga", title: "Primeira Liga", country: "Portugal" },
+  ];
+
   app.get("/api/sports", async (req, res) => {
     try {
-      if (!ODDS_API_KEY) {
-        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
       
       const cached = cache.get<any[]>("sports");
@@ -40,25 +41,18 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      const response = await fetch(
-        `${ODDS_API_BASE}/sports?apiKey=${ODDS_API_KEY}`
-      );
+      // Retornar lista de ligas principais (formato compatível com frontend)
+      const sports = MAIN_LEAGUES.map(league => ({
+        key: league.key,
+        active: true,
+        group: "Soccer",
+        title: league.title,
+        description: `${league.title} - ${league.country}`,
+        leagueId: league.id
+      }));
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Odds API error:", errorText);
-        return res.status(response.status).json({ error: "Failed to fetch sports" });
-      }
-      
-      const sports = await response.json();
-      
-      const soccerSports = sports.filter((sport: any) => 
-        sport.active && sport.group === "Soccer"
-      );
-      
-      cache.set("sports", soccerSports, CACHE_TTL_SPORTS);
-      
-      res.json(soccerSports);
+      cache.set("sports", sports, CACHE_TTL_SPORTS);
+      res.json(sports);
     } catch (error) {
       console.error("Error fetching sports:", error);
       res.status(500).json({ error: "Failed to fetch sports" });
@@ -67,8 +61,8 @@ export async function registerRoutes(
 
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
-      if (!ODDS_API_KEY) {
-        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
       
       const { sportKey } = req.params;
@@ -79,47 +73,98 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      const regions = "us,uk,eu";
-      const markets = "h2h,spreads,totals";
-      const oddsFormat = "decimal";
-      
-      const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=${regions}&markets=${markets}&oddsFormat=${oddsFormat}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Odds API error:", errorText);
-        return res.status(response.status).json({ error: "Failed to fetch odds" });
+      // Encontrar o leagueId correspondente ao sportKey
+      const league = MAIN_LEAGUES.find(l => l.key === sportKey);
+      if (!league) {
+        return res.status(404).json({ error: "League not found" });
       }
       
-      const oddsData = await response.json();
+      // Buscar jogos próximos (7 dias)
+      const today = new Date().toISOString().split('T')[0];
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const games = oddsData.map((game: any) => ({
-        id: game.id,
-        sportKey: game.sport_key,
-        sportTitle: game.sport_title,
-        commenceTime: game.commence_time,
-        homeTeam: game.home_team,
-        awayTeam: game.away_team,
-        bookmakers: game.bookmakers?.slice(0, 2).map((bookmaker: any) => ({
-          key: bookmaker.key,
-          title: bookmaker.title,
-          lastUpdate: bookmaker.last_update,
-          markets: bookmaker.markets?.map((market: any) => ({
-            key: market.key,
-            lastUpdate: market.last_update,
-            outcomes: market.outcomes?.map((outcome: any) => ({
-              name: outcome.name,
-              price: outcome.price,
-              point: outcome.point,
-            })) || [],
-          })) || [],
-        })) || [],
-      }));
+      // Determinar a temporada atual (ligas europeias vão de agosto a maio do ano seguinte)
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth(); // 0-11
+      const season = currentMonth >= 7 ? currentYear : currentYear - 1; // Se agosto ou depois, usa ano atual
       
-      cache.set(cacheKey, games, CACHE_TTL_ODDS);
+      const fixturesResponse = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${nextWeek}`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+      );
       
+      if (!fixturesResponse.ok) {
+        const errorText = await fixturesResponse.text();
+        console.error("API-Football fixtures error:", errorText);
+        return res.status(fixturesResponse.status).json({ error: "Failed to fetch fixtures" });
+      }
+      
+      const fixturesData = await fixturesResponse.json();
+      const fixtures = fixturesData.response?.slice(0, 15) || [];
+      
+      // Buscar odds para cada jogo
+      const games = await Promise.all(
+        fixtures.map(async (fixture: any) => {
+          try {
+            const oddsResponse = await fetch(
+              `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+            );
+            
+            let bookmakers: any[] = [];
+            if (oddsResponse.ok) {
+              const oddsData = await oddsResponse.json();
+              const apiBookmakers = oddsData.response?.[0]?.bookmakers || [];
+              
+              // Converter formato API-Football para formato compatível
+              bookmakers = apiBookmakers.slice(0, 2).map((bm: any) => ({
+                key: bm.name?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
+                title: bm.name || 'Unknown',
+                lastUpdate: new Date().toISOString(),
+                markets: (bm.bets || []).map((bet: any) => {
+                  // Mapear nomes de mercado
+                  let marketKey = 'h2h';
+                  if (bet.name === 'Match Winner' || bet.name === 'Home/Away') marketKey = 'h2h';
+                  else if (bet.name?.includes('Handicap') || bet.name?.includes('Spread')) marketKey = 'spreads';
+                  else if (bet.name?.includes('Goals') || bet.name?.includes('Over/Under')) marketKey = 'totals';
+                  
+                  return {
+                    key: marketKey,
+                    lastUpdate: new Date().toISOString(),
+                    outcomes: (bet.values || []).map((v: any) => ({
+                      name: v.value,
+                      price: parseFloat(v.odd) || 1.0,
+                      point: null,
+                    })),
+                  };
+                }),
+              }));
+            }
+            
+            return {
+              id: String(fixture.fixture.id),
+              sportKey: sportKey,
+              sportTitle: league.title,
+              commenceTime: fixture.fixture.date,
+              homeTeam: fixture.teams.home.name,
+              awayTeam: fixture.teams.away.name,
+              bookmakers: bookmakers,
+            };
+          } catch (err) {
+            return {
+              id: String(fixture.fixture.id),
+              sportKey: sportKey,
+              sportTitle: league.title,
+              commenceTime: fixture.fixture.date,
+              homeTeam: fixture.teams.home.name,
+              awayTeam: fixture.teams.away.name,
+              bookmakers: [],
+            };
+          }
+        })
+      );
+      
+      cache.set(cacheKey, games, CACHE_TTL_FOOTBALL);
       res.json(games);
     } catch (error) {
       console.error("Error fetching odds:", error);
@@ -483,504 +528,6 @@ export async function registerRoutes(
     }
   });
 
-  // OddsBlaze: Buscar odds de futebol com múltiplas casas de apostas
-  app.get("/api/oddsblaze/soccer", async (req, res) => {
-    try {
-      if (!ODDSBLAZE_API_KEY) {
-        return res.status(500).json({ error: "ODDSBLAZE_API_KEY not configured" });
-      }
-      
-      const cacheKey = "oddsblaze_soccer";
-      const cached = cache.get<any>(cacheKey);
-      if (cached) {
-        return res.json(cached);
-      }
-      
-      // OddsBlaze usa formato: ?sportsbook=X&league=Y&key=Z
-      const sportsbooks = ["draftkings", "fanduel", "betmgm"];
-      const leagues = ["epl", "laliga", "seriea", "bundesliga", "ligue1"];
-      const allGames: any[] = [];
-      
-      // Buscar de uma casa de apostas principal
-      for (const league of leagues) {
-        try {
-          const response = await fetch(
-            `${ODDSBLAZE_BASE}/?sportsbook=draftkings&league=${league}&key=${ODDSBLAZE_API_KEY}`,
-            { headers: { "Accept": "application/json" } }
-          );
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (Array.isArray(data)) {
-              allGames.push(...data.map((g: any) => ({ ...g, leagueSource: league })));
-            } else if (data.games && Array.isArray(data.games)) {
-              allGames.push(...data.games.map((g: any) => ({ ...g, leagueSource: league })));
-            }
-          }
-        } catch (err) {
-          console.error(`OddsBlaze error for ${league}:`, err);
-        }
-      }
-      
-      const result = {
-        source: "oddsblaze",
-        games: allGames,
-        timestamp: new Date().toISOString()
-      };
-      
-      cache.set(cacheKey, result, CACHE_TTL_ODDSBLAZE);
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching OddsBlaze odds:", error);
-      res.status(500).json({ error: "Failed to fetch OddsBlaze odds" });
-    }
-  });
-
-  // OddsBlaze: Buscar odds de um jogo específico por nome dos times
-  app.get("/api/oddsblaze/game-odds", async (req, res) => {
-    try {
-      if (!ODDSBLAZE_API_KEY) {
-        return res.status(500).json({ error: "ODDSBLAZE_API_KEY not configured" });
-      }
-      
-      const { homeTeam, awayTeam, league } = req.query;
-      
-      if (!homeTeam || !awayTeam) {
-        return res.status(400).json({ error: "homeTeam and awayTeam are required" });
-      }
-      
-      const cacheKey = `oddsblaze_game_${homeTeam}_${awayTeam}_${league || 'unknown'}`;
-      const cached = cache.get<any>(cacheKey);
-      if (cached) {
-        return res.json(cached);
-      }
-      
-      // Mapear liga do The Odds API para formato OddsBlaze
-      const leagueMapping: Record<string, string> = {
-        "soccer_epl": "epl",
-        "soccer_spain_la_liga": "laliga",
-        "soccer_italy_serie_a": "seriea",
-        "soccer_germany_bundesliga": "bundesliga",
-        "soccer_france_ligue_one": "ligue1",
-        "soccer_usa_mls": "mls",
-        "soccer_uefa_champs_league": "ucl",
-        "soccer_uefa_europa_league": "uel",
-        "soccer_brazil_campeonato": "brazil_serie_a",
-        "soccer_portugal_primeira_liga": "primeira_liga",
-        "soccer_netherlands_eredivisie": "eredivisie",
-        "soccer_argentina_primera_division": "argentina_liga"
-      };
-      
-      const oddsBlazeLeague = leagueMapping[String(league)];
-      
-      // Se não temos mapeamento para a liga, retornar erro específico
-      if (!oddsBlazeLeague) {
-        const emptyResult = { markets: [], unsupported_league: true };
-        cache.set(cacheKey, emptyResult, CACHE_TTL_ODDSBLAZE);
-        return res.json(emptyResult);
-      }
-      
-      // Usar formato correto: ?sportsbook=X&league=Y&key=Z
-      const response = await fetch(
-        `${ODDSBLAZE_BASE}/?sportsbook=draftkings&league=${oddsBlazeLeague}&key=${ODDSBLAZE_API_KEY}`,
-        { headers: { "Accept": "application/json" } }
-      );
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("OddsBlaze API error:", errorText);
-        return res.status(502).json({ markets: [], error: "api_error", message: "OddsBlaze API unavailable" });
-      }
-      
-      const data = await response.json();
-      
-      // OddsBlaze pode retornar array direto ou objeto com games
-      let games: any[] = [];
-      if (Array.isArray(data)) {
-        games = data;
-      } else if (data.games && Array.isArray(data.games)) {
-        games = data.games;
-      } else if (data.odds && Array.isArray(data.odds)) {
-        games = data.odds;
-      }
-      
-      console.log(`OddsBlaze: Found ${games.length} games for league ${oddsBlazeLeague}`);
-      
-      // Normalizar nome de time
-      const normalizeTeam = (name: string): string[] => {
-        return name.toLowerCase()
-          .replace(/[^a-z0-9\s]/g, '')
-          .split(' ')
-          .filter(w => w.length > 2);
-      };
-      
-      const homeNorm = normalizeTeam(String(homeTeam));
-      const awayNorm = normalizeTeam(String(awayTeam));
-      
-      // Encontrar o jogo - tentar diferentes formatos de dados
-      const matchingGame = games.find((g: any) => {
-        // Formato 1: teams.home.name / teams.away.name
-        let gameHomeName = g.teams?.home?.name || g.home_team || g.homeTeam || g.home || '';
-        let gameAwayName = g.teams?.away?.name || g.away_team || g.awayTeam || g.away || '';
-        
-        const gameHome = normalizeTeam(gameHomeName);
-        const gameAway = normalizeTeam(gameAwayName);
-        
-        const homeMatch = homeNorm.some(w => gameHome.some(gw => gw.includes(w) || w.includes(gw)));
-        const awayMatch = awayNorm.some(w => gameAway.some(gw => gw.includes(w) || w.includes(gw)));
-        
-        return homeMatch && awayMatch;
-      });
-      
-      if (!matchingGame) {
-        console.log(`OddsBlaze: No matching game found for ${homeTeam} vs ${awayTeam}`);
-        cache.set(cacheKey, { markets: [] }, CACHE_TTL_ODDSBLAZE);
-        return res.json({ markets: [] });
-      }
-      
-      console.log(`OddsBlaze: Found matching game:`, JSON.stringify(matchingGame).substring(0, 200));
-      
-      // Transformar odds para formato padrão
-      const markets: any[] = [];
-      
-      // OddsBlaze pode ter odds em diferentes formatos
-      const sportsbooks = matchingGame.sportsbooks || matchingGame.bookmakers || [];
-      const directOdds = matchingGame.odds || matchingGame.markets || [];
-      
-      // Agregar odds de todas as casas
-      const marketsByType: Record<string, any[]> = {};
-      
-      // Processar sportsbooks se existirem
-      if (sportsbooks.length > 0) {
-        sportsbooks.forEach((sb: any) => {
-          const odds = sb.odds || sb.markets || [];
-          odds.forEach((odd: any) => {
-            const marketType = odd.market || odd.type || odd.name || 'unknown';
-            if (!marketsByType[marketType]) {
-              marketsByType[marketType] = [];
-            }
-            marketsByType[marketType].push({
-              bookmaker: sb.name || sb.id || 'OddsBlaze',
-              ...odd
-            });
-          });
-        });
-      }
-      
-      // Processar odds diretas se existirem
-      if (directOdds.length > 0) {
-        directOdds.forEach((odd: any) => {
-          const marketType = odd.market || odd.type || odd.name || 'unknown';
-          if (!marketsByType[marketType]) {
-            marketsByType[marketType] = [];
-          }
-          marketsByType[marketType].push({
-            bookmaker: 'OddsBlaze',
-            ...odd
-          });
-        });
-      }
-      
-      // Mapear mercados para formato legível
-      const marketLabels: Record<string, string> = {
-        "Moneyline": "Resultado Final",
-        "Point Spread": "Handicap",
-        "Total Points": "Total de Gols",
-        "Total Goals": "Total de Gols",
-        "Both Teams to Score": "Ambas Marcam (BTTS)",
-        "Draw No Bet": "Empate Anula Aposta",
-        "Double Chance": "Dupla Chance",
-        "First Half Moneyline": "1º Tempo - Resultado",
-        "First Half Total": "1º Tempo - Total",
-      };
-      
-      Object.entries(marketsByType).forEach(([type, odds]) => {
-        const label = marketLabels[type] || type;
-        
-        // Usar melhor odd de cada resultado
-        const bestOdds: Record<string, { value: string; odd: number; bookmaker: string }> = {};
-        
-        odds.forEach((o: any) => {
-          const key = o.selection || o.name || o.value;
-          const price = parseFloat(o.price) || parseFloat(o.odds) || 0;
-          
-          if (!bestOdds[key] || price > bestOdds[key].odd) {
-            bestOdds[key] = {
-              value: key,
-              odd: price,
-              bookmaker: o.bookmaker
-            };
-          }
-        });
-        
-        if (Object.keys(bestOdds).length > 0) {
-          markets.push({
-            id: type,
-            name: type,
-            label,
-            values: Object.values(bestOdds)
-          });
-        }
-      });
-      
-      const result = {
-        gameId: matchingGame.id,
-        homeTeam: matchingGame.teams?.home?.name,
-        awayTeam: matchingGame.teams?.away?.name,
-        source: "oddsblaze",
-        markets
-      };
-      
-      cache.set(cacheKey, result, CACHE_TTL_ODDSBLAZE);
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching OddsBlaze game odds:", error);
-      res.status(500).json({ error: "Failed to fetch OddsBlaze game odds" });
-    }
-  });
-
-  // BoltOdds: Buscar todos os jogos de futebol
-  app.get("/api/boltodds/games", async (req, res) => {
-    try {
-      if (!BOLTODDS_API_KEY) {
-        return res.status(500).json({ error: "BOLTODDS_API_KEY not configured" });
-      }
-      
-      const cacheKey = "boltodds_games";
-      const cached = cache.get<any>(cacheKey);
-      if (cached) {
-        return res.json(cached);
-      }
-      
-      const response = await fetch(`${BOLTODDS_BASE}/get_games?key=${BOLTODDS_API_KEY}`);
-      
-      if (!response.ok) {
-        console.error("BoltOdds API error:", await response.text());
-        return res.status(502).json({ error: "BoltOdds API unavailable" });
-      }
-      
-      const data = await response.json();
-      
-      // Filtrar apenas jogos de futebol
-      const soccerSports = [
-        "EPL", "La Liga", "Serie A", "Bundesliga", "Ligue 1",
-        "Champions League", "Europa League", "Europa Conference",
-        "MLS", "Liga MX", "Primeira Liga", "Brazil Serie A",
-        "FA Cup", "EFL Championship", "World Cup", "World Cup Quals",
-        "LP Argentina", "Colombian Primera A"
-      ];
-      
-      const soccerGames = Object.entries(data)
-        .filter(([key, game]: [string, any]) => soccerSports.includes(game.sport))
-        .map(([key, game]: [string, any]) => ({
-          id: game.universal_id,
-          key: key,
-          when: game.when,
-          sport: game.sport,
-          teams: game.orig_teams || game.game
-        }));
-      
-      const result = {
-        source: "boltodds",
-        games: soccerGames,
-        timestamp: new Date().toISOString()
-      };
-      
-      cache.set(cacheKey, result, CACHE_TTL_BOLTODDS);
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching BoltOdds games:", error);
-      res.status(500).json({ error: "Failed to fetch BoltOdds games" });
-    }
-  });
-
-  // BoltOdds: Buscar odds de um jogo específico
-  app.get("/api/boltodds/game-odds", async (req, res) => {
-    try {
-      if (!BOLTODDS_API_KEY) {
-        return res.status(500).json({ error: "BOLTODDS_API_KEY not configured" });
-      }
-      
-      const { homeTeam, awayTeam, sportKey } = req.query;
-      
-      if (!homeTeam || !awayTeam) {
-        return res.status(400).json({ error: "homeTeam and awayTeam are required" });
-      }
-      
-      const cacheKey = `boltodds_odds_${homeTeam}_${awayTeam}`;
-      const cached = cache.get<any>(cacheKey);
-      if (cached) {
-        return res.json(cached);
-      }
-      
-      // Mapear sportKey para sport name da BoltOdds
-      const sportMapping: Record<string, string> = {
-        "soccer_epl": "EPL",
-        "soccer_spain_la_liga": "La Liga",
-        "soccer_italy_serie_a": "Serie A",
-        "soccer_germany_bundesliga": "Bundesliga",
-        "soccer_france_ligue_one": "Ligue 1",
-        "soccer_uefa_champs_league": "Champions League",
-        "soccer_uefa_europa_league": "Europa League",
-        "soccer_usa_mls": "MLS",
-        "soccer_mexico_ligamx": "Liga MX",
-        "soccer_portugal_primeira_liga": "Primeira Liga",
-        "soccer_brazil_campeonato": "Brazil Serie A",
-        "soccer_fa_cup": "FA Cup",
-        "soccer_efl_champ": "EFL Championship",
-        "soccer_argentina_primera_division": "LP Argentina"
-      };
-      
-      const boltSport = sportMapping[String(sportKey)] || null;
-      
-      // Buscar todos os jogos e encontrar o correspondente
-      const response = await fetch(`${BOLTODDS_BASE}/get_games?key=${BOLTODDS_API_KEY}`);
-      
-      if (!response.ok) {
-        console.error("BoltOdds API error:", await response.text());
-        return res.status(502).json({ markets: [], error: "api_error" });
-      }
-      
-      const data = await response.json();
-      
-      // Normalizar nome de time
-      const normalizeTeam = (name: string): string[] => {
-        return name.toLowerCase()
-          .replace(/[^a-z0-9\s]/g, '')
-          .split(' ')
-          .filter(w => w.length > 2);
-      };
-      
-      const homeNorm = normalizeTeam(String(homeTeam));
-      const awayNorm = normalizeTeam(String(awayTeam));
-      
-      // Encontrar jogo correspondente
-      let matchingGame: any = null;
-      let matchingKey: string = '';
-      
-      for (const [key, game] of Object.entries(data) as [string, any][]) {
-        // Verificar se é do esporte correto (se especificado)
-        if (boltSport && game.sport !== boltSport) continue;
-        
-        const teamsStr = game.orig_teams || game.game || '';
-        const teamsParts = teamsStr.split(' vs ');
-        
-        if (teamsParts.length >= 2) {
-          const gameHome = normalizeTeam(teamsParts[0]);
-          const gameAway = normalizeTeam(teamsParts[1]);
-          
-          const homeMatch = homeNorm.some(w => gameHome.some(gw => gw.includes(w) || w.includes(gw))) ||
-                           gameHome.some(w => homeNorm.some(hw => hw.includes(w) || w.includes(hw)));
-          const awayMatch = awayNorm.some(w => gameAway.some(gw => gw.includes(w) || w.includes(gw))) ||
-                           gameAway.some(w => awayNorm.some(aw => aw.includes(w) || w.includes(aw)));
-          
-          if (homeMatch && awayMatch) {
-            matchingGame = game;
-            matchingKey = key;
-            break;
-          }
-        }
-      }
-      
-      if (!matchingGame) {
-        console.log(`BoltOdds: No matching game for ${homeTeam} vs ${awayTeam}`);
-        cache.set(cacheKey, { markets: [] }, CACHE_TTL_BOLTODDS);
-        return res.json({ markets: [] });
-      }
-      
-      console.log(`BoltOdds: Found game ${matchingKey} for ${homeTeam} vs ${awayTeam}`);
-      
-      // Verificar se temos dados do WebSocket para este jogo
-      const wsData = boltOddsWS.getGameData(matchingKey);
-      
-      // Formatar mercados para o frontend
-      const markets: any[] = [];
-      
-      if (wsData && wsData.markets.length > 0) {
-        const marketLabels: Record<string, string> = {
-          "Moneyline": "Vencedor",
-          "3 Way": "Resultado Final (1X2)",
-          "Spread": "Handicap",
-          "Total": "Total de Gols",
-          "1st Half": "Primeiro Tempo",
-          "1st Half Moneyline": "1º Tempo - Vencedor",
-          "1st Half Spread": "1º Tempo - Handicap",
-          "1st Half Total": "1º Tempo - Total",
-          "BTTS": "Ambas Marcam (BTTS)",
-          "Double Chance": "Dupla Chance",
-          "Draw No Bet": "Empate Anula Aposta"
-        };
-        
-        for (const market of wsData.markets) {
-          const marketLabel = marketLabels[market.market] || market.market;
-          const values = market.outcomes.map(o => ({
-            value: o.name,
-            odd: o.price,
-            point: o.point,
-            bookmaker: o.bookmaker
-          }));
-          
-          if (values.length > 0) {
-            markets.push({
-              id: market.market.replace(/\s+/g, '_').toLowerCase(),
-              name: market.market,
-              label: marketLabel,
-              values
-            });
-          }
-        }
-      }
-      
-      // Se não temos dados do WebSocket, inscrever para receber atualizações
-      if (!wsData && boltOddsWS.isActive()) {
-        boltOddsWS.subscribeToGame(matchingKey, () => {});
-      }
-      
-      const result = {
-        gameId: matchingGame.universal_id,
-        gameKey: matchingKey,
-        homeTeam: String(homeTeam),
-        awayTeam: String(awayTeam),
-        when: matchingGame.when,
-        sport: matchingGame.sport,
-        source: "boltodds",
-        wsConnected: boltOddsWS.isActive(),
-        markets
-      };
-      
-      cache.set(cacheKey, result, CACHE_TTL_BOLTODDS);
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching BoltOdds game odds:", error);
-      res.status(500).json({ error: "Failed to fetch BoltOdds game odds" });
-    }
-  });
-
-  // BoltOdds: Debug endpoint para ver jogos disponíveis
-  app.get("/api/boltodds/debug", async (req, res) => {
-    try {
-      const availableGames = boltOddsWS.getAvailableGames();
-      const allData = boltOddsWS.getAllGameData();
-      const gamesWithMarkets = Array.from(allData.entries())
-        .filter(([k, v]) => v.markets.length > 0)
-        .map(([k, v]) => ({
-          game: k,
-          marketsCount: v.markets.length,
-          markets: v.markets.map(m => m.market)
-        }));
-      
-      res.json({
-        wsConnected: boltOddsWS.isActive(),
-        totalGames: availableGames.length,
-        gamesWithMarkets: gamesWithMarkets.length,
-        sampleGames: availableGames.slice(0, 10),
-        sampleWithMarkets: gamesWithMarkets.slice(0, 5)
-      });
-    } catch (error) {
-      console.error("Error in BoltOdds debug:", error);
-      res.status(500).json({ error: "Debug endpoint error" });
-    }
-  });
 
   return httpServer;
 }
