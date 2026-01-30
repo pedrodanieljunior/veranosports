@@ -8,8 +8,12 @@ import { cache } from "./cache";
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
+const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
+const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
+
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
 const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
+const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 
 export async function registerRoutes(
   httpServer: Server,
@@ -154,6 +158,163 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching bets:", error);
       res.status(500).json({ error: "Failed to fetch bets" });
+    }
+  });
+
+  // API-Football: Buscar ligas de futebol
+  app.get("/api/football/leagues", async (req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      }
+      
+      const cached = cache.get<any[]>("football_leagues");
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      const response = await fetch(`${API_FOOTBALL_BASE}/leagues?current=true`, {
+        headers: { "x-apisports-key": API_FOOTBALL_KEY }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API-Football error:", errorText);
+        return res.status(response.status).json({ error: "Failed to fetch leagues" });
+      }
+      
+      const data = await response.json();
+      const leagues = data.response?.filter((item: any) => 
+        item.league?.type === "League" || item.league?.type === "Cup"
+      ).slice(0, 30).map((item: any) => ({
+        id: item.league.id,
+        name: item.league.name,
+        country: item.country?.name,
+        logo: item.league.logo,
+        season: item.seasons?.[0]?.year
+      })) || [];
+      
+      cache.set("football_leagues", leagues, CACHE_TTL_SPORTS);
+      res.json(leagues);
+    } catch (error) {
+      console.error("Error fetching football leagues:", error);
+      res.status(500).json({ error: "Failed to fetch football leagues" });
+    }
+  });
+
+  // API-Football: Buscar jogos de uma liga com odds
+  app.get("/api/football/fixtures/:leagueId", async (req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      }
+      
+      const { leagueId } = req.params;
+      const cacheKey = `football_fixtures_${leagueId}`;
+      
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      // Buscar jogos próximos
+      const today = new Date().toISOString().split('T')[0];
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const fixturesResponse = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures?league=${leagueId}&season=2024&from=${today}&to=${nextWeek}`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+      );
+      
+      if (!fixturesResponse.ok) {
+        const errorText = await fixturesResponse.text();
+        console.error("API-Football fixtures error:", errorText);
+        return res.status(fixturesResponse.status).json({ error: "Failed to fetch fixtures" });
+      }
+      
+      const fixturesData = await fixturesResponse.json();
+      const fixtures = fixturesData.response?.slice(0, 10) || [];
+      
+      // Buscar odds para cada jogo
+      const fixturesWithOdds = await Promise.all(
+        fixtures.map(async (fixture: any) => {
+          try {
+            const oddsResponse = await fetch(
+              `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+            );
+            
+            let odds: any[] = [];
+            if (oddsResponse.ok) {
+              const oddsData = await oddsResponse.json();
+              odds = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
+            }
+            
+            return {
+              id: fixture.fixture.id,
+              date: fixture.fixture.date,
+              homeTeam: fixture.teams.home.name,
+              awayTeam: fixture.teams.away.name,
+              homeLogo: fixture.teams.home.logo,
+              awayLogo: fixture.teams.away.logo,
+              league: fixture.league.name,
+              odds: odds.map((bet: any) => ({
+                name: bet.name,
+                values: bet.values?.map((v: any) => ({
+                  value: v.value,
+                  odd: parseFloat(v.odd)
+                })) || []
+              }))
+            };
+          } catch (err) {
+            return {
+              id: fixture.fixture.id,
+              date: fixture.fixture.date,
+              homeTeam: fixture.teams.home.name,
+              awayTeam: fixture.teams.away.name,
+              homeLogo: fixture.teams.home.logo,
+              awayLogo: fixture.teams.away.logo,
+              league: fixture.league.name,
+              odds: []
+            };
+          }
+        })
+      );
+      
+      cache.set(cacheKey, fixturesWithOdds, CACHE_TTL_FOOTBALL);
+      res.json(fixturesWithOdds);
+    } catch (error) {
+      console.error("Error fetching football fixtures:", error);
+      res.status(500).json({ error: "Failed to fetch football fixtures" });
+    }
+  });
+
+  // API-Football: Buscar tipos de apostas disponíveis
+  app.get("/api/football/bets", async (req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      }
+      
+      const cached = cache.get<any[]>("football_bets");
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      const response = await fetch(`${API_FOOTBALL_BASE}/odds/bets`, {
+        headers: { "x-apisports-key": API_FOOTBALL_KEY }
+      });
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Failed to fetch bet types" });
+      }
+      
+      const data = await response.json();
+      cache.set("football_bets", data.response || [], CACHE_TTL_SPORTS);
+      res.json(data.response || []);
+    } catch (error) {
+      console.error("Error fetching bet types:", error);
+      res.status(500).json({ error: "Failed to fetch bet types" });
     }
   });
 
