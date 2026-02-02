@@ -478,6 +478,57 @@ export async function registerRoutes(
     }
   });
 
+  // Deletar um bilhete específico
+  app.delete("/api/bets/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteBetSlip(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Bet slip not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting bet:", error);
+      res.status(500).json({ error: "Failed to delete bet" });
+    }
+  });
+
+  // Deletar todos os bilhetes
+  app.delete("/api/bets", async (req, res) => {
+    try {
+      await storage.deleteAllBetSlips();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting all bets:", error);
+      res.status(500).json({ error: "Failed to delete bets" });
+    }
+  });
+
+  // Atualizar status de um bilhete
+  app.patch("/api/bets/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!["pending", "won", "lost"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const updated = await storage.updateBetSlipStatus(id, status);
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Bet slip not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating bet status:", error);
+      res.status(500).json({ error: "Failed to update bet status" });
+    }
+  });
+
   // API-Football: Buscar ligas de futebol
   app.get("/api/football/leagues", async (req, res) => {
     try {

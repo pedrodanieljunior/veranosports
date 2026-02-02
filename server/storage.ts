@@ -5,6 +5,9 @@ export interface IStorage {
   createBetSlip(data: InsertBetSlip): Promise<BetSlip>;
   getBetSlip(id: string): Promise<BetSlip | undefined>;
   getAllBetSlips(): Promise<BetSlip[]>;
+  deleteBetSlip(id: string): Promise<boolean>;
+  deleteAllBetSlips(): Promise<void>;
+  updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -25,6 +28,7 @@ export class MemStorage implements IStorage {
       stake: data.stake,
       totalOdds,
       potentialWin,
+      status: "pending",
       createdAt: new Date().toISOString(),
     };
     
@@ -37,7 +41,26 @@ export class MemStorage implements IStorage {
   }
 
   async getAllBetSlips(): Promise<BetSlip[]> {
-    return Array.from(this.betSlips.values());
+    return Array.from(this.betSlips.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async deleteBetSlip(id: string): Promise<boolean> {
+    return this.betSlips.delete(id);
+  }
+
+  async deleteAllBetSlips(): Promise<void> {
+    this.betSlips.clear();
+  }
+
+  async updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined> {
+    const betSlip = this.betSlips.get(id);
+    if (!betSlip) return undefined;
+    
+    betSlip.status = status;
+    this.betSlips.set(id, betSlip);
+    return betSlip;
   }
 }
 

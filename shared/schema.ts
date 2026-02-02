@@ -69,6 +69,7 @@ export const betSlipSchema = z.object({
   stake: z.number(),
   totalOdds: z.number(),
   potentialWin: z.number(),
+  status: z.enum(["pending", "won", "lost"]).default("pending"),
   createdAt: z.string(),
 });
 
