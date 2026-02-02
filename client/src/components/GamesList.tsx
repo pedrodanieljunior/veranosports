@@ -2,8 +2,11 @@ import { Game, Selection } from "@shared/schema";
 import { GameCard } from "./GameCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, AlertCircle, RefreshCw } from "lucide-react";
+import { Trophy, AlertCircle, RefreshCw, Calendar, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface GamesListProps {
   games: Game[];
@@ -13,6 +16,7 @@ interface GamesListProps {
   error: Error | null;
   selectedSport: string | null;
   onRefresh: () => void;
+  isTodayGames?: boolean;
 }
 
 export function GamesList({ 
@@ -22,19 +26,9 @@ export function GamesList({
   isLoading, 
   error,
   selectedSport,
-  onRefresh
+  onRefresh,
+  isTodayGames = false
 }: GamesListProps) {
-  if (!selectedSport) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        <Trophy className="w-20 h-20 text-muted-foreground/20 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Bem-vindo ao GANHE MAIS AQUI</h2>
-        <p className="text-muted-foreground max-w-md">
-          Selecione uma liga de futebol no menu lateral para ver os jogos e odds disponíveis.
-        </p>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -81,7 +75,7 @@ export function GamesList({
     );
   }
 
-  if (games.length === 0) {
+  if (games.length === 0 && !isTodayGames) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <Trophy className="w-16 h-16 text-muted-foreground/20 mb-4" />
@@ -93,16 +87,57 @@ export function GamesList({
     );
   }
 
+  if (games.length === 0 && isTodayGames) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+        <Calendar className="w-16 h-16 text-muted-foreground/20 mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Nenhum jogo hoje</h2>
+        <p className="text-muted-foreground max-w-md">
+          Não há jogos programados para hoje nas principais ligas. Selecione uma liga no menu para ver próximos jogos.
+        </p>
+      </div>
+    );
+  }
+
+  // Agrupar jogos por liga quando mostrando jogos do dia
+  const gamesByLeague = isTodayGames 
+    ? games.reduce((acc, game) => {
+        const league = game.sportTitle;
+        if (!acc[league]) acc[league] = [];
+        acc[league].push(game);
+        return acc;
+      }, {} as Record<string, Game[]>)
+    : null;
+
+  const today = new Date();
+  const formattedDate = format(today, "EEEE, d 'de' MMMM", { locale: ptBR });
+
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-auto">
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h2 className="text-xl font-semibold" data-testid="text-games-count">
-            {games.length} {games.length === 1 ? "Jogo" : "Jogos"} Disponíveis
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Clique no jogo para ver todos os mercados
-          </p>
+          {isTodayGames ? (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <Star className="w-5 h-5 text-yellow-500" />
+                <h2 className="text-xl font-semibold" data-testid="text-today-games">
+                  Jogos do Dia
+                </h2>
+              </div>
+              <p className="text-sm text-muted-foreground capitalize">
+                {formattedDate} - {games.length} {games.length === 1 ? "jogo" : "jogos"} nas principais ligas
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold" data-testid="text-games-count">
+                {games.length} {games.length === 1 ? "Jogo" : "Jogos"} Disponíveis
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Clique no jogo para ver todos os mercados
+              </p>
+            </>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={onRefresh} data-testid="button-refresh-games">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -110,16 +145,43 @@ export function GamesList({
         </Button>
       </div>
       
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {games.map((game) => (
-          <GameCard
-            key={game.id}
-            game={game}
-            selections={selections}
-            onClick={() => onGameClick(game)}
-          />
-        ))}
-      </div>
+      {isTodayGames && gamesByLeague ? (
+        <div className="space-y-6">
+          {Object.entries(gamesByLeague).map(([league, leagueGames]) => (
+            <div key={league}>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="secondary" className="text-xs">
+                  {league}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {leagueGames.length} {leagueGames.length === 1 ? "jogo" : "jogos"}
+                </span>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {leagueGames.map((game) => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    selections={selections}
+                    onClick={() => onGameClick(game)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {games.map((game) => (
+            <GameCard
+              key={game.id}
+              game={game}
+              selections={selections}
+              onClick={() => onGameClick(game)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

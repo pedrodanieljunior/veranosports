@@ -264,6 +264,84 @@ export async function registerRoutes(
     }
   });
 
+  // Endpoint para buscar jogos do dia de ligas populares
+  app.get("/api/games/today", async (req, res) => {
+    try {
+      if (!ODDS_API_KEY) {
+        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
+      }
+      
+      const cacheKey = "games_today";
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      // Ligas populares para buscar jogos do dia
+      const popularLeagues = [
+        "soccer_epl",                    // Premier League
+        "soccer_spain_la_liga",          // La Liga
+        "soccer_italy_serie_a",          // Serie A
+        "soccer_germany_bundesliga",     // Bundesliga
+        "soccer_france_ligue_one",       // Ligue 1
+        "soccer_brazil_campeonato",      // Brasileirão
+        "soccer_uefa_champs_league",     // Champions League
+        "soccer_uefa_europa_league",     // Europa League
+        "soccer_efl_champ",              // Championship
+      ];
+      
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+      
+      let allGames: any[] = [];
+      
+      // Buscar jogos de cada liga (limitando requests)
+      for (const league of popularLeagues.slice(0, 5)) { // Limitar a 5 ligas para economizar API calls
+        try {
+          const oddsUrl = `${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+          const response = await fetch(oddsUrl);
+          
+          if (response.ok) {
+            const rawGames = await response.json();
+            
+            // Filtrar apenas jogos de hoje
+            const todayGames = rawGames
+              .filter((game: any) => {
+                const gameDate = new Date(game.commence_time);
+                return gameDate >= todayStart && gameDate < tomorrowStart;
+              })
+              .map((game: any) => ({
+                id: game.id,
+                sportKey: game.sport_key,
+                sportTitle: game.sport_title,
+                commenceTime: game.commence_time,
+                homeTeam: game.home_team,
+                awayTeam: game.away_team,
+                bookmakers: game.bookmakers || []
+              }));
+            
+            allGames = [...allGames, ...todayGames];
+          }
+        } catch (err) {
+          console.error(`Error fetching ${league}:`, err);
+        }
+      }
+      
+      // Ordenar por horário de início
+      allGames.sort((a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
+      
+      // Log remaining requests
+      console.log(`Games today endpoint - Found ${allGames.length} games`);
+      
+      cache.set(cacheKey, allGames, CACHE_TTL_ODDS);
+      res.json(allGames);
+    } catch (error) {
+      console.error("Error fetching today's games:", error);
+      res.status(500).json({ error: "Failed to fetch today's games" });
+    }
+  });
+
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
       if (!ODDS_API_KEY) {

@@ -24,15 +24,32 @@ export default function Home() {
     queryKey: ["/api/sports"],
   });
 
+  // Jogos do dia (quando nenhum esporte está selecionado)
   const { 
-    data: games = [], 
-    isLoading: gamesLoading,
-    error: gamesError,
-    refetch: refetchGames
+    data: todayGames = [], 
+    isLoading: todayGamesLoading,
+    error: todayGamesError,
+    refetch: refetchTodayGames
+  } = useQuery<Game[]>({
+    queryKey: ["/api/games/today"],
+    enabled: !selectedSport,
+  });
+
+  const { 
+    data: leagueGames = [], 
+    isLoading: leagueGamesLoading,
+    error: leagueGamesError,
+    refetch: refetchLeagueGames
   } = useQuery<Game[]>({
     queryKey: [`/api/odds/${selectedSport}`],
     enabled: !!selectedSport,
   });
+
+  // Determinar quais jogos mostrar
+  const games = selectedSport ? leagueGames : todayGames;
+  const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
+  const gamesError = selectedSport ? leagueGamesError : todayGamesError;
+  const refetchGames = selectedSport ? refetchLeagueGames : refetchTodayGames;
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
     queryKey: ["/api/bets"],
@@ -164,6 +181,7 @@ export default function Home() {
           error={gamesError as Error | null}
           selectedSport={selectedSport}
           onRefresh={() => refetchGames()}
+          isTodayGames={!selectedSport}
         />
       </div>
       
