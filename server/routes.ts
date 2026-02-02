@@ -277,14 +277,14 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      // Ligas populares para buscar jogos do dia
+      // Ligas populares para buscar jogos do dia (primeiras 6 são buscadas)
       const popularLeagues = [
+        "soccer_brazil_campeonato",      // Brasileirão
         "soccer_epl",                    // Premier League
         "soccer_spain_la_liga",          // La Liga
         "soccer_italy_serie_a",          // Serie A
         "soccer_germany_bundesliga",     // Bundesliga
         "soccer_france_ligue_one",       // Ligue 1
-        "soccer_brazil_campeonato",      // Brasileirão
         "soccer_uefa_champs_league",     // Champions League
         "soccer_uefa_europa_league",     // Europa League
         "soccer_efl_champ",              // Championship
@@ -297,7 +297,7 @@ export async function registerRoutes(
       let allGames: any[] = [];
       
       // Buscar jogos de cada liga (limitando requests)
-      for (const league of popularLeagues.slice(0, 5)) { // Limitar a 5 ligas para economizar API calls
+      for (const league of popularLeagues.slice(0, 6)) { // Limitar a 6 ligas para economizar API calls (incluindo Brasileirão)
         try {
           const oddsUrl = `${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
           const response = await fetch(oddsUrl);
