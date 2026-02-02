@@ -468,10 +468,10 @@ export async function registerRoutes(
     }
   });
 
-  // Bilhetes recentes para o site principal (últimas 2 horas)
+  // Bilhetes recentes para o site principal (últimos 10 minutos)
   app.get("/api/bets", async (req, res) => {
     try {
-      const betSlips = await storage.getRecentBetSlips(2);
+      const betSlips = await storage.getRecentBetSlips(10 / 60);
       res.json(betSlips);
     } catch (error) {
       console.error("Error fetching bets:", error);
