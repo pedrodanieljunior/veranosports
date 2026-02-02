@@ -17,6 +17,8 @@ interface GamesListProps {
   selectedSport: string | null;
   onRefresh: () => void;
   isTodayGames?: boolean;
+  upcomingBrasileirao?: Game[];
+  brasileiraoLoading?: boolean;
 }
 
 export function GamesList({ 
@@ -27,7 +29,9 @@ export function GamesList({
   error,
   selectedSport,
   onRefresh,
-  isTodayGames = false
+  isTodayGames = false,
+  upcomingBrasileirao = [],
+  brasileiraoLoading = false
 }: GamesListProps) {
 
   if (isLoading) {
@@ -180,6 +184,52 @@ export function GamesList({
               onClick={() => onGameClick(game)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Próximos jogos do Brasileirão quando não há jogos do Brasil hoje */}
+      {isTodayGames && upcomingBrasileirao.length > 0 && (
+        <div className="mt-8 pt-6 border-t border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-4 rounded-sm overflow-hidden flex">
+              <div className="w-1/3 bg-green-500" />
+              <div className="w-1/3 bg-yellow-400" />
+              <div className="w-1/3 bg-blue-500" />
+            </div>
+            <h3 className="text-lg font-semibold">Próximos Jogos do Brasileirão</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Confira os próximos jogos do Campeonato Brasileiro
+          </p>
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {upcomingBrasileirao.map((game) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                selections={selections}
+                onClick={() => onGameClick(game)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loading do Brasileirão */}
+      {isTodayGames && brasileiraoLoading && upcomingBrasileirao.length === 0 && (
+        <div className="mt-8 pt-6 border-t border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton className="w-6 h-4" />
+            <Skeleton className="h-6 w-48" />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <Skeleton className="h-20 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

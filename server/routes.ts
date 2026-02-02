@@ -342,6 +342,50 @@ export async function registerRoutes(
     }
   });
 
+  // Endpoint para buscar próximos jogos do Brasileirão
+  app.get("/api/games/brasileirao", async (req, res) => {
+    try {
+      if (!ODDS_API_KEY) {
+        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
+      }
+      
+      const cacheKey = "games_brasileirao";
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      const oddsUrl = `${ODDS_API_BASE}/sports/soccer_brazil_campeonato/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+      const response = await fetch(oddsUrl);
+      
+      if (!response.ok) {
+        return res.json([]);
+      }
+      
+      const rawGames = await response.json();
+      
+      // Transformar e ordenar por data
+      const games = rawGames
+        .map((game: any) => ({
+          id: game.id,
+          sportKey: game.sport_key,
+          sportTitle: game.sport_title,
+          commenceTime: game.commence_time,
+          homeTeam: game.home_team,
+          awayTeam: game.away_team,
+          bookmakers: game.bookmakers || []
+        }))
+        .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
+        .slice(0, 10); // Limitar a 10 próximos jogos
+      
+      cache.set(cacheKey, games, CACHE_TTL_ODDS);
+      res.json(games);
+    } catch (error) {
+      console.error("Error fetching Brasileirão games:", error);
+      res.status(500).json({ error: "Failed to fetch Brasileirão games" });
+    }
+  });
+
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
       if (!ODDS_API_KEY) {

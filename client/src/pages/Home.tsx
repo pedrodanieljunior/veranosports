@@ -35,6 +35,23 @@ export default function Home() {
     enabled: !selectedSport,
   });
 
+  // Próximos jogos do Brasileirão (para mostrar quando não há jogos do Brasileirão hoje)
+  const { 
+    data: brasileiraoGames = [], 
+    isLoading: brasileiraoLoading,
+  } = useQuery<Game[]>({
+    queryKey: ["/api/games/brasileirao"],
+    enabled: !selectedSport,
+  });
+
+  // Verificar se há jogos do Brasileirão nos jogos do dia
+  const hasBrasileiraoToday = todayGames.some(g => g.sportKey === "soccer_brazil_campeonato");
+  
+  // Filtrar próximos jogos do Brasileirão que não estão nos jogos de hoje
+  const upcomingBrasileirao = brasileiraoGames.filter(g => 
+    !todayGames.some(tg => tg.id === g.id)
+  ).slice(0, 6);
+
   const { 
     data: leagueGames = [], 
     isLoading: leagueGamesLoading,
@@ -182,6 +199,8 @@ export default function Home() {
           selectedSport={selectedSport}
           onRefresh={() => refetchGames()}
           isTodayGames={!selectedSport}
+          upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []}
+          brasileiraoLoading={brasileiraoLoading}
         />
       </div>
       
