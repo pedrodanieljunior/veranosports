@@ -47,7 +47,7 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
-    queryKey: ["/api/bets"],
+    queryKey: ["/api/admin/bets"],
   });
 
   const deleteBetMutation = useMutation({
@@ -55,7 +55,7 @@ export default function Admin() {
       await apiRequest("DELETE", `/api/bets/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
       toast({
         title: "Bilhete excluído",
         description: "O bilhete foi removido com sucesso.",
@@ -75,7 +75,7 @@ export default function Admin() {
       await apiRequest("PATCH", `/api/bets/${id}/status`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
       toast({
         title: "Status atualizado",
         description: "O status do bilhete foi atualizado.",
@@ -95,7 +95,7 @@ export default function Admin() {
       await apiRequest("DELETE", "/api/bets");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
       toast({
         title: "Todos os bilhetes excluídos",
         description: "Todos os bilhetes foram removidos.",

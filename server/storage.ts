@@ -7,6 +7,7 @@ export interface IStorage {
   createBetSlip(data: InsertBetSlip): Promise<BetSlip>;
   getBetSlip(id: string): Promise<BetSlip | undefined>;
   getAllBetSlips(): Promise<BetSlip[]>;
+  getRecentBetSlips(hours: number): Promise<BetSlip[]>;
   deleteBetSlip(id: string): Promise<boolean>;
   deleteAllBetSlips(): Promise<void>;
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
@@ -65,6 +66,23 @@ export class DatabaseStorage implements IStorage {
       status: result.status as "pending" | "won" | "lost",
       createdAt: result.createdAt.toISOString(),
     }));
+  }
+
+  async getRecentBetSlips(hours: number): Promise<BetSlip[]> {
+    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const results = await db.select().from(betSlipsTable).orderBy(desc(betSlipsTable.createdAt));
+    
+    return results
+      .filter(result => new Date(result.createdAt) >= cutoffTime)
+      .map(result => ({
+        id: result.id,
+        selections: result.selections as BetSlip["selections"],
+        stake: result.stake,
+        totalOdds: result.totalOdds,
+        potentialWin: result.potentialWin,
+        status: result.status as "pending" | "won" | "lost",
+        createdAt: result.createdAt.toISOString(),
+      }));
   }
 
   async deleteBetSlip(id: string): Promise<boolean> {

@@ -468,12 +468,24 @@ export async function registerRoutes(
     }
   });
 
+  // Bilhetes recentes para o site principal (últimas 2 horas)
   app.get("/api/bets", async (req, res) => {
+    try {
+      const betSlips = await storage.getRecentBetSlips(2);
+      res.json(betSlips);
+    } catch (error) {
+      console.error("Error fetching bets:", error);
+      res.status(500).json({ error: "Failed to fetch bets" });
+    }
+  });
+
+  // Todos os bilhetes para o painel admin (histórico completo)
+  app.get("/api/admin/bets", async (req, res) => {
     try {
       const betSlips = await storage.getAllBetSlips();
       res.json(betSlips);
     } catch (error) {
-      console.error("Error fetching bets:", error);
+      console.error("Error fetching all bets:", error);
       res.status(500).json({ error: "Failed to fetch bets" });
     }
   });
