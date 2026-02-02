@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { pgTable, text, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+
+export const betSlipsTable = pgTable("bet_slips", {
+  id: text("id").primaryKey(),
+  selections: jsonb("selections").notNull(),
+  stake: real("stake").notNull(),
+  totalOdds: real("total_odds").notNull(),
+  potentialWin: real("potential_win").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 export const sportSchema = z.object({
   key: z.string(),
