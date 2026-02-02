@@ -7,8 +7,11 @@ import { cache } from "./cache";
 
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
+const ODDS_API_KEY = process.env.ODDS_API_KEY;
+const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
+const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 
 export async function registerRoutes(
@@ -16,24 +19,29 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  // Lista de ligas principais para exibir
-  const MAIN_LEAGUES = [
-    { id: 39, key: "soccer_england_premier_league", title: "Premier League", country: "England" },
-    { id: 140, key: "soccer_spain_la_liga", title: "La Liga", country: "Spain" },
-    { id: 135, key: "soccer_italy_serie_a", title: "Serie A", country: "Italy" },
-    { id: 78, key: "soccer_germany_bundesliga", title: "Bundesliga", country: "Germany" },
-    { id: 61, key: "soccer_france_ligue_one", title: "Ligue 1", country: "France" },
-    { id: 2, key: "soccer_uefa_champs_league", title: "UEFA Champions League", country: "Europe" },
-    { id: 3, key: "soccer_uefa_europa_league", title: "UEFA Europa League", country: "Europe" },
-    { id: 71, key: "soccer_brazil_campeonato", title: "Brasileirão Série A", country: "Brazil" },
-    { id: 253, key: "soccer_usa_mls", title: "MLS", country: "USA" },
-    { id: 94, key: "soccer_portugal_primeira_liga", title: "Primeira Liga", country: "Portugal" },
-  ];
+  // Mapeamento de sport keys da The Odds API para league IDs da API-Football (para mercados extras)
+  const LEAGUE_MAPPING: Record<string, number> = {
+    "soccer_epl": 39,                           // Premier League
+    "soccer_spain_la_liga": 140,                // La Liga
+    "soccer_italy_serie_a": 135,                // Serie A
+    "soccer_germany_bundesliga": 78,            // Bundesliga
+    "soccer_france_ligue_one": 61,              // Ligue 1
+    "soccer_uefa_champs_league": 2,             // Champions League
+    "soccer_uefa_europa_league": 3,             // Europa League
+    "soccer_brazil_campeonato": 71,             // Brasileirão
+    "soccer_usa_mls": 253,                      // MLS
+    "soccer_portugal_primeira_liga": 94,        // Primeira Liga
+    "soccer_efl_champ": 40,                     // Championship
+    "soccer_fa_cup": 45,                        // FA Cup
+    "soccer_netherlands_eredivisie": 88,        // Eredivisie
+    "soccer_turkey_super_league": 203,          // Turkey Super League
+    "soccer_belgium_first_div": 144,            // Belgium First Division
+  };
 
   app.get("/api/sports", async (req, res) => {
     try {
-      if (!API_FOOTBALL_KEY) {
-        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      if (!ODDS_API_KEY) {
+        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
       }
       
       const cached = cache.get<any[]>("sports");
@@ -41,18 +49,27 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      // Retornar lista de ligas principais (formato compatível com frontend)
-      const sports = MAIN_LEAGUES.map(league => ({
-        key: league.key,
-        active: true,
-        group: "Soccer",
-        title: league.title,
-        description: `${league.title} - ${league.country}`,
-        leagueId: league.id
-      }));
+      // Buscar esportes da The Odds API
+      const response = await fetch(`${ODDS_API_BASE}/sports?apiKey=${ODDS_API_KEY}`);
       
-      cache.set("sports", sports, CACHE_TTL_SPORTS);
-      res.json(sports);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("The Odds API sports error:", errorText);
+        return res.status(response.status).json({ error: "Failed to fetch sports" });
+      }
+      
+      const sports = await response.json();
+      
+      // Filtrar apenas futebol e adicionar leagueId da API-Football para mercados extras
+      const soccerSports = sports
+        .filter((s: any) => s.group === "Soccer" && s.active)
+        .map((s: any) => ({
+          ...s,
+          leagueId: LEAGUE_MAPPING[s.key] || null
+        }));
+      
+      cache.set("sports", soccerSports, CACHE_TTL_SPORTS);
+      res.json(soccerSports);
     } catch (error) {
       console.error("Error fetching sports:", error);
       res.status(500).json({ error: "Failed to fetch sports" });
@@ -61,8 +78,8 @@ export async function registerRoutes(
 
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
-      if (!API_FOOTBALL_KEY) {
-        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      if (!ODDS_API_KEY) {
+        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
       }
       
       const { sportKey } = req.params;
@@ -73,98 +90,34 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      // Encontrar o leagueId correspondente ao sportKey
-      const league = MAIN_LEAGUES.find(l => l.key === sportKey);
-      if (!league) {
-        return res.status(404).json({ error: "League not found" });
+      // Buscar odds da The Odds API (jogos atuais)
+      const oddsUrl = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu,uk&markets=h2h,spreads,totals&oddsFormat=decimal`;
+      const response = await fetch(oddsUrl);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("The Odds API error:", errorText);
+        return res.status(response.status).json({ error: "Failed to fetch odds" });
       }
       
-      // Buscar jogos próximos (7 dias)
-      const today = new Date().toISOString().split('T')[0];
-      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const rawGames = await response.json();
       
-      // Determinar a temporada atual (ligas europeias vão de agosto a maio do ano seguinte)
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth(); // 0-11
-      const season = currentMonth >= 7 ? currentYear : currentYear - 1; // Se agosto ou depois, usa ano atual
+      // Log remaining requests
+      const remaining = response.headers.get('x-requests-remaining');
+      console.log(`The Odds API - Requests remaining: ${remaining}`);
       
-      const fixturesResponse = await fetch(
-        `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${nextWeek}`,
-        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-      );
+      // Transformar para formato esperado pelo frontend (camelCase)
+      const games = rawGames.map((game: any) => ({
+        id: game.id,
+        sportKey: game.sport_key,
+        sportTitle: game.sport_title,
+        commenceTime: game.commence_time,
+        homeTeam: game.home_team,
+        awayTeam: game.away_team,
+        bookmakers: game.bookmakers || []
+      }));
       
-      if (!fixturesResponse.ok) {
-        const errorText = await fixturesResponse.text();
-        console.error("API-Football fixtures error:", errorText);
-        return res.status(fixturesResponse.status).json({ error: "Failed to fetch fixtures" });
-      }
-      
-      const fixturesData = await fixturesResponse.json();
-      const fixtures = fixturesData.response?.slice(0, 15) || [];
-      
-      // Buscar odds para cada jogo
-      const games = await Promise.all(
-        fixtures.map(async (fixture: any) => {
-          try {
-            const oddsResponse = await fetch(
-              `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
-              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-            );
-            
-            let bookmakers: any[] = [];
-            if (oddsResponse.ok) {
-              const oddsData = await oddsResponse.json();
-              const apiBookmakers = oddsData.response?.[0]?.bookmakers || [];
-              
-              // Converter formato API-Football para formato compatível
-              bookmakers = apiBookmakers.slice(0, 2).map((bm: any) => ({
-                key: bm.name?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
-                title: bm.name || 'Unknown',
-                lastUpdate: new Date().toISOString(),
-                markets: (bm.bets || []).map((bet: any) => {
-                  // Mapear nomes de mercado
-                  let marketKey = 'h2h';
-                  if (bet.name === 'Match Winner' || bet.name === 'Home/Away') marketKey = 'h2h';
-                  else if (bet.name?.includes('Handicap') || bet.name?.includes('Spread')) marketKey = 'spreads';
-                  else if (bet.name?.includes('Goals') || bet.name?.includes('Over/Under')) marketKey = 'totals';
-                  
-                  return {
-                    key: marketKey,
-                    lastUpdate: new Date().toISOString(),
-                    outcomes: (bet.values || []).map((v: any) => ({
-                      name: v.value,
-                      price: parseFloat(v.odd) || 1.0,
-                      point: null,
-                    })),
-                  };
-                }),
-              }));
-            }
-            
-            return {
-              id: String(fixture.fixture.id),
-              sportKey: sportKey,
-              sportTitle: league.title,
-              commenceTime: fixture.fixture.date,
-              homeTeam: fixture.teams.home.name,
-              awayTeam: fixture.teams.away.name,
-              bookmakers: bookmakers,
-            };
-          } catch (err) {
-            return {
-              id: String(fixture.fixture.id),
-              sportKey: sportKey,
-              sportTitle: league.title,
-              commenceTime: fixture.fixture.date,
-              homeTeam: fixture.teams.home.name,
-              awayTeam: fixture.teams.away.name,
-              bookmakers: [],
-            };
-          }
-        })
-      );
-      
-      cache.set(cacheKey, games, CACHE_TTL_FOOTBALL);
+      cache.set(cacheKey, games, CACHE_TTL_ODDS);
       res.json(games);
     } catch (error) {
       console.error("Error fetching odds:", error);
@@ -454,39 +407,71 @@ export async function registerRoutes(
         return res.json({ markets: [] });
       }
       
-      // Mapear mercados extras relevantes
-      const relevantBets = [
-        { id: 1, name: "Match Winner", label: "Resultado Final" },
-        { id: 2, name: "Home/Away", label: "Casa/Fora" },
-        { id: 3, name: "Second Half Winner", label: "Vencedor 2º Tempo" },
-        { id: 4, name: "Goals Over/Under", label: "Total de Gols" },
-        { id: 5, name: "Goals Over/Under First Half", label: "Gols 1º Tempo" },
-        { id: 6, name: "Goals Over/Under Second Half", label: "Gols 2º Tempo" },
-        { id: 8, name: "Both Teams Score", label: "Ambas Marcam (BTTS)" },
-        { id: 9, name: "Exact Score", label: "Placar Exato" },
-        { id: 10, name: "Double Chance", label: "Dupla Chance" },
-        { id: 11, name: "First Half Winner", label: "Vencedor 1º Tempo" },
-        { id: 13, name: "HT/FT Double", label: "Intervalo/Final" },
-        { id: 16, name: "Clean Sheet - Home", label: "Sem Sofrer Gol - Casa" },
-        { id: 17, name: "Clean Sheet - Away", label: "Sem Sofrer Gol - Fora" },
-        { id: 21, name: "Correct Score - First Half", label: "Placar 1º Tempo" },
-        { id: 27, name: "Odd/Even", label: "Ímpar/Par" },
-      ];
+      // Mapeamento de nomes de mercado para português
+      const marketLabels: Record<string, string> = {
+        "Match Winner": "Resultado Final",
+        "Home/Away": "Casa/Fora",
+        "Second Half Winner": "Vencedor 2º Tempo",
+        "Asian Handicap": "Handicap Asiático",
+        "Goals Over/Under": "Total de Gols",
+        "Goals Over/Under First Half": "Gols 1º Tempo",
+        "HT/FT Double": "Intervalo/Final",
+        "Both Teams Score": "Ambas Marcam (BTTS)",
+        "Handicap Result": "Resultado com Handicap",
+        "Exact Score": "Placar Exato",
+        "Highest Scoring Half": "Tempo com Mais Gols",
+        "Double Chance": "Dupla Chance",
+        "First Half Winner": "Vencedor 1º Tempo",
+        "Team To Score First": "Primeira Equipe a Marcar",
+        "Team To Score Last": "Última Equipe a Marcar",
+        "Total - Home": "Total Gols Casa",
+        "Total - Away": "Total Gols Visitante",
+        "Handicap Result - First Half": "Handicap 1º Tempo",
+        "Asian Handicap First Half": "Handicap Asiático 1º Tempo",
+        "Double Chance - First Half": "Dupla Chance 1º Tempo",
+        "Odd/Even": "Ímpar/Par",
+        "Odd/Even - First Half": "Ímpar/Par 1º Tempo",
+        "Results/Both Teams Score": "Resultado + Ambas Marcam",
+        "Result/Total Goals": "Resultado + Total Gols",
+        "Goals Over/Under - Second Half": "Gols 2º Tempo",
+        "Clean Sheet - Home": "Sem Sofrer Gol - Casa",
+        "Clean Sheet - Away": "Sem Sofrer Gol - Visitante",
+        "Win to Nil - Home": "Vitória sem Sofrer Gol - Casa",
+        "Win to Nil - Away": "Vitória sem Sofrer Gol - Visitante",
+        "Correct Score - First Half": "Placar Exato 1º Tempo",
+        "Win Both Halves": "Vencer Ambos os Tempos",
+        "Double Chance - Second Half": "Dupla Chance 2º Tempo",
+        "Both Teams Score - First Half": "Ambas Marcam 1º Tempo",
+        "Both Teams To Score - Second Half": "Ambas Marcam 2º Tempo",
+        "Win To Nil": "Vencer sem Sofrer Gol",
+        "Exact Goals Number": "Número Exato de Gols",
+        "To Win Either Half": "Vencer um dos Tempos",
+        "Home Team Exact Goals Number": "Gols Exatos Casa",
+        "Away Team Exact Goals Number": "Gols Exatos Visitante",
+        "Home Team Score a Goal": "Casa Marca",
+        "Away Team Score a Goal": "Visitante Marca",
+        "Corners Over Under": "Total de Escanteios",
+        "Winning Margin": "Margem de Vitória",
+        "Total Goals/Both Teams To Score": "Total Gols + Ambas Marcam",
+        "Goal Line": "Linha de Gols",
+        "Corners 1x2": "Escanteios 1x2",
+        "Corners Asian Handicap": "Escanteios Handicap Asiático",
+        "Cards Over/Under": "Total de Cartões",
+        "First Corner": "Primeiro Escanteio",
+        "Last Corner": "Último Escanteio",
+        "To Qualify": "Classificação"
+      };
       
-      const markets = bookmaker.bets
-        .filter((bet: any) => relevantBets.some(r => r.id === bet.id))
-        .map((bet: any) => {
-          const relevantBet = relevantBets.find(r => r.id === bet.id);
-          return {
-            id: bet.id,
-            name: bet.name,
-            label: relevantBet?.label || bet.name,
-            values: bet.values?.map((v: any) => ({
-              value: v.value,
-              odd: parseFloat(v.odd)
-            })) || []
-          };
-        });
+      // Retornar TODOS os mercados disponíveis (329 mercados da API-Football)
+      const markets = bookmaker.bets.map((bet: any) => ({
+        id: bet.id,
+        name: bet.name,
+        label: marketLabels[bet.name] || bet.name,
+        values: bet.values?.map((v: any) => ({
+          value: v.value,
+          odd: parseFloat(v.odd)
+        })) || []
+      }));
       
       const result = {
         fixtureId: matchingFixture.fixture.id,

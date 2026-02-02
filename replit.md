@@ -2,8 +2,9 @@
 
 ## Overview
 
-BetPro is a sports betting web application that displays live odds from various sports events and allows users to create bet slips. The application fetches odds data from:
-- **API-Football** - Odds and fixtures from 10+ main football leagues
+BetPro is a sports betting web application that displays live odds from various sports events and allows users to create bet slips. The application fetches data from two sources:
+- **The Odds API** - Current games and odds (h2h, spreads, totals) from 40+ soccer leagues worldwide
+- **API-Football** - Extra betting markets (329 different markets) for additional betting options
 
 The UI features a modal interface showing available betting markets. All odds are boosted by 20% with original values shown crossed out.
 
@@ -35,7 +36,8 @@ The frontend follows a component-based architecture with:
 - **Storage**: In-memory storage (MemStorage class) for bet slips
 
 The server handles:
-- Proxying requests to API-Football for sports odds and fixtures data
+- Proxying requests to The Odds API for current games and basic odds (h2h, spreads, totals)
+- Proxying requests to API-Football for extra betting markets (329 markets)
 - CRUD operations for bet slips
 - Static file serving in production
 - Vite dev server middleware in development
@@ -51,7 +53,7 @@ The server handles:
 
 2. **In-Memory Storage**: Currently uses MemStorage for simplicity. The Drizzle configuration is ready for PostgreSQL when database is provisioned.
 
-3. **API Proxy Pattern**: Backend proxies external API calls to API-Football, keeping API keys secure on the server.
+3. **API Proxy Pattern**: Backend proxies external API calls to The Odds API and API-Football, keeping API keys secure on the server.
 
 4. **Dark Mode First**: The application defaults to dark mode, suitable for a betting platform interface.
 
@@ -60,14 +62,21 @@ The server handles:
 ## External Dependencies
 
 ### Third-Party APIs
-- **API-Football**: Primary data source for sports odds and fixtures
+- **The Odds API**: Primary data source for current games and basic odds
+  - Requires `ODDS_API_KEY` environment variable
+  - Base URL: `https://api.the-odds-api.com/v4`
+  - Endpoints used: `/sports`, `/sports/{sport}/odds`
+  - Rate limit: 500 requests/month (free tier)
+  - Caching: 10 minutes
+  - Markets: h2h (1X2), spreads, totals
+
+- **API-Football**: Additional betting markets
   - Requires `API_FOOTBALL_KEY` environment variable
   - Base URL: `https://v3.football.api-sports.io`
   - Endpoints used: `/fixtures`, `/odds`, `/odds/bets`
   - Rate limit: 100 requests/day (free tier)
   - Caching: 15 minutes
-  - Leagues: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League, Brasileirão, MLS, Primeira Liga
-  - Markets: Match Winner, Over/Under Goals, Handicap, and more
+  - Markets: 329 different markets including BTTS, HT/FT, Corners, Cards, and more
 
 ### Database
 - **PostgreSQL**: Configured via Drizzle ORM

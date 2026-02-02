@@ -17,7 +17,8 @@ interface GameCardProps {
 
 export function GameCard({ game, selections, onClick }: GameCardProps) {
   const gameDate = new Date(game.commenceTime);
-  const isLive = gameDate <= new Date();
+  const isValidDate = !isNaN(gameDate.getTime());
+  const isLive = isValidDate && gameDate <= new Date();
   
   const bestBookmaker = game.bookmakers[0];
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
@@ -45,7 +46,7 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
             ) : (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
-                <span>{format(gameDate, "dd/MM HH:mm", { locale: ptBR })}</span>
+                <span>{isValidDate ? format(gameDate, "dd/MM HH:mm", { locale: ptBR }) : "A definir"}</span>
               </div>
             )}
           </div>
