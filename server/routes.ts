@@ -139,6 +139,65 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Ímpar", odd: parseFloat((1.85 + Math.random() * 0.1).toFixed(2)) },
         { value: "Par", odd: parseFloat((1.85 + Math.random() * 0.1).toFixed(2)) }
       ]
+    },
+    {
+      id: 11,
+      name: "Total Corners",
+      label: "Total de Escanteios",
+      values: [
+        { value: "Mais de 7.5", odd: parseFloat((1.7 + Math.random() * 0.4).toFixed(2)) },
+        { value: "Menos de 7.5", odd: parseFloat((2.0 + Math.random() * 0.3).toFixed(2)) },
+        { value: "Mais de 8.5", odd: parseFloat((1.9 + Math.random() * 0.4).toFixed(2)) },
+        { value: "Menos de 8.5", odd: parseFloat((1.8 + Math.random() * 0.3).toFixed(2)) },
+        { value: "Mais de 9.5", odd: parseFloat((2.1 + Math.random() * 0.5).toFixed(2)) },
+        { value: "Menos de 9.5", odd: parseFloat((1.65 + Math.random() * 0.3).toFixed(2)) },
+        { value: "Mais de 10.5", odd: parseFloat((2.4 + Math.random() * 0.6).toFixed(2)) },
+        { value: "Menos de 10.5", odd: parseFloat((1.5 + Math.random() * 0.2).toFixed(2)) }
+      ]
+    },
+    {
+      id: 12,
+      name: "Corners 1X2",
+      label: "Escanteios - Qual Time Terá Mais",
+      values: [
+        { value: homeTeam, odd: parseFloat((2.0 + Math.random() * 0.5).toFixed(2)) },
+        { value: "Empate", odd: parseFloat((4.0 + Math.random() * 1.5).toFixed(2)) },
+        { value: awayTeam, odd: parseFloat((2.2 + Math.random() * 0.6).toFixed(2)) }
+      ]
+    },
+    {
+      id: 13,
+      name: "Total Cards",
+      label: "Total de Cartões",
+      values: [
+        { value: "Mais de 2.5", odd: parseFloat((1.5 + Math.random() * 0.3).toFixed(2)) },
+        { value: "Menos de 2.5", odd: parseFloat((2.4 + Math.random() * 0.5).toFixed(2)) },
+        { value: "Mais de 3.5", odd: parseFloat((1.8 + Math.random() * 0.4).toFixed(2)) },
+        { value: "Menos de 3.5", odd: parseFloat((1.9 + Math.random() * 0.3).toFixed(2)) },
+        { value: "Mais de 4.5", odd: parseFloat((2.2 + Math.random() * 0.5).toFixed(2)) },
+        { value: "Menos de 4.5", odd: parseFloat((1.6 + Math.random() * 0.3).toFixed(2)) },
+        { value: "Mais de 5.5", odd: parseFloat((2.8 + Math.random() * 0.7).toFixed(2)) },
+        { value: "Menos de 5.5", odd: parseFloat((1.4 + Math.random() * 0.2).toFixed(2)) }
+      ]
+    },
+    {
+      id: 14,
+      name: "Cards 1X2",
+      label: "Cartões - Qual Time Receberá Mais",
+      values: [
+        { value: homeTeam, odd: parseFloat((2.1 + Math.random() * 0.5).toFixed(2)) },
+        { value: "Empate", odd: parseFloat((3.5 + Math.random() * 1.0).toFixed(2)) },
+        { value: awayTeam, odd: parseFloat((2.3 + Math.random() * 0.6).toFixed(2)) }
+      ]
+    },
+    {
+      id: 15,
+      name: "Red Card",
+      label: "Cartão Vermelho no Jogo",
+      values: [
+        { value: "Sim", odd: parseFloat((3.5 + Math.random() * 1.5).toFixed(2)) },
+        { value: "Não", odd: parseFloat((1.2 + Math.random() * 0.15).toFixed(2)) }
+      ]
     }
   ];
 }
