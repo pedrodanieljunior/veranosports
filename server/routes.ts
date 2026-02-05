@@ -4,6 +4,67 @@ import { storage } from "./storage";
 import { insertBetSlipSchema } from "@shared/schema";
 import { z } from "zod";
 import { cache } from "./cache";
+import QRCode from "qrcode";
+
+// Configuração PIX
+const PIX_KEY = "92993848238";
+const PIX_NAME = "Wendell Silva de Souza";
+const PIX_CITY = "SAO PAULO";
+
+// Gerar payload PIX EMV
+function generatePixPayload(value: number, txId: string): string {
+  const formatField = (id: string, value: string) => {
+    const len = value.length.toString().padStart(2, '0');
+    return `${id}${len}${value}`;
+  };
+
+  // Merchant Account Information (GUI + chave)
+  const gui = formatField("00", "br.gov.bcb.pix");
+  const key = formatField("01", PIX_KEY);
+  const merchantAccount = formatField("26", gui + key);
+
+  // Campos principais
+  const payloadFormat = formatField("00", "01");
+  const merchantCat = formatField("52", "0000");
+  const transactionCurrency = formatField("53", "986");
+  const transactionAmount = formatField("54", value.toFixed(2));
+  const countryCode = formatField("58", "BR");
+  const merchantName = formatField("59", PIX_NAME.substring(0, 25));
+  const merchantCity = formatField("60", PIX_CITY.substring(0, 15));
+  
+  // Additional Data (txid)
+  const txIdField = formatField("05", txId.substring(0, 25));
+  const additionalData = formatField("62", txIdField);
+
+  // Montar payload sem CRC
+  const payloadWithoutCRC = payloadFormat + merchantAccount + merchantCat + 
+    transactionCurrency + transactionAmount + countryCode + 
+    merchantName + merchantCity + additionalData + "6304";
+
+  // Calcular CRC16-CCITT
+  const crc = calculateCRC16(payloadWithoutCRC);
+  
+  return payloadWithoutCRC + crc;
+}
+
+function calculateCRC16(payload: string): string {
+  let crc = 0xFFFF;
+  const polynomial = 0x1021;
+
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = (crc << 1) ^ polynomial;
+      } else {
+        crc <<= 1;
+      }
+    }
+    crc &= 0xFFFF;
+  }
+
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
 
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
@@ -439,7 +500,21 @@ export async function registerRoutes(
     try {
       const validatedData = insertBetSlipSchema.parse(req.body);
       const betSlip = await storage.createBetSlip(validatedData);
-      res.status(201).json(betSlip);
+      
+      // Gerar QR Code PIX com valor da aposta
+      const txId = betSlip.id.replace(/-/g, '').substring(0, 25);
+      const pixPayload = generatePixPayload(betSlip.stake, txId);
+      const qrCodeDataUrl = await QRCode.toDataURL(pixPayload, { 
+        width: 300,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+      
+      res.status(201).json({
+        ...betSlip,
+        pixCode: pixPayload,
+        pixQrCode: qrCodeDataUrl
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 

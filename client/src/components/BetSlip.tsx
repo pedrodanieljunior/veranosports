@@ -3,10 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2 } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+interface PlacedBetWithPix extends BetSlipType {
+  pixCode?: string;
+  pixQrCode?: string;
+}
 
 interface BetSlipProps {
   selections: Selection[];
@@ -14,7 +20,7 @@ interface BetSlipProps {
   onClearAll: () => void;
   onClose: () => void;
   onPlaceBet: (stake: number) => void;
-  placedBet: BetSlipType | null;
+  placedBet: PlacedBetWithPix | null;
   isPlacing: boolean;
 }
 
@@ -28,6 +34,17 @@ export function BetSlip({
   isPlacing
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
+  const { toast } = useToast();
+
+  const copyPixCode = () => {
+    if (placedBet?.pixCode) {
+      navigator.clipboard.writeText(placedBet.pixCode);
+      toast({
+        title: "Código PIX copiado!",
+        description: "Cole no seu app de pagamentos.",
+      });
+    }
+  };
   
   const totalOdds = selections.reduce((acc, sel) => acc * sel.odds, 1);
   const potentialWin = parseFloat(stake || "0") * totalOdds;
@@ -54,17 +71,49 @@ export function BetSlip({
           </div>
         </CardHeader>
         
-        <CardContent className="flex-1 overflow-hidden p-4">
-          <div className="bg-primary/10 border border-primary rounded-md p-4 mb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Código do Bilhete</p>
-              <p className="font-mono text-lg font-bold text-primary" data-testid="text-bet-id">
-                #{placedBet.id.slice(0, 8).toUpperCase()}
-              </p>
+        <ScrollArea className="flex-1">
+          <CardContent className="p-4">
+            <div className="bg-primary/10 border border-primary rounded-md p-4 mb-4">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">Código do Bilhete</p>
+                <p className="font-mono text-lg font-bold text-primary" data-testid="text-bet-id">
+                  #{placedBet.id.slice(0, 8).toUpperCase()}
+                </p>
+              </div>
             </div>
-          </div>
-          
-          <ScrollArea className="h-[calc(100%-180px)]">
+
+            {placedBet.pixQrCode && (
+              <div className="bg-white rounded-md p-4 mb-4">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <QrCode className="w-5 h-5 text-primary" />
+                  <p className="font-medium text-black">Pague com PIX</p>
+                </div>
+                <div className="flex justify-center mb-3">
+                  <img 
+                    src={placedBet.pixQrCode} 
+                    alt="QR Code PIX" 
+                    className="w-48 h-48"
+                    data-testid="img-pix-qrcode"
+                  />
+                </div>
+                <div className="text-center mb-3">
+                  <p className="text-2xl font-bold text-primary">
+                    R$ {placedBet.stake.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-gray-500">Wendell Silva de Souza</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={copyPixCode}
+                  data-testid="button-copy-pix"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar Código PIX
+                </Button>
+              </div>
+            )}
+            
             <div className="space-y-3">
               {placedBet.selections.map((selection) => (
                 <div 
@@ -89,36 +138,36 @@ export function BetSlip({
                 </div>
               ))}
             </div>
-          </ScrollArea>
-          
-          <div className="mt-4 pt-4 border-t border-card-border space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Valor Apostado</span>
-              <span className="font-medium">R$ {placedBet.stake.toFixed(2)}</span>
+            
+            <div className="mt-4 pt-4 border-t border-card-border space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Valor Apostado</span>
+                <span className="font-medium">R$ {placedBet.stake.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Odds Total</span>
+                <span className="font-medium">{placedBet.totalOdds.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg pt-2 border-t border-card-border">
+                <span className="font-medium">Retorno Potencial</span>
+                <span className="font-bold text-primary" data-testid="text-potential-win">
+                  R$ {placedBet.potentialWin.toFixed(2)}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Odds Total</span>
-              <span className="font-medium">{placedBet.totalOdds.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-lg pt-2 border-t border-card-border">
-              <span className="font-medium">Retorno Potencial</span>
-              <span className="font-bold text-primary" data-testid="text-potential-win">
-                R$ {placedBet.potentialWin.toFixed(2)}
-              </span>
-            </div>
-          </div>
-          
-          <Button 
-            className="w-full mt-4" 
-            onClick={() => {
-              onClearAll();
-              onClose();
-            }}
-            data-testid="button-new-bet"
-          >
-            Fazer Nova Aposta
-          </Button>
-        </CardContent>
+            
+            <Button 
+              className="w-full mt-4" 
+              onClick={() => {
+                onClearAll();
+                onClose();
+              }}
+              data-testid="button-new-bet"
+            >
+              Fazer Nova Aposta
+            </Button>
+          </CardContent>
+        </ScrollArea>
       </Card>
     );
   }
