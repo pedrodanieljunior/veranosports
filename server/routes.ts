@@ -339,71 +339,152 @@ export async function registerRoutes(
   // Endpoint para buscar jogos do dia de ligas populares
   app.get("/api/games/today", async (req, res) => {
     try {
-      if (!ODDS_API_KEY) {
-        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
-      }
-      
       const cacheKey = "games_today";
       const cached = cache.get<any[]>(cacheKey);
       if (cached) {
         return res.json(cached);
       }
       
-      // Ligas populares para buscar jogos do dia (primeiras 6 são buscadas)
-      const popularLeagues = [
-        "soccer_brazil_campeonato",      // Brasileirão
-        "soccer_epl",                    // Premier League
-        "soccer_spain_la_liga",          // La Liga
-        "soccer_italy_serie_a",          // Serie A
-        "soccer_germany_bundesliga",     // Bundesliga
-        "soccer_france_ligue_one",       // Ligue 1
-        "soccer_uefa_champs_league",     // Champions League
-        "soccer_uefa_europa_league",     // Europa League
-        "soccer_efl_champ",              // Championship
-      ];
-      
-      const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-      
       let allGames: any[] = [];
+      let useApiFootball = false;
       
-      // Buscar jogos de cada liga (limitando requests)
-      for (const league of popularLeagues.slice(0, 6)) { // Limitar a 6 ligas para economizar API calls (incluindo Brasileirão)
-        try {
-          const oddsUrl = `${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
-          const response = await fetch(oddsUrl);
-          
-          if (response.ok) {
-            const rawGames = await response.json();
+      // Tentar The Odds API primeiro
+      if (ODDS_API_KEY) {
+        const popularLeagues = [
+          "soccer_brazil_campeonato",
+          "soccer_epl",
+          "soccer_spain_la_liga",
+          "soccer_italy_serie_a",
+          "soccer_germany_bundesliga",
+          "soccer_france_ligue_one",
+        ];
+        
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+        
+        for (const league of popularLeagues.slice(0, 3)) {
+          try {
+            const oddsUrl = `${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+            const response = await fetch(oddsUrl);
             
-            // Filtrar apenas jogos de hoje
-            const todayGames = rawGames
-              .filter((game: any) => {
-                const gameDate = new Date(game.commence_time);
-                return gameDate >= todayStart && gameDate < tomorrowStart;
-              })
-              .map((game: any) => ({
-                id: game.id,
-                sportKey: game.sport_key,
-                sportTitle: game.sport_title,
-                commenceTime: game.commence_time,
-                homeTeam: game.home_team,
-                awayTeam: game.away_team,
-                bookmakers: game.bookmakers || []
-              }));
+            if (response.status === 401) {
+              console.log("The Odds API quota exceeded, switching to API-Football");
+              useApiFootball = true;
+              break;
+            }
             
-            allGames = [...allGames, ...todayGames];
+            if (response.ok) {
+              const rawGames = await response.json();
+              const todayGames = rawGames
+                .filter((game: any) => {
+                  const gameDate = new Date(game.commence_time);
+                  return gameDate >= todayStart && gameDate < tomorrowStart;
+                })
+                .map((game: any) => ({
+                  id: game.id,
+                  sportKey: game.sport_key,
+                  sportTitle: game.sport_title,
+                  commenceTime: game.commence_time,
+                  homeTeam: game.home_team,
+                  awayTeam: game.away_team,
+                  bookmakers: game.bookmakers || []
+                }));
+              allGames = [...allGames, ...todayGames];
+            }
+          } catch (err) {
+            console.error(`Error fetching ${league}:`, err);
           }
-        } catch (err) {
-          console.error(`Error fetching ${league}:`, err);
+        }
+      } else {
+        useApiFootball = true;
+      }
+      
+      // Usar API-Football se The Odds API falhou ou não tem jogos
+      if ((useApiFootball || allGames.length === 0) && API_FOOTBALL_KEY) {
+        console.log("Using API-Football for today's games");
+        
+        const footballLeagues = [
+          { id: 39, name: "Premier League" },
+          { id: 140, name: "La Liga" },
+          { id: 135, name: "Serie A" },
+          { id: 78, name: "Bundesliga" },
+          { id: 61, name: "Ligue 1" },
+          { id: 71, name: "Brasileirão Série A" },
+        ];
+        
+        const today = new Date().toISOString().split('T')[0];
+        const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth();
+        const season = currentMonth >= 7 ? currentYear : currentYear - 1;
+        
+        for (const league of footballLeagues.slice(0, 4)) {
+          try {
+            const fixturesResponse = await fetch(
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${nextWeek}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+            );
+            
+            if (fixturesResponse.ok) {
+              const fixturesData = await fixturesResponse.json();
+              const fixtures = fixturesData.response || [];
+              
+              const gamesWithOdds = await Promise.all(
+                fixtures.slice(0, 5).map(async (fixture: any) => {
+                  let bookmakers: any[] = [];
+                  
+                  try {
+                    const oddsResponse = await fetch(
+                      `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
+                      { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+                    );
+                    
+                    if (oddsResponse.ok) {
+                      const oddsData = await oddsResponse.json();
+                      const bets = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
+                      
+                      const h2h = bets.find((b: any) => b.name === "Match Winner");
+                      if (h2h) {
+                        bookmakers = [{
+                          key: "api-football",
+                          title: "API-Football",
+                          markets: [{
+                            key: "h2h",
+                            outcomes: h2h.values.map((v: any) => ({
+                              name: v.value === "Home" ? fixture.teams.home.name : 
+                                    v.value === "Away" ? fixture.teams.away.name : "Empate",
+                              price: parseFloat(v.odd)
+                            }))
+                          }]
+                        }];
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Error fetching odds:", err);
+                  }
+                  
+                  return {
+                    id: `api-football-${fixture.fixture.id}`,
+                    sportKey: `soccer_${league.name.toLowerCase().replace(/\s+/g, '_')}`,
+                    sportTitle: league.name,
+                    commenceTime: fixture.fixture.date,
+                    homeTeam: fixture.teams.home.name,
+                    awayTeam: fixture.teams.away.name,
+                    bookmakers
+                  };
+                })
+              );
+              
+              allGames = [...allGames, ...gamesWithOdds];
+            }
+          } catch (err) {
+            console.error(`Error fetching football league ${league.id}:`, err);
+          }
         }
       }
       
-      // Ordenar por horário de início
       allGames.sort((a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
-      
-      // Log remaining requests
       console.log(`Games today endpoint - Found ${allGames.length} games`);
       
       cache.set(cacheKey, allGames, CACHE_TTL_ODDS);
@@ -460,10 +541,6 @@ export async function registerRoutes(
 
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
-      if (!ODDS_API_KEY) {
-        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
-      }
-      
       const { sportKey } = req.params;
       const cacheKey = `odds_${sportKey}`;
       
@@ -472,32 +549,124 @@ export async function registerRoutes(
         return res.json(cached);
       }
       
-      // Buscar odds da The Odds API (jogos atuais)
-      const oddsUrl = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu,uk&markets=h2h,spreads,totals&oddsFormat=decimal`;
-      const response = await fetch(oddsUrl);
+      let games: any[] = [];
+      let useApiFootball = false;
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("The Odds API error:", errorText);
-        return res.status(response.status).json({ error: "Failed to fetch odds" });
+      // Tentar The Odds API primeiro
+      if (ODDS_API_KEY) {
+        const oddsUrl = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu,uk&markets=h2h,spreads,totals&oddsFormat=decimal`;
+        const response = await fetch(oddsUrl);
+        
+        if (response.status === 401) {
+          console.log("The Odds API quota exceeded for sport, switching to API-Football");
+          useApiFootball = true;
+        } else if (response.ok) {
+          const rawGames = await response.json();
+          const remaining = response.headers.get('x-requests-remaining');
+          console.log(`The Odds API - Requests remaining: ${remaining}`);
+          
+          games = rawGames.map((game: any) => ({
+            id: game.id,
+            sportKey: game.sport_key,
+            sportTitle: game.sport_title,
+            commenceTime: game.commence_time,
+            homeTeam: game.home_team,
+            awayTeam: game.away_team,
+            bookmakers: game.bookmakers || []
+          }));
+        } else {
+          useApiFootball = true;
+        }
+      } else {
+        useApiFootball = true;
       }
       
-      const rawGames = await response.json();
-      
-      // Log remaining requests
-      const remaining = response.headers.get('x-requests-remaining');
-      console.log(`The Odds API - Requests remaining: ${remaining}`);
-      
-      // Transformar para formato esperado pelo frontend (camelCase)
-      const games = rawGames.map((game: any) => ({
-        id: game.id,
-        sportKey: game.sport_key,
-        sportTitle: game.sport_title,
-        commenceTime: game.commence_time,
-        homeTeam: game.home_team,
-        awayTeam: game.away_team,
-        bookmakers: game.bookmakers || []
-      }));
+      // Usar API-Football como fallback
+      if ((useApiFootball || games.length === 0) && API_FOOTBALL_KEY) {
+        const leagueMapping: Record<string, { id: number; name: string }> = {
+          "soccer_brazil_campeonato": { id: 71, name: "Brasileirão Série A" },
+          "soccer_epl": { id: 39, name: "Premier League" },
+          "soccer_spain_la_liga": { id: 140, name: "La Liga" },
+          "soccer_italy_serie_a": { id: 135, name: "Serie A" },
+          "soccer_germany_bundesliga": { id: 78, name: "Bundesliga" },
+          "soccer_france_ligue_one": { id: 61, name: "Ligue 1" },
+          "soccer_uefa_champs_league": { id: 2, name: "Champions League" },
+          "soccer_uefa_europa_league": { id: 3, name: "Europa League" },
+          "soccer_portugal_primeira_liga": { id: 94, name: "Primeira Liga" },
+          "soccer_netherlands_eredivisie": { id: 88, name: "Eredivisie" },
+        };
+        
+        const league = leagueMapping[sportKey];
+        if (league) {
+          console.log(`Using API-Football for ${sportKey}`);
+          
+          const today = new Date().toISOString().split('T')[0];
+          const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const currentYear = new Date().getFullYear();
+          const currentMonth = new Date().getMonth();
+          const season = currentMonth >= 7 ? currentYear : currentYear - 1;
+          
+          try {
+            const fixturesResponse = await fetch(
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${nextWeek}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+            );
+            
+            if (fixturesResponse.ok) {
+              const fixturesData = await fixturesResponse.json();
+              const fixtures = fixturesData.response?.slice(0, 15) || [];
+              
+              games = await Promise.all(
+                fixtures.map(async (fixture: any) => {
+                  let bookmakers: any[] = [];
+                  
+                  try {
+                    const oddsResponse = await fetch(
+                      `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
+                      { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+                    );
+                    
+                    if (oddsResponse.ok) {
+                      const oddsData = await oddsResponse.json();
+                      const bets = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
+                      
+                      const h2h = bets.find((b: any) => b.name === "Match Winner");
+                      if (h2h) {
+                        bookmakers = [{
+                          key: "api-football",
+                          title: "API-Football",
+                          markets: [{
+                            key: "h2h",
+                            outcomes: h2h.values.map((v: any) => ({
+                              name: v.value === "Home" ? fixture.teams.home.name : 
+                                    v.value === "Away" ? fixture.teams.away.name : "Empate",
+                              price: parseFloat(v.odd)
+                            }))
+                          }]
+                        }];
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Error fetching fixture odds:", err);
+                  }
+                  
+                  return {
+                    id: `api-football-${fixture.fixture.id}`,
+                    sportKey: sportKey,
+                    sportTitle: league.name,
+                    commenceTime: fixture.fixture.date,
+                    homeTeam: fixture.teams.home.name,
+                    awayTeam: fixture.teams.away.name,
+                    bookmakers
+                  };
+                })
+              );
+            }
+          } catch (err) {
+            console.error("Error fetching from API-Football:", err);
+          }
+        }
+      }
       
       cache.set(cacheKey, games, CACHE_TTL_ODDS);
       res.json(games);
