@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
@@ -43,6 +43,30 @@ export function BetSlip({
         title: "Código PIX copiado!",
         description: "Cole no seu app de pagamentos.",
       });
+    }
+  };
+
+  const sharePixCode = async () => {
+    if (placedBet?.pixCode) {
+      const shareText = `🎰 Bilhete GANHE MAIS AQUI\n\n📋 Código: #${placedBet.id.slice(0, 8).toUpperCase()}\n💰 Valor: R$ ${placedBet.stake.toFixed(2)}\n🎯 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}\n\n📱 Código PIX:\n${placedBet.pixCode}`;
+      
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Bilhete GANHE MAIS AQUI',
+            text: shareText,
+          });
+        } catch (err) {
+          // Usuário cancelou o compartilhamento
+        }
+      } else {
+        // Fallback: copiar para área de transferência
+        navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Conteúdo copiado!",
+          description: "Compartilhe com quem você quiser.",
+        });
+      }
     }
   };
   
@@ -102,15 +126,26 @@ export function BetSlip({
                   </p>
                   <p className="text-xs text-gray-500">Wendell Silva de Souza</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={copyPixCode}
-                  data-testid="button-copy-pix"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copiar Código PIX
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1" 
+                    onClick={copyPixCode}
+                    data-testid="button-copy-pix"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1" 
+                    onClick={sharePixCode}
+                    data-testid="button-share-pix"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Compartilhar
+                  </Button>
+                </div>
               </div>
             )}
             
