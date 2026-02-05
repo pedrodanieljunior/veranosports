@@ -128,8 +128,7 @@ export function BetSlip({
                 </div>
                 <div className="flex gap-2">
                   <Button 
-                    variant="outline" 
-                    className="flex-1" 
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" 
                     onClick={copyPixCode}
                     data-testid="button-copy-pix"
                   >
@@ -137,8 +136,7 @@ export function BetSlip({
                     Copiar
                   </Button>
                   <Button 
-                    variant="outline" 
-                    className="flex-1" 
+                    className="flex-1 bg-green-600 text-white hover:bg-green-700" 
                     onClick={sharePixCode}
                     data-testid="button-share-pix"
                   >
