@@ -332,7 +332,7 @@ export default function Admin() {
                 <p>Nenhum bilhete encontrado</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-[calc(100vh-350px)]">
+              <ScrollArea className="h-auto max-h-none">
                 <div className="space-y-4">
                   {filteredBets.map((bet) => (
                     <Card key={bet.id} className="border border-border">
