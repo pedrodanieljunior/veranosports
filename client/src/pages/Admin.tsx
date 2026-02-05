@@ -383,12 +383,13 @@ export default function Admin() {
                                     <Button
                                       size="icon"
                                       variant={sel.result === "won" ? "default" : "ghost"}
-                                      className={`h-7 w-7 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"}`}
+                                      className={`h-7 w-7 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
                                       onClick={() => updateSelectionMutation.mutate({ 
                                         betId: bet.id, 
                                         selectionId: sel.id, 
                                         result: sel.result === "won" ? "pending" : "won" 
                                       })}
+                                      disabled={!bet.verified}
                                       data-testid={`button-sel-won-${sel.id}`}
                                     >
                                       <CheckCircle className={`w-4 h-4 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
@@ -396,12 +397,13 @@ export default function Admin() {
                                     <Button
                                       size="icon"
                                       variant={sel.result === "lost" ? "default" : "ghost"}
-                                      className={`h-7 w-7 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"}`}
+                                      className={`h-7 w-7 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
                                       onClick={() => updateSelectionMutation.mutate({ 
                                         betId: bet.id, 
                                         selectionId: sel.id, 
                                         result: sel.result === "lost" ? "pending" : "lost" 
                                       })}
+                                      disabled={!bet.verified}
                                       data-testid={`button-sel-lost-${sel.id}`}
                                     >
                                       <XCircle className={`w-4 h-4 ${sel.result === "lost" ? "text-white" : "text-red-500"}`} />
@@ -432,8 +434,9 @@ export default function Admin() {
                               onValueChange={(value: BetStatus) => 
                                 updateStatusMutation.mutate({ id: bet.id, status: value })
                               }
+                              disabled={!bet.verified}
                             >
-                              <SelectTrigger className="w-32" data-testid={`select-status-${bet.id}`}>
+                              <SelectTrigger className={`w-32 ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`} data-testid={`select-status-${bet.id}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
