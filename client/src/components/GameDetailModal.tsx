@@ -50,7 +50,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   if (!game) return null;
   
   const gameDate = new Date(game.commenceTime);
-  const isLive = gameDate <= new Date();
+  const now = new Date();
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const isLive = gameDate <= now && gameDate >= twoHoursAgo;
   
   const allMarkets: Record<string, { outcomes: any[]; bookmaker: string }> = {};
   

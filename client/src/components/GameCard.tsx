@@ -18,7 +18,9 @@ interface GameCardProps {
 export function GameCard({ game, selections, onClick }: GameCardProps) {
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
-  const isLive = isValidDate && gameDate <= new Date();
+  const now = new Date();
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const isLive = isValidDate && gameDate <= now && gameDate >= twoHoursAgo;
   
   const bestBookmaker = game.bookmakers[0];
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");

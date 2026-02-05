@@ -430,7 +430,17 @@ export async function registerRoutes(
             
             if (fixturesResponse.ok) {
               const fixturesData = await fixturesResponse.json();
-              const fixtures = fixturesData.response || [];
+              const allFixtures = fixturesData.response || [];
+              
+              // Filtrar jogos que não terminaram (NS = Not Started, ou em andamento)
+              const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+              const fixtures = allFixtures.filter((f: any) => {
+                const status = f.fixture?.status?.short;
+                const gameDate = new Date(f.fixture?.date);
+                // Incluir jogos não iniciados ou em andamento (não finalizados)
+                return status === "NS" || status === "1H" || status === "HT" || status === "2H" || 
+                       (status !== "FT" && status !== "AET" && status !== "PEN" && gameDate > twoHoursAgo);
+              });
               
               const gamesWithOdds = await Promise.all(
                 fixtures.slice(0, 5).map(async (fixture: any) => {
