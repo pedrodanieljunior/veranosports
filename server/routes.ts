@@ -1089,8 +1089,12 @@ export async function registerRoutes(
         let allSelectionsResolved = true;
         let allSelectionsWon = true;
         let selectionsUpdated = false;
+        
+        console.log(`Processando bilhete ${bet.id} com ${bet.selections.length} seleções`);
 
         for (const selection of bet.selections) {
+          console.log(`  Seleção: ${selection.homeTeam} vs ${selection.awayTeam} - resultado atual: ${selection.result}`);
+          
           // Pular seleções que já têm resultado definido
           if (selection.result && selection.result !== "pending") {
             if (selection.result === "lost") allSelectionsWon = false;
@@ -1099,15 +1103,23 @@ export async function registerRoutes(
 
           // Tentar encontrar o jogo correspondente nos resultados
           const matchingFixture = allFinishedFixtures.find((fixture: any) => {
-            const homeMatch = normalizeTeamName(fixture.teams.home.name).includes(normalizeTeamName(selection.homeTeam)) ||
-                             normalizeTeamName(selection.homeTeam).includes(normalizeTeamName(fixture.teams.home.name));
-            const awayMatch = normalizeTeamName(fixture.teams.away.name).includes(normalizeTeamName(selection.awayTeam)) ||
-                             normalizeTeamName(selection.awayTeam).includes(normalizeTeamName(fixture.teams.away.name));
+            const fixtureHome = normalizeTeamName(fixture.teams.home.name);
+            const fixtureAway = normalizeTeamName(fixture.teams.away.name);
+            const selectionHome = normalizeTeamName(selection.homeTeam);
+            const selectionAway = normalizeTeamName(selection.awayTeam);
+            
+            const homeMatch = fixtureHome.includes(selectionHome) || selectionHome.includes(fixtureHome);
+            const awayMatch = fixtureAway.includes(selectionAway) || selectionAway.includes(fixtureAway);
+            
+            if (homeMatch && awayMatch) {
+              console.log(`    Match encontrado: ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${fixture.goals.home}-${fixture.goals.away})`);
+            }
             return homeMatch && awayMatch;
           });
 
           if (!matchingFixture) {
             // Jogo ainda não terminou ou não encontrado
+            console.log(`    Nenhum match encontrado para ${selection.homeTeam} vs ${selection.awayTeam}`);
             allSelectionsResolved = false;
             continue;
           }
