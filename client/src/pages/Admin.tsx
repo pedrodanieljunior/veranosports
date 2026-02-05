@@ -133,6 +133,27 @@ export default function Admin() {
     },
   });
 
+  const recheckBetMutation = useMutation({
+    mutationFn: async (betId: string) => {
+      const response = await apiRequest("POST", `/api/admin/bets/${betId}/recheck`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      toast({
+        title: "Bilhete resetado",
+        description: "Bilhete voltou para pendente. Clique em 'Verificar Resultados' para reverificar.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível resetar o bilhete.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateSelectionMutation = useMutation({
     mutationFn: async ({ betId, selectionId, result }: { betId: string; selectionId: string; result: "pending" | "won" | "lost" }) => {
       await apiRequest("PATCH", `/api/admin/bets/${betId}/selections/${selectionId}`, { result });
@@ -457,6 +478,18 @@ export default function Admin() {
                                 </SelectItem>
                               </SelectContent>
                             </Select>
+
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => recheckBetMutation.mutate(bet.id)}
+                              disabled={recheckBetMutation.isPending}
+                              data-testid={`button-recheck-${bet.id}`}
+                              title="Resetar bilhete para pendente e reverificar"
+                            >
+                              <RefreshCw className={`w-4 h-4 mr-1 ${recheckBetMutation.isPending ? 'animate-spin' : ''}`} />
+                              Reverificar
+                            </Button>
 
                             <AlertDialog>
                               <AlertDialogTrigger asChild>

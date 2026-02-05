@@ -1044,7 +1044,7 @@ export async function registerRoutes(
       const leaguesToCheck: {id: number, season: number}[] = [];
       
       // Adicionar temporadas europeias
-      const europeanLeagues = [39, 140, 135, 78, 61]; // Premier, La Liga, Serie A, Bundesliga, Ligue 1
+      const europeanLeagues = [39, 40, 140, 135, 78, 61]; // Premier, Championship, La Liga, Serie A, Bundesliga, Ligue 1
       for (const leagueId of europeanLeagues) {
         leaguesToCheck.push({ id: leagueId, season: currentEuropeanSeason });
         if (oldEuropeanSeason !== currentEuropeanSeason) {
@@ -1230,6 +1230,34 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating selection result:", error);
       res.status(500).json({ error: "Erro ao atualizar resultado" });
+    }
+  });
+
+  // Admin: Resetar e reverificar um bilhete
+  app.post("/api/admin/bets/:id/recheck", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bet = await storage.getBetSlip(id);
+      
+      if (!bet) {
+        return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      // Resetar todas as seleções para pending
+      for (const selection of bet.selections) {
+        await storage.updateSelectionResult(id, selection.id, "pending");
+      }
+      
+      // Resetar status do bilhete para pending
+      await storage.updateBetSlipStatus(id, "pending");
+
+      res.json({ 
+        message: "Bilhete resetado para pendente. Use 'Verificar Resultados' para reverificar.",
+        betId: id
+      });
+    } catch (error) {
+      console.error("Error resetting bet:", error);
+      res.status(500).json({ error: "Erro ao resetar bilhete" });
     }
   });
 
