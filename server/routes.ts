@@ -999,28 +999,66 @@ export async function registerRoutes(
         return res.json({ message: "Nenhum bilhete pendente", updated: 0 });
       }
 
-      // Buscar jogos finalizados dos últimos 7 dias
+      // Encontrar a data mais antiga e mais recente dos jogos nos bilhetes pendentes
       const today = new Date();
-      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const fromDate = sevenDaysAgo.toISOString().split('T')[0];
-      const toDate = today.toISOString().split('T')[0];
+      let oldestGameDate = today;
+      let newestGameDate = new Date(0);
       
-      // Determinar a temporada atual (para ligas europeias é ano anterior-ano atual, para brasileiras é ano atual)
+      for (const bet of pendingBets) {
+        for (const selection of bet.selections) {
+          if (selection.commenceTime) {
+            const gameDate = new Date(selection.commenceTime);
+            if (gameDate < oldestGameDate) oldestGameDate = gameDate;
+            if (gameDate > newestGameDate) newestGameDate = gameDate;
+          }
+        }
+      }
+      
+      // Se não encontrou datas válidas, usa os últimos 30 dias
+      if (newestGameDate.getTime() === 0) {
+        newestGameDate = today;
+        oldestGameDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+      
+      // Adicionar margem de 1 dia antes e depois
+      const fromDate = new Date(oldestGameDate.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const toDate = new Date(Math.min(newestGameDate.getTime() + 24 * 60 * 60 * 1000, today.getTime())).toISOString().split('T')[0];
+      
+      console.log(`Buscando resultados de ${fromDate} até ${toDate}`);
+      
+      // Determinar a temporada com base na data mais antiga do jogo
+      const oldestYear = oldestGameDate.getFullYear();
+      const oldestMonth = oldestGameDate.getMonth();
       const currentYear = today.getFullYear();
-      const currentMonth = today.getMonth(); // 0-11
-      // Temporada europeia começa em agosto, então se estamos antes de agosto, é a temporada anterior
-      const europeanSeason = currentMonth < 7 ? currentYear - 1 : currentYear;
-      const brazilianSeason = currentYear;
+      const currentMonth = today.getMonth();
+      
+      // Temporada europeia começa em agosto
+      const oldEuropeanSeason = oldestMonth < 7 ? oldestYear - 1 : oldestYear;
+      const currentEuropeanSeason = currentMonth < 7 ? currentYear - 1 : currentYear;
+      
+      // Para o Brasileirão usar o ano correto (temporada = ano do calendário)
+      const oldBrazilianSeason = oldestYear;
+      const currentBrazilianSeason = currentYear;
 
-      // Buscar resultados de todas as ligas principais
-      const leagues = [
-        { id: 39, season: europeanSeason },   // Premier League
-        { id: 140, season: europeanSeason },  // La Liga
-        { id: 135, season: europeanSeason },  // Serie A
-        { id: 78, season: europeanSeason },   // Bundesliga
-        { id: 61, season: europeanSeason },   // Ligue 1
-        { id: 71, season: brazilianSeason },  // Brasileirão
-      ];
+      // Buscar resultados de todas as ligas principais - incluir múltiplas temporadas se necessário
+      const leaguesToCheck: {id: number, season: number}[] = [];
+      
+      // Adicionar temporadas europeias
+      const europeanLeagues = [39, 140, 135, 78, 61]; // Premier, La Liga, Serie A, Bundesliga, Ligue 1
+      for (const leagueId of europeanLeagues) {
+        leaguesToCheck.push({ id: leagueId, season: currentEuropeanSeason });
+        if (oldEuropeanSeason !== currentEuropeanSeason) {
+          leaguesToCheck.push({ id: leagueId, season: oldEuropeanSeason });
+        }
+      }
+      
+      // Adicionar temporadas brasileiras
+      leaguesToCheck.push({ id: 71, season: currentBrazilianSeason });
+      if (oldBrazilianSeason !== currentBrazilianSeason) {
+        leaguesToCheck.push({ id: 71, season: oldBrazilianSeason });
+      }
+      
+      const leagues = leaguesToCheck;
       
       let allFinishedFixtures: any[] = [];
       
