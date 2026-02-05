@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2 } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle } from "lucide-react";
+import { SiTelegram } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
@@ -144,6 +145,24 @@ export function BetSlip({
                     Compartilhar
                   </Button>
                 </div>
+                
+                <a 
+                  href={`https://t.me/Fw26_bot?start=${placedBet.id.slice(0, 8).toLowerCase()}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mt-3"
+                >
+                  <Button 
+                    className="w-full bg-[#0088cc] text-white hover:bg-[#0077b5]" 
+                    data-testid="button-telegram-comprovante"
+                  >
+                    <SiTelegram className="w-5 h-5 mr-2" />
+                    Enviar Comprovante via Telegram
+                  </Button>
+                </a>
+                <p className="text-xs text-center text-gray-500 mt-1">
+                  Clique para enviar o comprovante PIX e ativar seu bilhete
+                </p>
               </div>
             )}
             
