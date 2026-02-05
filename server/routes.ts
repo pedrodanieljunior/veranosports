@@ -404,25 +404,27 @@ export async function registerRoutes(
       if ((useApiFootball || allGames.length === 0) && API_FOOTBALL_KEY) {
         console.log("Using API-Football for today's games");
         
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth();
+        const europeanSeason = currentMonth >= 7 ? currentYear : currentYear - 1;
+        const brazilianSeason = currentYear;
+        
         const footballLeagues = [
-          { id: 39, name: "Premier League" },
-          { id: 140, name: "La Liga" },
-          { id: 135, name: "Serie A" },
-          { id: 78, name: "Bundesliga" },
-          { id: 61, name: "Ligue 1" },
-          { id: 71, name: "Brasileirão Série A" },
+          { id: 71, name: "Brasileirão Série A", season: brazilianSeason },
+          { id: 39, name: "Premier League", season: europeanSeason },
+          { id: 140, name: "La Liga", season: europeanSeason },
+          { id: 135, name: "Serie A", season: europeanSeason },
+          { id: 78, name: "Bundesliga", season: europeanSeason },
+          { id: 61, name: "Ligue 1", season: europeanSeason },
         ];
         
         const today = new Date().toISOString().split('T')[0];
         const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth();
-        const season = currentMonth >= 7 ? currentYear : currentYear - 1;
         
-        for (const league of footballLeagues.slice(0, 4)) {
+        for (const league of footballLeagues.slice(0, 5)) {
           try {
             const fixturesResponse = await fetch(
-              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${nextWeek}`,
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${today}&to=${nextWeek}`,
               { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
             );
             
@@ -583,17 +585,22 @@ export async function registerRoutes(
       
       // Usar API-Football como fallback
       if ((useApiFootball || games.length === 0) && API_FOOTBALL_KEY) {
-        const leagueMapping: Record<string, { id: number; name: string }> = {
-          "soccer_brazil_campeonato": { id: 71, name: "Brasileirão Série A" },
-          "soccer_epl": { id: 39, name: "Premier League" },
-          "soccer_spain_la_liga": { id: 140, name: "La Liga" },
-          "soccer_italy_serie_a": { id: 135, name: "Serie A" },
-          "soccer_germany_bundesliga": { id: 78, name: "Bundesliga" },
-          "soccer_france_ligue_one": { id: 61, name: "Ligue 1" },
-          "soccer_uefa_champs_league": { id: 2, name: "Champions League" },
-          "soccer_uefa_europa_league": { id: 3, name: "Europa League" },
-          "soccer_portugal_primeira_liga": { id: 94, name: "Primeira Liga" },
-          "soccer_netherlands_eredivisie": { id: 88, name: "Eredivisie" },
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth();
+        const europeanSeason = currentMonth >= 7 ? currentYear : currentYear - 1;
+        const brazilianSeason = currentYear;
+        
+        const leagueMapping: Record<string, { id: number; name: string; season: number }> = {
+          "soccer_brazil_campeonato": { id: 71, name: "Brasileirão Série A", season: brazilianSeason },
+          "soccer_epl": { id: 39, name: "Premier League", season: europeanSeason },
+          "soccer_spain_la_liga": { id: 140, name: "La Liga", season: europeanSeason },
+          "soccer_italy_serie_a": { id: 135, name: "Serie A", season: europeanSeason },
+          "soccer_germany_bundesliga": { id: 78, name: "Bundesliga", season: europeanSeason },
+          "soccer_france_ligue_one": { id: 61, name: "Ligue 1", season: europeanSeason },
+          "soccer_uefa_champs_league": { id: 2, name: "Champions League", season: europeanSeason },
+          "soccer_uefa_europa_league": { id: 3, name: "Europa League", season: europeanSeason },
+          "soccer_portugal_primeira_liga": { id: 94, name: "Primeira Liga", season: europeanSeason },
+          "soccer_netherlands_eredivisie": { id: 88, name: "Eredivisie", season: europeanSeason },
         };
         
         const league = leagueMapping[sportKey];
@@ -602,13 +609,10 @@ export async function registerRoutes(
           
           const today = new Date().toISOString().split('T')[0];
           const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-          const currentYear = new Date().getFullYear();
-          const currentMonth = new Date().getMonth();
-          const season = currentMonth >= 7 ? currentYear : currentYear - 1;
           
           try {
             const fixturesResponse = await fetch(
-              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${nextWeek}`,
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${today}&to=${nextWeek}`,
               { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
             );
             
