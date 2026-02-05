@@ -1136,6 +1136,28 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Atualizar resultado de uma seleção individual
+  app.patch("/api/admin/bets/:betId/selections/:selectionId", async (req, res) => {
+    try {
+      const { betId, selectionId } = req.params;
+      const { result } = req.body;
+
+      if (!["pending", "won", "lost"].includes(result)) {
+        return res.status(400).json({ error: "Resultado inválido" });
+      }
+
+      const updated = await storage.updateSelectionResult(betId, selectionId, result);
+      if (!updated) {
+        return res.status(404).json({ error: "Bilhete ou seleção não encontrada" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating selection result:", error);
+      res.status(500).json({ error: "Erro ao atualizar resultado" });
+    }
+  });
+
   return httpServer;
 }
 

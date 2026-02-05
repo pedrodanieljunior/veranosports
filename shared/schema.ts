@@ -70,6 +70,7 @@ export const selectionSchema = z.object({
   bookmaker: z.string(),
   outcome: z.string(),
   odds: z.number(),
+  result: z.enum(["pending", "won", "lost"]).optional().default("pending"),
 });
 
 export type Selection = z.infer<typeof selectionSchema>;

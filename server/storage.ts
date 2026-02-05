@@ -11,6 +11,7 @@ export interface IStorage {
   deleteBetSlip(id: string): Promise<boolean>;
   deleteAllBetSlips(): Promise<void>;
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
+  updateSelectionResult(betId: string, selectionId: string, result: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -110,6 +111,47 @@ export class DatabaseStorage implements IStorage {
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
       createdAt: result.createdAt.toISOString(),
+    };
+  }
+
+  async updateSelectionResult(betId: string, selectionId: string, result: "pending" | "won" | "lost"): Promise<BetSlip | undefined> {
+    const bet = await this.getBetSlip(betId);
+    if (!bet) return undefined;
+
+    const updatedSelections = bet.selections.map(sel => {
+      if (sel.id === selectionId) {
+        return { ...sel, result };
+      }
+      return sel;
+    });
+
+    // Calcular status do bilhete baseado nas seleções
+    const allResolved = updatedSelections.every(sel => sel.result !== "pending");
+    const anyLost = updatedSelections.some(sel => sel.result === "lost");
+    
+    let betStatus: "pending" | "won" | "lost" = "pending";
+    if (allResolved) {
+      betStatus = anyLost ? "lost" : "won";
+    }
+
+    const [updated] = await db.update(betSlipsTable)
+      .set({ 
+        selections: updatedSelections,
+        status: betStatus
+      })
+      .where(eq(betSlipsTable.id, betId))
+      .returning();
+
+    if (!updated) return undefined;
+
+    return {
+      id: updated.id,
+      selections: updated.selections as BetSlip["selections"],
+      stake: updated.stake,
+      totalOdds: updated.totalOdds,
+      potentialWin: updated.potentialWin,
+      status: updated.status as "pending" | "won" | "lost",
+      createdAt: updated.createdAt.toISOString(),
     };
   }
 }

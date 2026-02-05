@@ -132,6 +132,22 @@ export default function Admin() {
     },
   });
 
+  const updateSelectionMutation = useMutation({
+    mutationFn: async ({ betId, selectionId, result }: { betId: string; selectionId: string; result: "pending" | "won" | "lost" }) => {
+      await apiRequest("PATCH", `/api/admin/bets/${betId}/selections/${selectionId}`, { result });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o resultado.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const copyBetCode = (id: string) => {
     navigator.clipboard.writeText(`#${id.slice(0, 8).toUpperCase()}`);
     toast({
@@ -310,13 +326,43 @@ export default function Admin() {
                               </span>
                             </div>
                             
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                               {bet.selections.map((sel, idx) => (
-                                <div key={idx} className="text-sm">
-                                  <span className="text-muted-foreground">{sel.homeTeam} vs {sel.awayTeam}</span>
-                                  <span className="mx-2">-</span>
-                                  <span className="font-medium">{sel.outcome}</span>
-                                  <span className="text-primary ml-2">@{sel.odds.toFixed(2)}</span>
+                                <div key={idx} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
+                                  <div className="flex-1">
+                                    <span className="text-muted-foreground">{sel.homeTeam} vs {sel.awayTeam}</span>
+                                    <span className="mx-2">-</span>
+                                    <span className="font-medium">{sel.outcome}</span>
+                                    <span className="text-primary ml-2">@{sel.odds.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant={sel.result === "won" ? "default" : "ghost"}
+                                      className={`h-7 w-7 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"}`}
+                                      onClick={() => updateSelectionMutation.mutate({ 
+                                        betId: bet.id, 
+                                        selectionId: sel.id, 
+                                        result: sel.result === "won" ? "pending" : "won" 
+                                      })}
+                                      data-testid={`button-sel-won-${sel.id}`}
+                                    >
+                                      <CheckCircle className={`w-4 h-4 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant={sel.result === "lost" ? "default" : "ghost"}
+                                      className={`h-7 w-7 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"}`}
+                                      onClick={() => updateSelectionMutation.mutate({ 
+                                        betId: bet.id, 
+                                        selectionId: sel.id, 
+                                        result: sel.result === "lost" ? "pending" : "lost" 
+                                      })}
+                                      data-testid={`button-sel-lost-${sel.id}`}
+                                    >
+                                      <XCircle className={`w-4 h-4 ${sel.result === "lost" ? "text-white" : "text-red-500"}`} />
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
