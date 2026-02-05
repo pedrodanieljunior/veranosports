@@ -1196,6 +1196,28 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Atualizar status de verificação (pagamento confirmado)
+  app.patch("/api/admin/bets/:id/verified", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { verified } = req.body;
+
+      if (typeof verified !== "boolean") {
+        return res.status(400).json({ error: "Valor de verificação inválido" });
+      }
+
+      const updated = await storage.updateBetSlipVerified(id, verified);
+      if (!updated) {
+        return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating verification status:", error);
+      res.status(500).json({ error: "Erro ao atualizar verificação" });
+    }
+  });
+
   return httpServer;
 }
 

@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type BetStatus = "pending" | "won" | "lost";
 
@@ -148,6 +149,26 @@ export default function Admin() {
     },
   });
 
+  const updateVerifiedMutation = useMutation({
+    mutationFn: async ({ id, verified }: { id: string; verified: boolean }) => {
+      await apiRequest("PATCH", `/api/admin/bets/${id}/verified`, { verified });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      toast({
+        title: "Status atualizado",
+        description: "Status de verificação atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a verificação.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const copyBetCode = (id: string) => {
     navigator.clipboard.writeText(`#${id.slice(0, 8).toUpperCase()}`);
     toast({
@@ -166,6 +187,8 @@ export default function Admin() {
     pending: bets.filter(b => b.status === "pending").length,
     won: bets.filter(b => b.status === "won").length,
     lost: bets.filter(b => b.status === "lost").length,
+    verified: bets.filter(b => b.verified).length,
+    notVerified: bets.filter(b => !b.verified).length,
     totalStake: bets.reduce((sum, b) => sum + b.stake, 0),
     totalPotential: bets.reduce((sum, b) => sum + b.potentialWin, 0),
   };
@@ -234,11 +257,17 @@ export default function Admin() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
           <Card>
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold">{stats.total}</p>
               <p className="text-xs text-muted-foreground">Total</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-green-500">{stats.verified}</p>
+              <p className="text-xs text-muted-foreground">Pagos</p>
             </CardContent>
           </Card>
           <Card>
@@ -320,6 +349,21 @@ export default function Admin() {
                                 <Copy className="w-3 h-3" />
                               </button>
                               {getStatusBadge(bet.status)}
+                              <div 
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs cursor-pointer transition-colors ${
+                                  bet.verified 
+                                    ? "bg-green-500/20 text-green-500 border border-green-500/30" 
+                                    : "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30"
+                                }`}
+                                onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: !bet.verified })}
+                                data-testid={`checkbox-verified-${bet.id}`}
+                              >
+                                <Checkbox 
+                                  checked={bet.verified} 
+                                  className="h-3.5 w-3.5 border-current"
+                                />
+                                <span>{bet.verified ? "Pago" : "Não pago"}</span>
+                              </div>
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}

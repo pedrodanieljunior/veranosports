@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, text, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, real, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 
 export const betSlipsTable = pgTable("bet_slips", {
   id: text("id").primaryKey(),
@@ -8,6 +8,7 @@ export const betSlipsTable = pgTable("bet_slips", {
   totalOdds: real("total_odds").notNull(),
   potentialWin: real("potential_win").notNull(),
   status: text("status").notNull().default("pending"),
+  verified: boolean("verified").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -82,6 +83,7 @@ export const betSlipSchema = z.object({
   totalOdds: z.number(),
   potentialWin: z.number(),
   status: z.enum(["pending", "won", "lost"]).default("pending"),
+  verified: z.boolean().default(false),
   createdAt: z.string(),
 });
 

@@ -12,6 +12,7 @@ export interface IStorage {
   deleteAllBetSlips(): Promise<void>;
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
   updateSelectionResult(betId: string, selectionId: string, result: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
+  updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -36,6 +37,7 @@ export class DatabaseStorage implements IStorage {
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
       createdAt: result.createdAt.toISOString(),
     };
   }
@@ -51,6 +53,7 @@ export class DatabaseStorage implements IStorage {
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
       createdAt: result.createdAt.toISOString(),
     };
   }
@@ -65,6 +68,7 @@ export class DatabaseStorage implements IStorage {
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
       createdAt: result.createdAt.toISOString(),
     }));
   }
@@ -82,6 +86,7 @@ export class DatabaseStorage implements IStorage {
         totalOdds: result.totalOdds,
         potentialWin: result.potentialWin,
         status: result.status as "pending" | "won" | "lost",
+        verified: result.verified,
         createdAt: result.createdAt.toISOString(),
       }));
   }
@@ -110,6 +115,7 @@ export class DatabaseStorage implements IStorage {
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
       createdAt: result.createdAt.toISOString(),
     };
   }
@@ -151,7 +157,28 @@ export class DatabaseStorage implements IStorage {
       totalOdds: updated.totalOdds,
       potentialWin: updated.potentialWin,
       status: updated.status as "pending" | "won" | "lost",
+      verified: updated.verified,
       createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  async updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined> {
+    const [result] = await db.update(betSlipsTable)
+      .set({ verified })
+      .where(eq(betSlipsTable.id, id))
+      .returning();
+    
+    if (!result) return undefined;
+    
+    return {
+      id: result.id,
+      selections: result.selections as BetSlip["selections"],
+      stake: result.stake,
+      totalOdds: result.totalOdds,
+      potentialWin: result.potentialWin,
+      status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
+      createdAt: result.createdAt.toISOString(),
     };
   }
 }
