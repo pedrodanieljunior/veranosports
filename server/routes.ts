@@ -984,6 +984,219 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Verificar resultados e atualizar bilhetes automaticamente
+  app.post("/api/admin/check-results", async (req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      }
+
+      // Buscar todos os bilhetes pendentes
+      const allBets = await storage.getAllBetSlips();
+      const pendingBets = allBets.filter(bet => bet.status === "pending");
+
+      if (pendingBets.length === 0) {
+        return res.json({ message: "Nenhum bilhete pendente", updated: 0 });
+      }
+
+      // Buscar jogos finalizados dos últimos 7 dias
+      const today = new Date();
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const fromDate = sevenDaysAgo.toISOString().split('T')[0];
+      const toDate = today.toISOString().split('T')[0];
+
+      // Buscar resultados de todas as ligas principais
+      const leagues = [39, 140, 135, 78, 61, 71]; // Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Brasileirão
+      
+      let allFinishedFixtures: any[] = [];
+      
+      for (const league of leagues) {
+        try {
+          const response = await fetch(
+            `${API_FOOTBALL_BASE}/fixtures?league=${league}&season=2024&from=${fromDate}&to=${toDate}&status=FT`,
+            { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.response) {
+              allFinishedFixtures = [...allFinishedFixtures, ...data.response];
+            }
+          }
+        } catch (err) {
+          console.log(`Erro ao buscar liga ${league}:`, err);
+        }
+      }
+
+      let updatedCount = 0;
+      const results: any[] = [];
+
+      // Verificar cada bilhete pendente
+      for (const bet of pendingBets) {
+        let allSelectionsResolved = true;
+        let allSelectionsWon = true;
+
+        for (const selection of bet.selections) {
+          // Tentar encontrar o jogo correspondente nos resultados
+          const matchingFixture = allFinishedFixtures.find((fixture: any) => {
+            const homeMatch = normalizeTeamName(fixture.teams.home.name).includes(normalizeTeamName(selection.homeTeam)) ||
+                             normalizeTeamName(selection.homeTeam).includes(normalizeTeamName(fixture.teams.home.name));
+            const awayMatch = normalizeTeamName(fixture.teams.away.name).includes(normalizeTeamName(selection.awayTeam)) ||
+                             normalizeTeamName(selection.awayTeam).includes(normalizeTeamName(fixture.teams.away.name));
+            return homeMatch && awayMatch;
+          });
+
+          if (!matchingFixture) {
+            // Jogo ainda não terminou ou não encontrado
+            allSelectionsResolved = false;
+            continue;
+          }
+
+          const homeGoals = matchingFixture.goals.home;
+          const awayGoals = matchingFixture.goals.away;
+          const totalGoals = homeGoals + awayGoals;
+
+          // Verificar se a seleção ganhou baseado no tipo de mercado
+          const selectionWon = checkSelectionResult(
+            selection,
+            homeGoals,
+            awayGoals,
+            totalGoals,
+            matchingFixture.teams.home.name,
+            matchingFixture.teams.away.name
+          );
+
+          if (!selectionWon) {
+            allSelectionsWon = false;
+          }
+        }
+
+        // Se todos os jogos terminaram, atualizar o status do bilhete
+        if (allSelectionsResolved) {
+          const newStatus = allSelectionsWon ? "won" : "lost";
+          await storage.updateBetSlipStatus(bet.id, newStatus);
+          updatedCount++;
+          results.push({
+            betId: bet.id,
+            oldStatus: "pending",
+            newStatus,
+            stake: bet.stake,
+            potentialWin: bet.potentialWin
+          });
+        }
+      }
+
+      res.json({
+        message: `Verificação concluída`,
+        totalPending: pendingBets.length,
+        updated: updatedCount,
+        fixturesChecked: allFinishedFixtures.length,
+        results
+      });
+    } catch (error) {
+      console.error("Error checking results:", error);
+      res.status(500).json({ error: "Erro ao verificar resultados" });
+    }
+  });
+
+  // Admin: Atualizar status de um bilhete manualmente
+  app.patch("/api/admin/bets/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!["pending", "won", "lost"].includes(status)) {
+        return res.status(400).json({ error: "Status inválido" });
+      }
+
+      const updated = await storage.updateBetSlipStatus(id, status);
+      if (!updated) {
+        return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating bet status:", error);
+      res.status(500).json({ error: "Erro ao atualizar status" });
+    }
+  });
 
   return httpServer;
+}
+
+// Normalizar nome de time para comparação
+function normalizeTeamName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/fc|sc|cf|ac|as|ss/gi, "")
+    .trim();
+}
+
+// Verificar se uma seleção ganhou
+function checkSelectionResult(
+  selection: any,
+  homeGoals: number,
+  awayGoals: number,
+  totalGoals: number,
+  homeTeamName: string,
+  awayTeamName: string
+): boolean {
+  const outcome = selection.outcome.toLowerCase();
+  const marketKey = selection.marketKey?.toLowerCase() || "";
+
+  // Resultado 1X2 (h2h)
+  if (marketKey === "h2h" || marketKey.includes("match_winner")) {
+    if (outcome.includes("home") || normalizeTeamName(outcome).includes(normalizeTeamName(homeTeamName))) {
+      return homeGoals > awayGoals;
+    }
+    if (outcome.includes("away") || normalizeTeamName(outcome).includes(normalizeTeamName(awayTeamName))) {
+      return awayGoals > homeGoals;
+    }
+    if (outcome.includes("draw") || outcome.includes("empate") || outcome === "x") {
+      return homeGoals === awayGoals;
+    }
+  }
+
+  // Total de gols Over/Under
+  if (marketKey.includes("total") || marketKey.includes("over") || marketKey.includes("under")) {
+    const overMatch = outcome.match(/over\s*(\d+\.?\d*)/i);
+    const underMatch = outcome.match(/under\s*(\d+\.?\d*)/i);
+    
+    if (overMatch) {
+      const line = parseFloat(overMatch[1]);
+      return totalGoals > line;
+    }
+    if (underMatch) {
+      const line = parseFloat(underMatch[1]);
+      return totalGoals < line;
+    }
+  }
+
+  // Ambas marcam (BTTS)
+  if (marketKey.includes("btts") || marketKey.includes("both")) {
+    if (outcome.includes("yes") || outcome.includes("sim")) {
+      return homeGoals > 0 && awayGoals > 0;
+    }
+    if (outcome.includes("no") || outcome.includes("nao") || outcome.includes("não")) {
+      return homeGoals === 0 || awayGoals === 0;
+    }
+  }
+
+  // Dupla chance
+  if (marketKey.includes("double_chance")) {
+    if (outcome.includes("1x") || outcome.includes("home or draw")) {
+      return homeGoals >= awayGoals;
+    }
+    if (outcome.includes("x2") || outcome.includes("draw or away")) {
+      return awayGoals >= homeGoals;
+    }
+    if (outcome.includes("12") || outcome.includes("home or away")) {
+      return homeGoals !== awayGoals;
+    }
+  }
+
+  // Se não conseguiu determinar, manter como pendente (retornar true para não marcar como perdido)
+  return false;
 }

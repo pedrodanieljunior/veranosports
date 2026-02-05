@@ -15,7 +15,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Copy
+  Copy,
+  Zap
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,7 +73,7 @@ export default function Admin() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: BetStatus }) => {
-      await apiRequest("PATCH", `/api/bets/${id}/status`, { status });
+      await apiRequest("PATCH", `/api/admin/bets/${id}/status`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
@@ -105,6 +106,27 @@ export default function Admin() {
       toast({
         title: "Erro",
         description: "Não foi possível excluir os bilhetes.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const checkResultsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/check-results");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      toast({
+        title: "Resultados verificados",
+        description: `${data.updated} bilhete(s) atualizado(s) de ${data.totalPending} pendente(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível verificar os resultados.",
         variant: "destructive",
       });
     },
@@ -151,7 +173,17 @@ export default function Admin() {
             <h1 className="text-2xl font-bold">Painel de Administração</h1>
             <p className="text-muted-foreground">Gerenciamento de bilhetes</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => checkResultsMutation.mutate()}
+              disabled={checkResultsMutation.isPending || stats.pending === 0}
+              data-testid="button-check-results"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              {checkResultsMutation.isPending ? "Verificando..." : "Verificar Resultados"}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-admin">
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
