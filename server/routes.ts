@@ -1004,27 +1004,42 @@ export async function registerRoutes(
       const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
       const fromDate = sevenDaysAgo.toISOString().split('T')[0];
       const toDate = today.toISOString().split('T')[0];
+      
+      // Determinar a temporada atual (para ligas europeias é ano anterior-ano atual, para brasileiras é ano atual)
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth(); // 0-11
+      // Temporada europeia começa em agosto, então se estamos antes de agosto, é a temporada anterior
+      const europeanSeason = currentMonth < 7 ? currentYear - 1 : currentYear;
+      const brazilianSeason = currentYear;
 
       // Buscar resultados de todas as ligas principais
-      const leagues = [39, 140, 135, 78, 61, 71]; // Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Brasileirão
+      const leagues = [
+        { id: 39, season: europeanSeason },   // Premier League
+        { id: 140, season: europeanSeason },  // La Liga
+        { id: 135, season: europeanSeason },  // Serie A
+        { id: 78, season: europeanSeason },   // Bundesliga
+        { id: 61, season: europeanSeason },   // Ligue 1
+        { id: 71, season: brazilianSeason },  // Brasileirão
+      ];
       
       let allFinishedFixtures: any[] = [];
       
       for (const league of leagues) {
         try {
           const response = await fetch(
-            `${API_FOOTBALL_BASE}/fixtures?league=${league}&season=2024&from=${fromDate}&to=${toDate}&status=FT`,
+            `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${fromDate}&to=${toDate}&status=FT`,
             { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
           );
           
           if (response.ok) {
             const data = await response.json();
+            console.log(`Liga ${league.id} temporada ${league.season}: ${data.response?.length || 0} jogos`);
             if (data.response) {
               allFinishedFixtures = [...allFinishedFixtures, ...data.response];
             }
           }
         } catch (err) {
-          console.log(`Erro ao buscar liga ${league}:`, err);
+          console.log(`Erro ao buscar liga ${league.id}:`, err);
         }
       }
 
