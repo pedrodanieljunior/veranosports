@@ -1088,8 +1088,15 @@ export async function registerRoutes(
       for (const bet of pendingBets) {
         let allSelectionsResolved = true;
         let allSelectionsWon = true;
+        let selectionsUpdated = false;
 
         for (const selection of bet.selections) {
+          // Pular seleções que já têm resultado definido
+          if (selection.result && selection.result !== "pending") {
+            if (selection.result === "lost") allSelectionsWon = false;
+            continue;
+          }
+
           // Tentar encontrar o jogo correspondente nos resultados
           const matchingFixture = allFinishedFixtures.find((fixture: any) => {
             const homeMatch = normalizeTeamName(fixture.teams.home.name).includes(normalizeTeamName(selection.homeTeam)) ||
@@ -1119,6 +1126,13 @@ export async function registerRoutes(
             matchingFixture.teams.away.name
           );
 
+          // Atualizar o resultado da seleção individual
+          const selectionResult = selectionWon ? "won" : "lost";
+          await storage.updateSelectionResult(bet.id, selection.id, selectionResult);
+          selectionsUpdated = true;
+          
+          console.log(`Seleção ${selection.homeTeam} vs ${selection.awayTeam}: ${selectionResult} (${homeGoals}-${awayGoals})`);
+
           if (!selectionWon) {
             allSelectionsWon = false;
           }
@@ -1135,6 +1149,16 @@ export async function registerRoutes(
             newStatus,
             stake: bet.stake,
             potentialWin: bet.potentialWin
+          });
+        } else if (selectionsUpdated) {
+          // Mesmo que nem todos os jogos terminaram, registrar que houve atualização parcial
+          results.push({
+            betId: bet.id,
+            oldStatus: "pending",
+            newStatus: "pending (parcial)",
+            stake: bet.stake,
+            potentialWin: bet.potentialWin,
+            note: "Algumas seleções atualizadas, aguardando outros jogos"
           });
         }
       }
