@@ -6,34 +6,44 @@ import { z } from "zod";
 import { cache } from "./cache";
 import QRCode from "qrcode";
 
-// Configuração PIX
-const PIX_KEY = "92993848238";
-const PIX_NAME = "Wendell Silva de Souza";
+// Configuração PIX - telefone com código do país
+const PIX_KEY = "+5592993848238";
+const PIX_NAME = "WENDELL SILVA DE SOUZA";
 const PIX_CITY = "SAO PAULO";
 
-// Gerar payload PIX EMV
+// Gerar payload PIX EMV (formato BRCode)
 function generatePixPayload(value: number, txId: string): string {
   const formatField = (id: string, value: string) => {
     const len = value.length.toString().padStart(2, '0');
     return `${id}${len}${value}`;
   };
 
-  // Merchant Account Information (GUI + chave)
-  const gui = formatField("00", "br.gov.bcb.pix");
-  const key = formatField("01", PIX_KEY);
-  const merchantAccount = formatField("26", gui + key);
+  // Remover caracteres especiais do txId (apenas alfanuméricos)
+  const cleanTxId = txId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 25);
 
-  // Campos principais
-  const payloadFormat = formatField("00", "01");
-  const merchantCat = formatField("52", "0000");
-  const transactionCurrency = formatField("53", "986");
+  // Merchant Account Information (GUI + chave PIX)
+  const gui = formatField("00", "BR.GOV.BCB.PIX");
+  const key = formatField("01", PIX_KEY);
+  const merchantAccountInfo = gui + key;
+  const merchantAccount = formatField("26", merchantAccountInfo);
+
+  // Campos do payload
+  const payloadFormat = formatField("00", "01"); // Payload Format Indicator
+  const merchantCat = formatField("52", "0000"); // Merchant Category Code
+  const transactionCurrency = formatField("53", "986"); // Currency = BRL
   const transactionAmount = formatField("54", value.toFixed(2));
   const countryCode = formatField("58", "BR");
-  const merchantName = formatField("59", PIX_NAME.substring(0, 25));
-  const merchantCity = formatField("60", PIX_CITY.substring(0, 15));
   
-  // Additional Data (txid)
-  const txIdField = formatField("05", txId.substring(0, 25));
+  // Nome sem acentos, máximo 25 caracteres
+  const cleanName = PIX_NAME.normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 25);
+  const merchantName = formatField("59", cleanName);
+  
+  // Cidade sem acentos, máximo 15 caracteres
+  const cleanCity = PIX_CITY.normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 15);
+  const merchantCity = formatField("60", cleanCity);
+  
+  // Additional Data Field Template (txid)
+  const txIdField = formatField("05", cleanTxId);
   const additionalData = formatField("62", txIdField);
 
   // Montar payload sem CRC
@@ -41,7 +51,7 @@ function generatePixPayload(value: number, txId: string): string {
     transactionCurrency + transactionAmount + countryCode + 
     merchantName + merchantCity + additionalData + "6304";
 
-  // Calcular CRC16-CCITT
+  // Calcular CRC16-CCITT (XModem)
   const crc = calculateCRC16(payloadWithoutCRC);
   
   return payloadWithoutCRC + crc;
@@ -51,16 +61,17 @@ function calculateCRC16(payload: string): string {
   let crc = 0xFFFF;
   const polynomial = 0x1021;
 
-  for (let i = 0; i < payload.length; i++) {
-    crc ^= payload.charCodeAt(i) << 8;
+  const bytes = Buffer.from(payload, 'utf8');
+  
+  for (let i = 0; i < bytes.length; i++) {
+    crc ^= bytes[i] << 8;
     for (let j = 0; j < 8; j++) {
       if ((crc & 0x8000) !== 0) {
-        crc = (crc << 1) ^ polynomial;
+        crc = ((crc << 1) ^ polynomial) & 0xFFFF;
       } else {
-        crc <<= 1;
+        crc = (crc << 1) & 0xFFFF;
       }
     }
-    crc &= 0xFFFF;
   }
 
   return crc.toString(16).toUpperCase().padStart(4, '0');
