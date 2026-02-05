@@ -88,6 +88,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       bookmaker,
       outcome: outcomeName,
       odds: boostedOdds,
+      result: "pending",
     };
     onToggleSelection(selection);
   };
@@ -201,8 +202,12 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                   {h2hMarket.outcomes.map((outcome: any) => {
                     const selected = isSelected(outcome.name, "h2h");
                     const boostedOdd = calculateBoostedOdd(outcome.price);
-                    const label = outcome.name === "Draw" ? "Empate" : 
-                                  outcome.name === game.homeTeam ? "1" : "2";
+                    const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
+                    const isHome = outcome.name === game.homeTeam;
+                    const label = isDraw ? "X" : isHome ? "1" : "2";
+                    const displayName = isDraw ? "Empate" : 
+                                        isHome ? game.homeTeam.substring(0, 10) : 
+                                        game.awayTeam.substring(0, 10);
                     return (
                       <button
                         key={outcome.name}
@@ -215,8 +220,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         data-testid={`button-modal-h2h-${outcome.name}`}
                       >
                         <span className="text-xs text-muted-foreground mb-1">
-                          {label === "1" ? game.homeTeam.substring(0, 10) : 
-                           label === "2" ? game.awayTeam.substring(0, 10) : "Empate"}
+                          {displayName}
                         </span>
                         <div className="flex items-center gap-1">
                           <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>

@@ -24,7 +24,7 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
   
   const homeOdd = h2hMarket?.outcomes.find(o => o.name === game.homeTeam);
-  const drawOdd = h2hMarket?.outcomes.find(o => o.name === "Draw");
+  const drawOdd = h2hMarket?.outcomes.find(o => o.name === "Draw" || o.name === "Empate");
   const awayOdd = h2hMarket?.outcomes.find(o => o.name === game.awayTeam);
   
   const selectionsForGame = selections.filter(s => s.gameId === game.id);
