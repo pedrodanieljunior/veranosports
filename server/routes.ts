@@ -1127,6 +1127,10 @@ export async function registerRoutes(
           const homeGoals = matchingFixture.goals.home;
           const awayGoals = matchingFixture.goals.away;
           const totalGoals = homeGoals + awayGoals;
+          
+          // Dados do primeiro tempo (halftime)
+          const htHomeGoals = matchingFixture.score?.halftime?.home ?? null;
+          const htAwayGoals = matchingFixture.score?.halftime?.away ?? null;
 
           // Verificar se a seleção ganhou baseado no tipo de mercado
           const selectionWon = checkSelectionResult(
@@ -1135,7 +1139,9 @@ export async function registerRoutes(
             awayGoals,
             totalGoals,
             matchingFixture.teams.home.name,
-            matchingFixture.teams.away.name
+            matchingFixture.teams.away.name,
+            htHomeGoals,
+            htAwayGoals
           );
 
           // Atualizar o resultado da seleção individual
@@ -1274,22 +1280,92 @@ function checkSelectionResult(
   awayGoals: number,
   totalGoals: number,
   homeTeamName: string,
-  awayTeamName: string
+  awayTeamName: string,
+  htHomeGoals: number | null = null,
+  htAwayGoals: number | null = null
 ): boolean {
   const outcome = selection.outcome.toLowerCase();
   const marketKey = selection.marketKey?.toLowerCase() || "";
+  const selectionHome = normalizeTeamName(selection.homeTeam);
+  const selectionAway = normalizeTeamName(selection.awayTeam);
+  const fixtureHome = normalizeTeamName(homeTeamName);
+  const fixtureAway = normalizeTeamName(awayTeamName);
+  
+  console.log(`    checkSelectionResult: outcome="${outcome}", marketKey="${marketKey}"`);
+  console.log(`    Placar: ${homeGoals}-${awayGoals}, HT: ${htHomeGoals}-${htAwayGoals}`);
+
+  // HT/FT Double - Resultado no intervalo e final
+  if (outcome.includes("ht/ft") || outcome.includes("halftime/fulltime")) {
+    // Formato: "HT/FT Double-Time1/Time2" ou similar
+    // Time1 = quem está ganhando no intervalo
+    // Time2 = quem ganha o jogo
+    const htftMatch = outcome.match(/ht\/ft[^-]*-(.+)\/(.+)/i);
+    if (htftMatch && htHomeGoals !== null && htAwayGoals !== null) {
+      const htPick = htftMatch[1].trim();
+      const ftPick = htftMatch[2].trim();
+      
+      console.log(`    HT/FT: HT pick="${htPick}", FT pick="${ftPick}"`);
+      
+      // Determinar resultado do intervalo
+      let htResult: string;
+      if (htHomeGoals > htAwayGoals) htResult = "home";
+      else if (htAwayGoals > htHomeGoals) htResult = "away";
+      else htResult = "draw";
+      
+      // Determinar resultado final
+      let ftResult: string;
+      if (homeGoals > awayGoals) ftResult = "home";
+      else if (awayGoals > homeGoals) ftResult = "away";
+      else ftResult = "draw";
+      
+      // Verificar se o pick do HT está correto
+      const htPickNorm = normalizeTeamName(htPick);
+      let htWon = false;
+      if (htResult === "home" && (htPickNorm.includes(fixtureHome) || fixtureHome.includes(htPickNorm))) htWon = true;
+      if (htResult === "away" && (htPickNorm.includes(fixtureAway) || fixtureAway.includes(htPickNorm))) htWon = true;
+      if (htResult === "draw" && (htPick.includes("draw") || htPick.includes("empate") || htPick === "x")) htWon = true;
+      
+      // Verificar se o pick do FT está correto
+      const ftPickNorm = normalizeTeamName(ftPick);
+      let ftWon = false;
+      if (ftResult === "home" && (ftPickNorm.includes(fixtureHome) || fixtureHome.includes(ftPickNorm))) ftWon = true;
+      if (ftResult === "away" && (ftPickNorm.includes(fixtureAway) || fixtureAway.includes(ftPickNorm))) ftWon = true;
+      if (ftResult === "draw" && (ftPick.includes("draw") || ftPick.includes("empate") || ftPick === "x")) ftWon = true;
+      
+      console.log(`    HT result: ${htResult}, HT won: ${htWon}. FT result: ${ftResult}, FT won: ${ftWon}`);
+      
+      return htWon && ftWon;
+    }
+    return false;
+  }
 
   // Resultado 1X2 (h2h)
   if (marketKey === "h2h" || marketKey.includes("match_winner")) {
-    if (outcome.includes("home") || normalizeTeamName(outcome).includes(normalizeTeamName(homeTeamName))) {
-      return homeGoals > awayGoals;
-    }
-    if (outcome.includes("away") || normalizeTeamName(outcome).includes(normalizeTeamName(awayTeamName))) {
-      return awayGoals > homeGoals;
-    }
+    const outcomeNorm = normalizeTeamName(outcome);
+    
+    // Verificar empate primeiro
     if (outcome.includes("draw") || outcome.includes("empate") || outcome === "x") {
+      console.log(`    h2h: verificando empate - ${homeGoals === awayGoals}`);
       return homeGoals === awayGoals;
     }
+    
+    // Verificar vitória da casa
+    const isHomeTeam = fixtureHome.includes(outcomeNorm) || outcomeNorm.includes(fixtureHome) ||
+                       selectionHome.includes(outcomeNorm) || outcomeNorm.includes(selectionHome);
+    if (isHomeTeam) {
+      console.log(`    h2h: ${outcome} é time da casa - vitória casa: ${homeGoals > awayGoals}`);
+      return homeGoals > awayGoals;
+    }
+    
+    // Verificar vitória fora
+    const isAwayTeam = fixtureAway.includes(outcomeNorm) || outcomeNorm.includes(fixtureAway) ||
+                       selectionAway.includes(outcomeNorm) || outcomeNorm.includes(selectionAway);
+    if (isAwayTeam) {
+      console.log(`    h2h: ${outcome} é time de fora - vitória fora: ${awayGoals > homeGoals}`);
+      return awayGoals > homeGoals;
+    }
+    
+    console.log(`    h2h: não identificou time no outcome "${outcome}"`);
   }
 
   // Total de gols Over/Under
@@ -1299,20 +1375,24 @@ function checkSelectionResult(
     
     if (overMatch) {
       const line = parseFloat(overMatch[1]);
+      console.log(`    totals: Over ${line} - total ${totalGoals} > ${line} = ${totalGoals > line}`);
       return totalGoals > line;
     }
     if (underMatch) {
       const line = parseFloat(underMatch[1]);
+      console.log(`    totals: Under ${line} - total ${totalGoals} < ${line} = ${totalGoals < line}`);
       return totalGoals < line;
     }
   }
 
   // Ambas marcam (BTTS)
-  if (marketKey.includes("btts") || marketKey.includes("both")) {
+  if (marketKey.includes("btts") || marketKey.includes("both") || outcome.includes("both teams score")) {
     if (outcome.includes("yes") || outcome.includes("sim")) {
+      console.log(`    BTTS: Sim - ${homeGoals > 0 && awayGoals > 0}`);
       return homeGoals > 0 && awayGoals > 0;
     }
     if (outcome.includes("no") || outcome.includes("nao") || outcome.includes("não")) {
+      console.log(`    BTTS: Não - ${homeGoals === 0 || awayGoals === 0}`);
       return homeGoals === 0 || awayGoals === 0;
     }
   }
@@ -1330,6 +1410,7 @@ function checkSelectionResult(
     }
   }
 
-  // Se não conseguiu determinar, manter como pendente (retornar true para não marcar como perdido)
+  console.log(`    Mercado não reconhecido: marketKey="${marketKey}", outcome="${outcome}"`);
+  // Se não conseguiu determinar, marcar como perdido
   return false;
 }
