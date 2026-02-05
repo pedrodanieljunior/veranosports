@@ -1103,13 +1103,8 @@ export async function registerRoutes(
 
           // Tentar encontrar o jogo correspondente nos resultados
           const matchingFixture = allFinishedFixtures.find((fixture: any) => {
-            const fixtureHome = normalizeTeamName(fixture.teams.home.name);
-            const fixtureAway = normalizeTeamName(fixture.teams.away.name);
-            const selectionHome = normalizeTeamName(selection.homeTeam);
-            const selectionAway = normalizeTeamName(selection.awayTeam);
-            
-            const homeMatch = fixtureHome.includes(selectionHome) || selectionHome.includes(fixtureHome);
-            const awayMatch = fixtureAway.includes(selectionAway) || selectionAway.includes(fixtureAway);
+            const homeMatch = teamsMatch(fixture.teams.home.name, selection.homeTeam);
+            const awayMatch = teamsMatch(fixture.teams.away.name, selection.awayTeam);
             
             if (homeMatch && awayMatch) {
               console.log(`    Match encontrado: ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${fixture.goals.home}-${fixture.goals.away})`);
@@ -1263,14 +1258,68 @@ export async function registerRoutes(
   return httpServer;
 }
 
+// Mapeamento de aliases de times para normalização
+const teamAliases: Record<string, string[]> = {
+  "bragantino": ["rb bragantino", "bragantino-sp", "bragantino sp", "red bull bragantino"],
+  "atletico-mg": ["atletico mineiro", "atletico-mg", "atletico mg", "galo", "cam"],
+  "atletico-pr": ["athletico paranaense", "athletico-pr", "athletico pr", "atletico paranaense", "cap"],
+  "flamengo": ["flamengo", "mengao", "fla"],
+  "fluminense": ["fluminense", "flu", "tricolor"],
+  "vasco": ["vasco da gama", "vasco", "vascao"],
+  "botafogo": ["botafogo", "bota", "fogao"],
+  "santos": ["santos", "peixe"],
+  "palmeiras": ["palmeiras", "verdao", "sep"],
+  "corinthians": ["corinthians", "timao", "sccp"],
+  "sao paulo": ["sao paulo", "spfc", "tricolor paulista"],
+  "gremio": ["gremio", "imortal"],
+  "internacional": ["internacional", "inter", "colorado"],
+  "cruzeiro": ["cruzeiro", "raposa"],
+  "bahia": ["bahia", "tricolor de aco"],
+  "fortaleza": ["fortaleza", "leao"],
+  "ceara": ["ceara", "vozao"],
+  "sport": ["sport", "sport recife"],
+  "vitoria": ["vitoria", "leao da barra"],
+  "chapecoense": ["chapecoense", "chape"],
+  "remo": ["remo", "leao azul"],
+  "mirassol": ["mirassol"],
+  "sunderland": ["sunderland"],
+  "burnley": ["burnley"],
+};
+
 // Normalizar nome de time para comparação
 function normalizeTeamName(name: string): string {
-  return name
+  const normalized = name
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/fc|sc|cf|ac|as|ss/gi, "")
+    .replace(/fc|sc|cf|ac|as|ss|rb /gi, "")
+    .replace(/-/g, " ")
     .trim();
+  
+  return normalized;
+}
+
+// Verificar se dois nomes de times correspondem
+function teamsMatch(name1: string, name2: string): boolean {
+  const n1 = normalizeTeamName(name1);
+  const n2 = normalizeTeamName(name2);
+  
+  // Verificação direta
+  if (n1.includes(n2) || n2.includes(n1)) {
+    return true;
+  }
+  
+  // Verificar aliases
+  for (const [canonical, aliases] of Object.entries(teamAliases)) {
+    const allNames = [canonical, ...aliases].map(a => normalizeTeamName(a));
+    const n1Match = allNames.some(a => n1.includes(a) || a.includes(n1));
+    const n2Match = allNames.some(a => n2.includes(a) || a.includes(n2));
+    if (n1Match && n2Match) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 // Verificar se uma seleção ganhou
@@ -1319,18 +1368,16 @@ function checkSelectionResult(
       else ftResult = "draw";
       
       // Verificar se o pick do HT está correto
-      const htPickNorm = normalizeTeamName(htPick);
       let htWon = false;
-      if (htResult === "home" && (htPickNorm.includes(fixtureHome) || fixtureHome.includes(htPickNorm))) htWon = true;
-      if (htResult === "away" && (htPickNorm.includes(fixtureAway) || fixtureAway.includes(htPickNorm))) htWon = true;
-      if (htResult === "draw" && (htPick.includes("draw") || htPick.includes("empate") || htPick === "x")) htWon = true;
+      if (htResult === "home" && teamsMatch(htPick, homeTeamName)) htWon = true;
+      if (htResult === "away" && teamsMatch(htPick, awayTeamName)) htWon = true;
+      if (htResult === "draw" && (htPick.toLowerCase().includes("draw") || htPick.toLowerCase().includes("empate") || htPick.toLowerCase() === "x")) htWon = true;
       
       // Verificar se o pick do FT está correto
-      const ftPickNorm = normalizeTeamName(ftPick);
       let ftWon = false;
-      if (ftResult === "home" && (ftPickNorm.includes(fixtureHome) || fixtureHome.includes(ftPickNorm))) ftWon = true;
-      if (ftResult === "away" && (ftPickNorm.includes(fixtureAway) || fixtureAway.includes(ftPickNorm))) ftWon = true;
-      if (ftResult === "draw" && (ftPick.includes("draw") || ftPick.includes("empate") || ftPick === "x")) ftWon = true;
+      if (ftResult === "home" && teamsMatch(ftPick, homeTeamName)) ftWon = true;
+      if (ftResult === "away" && teamsMatch(ftPick, awayTeamName)) ftWon = true;
+      if (ftResult === "draw" && (ftPick.toLowerCase().includes("draw") || ftPick.toLowerCase().includes("empate") || ftPick.toLowerCase() === "x")) ftWon = true;
       
       console.log(`    HT result: ${htResult}, HT won: ${htWon}. FT result: ${ftResult}, FT won: ${ftWon}`);
       
@@ -1341,31 +1388,27 @@ function checkSelectionResult(
 
   // Resultado 1X2 (h2h)
   if (marketKey === "h2h" || marketKey.includes("match_winner")) {
-    const outcomeNorm = normalizeTeamName(outcome);
-    
     // Verificar empate primeiro
     if (outcome.includes("draw") || outcome.includes("empate") || outcome === "x") {
       console.log(`    h2h: verificando empate - ${homeGoals === awayGoals}`);
       return homeGoals === awayGoals;
     }
     
-    // Verificar vitória da casa
-    const isHomeTeam = fixtureHome.includes(outcomeNorm) || outcomeNorm.includes(fixtureHome) ||
-                       selectionHome.includes(outcomeNorm) || outcomeNorm.includes(selectionHome);
+    // Verificar vitória da casa usando teamsMatch
+    const isHomeTeam = teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
     if (isHomeTeam) {
-      console.log(`    h2h: ${outcome} é time da casa - vitória casa: ${homeGoals > awayGoals}`);
+      console.log(`    h2h: ${selection.outcome} é time da casa - vitória casa: ${homeGoals > awayGoals}`);
       return homeGoals > awayGoals;
     }
     
-    // Verificar vitória fora
-    const isAwayTeam = fixtureAway.includes(outcomeNorm) || outcomeNorm.includes(fixtureAway) ||
-                       selectionAway.includes(outcomeNorm) || outcomeNorm.includes(selectionAway);
+    // Verificar vitória fora usando teamsMatch
+    const isAwayTeam = teamsMatch(selection.outcome, awayTeamName) || teamsMatch(selection.outcome, selection.awayTeam);
     if (isAwayTeam) {
-      console.log(`    h2h: ${outcome} é time de fora - vitória fora: ${awayGoals > homeGoals}`);
+      console.log(`    h2h: ${selection.outcome} é time de fora - vitória fora: ${awayGoals > homeGoals}`);
       return awayGoals > homeGoals;
     }
     
-    console.log(`    h2h: não identificou time no outcome "${outcome}"`);
+    console.log(`    h2h: não identificou time no outcome "${selection.outcome}"`);
   }
 
   // Total de gols Over/Under
