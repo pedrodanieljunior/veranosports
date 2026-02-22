@@ -94,19 +94,19 @@ export default function Home() {
       </div>
 
       {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
-      <div className="hidden md:block h-screen overflow-hidden relative">
+      <div className="hidden md:block h-screen overflow-auto relative">
         {/* FRAME IMAGE - fixed background covering entire page */}
         <img
           src={frameImage}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
+          className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
           data-testid="img-frame"
         />
 
         {/* ALL CONTENT positioned on top of the frame */}
-        <div className="relative z-10 flex h-full">
+        <div className="relative z-10 flex min-h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "14vw", paddingTop: "45vh", paddingLeft: "2.5vw" }}>
+          <div className="flex-shrink-0 flex flex-col" style={{ width: "14vw", paddingTop: "45vh", paddingLeft: "2.5vw" }}>
             <div className="flex flex-col">
               <div className="flex items-center gap-2 px-3 py-2 whitespace-nowrap">
                 <span className="text-sm">⚽</span>
@@ -138,7 +138,7 @@ export default function Home() {
           </div>
 
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
-          <div className="flex-1 flex flex-col h-full min-w-0">
+          <div className="flex-1 flex flex-col min-w-0">
             {/* Buttons area - positioned at top right of the white area */}
             <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "8vh" }}>
               <div className="flex items-center gap-3">
@@ -169,8 +169,8 @@ export default function Home() {
               <PromoBanners />
             </div>
 
-            {/* Games content - scrollable */}
-            <div className="flex-1 overflow-auto" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+            {/* Games content */}
+            <div className="pb-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
