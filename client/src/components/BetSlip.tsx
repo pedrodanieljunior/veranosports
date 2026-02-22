@@ -49,12 +49,12 @@ export function BetSlip({
 
   const sharePixCode = async () => {
     if (placedBet?.pixCode) {
-      const shareText = `🎰 Bilhete GANHE MAIS AQUI\n\n📋 Código: #${placedBet.id.slice(0, 8).toUpperCase()}\n💰 Valor: R$ ${placedBet.stake.toFixed(2)}\n🎯 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}\n\n📱 Código PIX:\n${placedBet.pixCode}`;
+      const shareText = `🎰 Bilhete FW Sports\n\n📋 Código: #${placedBet.id.slice(0, 8).toUpperCase()}\n💰 Valor: R$ ${placedBet.stake.toFixed(2)}\n🎯 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}\n\n📱 Código PIX:\n${placedBet.pixCode}`;
       
       if (navigator.share) {
         try {
           await navigator.share({
-            title: 'Bilhete GANHE MAIS AQUI',
+            title: 'Bilhete FW Sports',
             text: shareText,
           });
         } catch (err) {

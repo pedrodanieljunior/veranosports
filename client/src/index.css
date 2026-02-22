@@ -22,14 +22,14 @@
   --card-foreground: 220 25% 10%;
   --card-border: 220 15% 90%;
 
-  --sidebar: 220 25% 12%;
-  --sidebar-foreground: 220 10% 95%;
-  --sidebar-border: 220 20% 18%;
-  --sidebar-primary: 142 70% 45%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 220 15% 25%;
+  --sidebar-border: 220 15% 90%;
+  --sidebar-primary: 45 95% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 20% 20%;
-  --sidebar-accent-foreground: 220 10% 95%;
-  --sidebar-ring: 142 70% 45%;
+  --sidebar-accent: 45 95% 95%;
+  --sidebar-accent-foreground: 45 70% 25%;
+  --sidebar-ring: 45 95% 50%;
 
   --popover: 0 0% 100%;
   --popover-foreground: 220 25% 10%;
@@ -122,14 +122,14 @@
   --card-foreground: 220 10% 95%;
   --card-border: 220 20% 18%;
 
-  --sidebar: 220 30% 6%;
-  --sidebar-foreground: 220 10% 95%;
-  --sidebar-border: 220 20% 15%;
-  --sidebar-primary: 142 70% 45%;
+  --sidebar: 220 20% 14%;
+  --sidebar-foreground: 220 10% 90%;
+  --sidebar-border: 220 15% 20%;
+  --sidebar-primary: 45 95% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 25% 15%;
-  --sidebar-accent-foreground: 220 10% 95%;
-  --sidebar-ring: 142 70% 45%;
+  --sidebar-accent: 220 20% 20%;
+  --sidebar-accent-foreground: 220 10% 90%;
+  --sidebar-ring: 45 95% 50%;
 
   --popover: 220 25% 12%;
   --popover-foreground: 220 10% 95%;
