@@ -110,7 +110,7 @@ export default function Home() {
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
-                <h2 className="font-bold text-gray-800 text-[13px]">Ligas de Futebol</h2>
+                <h2 className="font-bold text-gray-800 text-[15px]">Ligas de Futebol</h2>
               </div>
               <ScrollArea className="flex-1">
                 <div className="py-0">
@@ -123,7 +123,7 @@ export default function Home() {
                       <button
                         key={sport.key}
                         onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-4 py-2 text-[12px] transition-colors ${
+                        className={`w-full text-left px-4 py-3 text-[14px] transition-colors ${
                           selectedSport === sport.key
                             ? "bg-white/50 text-gray-900 font-semibold"
                             : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
