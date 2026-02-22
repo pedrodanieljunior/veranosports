@@ -94,21 +94,21 @@ export default function Home() {
       </div>
 
       {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
-      <div className="hidden md:block relative min-h-screen">
-        {/* FRAME IMAGE - fixed background */}
+      <div className="hidden md:block h-screen overflow-hidden relative">
+        {/* FRAME IMAGE - fixed background covering entire page */}
         <img
           src={frameImage}
           alt=""
-          className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
           data-testid="img-frame"
         />
 
         {/* ALL CONTENT positioned on top of the frame */}
-        <div className="relative z-10 flex min-h-screen">
+        <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="w-[14%] min-w-[160px] max-w-[220px] flex-shrink-0 flex flex-col fixed top-0 left-0 h-full pt-[28%] pl-[1%]">
+          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[230px] pl-[15px]">
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2">
+              <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
                 <h2 className="font-bold text-gray-800 text-[13px]">Ligas de Futebol</h2>
               </div>
@@ -116,14 +116,14 @@ export default function Home() {
                 <div className="py-0">
                   {sportsLoading ? (
                     Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="px-3 py-2"><Skeleton className="h-4 w-full" /></div>
+                      <div key={i} className="px-4 py-2"><Skeleton className="h-4 w-full" /></div>
                     ))
                   ) : (
                     sports.map((sport) => (
                       <button
                         key={sport.key}
                         onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-3 py-1.5 text-[12px] transition-colors ${
+                        className={`w-full text-left px-4 py-2 text-[12px] transition-colors ${
                           selectedSport === sport.key
                             ? "bg-white/50 text-gray-900 font-semibold"
                             : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
@@ -140,9 +140,9 @@ export default function Home() {
           </div>
 
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
-          <div className="flex-1 flex flex-col min-w-0 ml-[14%]" style={{ minWidth: 0 }}>
-            {/* Buttons area - positioned at top right */}
-            <div className="flex items-center justify-end pr-[4%] pt-[1.5%] pb-0 flex-shrink-0">
+          <div className="flex-1 flex flex-col h-full min-w-0">
+            {/* Buttons area - positioned at top right of the white area */}
+            <div className="flex items-center justify-end px-16 pt-12 pb-0 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
@@ -163,16 +163,16 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Spacer to align with frame layout */}
-            <div style={{ height: "16%" }} className="flex-shrink-0" />
+            {/* Spacer to push content down to align with sidebar leagues */}
+            <div className="h-[130px] flex-shrink-0" />
 
             {/* Promo banners */}
-            <div className="px-[3%] pb-3 flex-shrink-0">
+            <div className="px-4 pl-14 pb-4 flex-shrink-0">
               <PromoBanners />
             </div>
 
             {/* Games content - scrollable */}
-            <div className="flex-1 px-[3%] pb-8">
+            <div className="flex-1 overflow-auto px-4 pl-14">
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
