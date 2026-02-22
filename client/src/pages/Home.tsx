@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateLeagueName } from "@/lib/leagueTranslations";
+import { PromoBanners } from "@/components/PromoBanners";
 import frameImage from "@assets/frame_fw_1771771334915.jpeg";
 
 export default function Home() {
@@ -162,10 +163,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Spacer to push games content down to align with sidebar leagues */}
-            <div className="h-[170px] flex-shrink-0" />
+            {/* Spacer to push content down to align with sidebar leagues */}
+            <div className="h-[130px] flex-shrink-0" />
 
-            {/* Games content - scrollable, starts at same level as leagues */}
+            {/* Promo banners */}
+            <div className="px-4 pl-14 pb-4 flex-shrink-0">
+              <PromoBanners />
+            </div>
+
+            {/* Games content - scrollable */}
             <div className="flex-1 overflow-auto px-4 pl-14">
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
