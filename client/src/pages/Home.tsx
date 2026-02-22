@@ -106,7 +106,7 @@ export default function Home() {
         {/* ALL CONTENT positioned on top of the frame */}
         <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "10.5vw", paddingTop: "21vh", paddingLeft: "0.8vw" }}>
+          <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "10.5vw", paddingTop: "38vh", paddingLeft: "0.8vw" }}>
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
