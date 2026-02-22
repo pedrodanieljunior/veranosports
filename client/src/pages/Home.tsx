@@ -141,7 +141,7 @@ export default function Home() {
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col h-full min-w-0">
             {/* Top bar with buttons - aligned with logo area */}
-            <div className="flex items-center justify-end px-6 pt-[140px] pb-2 flex-shrink-0">
+            <div className="flex items-center justify-end px-4 pt-[230px] pb-2 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
