@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateLeagueName } from "@/lib/leagueTranslations";
-import frameBg from "@assets/imagem3_completa_1771769504535.png";
+import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -122,89 +122,54 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* ===== MOBILE LAYOUT (< md) ===== */}
+    <div className="min-h-screen bg-gray-50">
+      {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen">
         <header
           className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between"
           style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}
         >
           <div className="flex items-center gap-2">
-            <MobileNav
-              sports={sports}
-              selectedSport={selectedSport}
-              onSelectSport={handleSelectSport}
-              isLoading={sportsLoading}
-            />
+            <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
+            <img src={logoFwSports} alt="FW Sports" className="h-10 w-auto object-contain drop-shadow-md" />
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md"
-              data-testid="button-open-history-mobile"
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Meus Bilhetes</span>
-              {betHistory.length > 0 && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>
-              )}
+            <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
+              <History className="w-3.5 h-3.5" /><span>Meus Bilhetes</span>
+              {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
             </button>
-            <button
-              onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md"
-              data-testid="button-open-betslip-mobile"
-            >
-              <Receipt className="w-3.5 h-3.5" />
-              <span>Bilhete</span>
-              {selections.length > 0 && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>
-              )}
+            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md" data-testid="button-open-betslip-mobile">
+              <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
+              {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
             </button>
           </div>
         </header>
         <div className="flex-1">
-          <GamesList
-            games={games} selections={selections}
-            onGameClick={(game) => setSelectedGame(game)}
-            isLoading={gamesLoading} error={gamesError as Error | null}
-            selectedSport={selectedSport} onRefresh={() => refetchGames()}
-            isTodayGames={!selectedSport}
-            upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []}
-            brasileiraoLoading={brasileiraoLoading}
-          />
+          <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
         </div>
       </div>
 
-      {/* ===== DESKTOP LAYOUT (>= md) - Frame from reference image ===== */}
-      <div className="hidden md:block min-h-screen relative">
-        {/* Fixed background frame image - covers top-left area */}
-        <div
-          className="fixed top-0 left-0 w-[280px] h-screen z-0"
-          style={{
-            backgroundImage: `url(${frameBg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "top left",
-            backgroundRepeat: "no-repeat",
-          }}
-        />
-        {/* Yellow gradient fallback extending below the image */}
-        <div
-          className="fixed top-0 left-0 w-[280px] h-screen z-0"
-          style={{
-            background: "linear-gradient(180deg, #f5c518 0%, #e8b206 30%, #d4960a 70%, #c48a08 100%)",
-            zIndex: -1,
-          }}
-        />
+      {/* ===== DESKTOP LAYOUT ===== */}
+      <div className="hidden md:flex h-screen overflow-hidden bg-gray-50">
+        {/* LEFT COLUMN */}
+        <div className="w-[220px] flex-shrink-0 flex flex-col h-full">
+          {/* Logo area - yellow gradient with large logo */}
+          <div
+            className="flex-shrink-0 flex items-center justify-center px-3 pt-3 pb-2"
+            style={{ background: "linear-gradient(180deg, #f5c518 0%, #eab308 60%, #d4960a 100%)" }}
+          >
+            <img
+              src={logoFwSports}
+              alt="FW Sports"
+              className="w-[190px] h-auto object-contain drop-shadow-lg"
+              data-testid="img-logo"
+            />
+          </div>
 
-        {/* Page content overlaid on top of the frame */}
-        <div className="relative z-10 flex h-screen">
-          {/* LEFT SIDEBAR - overlaid on the yellow frame */}
-          <div className="w-[240px] flex-shrink-0 flex flex-col h-full">
-            {/* Logo space - transparent so the background image shows through */}
-            <div className="h-[140px] flex-shrink-0" />
-
-            {/* Leagues panel - white panel overlaid on yellow area */}
-            <div className="flex-1 bg-white/95 ml-2 rounded-tr-2xl flex flex-col min-h-0 shadow-sm">
+          {/* Leagues list - white solid background, yellow left border */}
+          <div className="flex-1 flex flex-row min-h-0">
+            <div className="w-1.5 flex-shrink-0" style={{ background: "linear-gradient(180deg, #eab308 0%, #d4960a 50%, #c48a08 100%)" }} />
+            <div className="flex-1 bg-white flex flex-col border-r border-gray-200">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
                 <span className="text-base">⚽</span>
                 <h2 className="font-bold text-gray-700 text-sm">Ligas de Futebol</h2>
@@ -213,16 +178,14 @@ export default function Home() {
                 <div className="py-1">
                   {sportsLoading ? (
                     Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="px-4 py-2.5">
-                        <Skeleton className="h-4 w-full" />
-                      </div>
+                      <div key={i} className="px-4 py-2.5"><Skeleton className="h-4 w-full" /></div>
                     ))
                   ) : (
                     sports.map((sport) => (
                       <button
                         key={sport.key}
                         onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors ${
+                        className={`w-full text-left px-4 py-2 text-[13px] transition-colors ${
                           selectedSport === sport.key
                             ? "bg-yellow-50 text-yellow-800 font-semibold border-l-[3px] border-l-yellow-500"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-800 border-l-[3px] border-l-transparent"
@@ -237,70 +200,43 @@ export default function Home() {
               </ScrollArea>
             </div>
           </div>
+        </div>
 
-          {/* RIGHT CONTENT AREA */}
-          <div className="flex-1 flex flex-col h-full min-w-0">
-            {/* Top bar with buttons - aligned with reference */}
-            <div className="h-[140px] flex-shrink-0 flex items-start justify-end px-6 pt-6">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-                  className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
-                  data-testid="button-open-history"
-                >
-                  <History className="w-4 h-4" />
-                  <span>Meus Bilhetes</span>
-                  {betHistory.length > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>
-                  )}
-                </button>
-                <button
-                  onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-                  className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
-                  data-testid="button-open-betslip"
-                >
-                  <Receipt className="w-4 h-4" />
-                  <span>Bilhete</span>
-                  {selections.length > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>
-                  )}
-                </button>
-              </div>
+        {/* RIGHT COLUMN */}
+        <div className="flex-1 flex flex-col h-full min-w-0">
+          {/* Top header bar with buttons */}
+          <div className="flex items-center justify-end px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+                className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 hover:bg-gray-50 transition-colors"
+                data-testid="button-open-history"
+              >
+                <History className="w-4 h-4" /><span>Meus Bilhetes</span>
+                {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
+              </button>
+              <button
+                onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
+                className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
+                data-testid="button-open-betslip"
+              >
+                <Receipt className="w-4 h-4" /><span>Bilhete</span>
+                {selections.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>}
+              </button>
             </div>
+          </div>
 
-            {/* Games content - scrollable */}
-            <div className="flex-1 overflow-auto">
-              <GamesList
-                games={games} selections={selections}
-                onGameClick={(game) => setSelectedGame(game)}
-                isLoading={gamesLoading} error={gamesError as Error | null}
-                selectedSport={selectedSport} onRefresh={() => refetchGames()}
-                isTodayGames={!selectedSport}
-                upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []}
-                brasileiraoLoading={brasileiraoLoading}
-              />
-            </div>
+          {/* Games area */}
+          <div className="flex-1 overflow-auto">
+            <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
           </div>
         </div>
       </div>
 
-      {/* Modals/Overlays */}
-      <GameDetailModal
-        game={selectedGame} open={!!selectedGame}
-        onClose={() => setSelectedGame(null)}
-        selections={selections} onToggleSelection={handleToggleSelection}
-      />
-      {showBetSlip && (
-        <BetSlip
-          selections={selections} onRemoveSelection={handleRemoveSelection}
-          onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)}
-          onPlaceBet={handlePlaceBet} placedBet={placedBet}
-          isPlacing={placeBetMutation.isPending}
-        />
-      )}
-      {showHistory && (
-        <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />
-      )}
+      {/* Modals */}
+      <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} />
+      {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} />}
+      {showHistory && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
     </div>
   );
 }
