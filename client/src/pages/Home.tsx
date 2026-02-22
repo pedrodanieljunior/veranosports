@@ -166,7 +166,7 @@ export default function Home() {
             <div className="h-[170px] flex-shrink-0" />
 
             {/* Games content - scrollable, starts at same level as leagues */}
-            <div className="flex-1 overflow-auto px-4">
+            <div className="flex-1 overflow-auto px-4 pl-8">
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
