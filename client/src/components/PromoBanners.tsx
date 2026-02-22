@@ -15,7 +15,7 @@ function RotatingBanner({ images, interval = 4000, objectPosition = "center" }: 
   }, [images.length, interval]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl shadow-md" style={{ aspectRatio: "2/1" }}>
+    <div className="relative w-full overflow-hidden rounded-lg shadow-md" style={{ aspectRatio: "2.5/1" }}>
       {images.map((src, i) => (
         <img
           key={i}
@@ -27,12 +27,12 @@ function RotatingBanner({ images, interval = 4000, objectPosition = "center" }: 
           style={{ objectPosition }}
         />
       ))}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
         {images.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
-            className={`w-2 h-2 rounded-full transition-colors ${
+            className={`w-1.5 h-1.5 rounded-full transition-colors ${
               i === current ? "bg-white" : "bg-white/40"
             }`}
             data-testid={`banner-dot-${i}`}
@@ -45,7 +45,7 @@ function RotatingBanner({ images, interval = 4000, objectPosition = "center" }: 
 
 export function PromoBanners() {
   return (
-    <div className="flex gap-3 w-full max-w-[85%] mx-auto mr-8">
+    <div className="flex gap-2 w-full">
       <div className="flex-1">
         <RotatingBanner images={[banner1a, banner1b]} interval={4000} />
       </div>
