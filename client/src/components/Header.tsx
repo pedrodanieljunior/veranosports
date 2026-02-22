@@ -1,5 +1,6 @@
-import { Trophy, Receipt, History } from "lucide-react";
+import { History, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
 
 interface HeaderProps {
   selectionsCount: number;
@@ -10,30 +11,24 @@ interface HeaderProps {
 
 export function Header({ selectionsCount, betsCount, onOpenBetSlip, onOpenHistory }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 bg-card border-b border-card-border">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e6a800 50%, #d4960a 100%)" }}>
+      <div className="container mx-auto px-4 h-20 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center">
-            <Trophy className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">GANHE MAIS AQUI</h1>
-            <p className="text-xs text-muted-foreground">Apostas Esportivas</p>
-          </div>
+          <img src={logoFwSports} alt="FW Sports" className="h-16 w-auto object-contain" data-testid="img-logo" />
         </div>
         
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenHistory}
-            className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-muted text-foreground font-medium hover-elevate active-elevate-2"
+            className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white/90 text-gray-800 font-semibold text-sm shadow-sm hover:bg-white transition-colors"
             data-testid="button-open-history"
           >
-            <History className="w-5 h-5" />
-            <span className="hidden sm:inline">Meus Bilhetes</span>
+            <History className="w-4 h-4" />
+            <span>Meus Bilhetes</span>
             {betsCount > 0 && (
               <Badge 
                 variant="secondary" 
-                className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-accent text-accent-foreground"
+                className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0"
                 data-testid="badge-bets-count"
               >
                 {betsCount}
@@ -43,15 +38,15 @@ export function Header({ selectionsCount, betsCount, onOpenBetSlip, onOpenHistor
           
           <button
             onClick={onOpenBetSlip}
-            className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover-elevate active-elevate-2"
+            className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold text-sm shadow-sm hover:bg-green-700 transition-colors"
             data-testid="button-open-betslip"
           >
-            <Receipt className="w-5 h-5" />
-            <span className="hidden sm:inline">Bilhete</span>
+            <Receipt className="w-4 h-4" />
+            <span>Bilhete</span>
             {selectionsCount > 0 && (
               <Badge 
                 variant="secondary" 
-                className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-accent text-accent-foreground"
+                className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0"
                 data-testid="badge-selections-count"
               >
                 {selectionsCount}

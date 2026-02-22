@@ -10,6 +10,9 @@ import { MobileNav } from "@/components/MobileNav";
 import { GameDetailModal } from "@/components/GameDetailModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { History, Receipt } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -24,7 +27,6 @@ export default function Home() {
     queryKey: ["/api/sports"],
   });
 
-  // Jogos do dia (quando nenhum esporte está selecionado)
   const { 
     data: todayGames = [], 
     isLoading: todayGamesLoading,
@@ -35,7 +37,6 @@ export default function Home() {
     enabled: !selectedSport,
   });
 
-  // Próximos jogos do Brasileirão (para mostrar quando não há jogos do Brasileirão hoje)
   const { 
     data: brasileiraoGames = [], 
     isLoading: brasileiraoLoading,
@@ -44,10 +45,8 @@ export default function Home() {
     enabled: !selectedSport,
   });
 
-  // Verificar se há jogos do Brasileirão nos jogos do dia
   const hasBrasileiraoToday = todayGames.some(g => g.sportKey === "soccer_brazil_campeonato");
   
-  // Filtrar próximos jogos do Brasileirão que não estão nos jogos de hoje
   const upcomingBrasileirao = brasileiraoGames.filter(g => 
     !todayGames.some(tg => tg.id === g.id)
   ).slice(0, 6);
@@ -62,7 +61,6 @@ export default function Home() {
     enabled: !!selectedSport,
   });
 
-  // Determinar quais jogos mostrar
   const games = selectedSport ? leagueGames : todayGames;
   const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
@@ -131,40 +129,44 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="lg:hidden sticky top-0 z-50 bg-card border-b border-card-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="lg:hidden sticky top-0 z-50" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e6a800 50%, #d4960a 100%)" }}>
+        <div className="container mx-auto px-3 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
             <MobileNav
               sports={sports}
               selectedSport={selectedSport}
               onSelectSport={handleSelectSport}
               isLoading={sportsLoading}
             />
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">GANHE MAIS AQUI</h1>
-              <p className="text-xs text-muted-foreground">Apostas Esportivas</p>
-            </div>
+            <img src={logoFwSports} alt="FW Sports" className="h-12 w-auto object-contain" />
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-              className="relative flex items-center gap-2 px-3 py-2 rounded-md bg-muted text-foreground font-medium hover-elevate active-elevate-2"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 text-gray-800 font-semibold text-xs shadow-sm"
               data-testid="button-open-history-mobile"
             >
-              <span className="text-sm">{betHistory.length}</span>
+              <History className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Meus Bilhetes</span>
+              {betHistory.length > 0 && (
+                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">
+                  {betHistory.length}
+                </Badge>
+              )}
             </button>
             <button
               onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-              className="relative flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover-elevate active-elevate-2"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-semibold text-xs shadow-sm"
               data-testid="button-open-betslip-mobile"
             >
+              <Receipt className="w-3.5 h-3.5" />
               <span>Bilhete</span>
               {selections.length > 0 && (
-                <span className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs rounded-full bg-accent text-accent-foreground font-bold">
+                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">
                   {selections.length}
-                </span>
+                </Badge>
               )}
             </button>
           </div>
