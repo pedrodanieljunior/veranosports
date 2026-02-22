@@ -140,7 +140,7 @@ export default function Home() {
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col h-full min-w-0">
             {/* Buttons area - positioned at top right of the white area */}
-            <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "3.5vw", paddingTop: "4.5vh" }}>
+            <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "8vh" }}>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
