@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { History, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
+import bgImage from "@assets/imagem3_completa_1771769504535.png";
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -129,76 +129,34 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* Mobile Header - only on small screens */}
-      <div className="md:hidden sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-        <div className="px-3 py-2 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <MobileNav
-              sports={sports}
-              selectedSport={selectedSport}
-              onSelectSport={handleSelectSport}
-              isLoading={sportsLoading}
-            />
-            <img src={logoFwSports} alt="FW Sports" className="h-14 w-auto object-contain drop-shadow-md" />
-          </div>
-          
-          <div className="flex items-center gap-2">
+      {/* HEADER with background image - fixed design from reference */}
+      <header className="sticky top-0 z-50 relative">
+        <div 
+          className="h-[120px] bg-cover bg-left-top bg-no-repeat"
+          style={{ 
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: 'auto 100%',
+            backgroundColor: '#f5c518'
+          }}
+        >
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+            <div className="md:hidden">
+              <MobileNav
+                sports={sports}
+                selectedSport={selectedSport}
+                onSelectSport={handleSelectSport}
+                isLoading={sportsLoading}
+              />
+            </div>
             <button
               onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md"
-              data-testid="button-open-history-mobile"
-            >
-              <History className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Meus Bilhetes</span>
-              {betHistory.length > 0 && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">
-                  {betHistory.length}
-                </Badge>
-              )}
-            </button>
-            <button
-              onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md"
-              data-testid="button-open-betslip-mobile"
-            >
-              <Receipt className="w-3.5 h-3.5" />
-              <span>Bilhete</span>
-              {selections.length > 0 && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">
-                  {selections.length}
-                </Badge>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop Header - shows on md and above */}
-      <header className="hidden md:block sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-        <div className="flex items-center justify-between px-6 py-2">
-          <div className="flex items-center">
-            <img 
-              src={logoFwSports} 
-              alt="FW Sports" 
-              className="h-[90px] w-auto object-contain drop-shadow-lg" 
-              data-testid="img-logo" 
-            />
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-              className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/95 text-gray-800 font-bold text-sm shadow-md hover:bg-white transition-colors"
+              className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-800 font-bold text-sm shadow-md hover:bg-gray-50 transition-colors"
               data-testid="button-open-history"
             >
               <History className="w-4 h-4" />
               <span>Meus Bilhetes</span>
               {betHistory.length > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0"
-                  data-testid="badge-bets-count"
-                >
+                <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">
                   {betHistory.length}
                 </Badge>
               )}
@@ -206,17 +164,13 @@ export default function Home() {
             
             <button
               onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-              className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600 text-white font-bold text-sm shadow-md hover:bg-green-700 transition-colors"
+              className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-md hover:bg-green-700 transition-colors"
               data-testid="button-open-betslip"
             >
               <Receipt className="w-4 h-4" />
               <span>Bilhete</span>
               {selections.length > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0"
-                  data-testid="badge-selections-count"
-                >
+                <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">
                   {selections.length}
                 </Badge>
               )}
@@ -227,8 +181,7 @@ export default function Home() {
       
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - shows on md and above */}
-        <div className="hidden md:flex h-[calc(100vh-106px)] sticky top-[106px]">
+        <div className="hidden md:flex h-[calc(100vh-120px)] sticky top-[120px]">
           <SportsSidebar
             sports={sports}
             selectedSport={selectedSport}
