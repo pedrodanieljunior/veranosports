@@ -105,7 +105,7 @@ export default function Home() {
         {/* ALL CONTENT positioned on top of the frame */}
         <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[120px]">
+          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[200px]">
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
@@ -141,7 +141,7 @@ export default function Home() {
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col h-full min-w-0">
             {/* Top bar with buttons - aligned with logo area */}
-            <div className="flex items-center justify-end px-6 pt-8 pb-2 flex-shrink-0">
+            <div className="flex items-center justify-end px-6 pt-[60px] pb-2 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
