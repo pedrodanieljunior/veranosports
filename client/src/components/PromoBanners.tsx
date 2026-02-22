@@ -50,7 +50,7 @@ export function PromoBanners() {
         <RotatingBanner images={[banner1a, banner1b]} interval={4000} />
       </div>
       <div className="flex-1">
-        <RotatingBanner images={[banner2a, banner2b]} interval={5000} objectPosition="center 60%" />
+        <RotatingBanner images={[banner2a, banner2b]} interval={5000} objectPosition="center 30%" />
       </div>
     </div>
   );
