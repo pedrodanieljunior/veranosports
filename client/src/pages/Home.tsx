@@ -106,7 +106,7 @@ export default function Home() {
         {/* ALL CONTENT positioned on top of the frame */}
         <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[230px] pl-[15px]">
+          <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "10.5vw", paddingTop: "21vh", paddingLeft: "0.8vw" }}>
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
@@ -142,7 +142,7 @@ export default function Home() {
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col h-full min-w-0">
             {/* Buttons area - positioned at top right of the white area */}
-            <div className="flex items-center justify-end px-16 pt-12 pb-0 flex-shrink-0">
+            <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "3.5vw", paddingTop: "4.5vh" }}>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
@@ -164,15 +164,15 @@ export default function Home() {
             </div>
 
             {/* Spacer to push content down to align with sidebar leagues */}
-            <div className="h-[130px] flex-shrink-0" />
+            <div className="flex-shrink-0" style={{ height: "12vh" }} />
 
             {/* Promo banners */}
-            <div className="px-4 pl-14 pb-4 flex-shrink-0">
+            <div className="pb-4 flex-shrink-0" style={{ paddingLeft: "3vw", paddingRight: "1vw" }}>
               <PromoBanners />
             </div>
 
             {/* Games content - scrollable */}
-            <div className="flex-1 overflow-auto px-4 pl-14">
+            <div className="flex-1 overflow-auto" style={{ paddingLeft: "3vw", paddingRight: "1vw" }}>
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
