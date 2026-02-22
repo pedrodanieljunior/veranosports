@@ -105,27 +105,27 @@ export default function Home() {
         {/* ALL CONTENT positioned on top of the frame */}
         <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[160px]">
-            <div className="flex-1 bg-white/90 backdrop-blur-sm mx-1 rounded-t-xl flex flex-col min-h-0 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-white">
+          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[120px]">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
-                <h2 className="font-bold text-gray-700 text-[13px]">Ligas de Futebol</h2>
+                <h2 className="font-bold text-gray-800 text-[13px]">Ligas de Futebol</h2>
               </div>
-              <ScrollArea className="flex-1 bg-white">
-                <div className="py-1">
+              <ScrollArea className="flex-1">
+                <div className="py-0">
                   {sportsLoading ? (
                     Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="px-3 py-2"><Skeleton className="h-4 w-full" /></div>
+                      <div key={i} className="px-4 py-2"><Skeleton className="h-4 w-full" /></div>
                     ))
                   ) : (
                     sports.map((sport) => (
                       <button
                         key={sport.key}
                         onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-3 py-2 text-[12px] transition-colors ${
+                        className={`w-full text-left px-4 py-2 text-[12px] transition-colors ${
                           selectedSport === sport.key
-                            ? "bg-yellow-50 text-yellow-800 font-semibold border-l-[3px] border-l-yellow-500"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-800 border-l-[3px] border-l-transparent"
+                            ? "bg-white/50 text-gray-900 font-semibold"
+                            : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
                         }`}
                         data-testid={`button-sport-${sport.key}`}
                       >
@@ -140,8 +140,8 @@ export default function Home() {
 
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col h-full min-w-0">
-            {/* Top bar with buttons - in the white area at top-right */}
-            <div className="flex items-center justify-end px-6 pt-4 pb-2 flex-shrink-0">
+            {/* Top bar with buttons - aligned with logo area */}
+            <div className="flex items-center justify-end px-6 pt-8 pb-2 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
