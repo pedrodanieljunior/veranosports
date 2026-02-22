@@ -1,6 +1,6 @@
 import { Game, Selection } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Clock, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 
 function calculateBoostedOdd(originalOdd: number): number {
@@ -49,11 +49,14 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
             <span>{formattedDate}</span>
           </div>
         )}
-        {hasSelections && (
-          <Badge className="bg-yellow-500 text-white text-[10px] px-1.5 py-0 ml-auto border-0">
-            {selectionsForGame.length}
-          </Badge>
-        )}
+        <div className="ml-auto flex items-center gap-1">
+          {hasSelections && (
+            <Badge className="bg-yellow-500 text-white text-[10px] px-1.5 py-0 border-0">
+              {selectionsForGame.length}
+            </Badge>
+          )}
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </div>
       </div>
       
       <div className="p-2.5">

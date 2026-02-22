@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
-import { SportsSidebar } from "@/components/SportsSidebar";
 import { GamesList } from "@/components/GamesList";
 import { BetSlip } from "@/components/BetSlip";
 import { BetHistory } from "@/components/BetHistory";
@@ -11,7 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { History, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import bgImage from "@assets/imagem3_completa_1771769504535.png";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { translateLeagueName } from "@/lib/leagueTranslations";
+import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -97,21 +99,13 @@ export default function Home() {
   };
 
   const handleToggleSelection = (selection: Selection) => {
-    if (placedBet) {
-      setPlacedBet(null);
-    }
-    
+    if (placedBet) setPlacedBet(null);
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
-      if (exists) {
-        return prev.filter((s) => s.id !== selection.id);
-      }
+      if (exists) return prev.filter((s) => s.id !== selection.id);
       return [...prev, selection];
     });
-    
-    if (!showBetSlip && selections.length === 0) {
-      setShowBetSlip(true);
-    }
+    if (!showBetSlip && selections.length === 0) setShowBetSlip(true);
   };
 
   const handleRemoveSelection = (selectionId: string) => {
@@ -128,82 +122,169 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* HEADER with background image - fixed design from reference */}
-      <header className="sticky top-0 z-50 relative">
-        <div 
-          className="h-[120px] bg-cover bg-left-top bg-no-repeat"
-          style={{ 
-            backgroundImage: `url(${bgImage})`,
-            backgroundSize: 'auto 100%',
-            backgroundColor: '#f5c518'
-          }}
-        >
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-            <div className="md:hidden">
-              <MobileNav
-                sports={sports}
-                selectedSport={selectedSport}
-                onSelectSport={handleSelectSport}
-                isLoading={sportsLoading}
-              />
-            </div>
+    <div className="min-h-screen bg-gray-100">
+      {/* ===== MOBILE LAYOUT (< md) ===== */}
+      <div className="md:hidden flex flex-col min-h-screen">
+        <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+          <div className="flex items-center gap-2">
+            <MobileNav
+              sports={sports}
+              selectedSport={selectedSport}
+              onSelectSport={handleSelectSport}
+              isLoading={sportsLoading}
+            />
+            <img src={logoFwSports} alt="FW Sports" className="h-12 w-auto object-contain drop-shadow-md" />
+          </div>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-              className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-800 font-bold text-sm shadow-md hover:bg-gray-50 transition-colors"
-              data-testid="button-open-history"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md"
+              data-testid="button-open-history-mobile"
             >
-              <History className="w-4 h-4" />
+              <History className="w-3.5 h-3.5" />
               <span>Meus Bilhetes</span>
               {betHistory.length > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">
+                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">
                   {betHistory.length}
                 </Badge>
               )}
             </button>
-            
             <button
               onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-              className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-md hover:bg-green-700 transition-colors"
-              data-testid="button-open-betslip"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md"
+              data-testid="button-open-betslip-mobile"
             >
-              <Receipt className="w-4 h-4" />
+              <Receipt className="w-3.5 h-3.5" />
               <span>Bilhete</span>
               {selections.length > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">
+                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">
                   {selections.length}
                 </Badge>
               )}
             </button>
           </div>
-        </div>
-      </header>
-      
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="hidden md:flex h-[calc(100vh-120px)] sticky top-[120px]">
-          <SportsSidebar
-            sports={sports}
+        </header>
+
+        <div className="flex-1">
+          <GamesList
+            games={games}
+            selections={selections}
+            onGameClick={(game) => setSelectedGame(game)}
+            isLoading={gamesLoading}
+            error={gamesError as Error | null}
             selectedSport={selectedSport}
-            onSelectSport={handleSelectSport}
-            isLoading={sportsLoading}
+            onRefresh={() => refetchGames()}
+            isTodayGames={!selectedSport}
+            upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []}
+            brasileiraoLoading={brasileiraoLoading}
           />
         </div>
-        
-        <GamesList
-          games={games}
-          selections={selections}
-          onGameClick={(game) => setSelectedGame(game)}
-          isLoading={gamesLoading}
-          error={gamesError as Error | null}
-          selectedSport={selectedSport}
-          onRefresh={() => refetchGames()}
-          isTodayGames={!selectedSport}
-          upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []}
-          brasileiraoLoading={brasileiraoLoading}
-        />
       </div>
-      
+
+      {/* ===== DESKTOP LAYOUT (>= md) ===== */}
+      <div className="hidden md:flex h-screen overflow-hidden">
+        {/* LEFT COLUMN - Yellow gradient with logo + leagues */}
+        <div className="w-[240px] flex-shrink-0 flex flex-col h-full" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 30%, #d4960a 70%, #c48a08 100%)" }}>
+          {/* Logo Area */}
+          <div className="flex items-center justify-center py-4 px-4">
+            <img 
+              src={logoFwSports} 
+              alt="FW Sports" 
+              className="w-[180px] h-auto object-contain drop-shadow-lg" 
+              data-testid="img-logo" 
+            />
+          </div>
+
+          {/* Leagues Section */}
+          <div className="flex-1 flex flex-col min-h-0 bg-white/95 mx-0 rounded-tr-xl">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+              <span className="text-base">⚽</span>
+              <h2 className="font-bold text-gray-700 text-sm">Ligas de Futebol</h2>
+            </div>
+            
+            <ScrollArea className="flex-1">
+              <div className="py-1">
+                {sportsLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <div key={i} className="px-4 py-2">
+                      <Skeleton className="h-5 w-full" />
+                    </div>
+                  ))
+                ) : (
+                  sports.map((sport) => (
+                    <button
+                      key={sport.key}
+                      onClick={() => handleSelectSport(sport.key)}
+                      className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors border-l-[3px] ${
+                        selectedSport === sport.key
+                          ? "bg-yellow-50 text-yellow-800 font-semibold border-l-yellow-500"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-800 border-l-transparent"
+                      }`}
+                      data-testid={`button-sport-${sport.key}`}
+                    >
+                      {translateLeagueName(sport.key, sport.title)}
+                    </button>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN - Header buttons + Games content */}
+        <div className="flex-1 flex flex-col h-full min-w-0">
+          {/* Top bar with buttons */}
+          <div className="flex items-center justify-end px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+                className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+                data-testid="button-open-history"
+              >
+                <History className="w-4 h-4" />
+                <span>Meus Bilhetes</span>
+                {betHistory.length > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">
+                    {betHistory.length}
+                  </Badge>
+                )}
+              </button>
+              
+              <button
+                onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
+                className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
+                data-testid="button-open-betslip"
+              >
+                <Receipt className="w-4 h-4" />
+                <span>Bilhete</span>
+                {selections.length > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">
+                    {selections.length}
+                  </Badge>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Games content area */}
+          <div className="flex-1 overflow-auto">
+            <GamesList
+              games={games}
+              selections={selections}
+              onGameClick={(game) => setSelectedGame(game)}
+              isLoading={gamesLoading}
+              error={gamesError as Error | null}
+              selectedSport={selectedSport}
+              onRefresh={() => refetchGames()}
+              isTodayGames={!selectedSport}
+              upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []}
+              brasileiraoLoading={brasileiraoLoading}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Modals/Overlays */}
       <GameDetailModal
         game={selectedGame}
         open={!!selectedGame}
