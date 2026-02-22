@@ -172,7 +172,7 @@ export default function Home() {
             </div>
 
             {/* Games content - scrollable */}
-            <div className="flex-1 overflow-auto" style={{ paddingLeft: "12vw", paddingRight: "1vw" }}>
+            <div className="flex-1 overflow-auto" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
