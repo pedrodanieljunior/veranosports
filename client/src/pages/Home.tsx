@@ -94,7 +94,7 @@ export default function Home() {
       </div>
 
       {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
-      <div className="hidden md:block h-screen overflow-auto relative">
+      <div className="hidden md:block h-screen overflow-y-scroll relative">
         {/* FRAME IMAGE - fixed background covering entire page */}
         <img
           src={frameImage}
