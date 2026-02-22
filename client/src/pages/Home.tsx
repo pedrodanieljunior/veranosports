@@ -140,8 +140,8 @@ export default function Home() {
 
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col h-full min-w-0">
-            {/* Top bar with buttons - aligned with logo area */}
-            <div className="flex items-center justify-end px-4 pt-[230px] pb-2 flex-shrink-0">
+            {/* Buttons area - positioned at top right of the white area */}
+            <div className="flex items-center justify-end px-4 pt-6 pb-0 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
@@ -162,8 +162,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Games content - scrollable, positioned in the white content area */}
-            <div className="flex-1 overflow-auto px-2">
+            {/* Spacer to push games content down to align with sidebar leagues */}
+            <div className="h-[170px] flex-shrink-0" />
+
+            {/* Games content - scrollable, starts at same level as leagues */}
+            <div className="flex-1 overflow-auto px-4">
               <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
