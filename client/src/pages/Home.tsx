@@ -106,7 +106,7 @@ export default function Home() {
         {/* ALL CONTENT positioned on top of the frame */}
         <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
-          <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "10.5vw", paddingTop: "38vh", paddingLeft: "0.8vw" }}>
+          <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "14vw", paddingTop: "38vh", paddingLeft: "0.8vw" }}>
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5">
                 <span className="text-sm">⚽</span>
@@ -123,7 +123,7 @@ export default function Home() {
                       <button
                         key={sport.key}
                         onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-4 py-3 text-[14px] transition-colors ${
+                        className={`w-full text-left px-4 py-3 text-[14px] whitespace-nowrap transition-colors ${
                           selectedSport === sport.key
                             ? "bg-white/50 text-gray-900 font-semibold"
                             : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
