@@ -107,35 +107,33 @@ export default function Home() {
         <div className="relative z-10 flex h-full">
           {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
           <div className="flex-shrink-0 flex flex-col h-full" style={{ width: "14vw", paddingTop: "38vh", paddingLeft: "0.8vw" }}>
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5">
+            <div className="flex-1 flex flex-col min-h-0 overflow-auto">
+              <div className="flex items-center gap-2 px-3 py-2">
                 <span className="text-sm">⚽</span>
                 <h2 className="font-bold text-gray-800 text-[15px]">Ligas de Futebol</h2>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="py-0">
-                  {sportsLoading ? (
-                    Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="px-4 py-2"><Skeleton className="h-4 w-full" /></div>
-                    ))
-                  ) : (
-                    sports.map((sport) => (
-                      <button
-                        key={sport.key}
-                        onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-4 py-3 text-[14px] whitespace-nowrap transition-colors ${
-                          selectedSport === sport.key
-                            ? "bg-white/50 text-gray-900 font-semibold"
-                            : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
-                        }`}
-                        data-testid={`button-sport-${sport.key}`}
-                      >
-                        {translateLeagueName(sport.key, sport.title)}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+              <div className="flex flex-col">
+                {sportsLoading ? (
+                  Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="px-3 py-2"><Skeleton className="h-4 w-full" /></div>
+                  ))
+                ) : (
+                  sports.map((sport) => (
+                    <button
+                      key={sport.key}
+                      onClick={() => handleSelectSport(sport.key)}
+                      className={`w-full text-left px-3 py-2.5 text-[13px] whitespace-nowrap transition-colors ${
+                        selectedSport === sport.key
+                          ? "bg-white/50 text-gray-900 font-semibold"
+                          : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
+                      }`}
+                      data-testid={`button-sport-${sport.key}`}
+                    >
+                      {translateLeagueName(sport.key, sport.title)}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
