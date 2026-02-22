@@ -129,9 +129,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="lg:hidden sticky top-0 z-50" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e6a800 50%, #d4960a 100%)" }}>
-        <div className="container mx-auto px-3 h-16 flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* Mobile Header */}
+      <div className="lg:hidden sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+        <div className="px-3 py-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <MobileNav
               sports={sports}
@@ -139,13 +140,13 @@ export default function Home() {
               onSelectSport={handleSelectSport}
               isLoading={sportsLoading}
             />
-            <img src={logoFwSports} alt="FW Sports" className="h-12 w-auto object-contain" />
+            <img src={logoFwSports} alt="FW Sports" className="h-14 w-auto object-contain drop-shadow-md" />
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 text-gray-800 font-semibold text-xs shadow-sm"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md"
               data-testid="button-open-history-mobile"
             >
               <History className="w-3.5 h-3.5" />
@@ -158,7 +159,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-semibold text-xs shadow-sm"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md"
               data-testid="button-open-betslip-mobile"
             >
               <Receipt className="w-3.5 h-3.5" />
@@ -173,6 +174,7 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Desktop Header */}
       <div className="hidden lg:block">
         <Header 
           selectionsCount={selections.length}
@@ -182,8 +184,9 @@ export default function Home() {
         />
       </div>
       
+      {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex h-[calc(100vh-108px)] sticky top-[108px]">
           <SportsSidebar
             sports={sports}
             selectedSport={selectedSport}

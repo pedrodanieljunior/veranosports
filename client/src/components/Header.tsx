@@ -11,16 +11,21 @@ interface HeaderProps {
 
 export function Header({ selectionsCount, betsCount, onOpenBetSlip, onOpenHistory }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e6a800 50%, #d4960a 100%)" }}>
-      <div className="container mx-auto px-4 h-20 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <img src={logoFwSports} alt="FW Sports" className="h-16 w-auto object-contain" data-testid="img-logo" />
+    <header className="sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+      <div className="flex items-center justify-between px-6 py-3">
+        <div className="flex items-center">
+          <img 
+            src={logoFwSports} 
+            alt="FW Sports" 
+            className="h-24 w-auto object-contain drop-shadow-lg" 
+            data-testid="img-logo" 
+          />
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={onOpenHistory}
-            className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white/90 text-gray-800 font-semibold text-sm shadow-sm hover:bg-white transition-colors"
+            className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/95 text-gray-800 font-bold text-sm shadow-md hover:bg-white transition-colors"
             data-testid="button-open-history"
           >
             <History className="w-4 h-4" />
@@ -38,7 +43,7 @@ export function Header({ selectionsCount, betsCount, onOpenBetSlip, onOpenHistor
           
           <button
             onClick={onOpenBetSlip}
-            className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold text-sm shadow-sm hover:bg-green-700 transition-colors"
+            className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600 text-white font-bold text-sm shadow-md hover:bg-green-700 transition-colors"
             data-testid="button-open-betslip"
           >
             <Receipt className="w-4 h-4" />

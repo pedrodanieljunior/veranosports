@@ -2,7 +2,6 @@ import { Game, Selection } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 function calculateBoostedOdd(originalOdd: number): number {
   return originalOdd * 1.20;
@@ -66,7 +65,7 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
             {game.homeTeam}
           </span>
           {homeOdd && (
-            <span className="text-sm font-bold text-green-700 ml-auto tabular-nums">
+            <span className="text-sm font-bold text-green-600 ml-auto tabular-nums">
               {calculateBoostedOdd(homeOdd.price).toFixed(2)}
             </span>
           )}
@@ -75,7 +74,7 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
         <div className="flex items-center gap-2 mb-1.5 pl-8">
           <span className="text-[11px] text-gray-400 flex-1">Empate</span>
           {drawOdd && (
-            <span className="text-sm font-bold text-green-700 ml-auto tabular-nums">
+            <span className="text-sm font-bold text-green-600 ml-auto tabular-nums">
               {calculateBoostedOdd(drawOdd.price).toFixed(2)}
             </span>
           )}
@@ -89,7 +88,7 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
             {game.awayTeam}
           </span>
           {awayOdd && (
-            <span className="text-sm font-bold text-green-700 ml-auto tabular-nums">
+            <span className="text-sm font-bold text-green-600 ml-auto tabular-nums">
               {calculateBoostedOdd(awayOdd.price).toFixed(2)}
             </span>
           )}
