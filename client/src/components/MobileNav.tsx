@@ -25,7 +25,7 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/20" data-testid="button-mobile-menu">
+        <Button variant="ghost" size="icon" className="md:hidden text-white hover:bg-white/20" data-testid="button-mobile-menu">
           <Menu className="w-5 h-5" />
         </Button>
       </SheetTrigger>

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
-import { Header } from "@/components/Header";
 import { SportsSidebar } from "@/components/SportsSidebar";
 import { GamesList } from "@/components/GamesList";
 import { BetSlip } from "@/components/BetSlip";
@@ -130,8 +129,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+      {/* Mobile Header - only on small screens */}
+      <div className="md:hidden sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
         <div className="px-3 py-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <MobileNav
@@ -174,19 +173,62 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Desktop Header */}
-      <div className="hidden lg:block">
-        <Header 
-          selectionsCount={selections.length}
-          betsCount={betHistory.length}
-          onOpenBetSlip={() => { setShowBetSlip(true); setShowHistory(false); }}
-          onOpenHistory={() => { setShowHistory(true); setShowBetSlip(false); }}
-        />
-      </div>
+      {/* Desktop Header - shows on md and above */}
+      <header className="hidden md:block sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+        <div className="flex items-center justify-between px-6 py-2">
+          <div className="flex items-center">
+            <img 
+              src={logoFwSports} 
+              alt="FW Sports" 
+              className="h-[90px] w-auto object-contain drop-shadow-lg" 
+              data-testid="img-logo" 
+            />
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+              className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/95 text-gray-800 font-bold text-sm shadow-md hover:bg-white transition-colors"
+              data-testid="button-open-history"
+            >
+              <History className="w-4 h-4" />
+              <span>Meus Bilhetes</span>
+              {betHistory.length > 0 && (
+                <Badge 
+                  variant="secondary" 
+                  className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0"
+                  data-testid="badge-bets-count"
+                >
+                  {betHistory.length}
+                </Badge>
+              )}
+            </button>
+            
+            <button
+              onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
+              className="relative flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600 text-white font-bold text-sm shadow-md hover:bg-green-700 transition-colors"
+              data-testid="button-open-betslip"
+            >
+              <Receipt className="w-4 h-4" />
+              <span>Bilhete</span>
+              {selections.length > 0 && (
+                <Badge 
+                  variant="secondary" 
+                  className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0"
+                  data-testid="badge-selections-count"
+                >
+                  {selections.length}
+                </Badge>
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
       
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="hidden lg:flex h-[calc(100vh-108px)] sticky top-[108px]">
+        {/* Sidebar - shows on md and above */}
+        <div className="hidden md:flex h-[calc(100vh-106px)] sticky top-[106px]">
           <SportsSidebar
             sports={sports}
             selectedSport={selectedSport}
