@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateLeagueName } from "@/lib/leagueTranslations";
-import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
+import frameImage from "@assets/frame_fw_1771771334915.jpeg";
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -24,52 +24,19 @@ export default function Home() {
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const { toast } = useToast();
 
-  const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({
-    queryKey: ["/api/sports"],
-  });
-
-  const { 
-    data: todayGames = [], 
-    isLoading: todayGamesLoading,
-    error: todayGamesError,
-    refetch: refetchTodayGames
-  } = useQuery<Game[]>({
-    queryKey: ["/api/games/today"],
-    enabled: !selectedSport,
-  });
-
-  const { 
-    data: brasileiraoGames = [], 
-    isLoading: brasileiraoLoading,
-  } = useQuery<Game[]>({
-    queryKey: ["/api/games/brasileirao"],
-    enabled: !selectedSport,
-  });
-
+  const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
+  const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError, refetch: refetchTodayGames } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport });
+  const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport });
   const hasBrasileiraoToday = todayGames.some(g => g.sportKey === "soccer_brazil_campeonato");
-  
-  const upcomingBrasileirao = brasileiraoGames.filter(g => 
-    !todayGames.some(tg => tg.id === g.id)
-  ).slice(0, 6);
-
-  const { 
-    data: leagueGames = [], 
-    isLoading: leagueGamesLoading,
-    error: leagueGamesError,
-    refetch: refetchLeagueGames
-  } = useQuery<Game[]>({
-    queryKey: [`/api/odds/${selectedSport}`],
-    enabled: !!selectedSport,
-  });
+  const upcomingBrasileirao = brasileiraoGames.filter(g => !todayGames.some(tg => tg.id === g.id)).slice(0, 6);
+  const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError, refetch: refetchLeagueGames } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport });
 
   const games = selectedSport ? leagueGames : todayGames;
   const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
   const refetchGames = selectedSport ? refetchLeagueGames : refetchTodayGames;
 
-  const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
-    queryKey: ["/api/bets"],
-  });
+  const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({ queryKey: ["/api/bets"] });
 
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number }) => {
@@ -80,24 +47,14 @@ export default function Home() {
       setPlacedBet(data);
       setSelections([]);
       queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
-      toast({
-        title: "Bilhete gerado com sucesso!",
-        description: `Código: #${data.id.slice(0, 8).toUpperCase()}`,
-      });
+      toast({ title: "Bilhete gerado com sucesso!", description: `Código: #${data.id.slice(0, 8).toUpperCase()}` });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Erro ao gerar bilhete",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao gerar bilhete", description: error.message, variant: "destructive" });
     },
   });
 
-  const handleSelectSport = (sportKey: string) => {
-    setSelectedSport(sportKey);
-  };
-
+  const handleSelectSport = (sportKey: string) => setSelectedSport(sportKey);
   const handleToggleSelection = (selection: Selection) => {
     if (placedBet) setPlacedBet(null);
     setSelections((prev) => {
@@ -107,31 +64,17 @@ export default function Home() {
     });
     if (!showBetSlip && selections.length === 0) setShowBetSlip(true);
   };
-
-  const handleRemoveSelection = (selectionId: string) => {
-    setSelections((prev) => prev.filter((s) => s.id !== selectionId));
-  };
-
-  const handleClearAll = () => {
-    setSelections([]);
-    setPlacedBet(null);
-  };
-
-  const handlePlaceBet = (stake: number) => {
-    placeBetMutation.mutate({ selections, stake });
-  };
+  const handleRemoveSelection = (selectionId: string) => setSelections((prev) => prev.filter((s) => s.id !== selectionId));
+  const handleClearAll = () => { setSelections([]); setPlacedBet(null); };
+  const handlePlaceBet = (stake: number) => placeBetMutation.mutate({ selections, stake });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen">
-        <header
-          className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between"
-          style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}
-        >
+        <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           <div className="flex items-center gap-2">
             <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
-            <img src={logoFwSports} alt="FW Sports" className="h-10 w-auto object-contain drop-shadow-md" />
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
@@ -149,43 +92,37 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ===== DESKTOP LAYOUT ===== */}
-      <div className="hidden md:flex h-screen overflow-hidden bg-gray-50">
-        {/* LEFT COLUMN */}
-        <div className="w-[220px] flex-shrink-0 flex flex-col h-full">
-          {/* Logo area - yellow gradient with large logo */}
-          <div
-            className="flex-shrink-0 flex items-center justify-center px-3 pt-3 pb-2"
-            style={{ background: "linear-gradient(180deg, #f5c518 0%, #eab308 60%, #d4960a 100%)" }}
-          >
-            <img
-              src={logoFwSports}
-              alt="FW Sports"
-              className="w-[190px] h-auto object-contain drop-shadow-lg"
-              data-testid="img-logo"
-            />
-          </div>
+      {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
+      <div className="hidden md:block h-screen overflow-hidden relative">
+        {/* FRAME IMAGE - fixed background covering entire page */}
+        <img
+          src={frameImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
+          data-testid="img-frame"
+        />
 
-          {/* Leagues list - white solid background, yellow left border */}
-          <div className="flex-1 flex flex-row min-h-0">
-            <div className="w-1.5 flex-shrink-0" style={{ background: "linear-gradient(180deg, #eab308 0%, #d4960a 50%, #c48a08 100%)" }} />
-            <div className="flex-1 bg-white flex flex-col border-r border-gray-200">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                <span className="text-base">⚽</span>
-                <h2 className="font-bold text-gray-700 text-sm">Ligas de Futebol</h2>
+        {/* ALL CONTENT positioned on top of the frame */}
+        <div className="relative z-10 flex h-full">
+          {/* LEFT SIDEBAR AREA - positioned over the yellow bar in the frame */}
+          <div className="w-[200px] flex-shrink-0 flex flex-col h-full pt-[160px]">
+            <div className="flex-1 bg-white/90 backdrop-blur-sm mx-1 rounded-t-xl flex flex-col min-h-0 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-white">
+                <span className="text-sm">⚽</span>
+                <h2 className="font-bold text-gray-700 text-[13px]">Ligas de Futebol</h2>
               </div>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 bg-white">
                 <div className="py-1">
                   {sportsLoading ? (
                     Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="px-4 py-2.5"><Skeleton className="h-4 w-full" /></div>
+                      <div key={i} className="px-3 py-2"><Skeleton className="h-4 w-full" /></div>
                     ))
                   ) : (
                     sports.map((sport) => (
                       <button
                         key={sport.key}
                         onClick={() => handleSelectSport(sport.key)}
-                        className={`w-full text-left px-4 py-2 text-[13px] transition-colors ${
+                        className={`w-full text-left px-3 py-2 text-[12px] transition-colors ${
                           selectedSport === sport.key
                             ? "bg-yellow-50 text-yellow-800 font-semibold border-l-[3px] border-l-yellow-500"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-800 border-l-[3px] border-l-transparent"
@@ -200,35 +137,35 @@ export default function Home() {
               </ScrollArea>
             </div>
           </div>
-        </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="flex-1 flex flex-col h-full min-w-0">
-          {/* Top header bar with buttons */}
-          <div className="flex items-center justify-end px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-                className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 hover:bg-gray-50 transition-colors"
-                data-testid="button-open-history"
-              >
-                <History className="w-4 h-4" /><span>Meus Bilhetes</span>
-                {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
-              </button>
-              <button
-                onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
-                className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
-                data-testid="button-open-betslip"
-              >
-                <Receipt className="w-4 h-4" /><span>Bilhete</span>
-                {selections.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>}
-              </button>
+          {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
+          <div className="flex-1 flex flex-col h-full min-w-0">
+            {/* Top bar with buttons - in the white area at top-right */}
+            <div className="flex items-center justify-end px-6 pt-4 pb-2 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+                  className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors"
+                  data-testid="button-open-history"
+                >
+                  <History className="w-4 h-4" /><span>Meus Bilhetes</span>
+                  {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
+                </button>
+                <button
+                  onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
+                  className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
+                  data-testid="button-open-betslip"
+                >
+                  <Receipt className="w-4 h-4" /><span>Bilhete</span>
+                  {selections.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Games area */}
-          <div className="flex-1 overflow-auto">
-            <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
+            {/* Games content - scrollable, positioned in the white content area */}
+            <div className="flex-1 overflow-auto px-2">
+              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
+            </div>
           </div>
         </div>
       </div>
