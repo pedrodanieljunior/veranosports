@@ -37,7 +37,7 @@ export function GamesList({
 
   if (isLoading) {
     return (
-      <div className="flex-1 p-4 sm:p-6 bg-gray-50">
+      <div className="flex-1 p-4 sm:p-6 bg-transparent">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
@@ -54,7 +54,7 @@ export function GamesList({
 
   if (error) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
         <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
         <h2 className="text-lg font-semibold text-gray-800 mb-1">Erro ao carregar jogos</h2>
         <p className="text-sm text-gray-500 max-w-md mb-4">
@@ -70,7 +70,7 @@ export function GamesList({
 
   if (games.length === 0 && !isTodayGames) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
         <Trophy className="w-12 h-12 text-gray-300 mb-3" />
         <h2 className="text-lg font-semibold text-gray-800 mb-1">Sem jogos disponíveis</h2>
         <p className="text-sm text-gray-500 max-w-md">
@@ -82,7 +82,7 @@ export function GamesList({
 
   if (games.length === 0 && isTodayGames) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
         <Calendar className="w-12 h-12 text-gray-300 mb-3" />
         <h2 className="text-lg font-semibold text-gray-800 mb-1">Nenhum jogo hoje</h2>
         <p className="text-sm text-gray-500 max-w-md">
@@ -111,7 +111,7 @@ export function GamesList({
   const formattedDate = format(today, "EEEE, d 'de' MMMM", { locale: ptBR });
 
   return (
-    <div className="flex-1 p-4 sm:p-6 overflow-auto bg-gray-50">
+    <div className="flex-1 p-4 sm:p-6 overflow-auto bg-transparent">
       <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
         <div>
           {isTodayGames ? (
