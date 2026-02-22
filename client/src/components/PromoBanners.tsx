@@ -15,7 +15,7 @@ function RotatingBanner({ images, interval = 4000 }: { images: string[]; interva
   }, [images.length, interval]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl shadow-md" style={{ aspectRatio: "16/9" }}>
+    <div className="relative w-full overflow-hidden rounded-xl shadow-md" style={{ aspectRatio: "2/1" }}>
       {images.map((src, i) => (
         <img
           key={i}
