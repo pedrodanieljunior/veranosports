@@ -44,7 +44,7 @@ function RotatingBanner({ images, interval = 4000 }: { images: string[]; interva
 
 export function PromoBanners() {
   return (
-    <div className="flex gap-3 w-full max-w-[85%]">
+    <div className="flex gap-3 w-full max-w-[85%] ml-auto">
       <div className="flex-1">
         <RotatingBanner images={[banner1a, banner1b]} interval={4000} />
       </div>
