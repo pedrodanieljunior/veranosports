@@ -122,7 +122,7 @@ export default function Home() {
                     <button
                       key={sport.key}
                       onClick={() => handleSelectSport(sport.key)}
-                      className={`w-full text-left px-3 py-2.5 text-[13px] whitespace-nowrap transition-colors ${
+                      className={`text-left px-3 py-2.5 text-[13px] whitespace-nowrap transition-colors inline-block min-w-full ${
                         selectedSport === sport.key
                           ? "bg-white/50 text-gray-900 font-semibold"
                           : "text-gray-700 hover:bg-white/30 hover:text-gray-900"
