@@ -87,11 +87,10 @@ const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 
 // Função para gerar mercados extras quando API-Football não encontra correspondência
+// IMPORTANTE: esses valores são as odds BASE (antes do boost de +20% aplicado no frontend)
+// Para que após o boost fiquem realistas, os valores aqui devem ser ~17% menores que o mercado real
 function generateExtraMarkets(homeTeam: string, awayTeam: string) {
-  // Gerar odds baseadas em variação aleatória para parecer realista
-  const baseOdd = () => (1.5 + Math.random() * 2.5).toFixed(2);
-  const lowOdd = () => (1.3 + Math.random() * 0.7).toFixed(2);
-  const highOdd = () => (2.5 + Math.random() * 3).toFixed(2);
+  const r = (min: number, max: number) => parseFloat((min + Math.random() * (max - min)).toFixed(2));
   
   return [
     {
@@ -99,8 +98,8 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Both Teams Score",
       label: "Ambas Marcam (BTTS)",
       values: [
-        { value: "Sim", odd: parseFloat(lowOdd()) },
-        { value: "Não", odd: parseFloat(baseOdd()) }
+        { value: "Sim", odd: r(1.45, 1.60) },
+        { value: "Não", odd: r(1.85, 2.05) }
       ]
     },
     {
@@ -108,13 +107,13 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "HT/FT Double",
       label: "Intervalo/Final",
       values: [
-        { value: `${homeTeam}/${homeTeam}`, odd: parseFloat(highOdd()) },
-        { value: "Empate/Empate", odd: parseFloat(highOdd()) },
-        { value: `${awayTeam}/${awayTeam}`, odd: parseFloat(highOdd()) },
-        { value: `${homeTeam}/Empate`, odd: parseFloat(highOdd()) },
-        { value: `Empate/${homeTeam}`, odd: parseFloat(highOdd()) },
-        { value: `${awayTeam}/Empate`, odd: parseFloat(highOdd()) },
-        { value: `Empate/${awayTeam}`, odd: parseFloat(highOdd()) }
+        { value: `${homeTeam}/${homeTeam}`, odd: r(3.00, 4.00) },
+        { value: "Empate/Empate", odd: r(4.50, 5.50) },
+        { value: `${awayTeam}/${awayTeam}`, odd: r(4.00, 5.50) },
+        { value: `${homeTeam}/Empate`, odd: r(7.00, 9.00) },
+        { value: `Empate/${homeTeam}`, odd: r(5.00, 7.00) },
+        { value: `${awayTeam}/Empate`, odd: r(8.00, 11.00) },
+        { value: `Empate/${awayTeam}`, odd: r(6.00, 8.50) }
       ]
     },
     {
@@ -122,9 +121,9 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Double Chance",
       label: "Dupla Chance",
       values: [
-        { value: `${homeTeam} ou Empate`, odd: parseFloat(lowOdd()) },
-        { value: `${awayTeam} ou Empate`, odd: parseFloat(lowOdd()) },
-        { value: `${homeTeam} ou ${awayTeam}`, odd: parseFloat(lowOdd()) }
+        { value: `${homeTeam} ou Empate`, odd: r(1.15, 1.30) },
+        { value: `${awayTeam} ou Empate`, odd: r(1.25, 1.45) },
+        { value: `${homeTeam} ou ${awayTeam}`, odd: r(1.10, 1.22) }
       ]
     },
     {
@@ -132,18 +131,18 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Exact Score",
       label: "Placar Exato",
       values: [
-        { value: "1-0", odd: parseFloat((5 + Math.random() * 3).toFixed(2)) },
-        { value: "2-0", odd: parseFloat((7 + Math.random() * 4).toFixed(2)) },
-        { value: "2-1", odd: parseFloat((6 + Math.random() * 3).toFixed(2)) },
-        { value: "1-1", odd: parseFloat((5 + Math.random() * 2).toFixed(2)) },
-        { value: "0-0", odd: parseFloat((8 + Math.random() * 4).toFixed(2)) },
-        { value: "0-1", odd: parseFloat((6 + Math.random() * 3).toFixed(2)) },
-        { value: "0-2", odd: parseFloat((8 + Math.random() * 4).toFixed(2)) },
-        { value: "1-2", odd: parseFloat((7 + Math.random() * 3).toFixed(2)) },
-        { value: "2-2", odd: parseFloat((9 + Math.random() * 5).toFixed(2)) },
-        { value: "3-0", odd: parseFloat((12 + Math.random() * 5).toFixed(2)) },
-        { value: "3-1", odd: parseFloat((10 + Math.random() * 4).toFixed(2)) },
-        { value: "3-2", odd: parseFloat((15 + Math.random() * 8).toFixed(2)) }
+        { value: "1-0", odd: r(5.50, 7.00) },
+        { value: "2-0", odd: r(8.00, 10.00) },
+        { value: "2-1", odd: r(7.00, 9.00) },
+        { value: "1-1", odd: r(5.50, 6.50) },
+        { value: "0-0", odd: r(8.00, 10.00) },
+        { value: "0-1", odd: r(7.50, 9.50) },
+        { value: "0-2", odd: r(11.00, 14.00) },
+        { value: "1-2", odd: r(9.00, 11.00) },
+        { value: "2-2", odd: r(11.00, 14.00) },
+        { value: "3-0", odd: r(15.00, 19.00) },
+        { value: "3-1", odd: r(13.00, 16.00) },
+        { value: "3-2", odd: r(19.00, 25.00) }
       ]
     },
     {
@@ -151,14 +150,14 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Goals Over/Under",
       label: "Total de Gols",
       values: [
-        { value: "Mais de 0.5", odd: parseFloat((1.1 + Math.random() * 0.2).toFixed(2)) },
-        { value: "Menos de 0.5", odd: parseFloat((6 + Math.random() * 2).toFixed(2)) },
-        { value: "Mais de 1.5", odd: parseFloat((1.3 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Menos de 1.5", odd: parseFloat((2.5 + Math.random() * 1).toFixed(2)) },
-        { value: "Mais de 2.5", odd: parseFloat((1.7 + Math.random() * 0.5).toFixed(2)) },
-        { value: "Menos de 2.5", odd: parseFloat((1.9 + Math.random() * 0.4).toFixed(2)) },
-        { value: "Mais de 3.5", odd: parseFloat((2.5 + Math.random() * 0.8).toFixed(2)) },
-        { value: "Menos de 3.5", odd: parseFloat((1.4 + Math.random() * 0.3).toFixed(2)) }
+        { value: "Mais de 0.5", odd: r(1.05, 1.10) },
+        { value: "Menos de 0.5", odd: r(6.50, 8.00) },
+        { value: "Mais de 1.5", odd: r(1.20, 1.32) },
+        { value: "Menos de 1.5", odd: r(2.80, 3.30) },
+        { value: "Mais de 2.5", odd: r(1.55, 1.75) },
+        { value: "Menos de 2.5", odd: r(1.75, 1.95) },
+        { value: "Mais de 3.5", odd: r(2.15, 2.50) },
+        { value: "Menos de 3.5", odd: r(1.35, 1.50) }
       ]
     },
     {
@@ -166,9 +165,9 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Team To Score First",
       label: "Primeira Equipe a Marcar",
       values: [
-        { value: homeTeam, odd: parseFloat(baseOdd()) },
-        { value: awayTeam, odd: parseFloat(baseOdd()) },
-        { value: "Nenhum Gol", odd: parseFloat(highOdd()) }
+        { value: homeTeam, odd: r(1.70, 2.00) },
+        { value: awayTeam, odd: r(2.10, 2.60) },
+        { value: "Nenhum Gol", odd: r(7.00, 9.00) }
       ]
     },
     {
@@ -176,9 +175,9 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "First Half Winner",
       label: "Vencedor 1º Tempo",
       values: [
-        { value: homeTeam, odd: parseFloat(baseOdd()) },
-        { value: "Empate", odd: parseFloat(lowOdd()) },
-        { value: awayTeam, odd: parseFloat(baseOdd()) }
+        { value: homeTeam, odd: r(2.20, 2.80) },
+        { value: "Empate", odd: r(1.75, 1.95) },
+        { value: awayTeam, odd: r(3.00, 4.00) }
       ]
     },
     {
@@ -186,12 +185,12 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Exact Goals Number",
       label: "Número Exato de Gols",
       values: [
-        { value: "0 Gols", odd: parseFloat((8 + Math.random() * 3).toFixed(2)) },
-        { value: "1 Gol", odd: parseFloat((5 + Math.random() * 2).toFixed(2)) },
-        { value: "2 Gols", odd: parseFloat((3.5 + Math.random() * 1).toFixed(2)) },
-        { value: "3 Gols", odd: parseFloat((4 + Math.random() * 1.5).toFixed(2)) },
-        { value: "4 Gols", odd: parseFloat((6 + Math.random() * 2).toFixed(2)) },
-        { value: "5+ Gols", odd: parseFloat((7 + Math.random() * 3).toFixed(2)) }
+        { value: "0 Gols", odd: r(8.00, 10.00) },
+        { value: "1 Gol", odd: r(4.50, 5.50) },
+        { value: "2 Gols", odd: r(3.20, 3.80) },
+        { value: "3 Gols", odd: r(3.80, 4.50) },
+        { value: "4 Gols", odd: r(5.50, 7.00) },
+        { value: "5+ Gols", odd: r(6.50, 8.50) }
       ]
     },
     {
@@ -199,8 +198,8 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Win Both Halves",
       label: "Vencer Ambos os Tempos",
       values: [
-        { value: homeTeam, odd: parseFloat((3 + Math.random() * 2).toFixed(2)) },
-        { value: awayTeam, odd: parseFloat((4 + Math.random() * 2.5).toFixed(2)) }
+        { value: homeTeam, odd: r(3.50, 4.50) },
+        { value: awayTeam, odd: r(5.00, 7.00) }
       ]
     },
     {
@@ -208,8 +207,8 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Odd/Even",
       label: "Ímpar/Par Total de Gols",
       values: [
-        { value: "Ímpar", odd: parseFloat((1.85 + Math.random() * 0.1).toFixed(2)) },
-        { value: "Par", odd: parseFloat((1.85 + Math.random() * 0.1).toFixed(2)) }
+        { value: "Ímpar", odd: r(1.72, 1.80) },
+        { value: "Par", odd: r(1.80, 1.88) }
       ]
     },
     {
@@ -217,14 +216,14 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Total Corners",
       label: "Total de Escanteios",
       values: [
-        { value: "Mais de 7.5", odd: parseFloat((1.7 + Math.random() * 0.4).toFixed(2)) },
-        { value: "Menos de 7.5", odd: parseFloat((2.0 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Mais de 8.5", odd: parseFloat((1.9 + Math.random() * 0.4).toFixed(2)) },
-        { value: "Menos de 8.5", odd: parseFloat((1.8 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Mais de 9.5", odd: parseFloat((2.1 + Math.random() * 0.5).toFixed(2)) },
-        { value: "Menos de 9.5", odd: parseFloat((1.65 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Mais de 10.5", odd: parseFloat((2.4 + Math.random() * 0.6).toFixed(2)) },
-        { value: "Menos de 10.5", odd: parseFloat((1.5 + Math.random() * 0.2).toFixed(2)) }
+        { value: "Mais de 7.5", odd: r(1.50, 1.65) },
+        { value: "Menos de 7.5", odd: r(1.90, 2.10) },
+        { value: "Mais de 8.5", odd: r(1.65, 1.80) },
+        { value: "Menos de 8.5", odd: r(1.75, 1.95) },
+        { value: "Mais de 9.5", odd: r(1.85, 2.05) },
+        { value: "Menos de 9.5", odd: r(1.55, 1.72) },
+        { value: "Mais de 10.5", odd: r(2.10, 2.35) },
+        { value: "Menos de 10.5", odd: r(1.42, 1.55) }
       ]
     },
     {
@@ -232,9 +231,9 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Corners 1X2",
       label: "Escanteios - Qual Time Terá Mais",
       values: [
-        { value: homeTeam, odd: parseFloat((2.0 + Math.random() * 0.5).toFixed(2)) },
-        { value: "Empate", odd: parseFloat((4.0 + Math.random() * 1.5).toFixed(2)) },
-        { value: awayTeam, odd: parseFloat((2.2 + Math.random() * 0.6).toFixed(2)) }
+        { value: homeTeam, odd: r(1.80, 2.10) },
+        { value: "Empate", odd: r(3.20, 3.80) },
+        { value: awayTeam, odd: r(1.95, 2.30) }
       ]
     },
     {
@@ -242,14 +241,14 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Total Cards",
       label: "Total de Cartões",
       values: [
-        { value: "Mais de 2.5", odd: parseFloat((1.5 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Menos de 2.5", odd: parseFloat((2.4 + Math.random() * 0.5).toFixed(2)) },
-        { value: "Mais de 3.5", odd: parseFloat((1.8 + Math.random() * 0.4).toFixed(2)) },
-        { value: "Menos de 3.5", odd: parseFloat((1.9 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Mais de 4.5", odd: parseFloat((2.2 + Math.random() * 0.5).toFixed(2)) },
-        { value: "Menos de 4.5", odd: parseFloat((1.6 + Math.random() * 0.3).toFixed(2)) },
-        { value: "Mais de 5.5", odd: parseFloat((2.8 + Math.random() * 0.7).toFixed(2)) },
-        { value: "Menos de 5.5", odd: parseFloat((1.4 + Math.random() * 0.2).toFixed(2)) }
+        { value: "Mais de 2.5", odd: r(1.40, 1.55) },
+        { value: "Menos de 2.5", odd: r(2.15, 2.45) },
+        { value: "Mais de 3.5", odd: r(1.65, 1.85) },
+        { value: "Menos de 3.5", odd: r(1.70, 1.90) },
+        { value: "Mais de 4.5", odd: r(2.00, 2.25) },
+        { value: "Menos de 4.5", odd: r(1.50, 1.65) },
+        { value: "Mais de 5.5", odd: r(2.40, 2.75) },
+        { value: "Menos de 5.5", odd: r(1.35, 1.48) }
       ]
     },
     {
@@ -257,9 +256,9 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Cards 1X2",
       label: "Cartões - Qual Time Receberá Mais",
       values: [
-        { value: homeTeam, odd: parseFloat((2.1 + Math.random() * 0.5).toFixed(2)) },
-        { value: "Empate", odd: parseFloat((3.5 + Math.random() * 1.0).toFixed(2)) },
-        { value: awayTeam, odd: parseFloat((2.3 + Math.random() * 0.6).toFixed(2)) }
+        { value: homeTeam, odd: r(1.85, 2.15) },
+        { value: "Empate", odd: r(2.80, 3.40) },
+        { value: awayTeam, odd: r(2.00, 2.35) }
       ]
     },
     {
@@ -267,8 +266,8 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       name: "Red Card",
       label: "Cartão Vermelho no Jogo",
       values: [
-        { value: "Sim", odd: parseFloat((3.5 + Math.random() * 1.5).toFixed(2)) },
-        { value: "Não", odd: parseFloat((1.2 + Math.random() * 0.15).toFixed(2)) }
+        { value: "Sim", odd: r(3.00, 3.80) },
+        { value: "Não", odd: r(1.18, 1.28) }
       ]
     }
   ];
