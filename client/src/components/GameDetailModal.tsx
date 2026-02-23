@@ -156,7 +156,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gray-100 text-gray-900 border-gray-300">
+      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-gray-50 to-gray-200 text-gray-900 border-gray-300">
         <DialogHeader className="p-4 border-b border-gray-300 bg-gray-200/60">
           <div className="flex items-center gap-2 mb-2">
             {isLive ? (
