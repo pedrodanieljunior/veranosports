@@ -68,8 +68,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   });
   
   const h2hMarket = allMarkets["h2h"];
-  const spreadMarket = allMarkets["spreads"];
-  const totalsMarket = allMarkets["totals"];
   
   const isSelected = (outcomeName: string, marketKey: string) => {
     return selections.some(
@@ -152,7 +150,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
-  const hasMainMarkets = h2hMarket || spreadMarket || totalsMarket;
+  const hasMainMarkets = !!h2hMarket;
   const hasExtraMarkets = extraMarkets?.markets && extraMarkets.markets.length > 0;
   const isLoadingAny = loadingExtra;
 
@@ -232,76 +230,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               </div>
             )}
             
-            {spreadMarket && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">
-                    {marketLabels.spreads}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{spreadMarket.bookmaker}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {spreadMarket.outcomes.map((outcome: any) => {
-                    const selected = isSelected(`spread-${outcome.name}-${outcome.point}`, "spreads");
-                    return (
-                      <button
-                        key={`${outcome.name}-${outcome.point}`}
-                        onClick={() => handleOddClick(`spread-${outcome.name}-${outcome.point}`, outcome.price, "spreads", spreadMarket.bookmaker)}
-                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
-                          selected
-                            ? "bg-primary/10 border-primary"
-                            : "bg-card border-transparent hover:border-muted-foreground/20"
-                        }`}
-                        data-testid={`button-modal-spread-${outcome.name}`}
-                      >
-                        <span className="text-xs text-muted-foreground mb-1">
-                          {outcome.name} ({outcome.point > 0 ? '+' : ''}{outcome.point})
-                        </span>
-                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                          {outcome.price.toFixed(2)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {totalsMarket && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">
-                    {marketLabels.totals}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{totalsMarket.bookmaker}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {totalsMarket.outcomes.map((outcome: any) => {
-                    const selected = isSelected(`total-${outcome.name}-${outcome.point}`, "totals");
-                    const label = outcome.name === "Over" ? `Mais de ${outcome.point}` : `Menos de ${outcome.point}`;
-                    return (
-                      <button
-                        key={`${outcome.name}-${outcome.point}`}
-                        onClick={() => handleOddClick(`total-${outcome.name}-${outcome.point}`, outcome.price, "totals", totalsMarket.bookmaker)}
-                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
-                          selected
-                            ? "bg-primary/10 border-primary"
-                            : "bg-card border-transparent hover:border-muted-foreground/20"
-                        }`}
-                        data-testid={`button-modal-total-${outcome.name}`}
-                      >
-                        <span className="text-xs text-muted-foreground mb-1">
-                          {label}
-                        </span>
-                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                          {outcome.price.toFixed(2)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Separator for API-Football extra markets */}
             {hasMainMarkets && (hasExtraMarkets || loadingExtra) && (

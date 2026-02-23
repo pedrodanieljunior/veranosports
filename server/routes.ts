@@ -96,7 +96,7 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
     {
       id: 1,
       name: "Both Teams Score",
-      label: "Ambas Marcam (BTTS)",
+      label: "Ambas Marcam",
       values: [
         { value: "Sim", odd: r(1.45, 1.60) },
         { value: "Não", odd: r(1.85, 2.05) }
@@ -114,16 +114,6 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: `Empate/${homeTeam}`, odd: r(5.00, 7.00) },
         { value: `${awayTeam}/Empate`, odd: r(8.00, 11.00) },
         { value: `Empate/${awayTeam}`, odd: r(6.00, 8.50) }
-      ]
-    },
-    {
-      id: 3,
-      name: "Double Chance",
-      label: "Dupla Chance",
-      values: [
-        { value: `${homeTeam} ou Empate`, odd: r(1.15, 1.30) },
-        { value: `${awayTeam} ou Empate`, odd: r(1.25, 1.45) },
-        { value: `${homeTeam} ou ${awayTeam}`, odd: r(1.10, 1.22) }
       ]
     },
     {
@@ -147,68 +137,21 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
     },
     {
       id: 5,
-      name: "Goals Over/Under",
-      label: "Total de Gols",
+      name: "Goals Over/Under 2.5",
+      label: "Total de Gols 2,5",
       values: [
-        { value: "Mais de 0.5", odd: r(1.05, 1.10) },
-        { value: "Menos de 0.5", odd: r(6.50, 8.00) },
-        { value: "Mais de 1.5", odd: r(1.20, 1.32) },
-        { value: "Menos de 1.5", odd: r(2.80, 3.30) },
-        { value: "Mais de 2.5", odd: r(1.55, 1.75) },
-        { value: "Menos de 2.5", odd: r(1.75, 1.95) },
-        { value: "Mais de 3.5", odd: r(2.15, 2.50) },
-        { value: "Menos de 3.5", odd: r(1.35, 1.50) }
+        { value: "Sim (Mais de 2.5)", odd: r(1.55, 1.75) },
+        { value: "Não (Menos de 2.5)", odd: r(1.75, 1.95) }
       ]
     },
     {
       id: 6,
       name: "Team To Score First",
-      label: "Primeira Equipe a Marcar",
+      label: "Primeiro a Marcar",
       values: [
         { value: homeTeam, odd: r(1.70, 2.00) },
         { value: awayTeam, odd: r(2.10, 2.60) },
         { value: "Nenhum Gol", odd: r(7.00, 9.00) }
-      ]
-    },
-    {
-      id: 7,
-      name: "First Half Winner",
-      label: "Vencedor 1º Tempo",
-      values: [
-        { value: homeTeam, odd: r(2.20, 2.80) },
-        { value: "Empate", odd: r(1.75, 1.95) },
-        { value: awayTeam, odd: r(3.00, 4.00) }
-      ]
-    },
-    {
-      id: 8,
-      name: "Exact Goals Number",
-      label: "Número Exato de Gols",
-      values: [
-        { value: "0 Gols", odd: r(8.00, 10.00) },
-        { value: "1 Gol", odd: r(4.50, 5.50) },
-        { value: "2 Gols", odd: r(3.20, 3.80) },
-        { value: "3 Gols", odd: r(3.80, 4.50) },
-        { value: "4 Gols", odd: r(5.50, 7.00) },
-        { value: "5+ Gols", odd: r(6.50, 8.50) }
-      ]
-    },
-    {
-      id: 9,
-      name: "Win Both Halves",
-      label: "Vencer Ambos os Tempos",
-      values: [
-        { value: homeTeam, odd: r(3.50, 4.50) },
-        { value: awayTeam, odd: r(5.00, 7.00) }
-      ]
-    },
-    {
-      id: 10,
-      name: "Odd/Even",
-      label: "Ímpar/Par Total de Gols",
-      values: [
-        { value: "Ímpar", odd: r(1.72, 1.80) },
-        { value: "Par", odd: r(1.80, 1.88) }
       ]
     },
     {
@@ -224,41 +167,6 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Menos de 9.5", odd: r(1.55, 1.72) },
         { value: "Mais de 10.5", odd: r(2.10, 2.35) },
         { value: "Menos de 10.5", odd: r(1.42, 1.55) }
-      ]
-    },
-    {
-      id: 12,
-      name: "Corners 1X2",
-      label: "Escanteios - Qual Time Terá Mais",
-      values: [
-        { value: homeTeam, odd: r(1.80, 2.10) },
-        { value: "Empate", odd: r(3.20, 3.80) },
-        { value: awayTeam, odd: r(1.95, 2.30) }
-      ]
-    },
-    {
-      id: 13,
-      name: "Total Cards",
-      label: "Total de Cartões",
-      values: [
-        { value: "Mais de 2.5", odd: r(1.40, 1.55) },
-        { value: "Menos de 2.5", odd: r(2.15, 2.45) },
-        { value: "Mais de 3.5", odd: r(1.65, 1.85) },
-        { value: "Menos de 3.5", odd: r(1.70, 1.90) },
-        { value: "Mais de 4.5", odd: r(2.00, 2.25) },
-        { value: "Menos de 4.5", odd: r(1.50, 1.65) },
-        { value: "Mais de 5.5", odd: r(2.40, 2.75) },
-        { value: "Menos de 5.5", odd: r(1.35, 1.48) }
-      ]
-    },
-    {
-      id: 14,
-      name: "Cards 1X2",
-      label: "Cartões - Qual Time Receberá Mais",
-      values: [
-        { value: homeTeam, odd: r(1.85, 2.15) },
-        { value: "Empate", odd: r(2.80, 3.40) },
-        { value: awayTeam, odd: r(2.00, 2.35) }
       ]
     },
     {
@@ -1174,8 +1082,18 @@ export async function registerRoutes(
         "To Qualify": "Classificação"
       };
       
-      // Retornar TODOS os mercados disponíveis (329 mercados da API-Football)
-      const markets = bookmaker.bets.map((bet: any) => ({
+      const allowedMarkets = new Set([
+        "Match Winner",
+        "Both Teams Score",
+        "HT/FT Double",
+        "Exact Score",
+        "Goals Over/Under",
+        "Team To Score First",
+        "Corners Over Under",
+        "Total Corners",
+      ]);
+      
+      const markets = bookmaker.bets.filter((bet: any) => allowedMarkets.has(bet.name)).map((bet: any) => ({
         id: bet.id,
         name: bet.name,
         label: marketLabels[bet.name] || bet.name,

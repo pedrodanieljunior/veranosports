@@ -34,11 +34,8 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
   const isLive = gameDate <= new Date();
   
   const matchWinner = fixture.odds.find(o => o.name === "Match Winner");
-  const firstHalfWinner = fixture.odds.find(o => o.name === "First Half Winner");
-  const htFt = fixture.odds.find(o => o.name === "HT/FT Double");
   const btts = fixture.odds.find(o => o.name === "Both Teams Score");
-  const goalsOverUnder = fixture.odds.find(o => o.name === "Goals Over/Under");
-  const goalsFirstHalf = fixture.odds.find(o => o.name === "Goals Over/Under First Half");
+  const htFt = fixture.odds.find(o => o.name === "HT/FT Double");
   
   const isSelected = (outcomeName: string, marketKey: string) => {
     return selections.some(
@@ -59,6 +56,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
       bookmaker: "API-Football",
       outcome: `${marketName}: ${outcomeName}`,
       odds: finalOdds,
+      result: "pending",
     };
     onToggleSelection(selection);
   };
@@ -122,22 +120,9 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
     return value;
   };
 
-  const translateFirstHalf = (value: string): string => {
-    if (value === "Home") return `${fixture.homeTeam} (1T)`;
-    if (value === "Away") return `${fixture.awayTeam} (1T)`;
-    if (value === "Draw") return "Empate (1T)";
-    return value;
-  };
-
   const translateBtts = (value: string): string => {
     if (value === "Yes") return "Sim";
     if (value === "No") return "Não";
-    return value;
-  };
-
-  const translateGoals = (value: string): string => {
-    if (value.startsWith("Over")) return `Mais de ${value.replace("Over ", "")}`;
-    if (value.startsWith("Under")) return `Menos de ${value.replace("Under ", "")}`;
     return value;
   };
 
@@ -199,14 +184,11 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
             </div>
           </div>
           
-          {renderMarket(matchWinner, "match_winner", "Vencedor do Jogo", translateMatchWinner)}
-          {renderMarket(firstHalfWinner, "first_half_winner", "Vencedor do 1º Tempo", translateFirstHalf)}
+          {renderMarket(matchWinner, "match_winner", "Resultado Final", translateMatchWinner)}
+          {renderMarket(btts, "btts", "Ambas Marcam", translateBtts)}
           {renderMarket(htFt, "ht_ft", "Intervalo / Final")}
-          {renderMarket(btts, "btts", "Ambos Marcam", translateBtts)}
-          {renderMarket(goalsOverUnder, "goals_ou", "Total de Gols", translateGoals)}
-          {renderMarket(goalsFirstHalf, "goals_1h", "Gols 1º Tempo", translateGoals)}
           
-          {!matchWinner && !firstHalfWinner && !htFt && !btts && (
+          {!matchWinner && !btts && !htFt && (
             <div className="text-center py-4 text-muted-foreground">
               <p>Odds não disponíveis para este jogo</p>
             </div>
