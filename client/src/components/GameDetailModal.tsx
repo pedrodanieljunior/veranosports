@@ -7,8 +7,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 
-function calculateBoostedOdd(originalOdd: number): number {
-  return originalOdd * 1.20;
+function calculateH2hBoostedOdd(originalOdd: number): number {
+  return originalOdd * 1.15;
 }
 
 interface ExtraMarket {
@@ -78,7 +78,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   };
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
-    const boostedOdds = calculateBoostedOdd(originalOdds);
+    const finalOdds = marketKey === "h2h" ? calculateH2hBoostedOdd(originalOdds) : originalOdds;
     const selection: Selection = {
       id: `${game.id}-${marketKey}-${outcomeName}`,
       gameId: game.id,
@@ -89,7 +89,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       marketKey,
       bookmaker,
       outcome: outcomeName,
-      odds: boostedOdds,
+      odds: finalOdds,
       result: "pending",
     };
     onToggleSelection(selection);
@@ -115,7 +115,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
           {market.values.map((value) => {
             const outcomeKey = `${market.name}-${value.value}`;
             const selected = isSelected(outcomeKey, marketKey);
-            const boostedOdd = calculateBoostedOdd(value.odd);
             
             let displayLabel = value.value;
             if (value.value === "Yes") displayLabel = "Sim";
@@ -142,13 +141,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <span className="text-xs text-muted-foreground mb-1 text-center line-clamp-1">
                   {displayLabel}
                 </span>
-                <div className="flex items-center gap-1">
-                  <span className={`font-bold text-base ${selected ? "text-primary" : ""}`}>
-                    {boostedOdd.toFixed(2)}
-                  </span>
-                  <TrendingUp className="w-3 h-3 text-green-500" />
-                </div>
-                <span className="text-[10px] text-muted-foreground/60 line-through">
+                <span className={`font-bold text-base ${selected ? "text-primary" : ""}`}>
                   {value.odd.toFixed(2)}
                 </span>
               </button>
@@ -203,10 +196,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <div className="grid grid-cols-3 gap-2">
                   {h2hMarket.outcomes.map((outcome: any) => {
                     const selected = isSelected(outcome.name, "h2h");
-                    const boostedOdd = calculateBoostedOdd(outcome.price);
+                    const boostedOdd = calculateH2hBoostedOdd(outcome.price);
                     const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
                     const isHome = outcome.name === game.homeTeam;
-                    const label = isDraw ? "X" : isHome ? "1" : "2";
                     const displayName = isDraw ? "Empate" : 
                                         isHome ? game.homeTeam.substring(0, 10) : 
                                         game.awayTeam.substring(0, 10);
@@ -251,7 +243,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <div className="grid grid-cols-2 gap-2">
                   {spreadMarket.outcomes.map((outcome: any) => {
                     const selected = isSelected(`spread-${outcome.name}-${outcome.point}`, "spreads");
-                    const boostedOdd = calculateBoostedOdd(outcome.price);
                     return (
                       <button
                         key={`${outcome.name}-${outcome.point}`}
@@ -266,13 +257,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         <span className="text-xs text-muted-foreground mb-1">
                           {outcome.name} ({outcome.point > 0 ? '+' : ''}{outcome.point})
                         </span>
-                        <div className="flex items-center gap-1">
-                          <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                            {boostedOdd.toFixed(2)}
-                          </span>
-                          <TrendingUp className="w-3 h-3 text-green-500" />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground/60 line-through">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
                           {outcome.price.toFixed(2)}
                         </span>
                       </button>
@@ -293,7 +278,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <div className="grid grid-cols-2 gap-2">
                   {totalsMarket.outcomes.map((outcome: any) => {
                     const selected = isSelected(`total-${outcome.name}-${outcome.point}`, "totals");
-                    const boostedOdd = calculateBoostedOdd(outcome.price);
                     const label = outcome.name === "Over" ? `Mais de ${outcome.point}` : `Menos de ${outcome.point}`;
                     return (
                       <button
@@ -309,13 +293,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         <span className="text-xs text-muted-foreground mb-1">
                           {label}
                         </span>
-                        <div className="flex items-center gap-1">
-                          <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                            {boostedOdd.toFixed(2)}
-                          </span>
-                          <TrendingUp className="w-3 h-3 text-green-500" />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground/60 line-through">
+                        <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
                           {outcome.price.toFixed(2)}
                         </span>
                       </button>
@@ -362,7 +340,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
         
         <div className="p-3 border-t border-card-border bg-muted/30">
           <p className="text-xs text-muted-foreground text-center">
-            Todas as odds incluem bônus de +20%
+            Resultado Final inclui bônus de +15%
           </p>
         </div>
       </DialogContent>

@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { Selection } from "@shared/schema";
 
 function calculateBoostedOdd(originalOdd: number): number {
-  return originalOdd * 1.20;
+  return originalOdd * 1.15;
 }
 
 interface FootballFixture {
@@ -47,7 +47,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
   };
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, marketName: string) => {
-    const boostedOdds = calculateBoostedOdd(originalOdds);
+    const finalOdds = marketKey === "match_winner" ? calculateBoostedOdd(originalOdds) : originalOdds;
     const selection: Selection = {
       id: `${fixture.id}-${marketKey}-${outcomeName}`,
       gameId: String(fixture.id),
@@ -58,7 +58,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
       marketKey,
       bookmaker: "API-Football",
       outcome: `${marketName}: ${outcomeName}`,
-      odds: boostedOdds,
+      odds: finalOdds,
     };
     onToggleSelection(selection);
   };
@@ -79,7 +79,8 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {market.values.slice(0, 6).map((outcome) => {
             const selected = isSelected(`${marketKey}-${outcome.value}`, marketKey);
-            const boostedOdd = calculateBoostedOdd(outcome.odd);
+            const isMatchWinner = marketKey === "match_winner";
+            const displayOdd = isMatchWinner ? calculateBoostedOdd(outcome.odd) : outcome.odd;
             const displayValue = translateFn ? translateFn(outcome.value) : outcome.value;
             return (
               <button
@@ -97,12 +98,14 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
                 </span>
                 <div className="flex flex-col items-center">
                   <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
-                    {boostedOdd.toFixed(2)}
+                    {displayOdd.toFixed(2)}
                   </span>
-                  <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
-                    {outcome.odd.toFixed(2)}
-                    <TrendingUp className="w-2.5 h-2.5 text-green-500" />
-                  </span>
+                  {isMatchWinner && (
+                    <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
+                      {outcome.odd.toFixed(2)}
+                      <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                    </span>
+                  )}
                 </div>
               </button>
             );

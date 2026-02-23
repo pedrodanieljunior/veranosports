@@ -4,7 +4,7 @@ import { Clock, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 
 function calculateBoostedOdd(originalOdd: number): number {
-  return originalOdd * 1.20;
+  return originalOdd * 1.15;
 }
 
 interface GameCardProps {
