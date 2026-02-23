@@ -1,6 +1,6 @@
 import { type BetSlip, type InsertBetSlip, betSlipsTable } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -13,6 +13,8 @@ export interface IStorage {
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
   updateSelectionResult(betId: string, selectionId: string, result: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
   updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined>;
+  getDailyBetSlips(): Promise<BetSlip[]>;
+  getDailyTotalPotentialWin(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -180,6 +182,38 @@ export class DatabaseStorage implements IStorage {
       verified: result.verified,
       createdAt: result.createdAt.toISOString(),
     };
+  }
+
+  async getDailyBetSlips(): Promise<BetSlip[]> {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    
+    const results = await db.select().from(betSlipsTable)
+      .where(gte(betSlipsTable.createdAt, todayStart))
+      .orderBy(desc(betSlipsTable.createdAt));
+    
+    return results.map(result => ({
+      id: result.id,
+      selections: result.selections as BetSlip["selections"],
+      stake: result.stake,
+      totalOdds: result.totalOdds,
+      potentialWin: result.potentialWin,
+      status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
+      createdAt: result.createdAt.toISOString(),
+    }));
+  }
+
+  async getDailyTotalPotentialWin(): Promise<number> {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    
+    const [result] = await db.select({
+      total: sql<number>`COALESCE(SUM(${betSlipsTable.potentialWin}), 0)`
+    }).from(betSlipsTable)
+      .where(gte(betSlipsTable.createdAt, todayStart));
+    
+    return Number(result?.total ?? 0);
   }
 }
 

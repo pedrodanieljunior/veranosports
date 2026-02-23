@@ -48,10 +48,16 @@ export default function Home() {
       setPlacedBet(data);
       setSelections([]);
       queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
       toast({ title: "Bilhete gerado com sucesso!", description: `Código: #${data.id.slice(0, 8).toUpperCase()}` });
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao gerar bilhete", description: error.message, variant: "destructive" });
+      let description = error.message;
+      try {
+        const parsed = JSON.parse(error.message.replace(/^\d+:\s*/, ''));
+        if (parsed.error) description = parsed.error;
+      } catch {}
+      toast({ title: "Erro ao gerar bilhete", description, variant: "destructive" });
     },
   });
 
@@ -61,6 +67,10 @@ export default function Home() {
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
       if (exists) return prev.filter((s) => s.id !== selection.id);
+      if (prev.length >= 3) {
+        toast({ title: "Máximo de 3 seleções por bilhete", variant: "destructive" });
+        return prev;
+      }
       return [...prev, selection];
     });
     if (!showBetSlip && selections.length === 0) setShowBetSlip(true);

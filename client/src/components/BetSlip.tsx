@@ -3,16 +3,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle } from "lucide-react";
 import { SiTelegram } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
   pixQrCode?: string;
+  cappedAtMax?: boolean;
+  cappedByDaily?: boolean;
+  dailyRemaining?: number;
+}
+
+interface LimitsData {
+  dailyTotal: number;
+  dailyLimit: number;
+  dailyRemaining: number;
+  maxBetPayout: number;
+  maxSelections: number;
+  isDailyLimitReached: boolean;
 }
 
 interface BetSlipProps {
@@ -37,6 +50,10 @@ export function BetSlip({
   const [stake, setStake] = useState<string>("10");
   const { toast } = useToast();
 
+  const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
+
+  const MAX_BET_PAYOUT = limits?.maxBetPayout ?? 15000;
+
   const copyPixCode = () => {
     if (placedBet?.pixCode) {
       navigator.clipboard.writeText(placedBet.pixCode);
@@ -58,10 +75,8 @@ export function BetSlip({
             text: shareText,
           });
         } catch (err) {
-          // Usuário cancelou o compartilhamento
         }
       } else {
-        // Fallback: copiar para área de transferência
         navigator.clipboard.writeText(shareText);
         toast({
           title: "Conteúdo copiado!",
@@ -72,7 +87,12 @@ export function BetSlip({
   };
   
   const totalOdds = selections.reduce((acc, sel) => acc * sel.odds, 1);
-  const potentialWin = parseFloat(stake || "0") * totalOdds;
+  const rawPotentialWin = parseFloat(stake || "0") * totalOdds;
+  const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
+  const isCappedAtMax = rawPotentialWin > MAX_BET_PAYOUT;
+
+  const isNearDailyLimit = limits && displayPotentialWin > limits.dailyRemaining && limits.dailyRemaining > 0;
+  const isDailyLimitReached = limits?.isDailyLimitReached ?? false;
   
   const handlePlaceBet = () => {
     const stakeValue = parseFloat(stake);
@@ -106,6 +126,22 @@ export function BetSlip({
                 </p>
               </div>
             </div>
+
+            {placedBet.cappedAtMax && (
+              <div className="bg-yellow-500/10 border border-yellow-500 rounded-md p-3 mb-4 flex items-start gap-2" data-testid="alert-capped-max">
+                <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">Os ganhos se limitam a R$15.000,00</p>
+              </div>
+            )}
+
+            {placedBet.cappedByDaily && (
+              <div className="bg-orange-500/10 border border-orange-500 rounded-md p-3 mb-4 flex items-start gap-2" data-testid="alert-capped-daily">
+                <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-orange-700 dark:text-orange-400">
+                  Ganhos limitados ao valor restante do limite diário: R$ {placedBet.potentialWin.toFixed(2)}
+                </p>
+              </div>
+            )}
 
             {placedBet.pixQrCode && (
               <div className="bg-white rounded-md p-4 mb-4">
@@ -252,7 +288,14 @@ export function BetSlip({
       </CardHeader>
       
       <CardContent className="flex-1 overflow-hidden p-4 flex flex-col">
-        {selections.length === 0 ? (
+        {isDailyLimitReached ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+            <AlertTriangle className="w-16 h-16 text-destructive/50 mb-4" />
+            <p className="text-destructive font-medium" data-testid="text-daily-limit-reached">
+              Para assegurar os pagamentos das apostas já feitas, o painel retomará em algumas horas.
+            </p>
+          </div>
+        ) : selections.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
             <Receipt className="w-16 h-16 text-muted-foreground/30 mb-4" />
             <p className="text-muted-foreground">
@@ -328,6 +371,22 @@ export function BetSlip({
                   </Button>
                 ))}
               </div>
+
+              {isCappedAtMax && (
+                <div className="bg-yellow-500/10 border border-yellow-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-capped-max">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400">Os ganhos se limitam a R$15.000,00</p>
+                </div>
+              )}
+
+              {isNearDailyLimit && !isCappedAtMax && (
+                <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">
+                  <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-orange-700 dark:text-orange-400">
+                    Os ganhos máximos desta aposta são de R$ {limits!.dailyRemaining.toFixed(2)} (limite diário restante)
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -341,7 +400,7 @@ export function BetSlip({
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
                   <span className="font-bold text-primary">
-                    R$ {potentialWin.toFixed(2)}
+                    R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -350,7 +409,7 @@ export function BetSlip({
                 className="w-full" 
                 size="lg"
                 onClick={handlePlaceBet}
-                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0}
+                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0 || isDailyLimitReached}
                 data-testid="button-place-bet"
               >
                 {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}

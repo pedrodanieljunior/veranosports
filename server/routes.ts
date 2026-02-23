@@ -690,12 +690,73 @@ export async function registerRoutes(
     }
   });
 
+  const MAX_BET_PAYOUT = 15000;
+  const DAILY_LIMIT = 50000;
+  const MAX_SELECTIONS = 3;
+
+  app.get("/api/limits", async (req, res) => {
+    try {
+      const dailyTotal = await storage.getDailyTotalPotentialWin();
+      const dailyRemaining = Math.max(0, DAILY_LIMIT - dailyTotal);
+      res.json({
+        dailyTotal,
+        dailyLimit: DAILY_LIMIT,
+        dailyRemaining,
+        maxBetPayout: MAX_BET_PAYOUT,
+        maxSelections: MAX_SELECTIONS,
+        isDailyLimitReached: dailyTotal >= DAILY_LIMIT,
+      });
+    } catch (error) {
+      console.error("Error fetching limits:", error);
+      res.status(500).json({ error: "Erro ao buscar limites" });
+    }
+  });
+
   app.post("/api/bets", async (req, res) => {
     try {
       const validatedData = insertBetSlipSchema.parse(req.body);
+
+      if (validatedData.selections.length > MAX_SELECTIONS) {
+        return res.status(400).json({
+          error: `Máximo de ${MAX_SELECTIONS} seleções por bilhete`,
+        });
+      }
+
+      const dailyTotal = await storage.getDailyTotalPotentialWin();
+
+      if (dailyTotal >= DAILY_LIMIT) {
+        return res.status(400).json({
+          error: "Para assegurar os pagamentos das apostas já feitas, o painel retomará em algumas horas.",
+          isDailyLimitReached: true,
+        });
+      }
+
+      const totalOdds = validatedData.selections.reduce((acc, sel) => acc * sel.odds, 1);
+      let potentialWin = validatedData.stake * totalOdds;
+
+      if (potentialWin > MAX_BET_PAYOUT) {
+        potentialWin = MAX_BET_PAYOUT;
+      }
+
+      const dailyRemaining = DAILY_LIMIT - dailyTotal;
+      let cappedByDaily = false;
+      if (potentialWin > dailyRemaining) {
+        potentialWin = dailyRemaining;
+        cappedByDaily = true;
+      }
+
       const betSlip = await storage.createBetSlip(validatedData);
-      
-      // Gerar QR Code PIX com valor da aposta
+
+      const updatedBetSlip = { ...betSlip, potentialWin };
+      if (betSlip.potentialWin !== potentialWin) {
+        const { eq } = await import("drizzle-orm");
+        const { db } = await import("./db");
+        const { betSlipsTable } = await import("@shared/schema");
+        await db.update(betSlipsTable)
+          .set({ potentialWin })
+          .where(eq(betSlipsTable.id, betSlip.id));
+      }
+
       const txId = betSlip.id.replace(/-/g, '').substring(0, 25);
       const pixPayload = generatePixPayload(betSlip.stake, txId);
       const qrCodeDataUrl = await QRCode.toDataURL(pixPayload, { 
@@ -705,9 +766,12 @@ export async function registerRoutes(
       });
       
       res.status(201).json({
-        ...betSlip,
+        ...updatedBetSlip,
         pixCode: pixPayload,
-        pixQrCode: qrCodeDataUrl
+        pixQrCode: qrCodeDataUrl,
+        cappedAtMax: betSlip.potentialWin !== potentialWin && potentialWin === MAX_BET_PAYOUT,
+        cappedByDaily,
+        dailyRemaining: dailyRemaining - potentialWin,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
