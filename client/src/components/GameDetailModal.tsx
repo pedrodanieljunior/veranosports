@@ -106,8 +106,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     return (
       <div key={market.id} className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-800">{market.label}</span>
-          <span className="text-xs text-gray-500">{bookmaker}</span>
+          <span className="text-sm font-semibold text-gray-200">{market.label}</span>
+          <span className="text-xs text-gray-400">{bookmaker}</span>
         </div>
         <div className={`grid gap-2 ${market.values.length <= 2 ? 'grid-cols-2' : market.values.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
           {market.values.map((value) => {
@@ -131,15 +131,15 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 onClick={() => handleOddClick(outcomeKey, value.odd, marketKey, bookmaker)}
                 className={`flex flex-col items-center p-2.5 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
                   selected
-                    ? "bg-blue-50 border-blue-500"
-                    : "bg-white border-gray-200 hover:border-gray-400"
+                    ? "bg-green-900/30 border-green-500"
+                    : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666]"
                 }`}
                 data-testid={`button-modal-extra-${market.id}-${value.value}`}
               >
-                <span className="text-xs text-gray-500 mb-1 text-center line-clamp-1">
+                <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">
                   {displayLabel}
                 </span>
-                <span className={`font-bold text-base ${selected ? "text-blue-600" : "text-gray-900"}`}>
+                <span className={`font-bold text-base ${selected ? "text-green-400" : "text-gray-100"}`}>
                   {value.odd.toFixed(2)}
                 </span>
               </button>
@@ -156,27 +156,27 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-gray-50 to-gray-200 text-gray-900 border-gray-300">
-        <DialogHeader className="p-4 border-b border-gray-300 bg-gray-200/60">
+      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-[#333333] to-[#282828] text-gray-100 border-[#444]">
+        <DialogHeader className="p-4 border-b border-[#444] bg-[#333333]">
           <div className="flex items-center gap-2 mb-2">
             {isLive ? (
               <Badge variant="destructive" className="animate-pulse">
                 AO VIVO
               </Badge>
             ) : (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
+              <div className="flex items-center gap-1 text-xs text-gray-400">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{format(gameDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
               </div>
             )}
-            <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-700">
+            <Badge variant="secondary" className="text-xs bg-[#444] text-gray-300">
               {game.sportTitle}
             </Badge>
           </div>
-          <DialogTitle className="text-lg text-gray-900">
+          <DialogTitle className="text-lg text-gray-100">
             {game.homeTeam} vs {game.awayTeam}
           </DialogTitle>
-          <DialogDescription className="text-xs text-gray-500">
+          <DialogDescription className="text-xs text-gray-400">
             Selecione uma odd para adicionar ao bilhete
           </DialogDescription>
         </DialogHeader>
@@ -186,10 +186,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {h2hMarket && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-800">
+                  <span className="text-sm font-semibold text-gray-200">
                     {marketLabels.h2h}
                   </span>
-                  <span className="text-xs text-gray-500">{h2hMarket.bookmaker}</span>
+                  <span className="text-xs text-gray-400">{h2hMarket.bookmaker}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {h2hMarket.outcomes.map((outcome: any) => {
@@ -206,21 +206,21 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         onClick={() => handleOddClick(outcome.name, outcome.price, "h2h", h2hMarket.bookmaker)}
                         className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
                           selected
-                            ? "bg-blue-50 border-blue-500"
-                            : "bg-white border-gray-200 hover:border-gray-400"
+                            ? "bg-green-900/30 border-green-500"
+                            : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666]"
                         }`}
                         data-testid={`button-modal-h2h-${outcome.name}`}
                       >
-                        <span className="text-xs text-gray-500 mb-1">
+                        <span className="text-xs text-gray-400 mb-1">
                           {displayName}
                         </span>
                         <div className="flex items-center gap-1">
-                          <span className={`font-bold text-lg ${selected ? "text-blue-600" : "text-gray-900"}`}>
+                          <span className={`font-bold text-lg ${selected ? "text-green-400" : "text-gray-100"}`}>
                             {boostedOdd.toFixed(2)}
                           </span>
                           <TrendingUp className="w-3 h-3 text-green-500" />
                         </div>
-                        <span className="text-[10px] text-gray-400 line-through">
+                        <span className="text-[10px] text-gray-500 line-through">
                           {outcome.price.toFixed(2)}
                         </span>
                       </button>
@@ -234,9 +234,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {/* Separator for API-Football extra markets */}
             {hasMainMarkets && (hasExtraMarkets || loadingExtra) && (
               <div className="flex items-center gap-3 py-2">
-                <div className="flex-1 h-px bg-gray-300" />
-                <span className="text-xs text-gray-500 font-medium">Mercados Extras</span>
-                <div className="flex-1 h-px bg-gray-300" />
+                <div className="flex-1 h-px bg-[#4a4a4a]" />
+                <span className="text-xs text-gray-400 font-medium">Mercados Extras</span>
+                <div className="flex-1 h-px bg-[#4a4a4a]" />
               </div>
             )}
 
@@ -244,13 +244,13 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {loadingExtra && (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                <span className="ml-2 text-sm text-gray-500">Carregando mercados extras...</span>
+                <span className="ml-2 text-sm text-gray-400">Carregando mercados extras...</span>
               </div>
             )}
 
             {/* Error state for extra markets */}
             {errorExtra && !isLoadingAny && (
-              <div className="text-center py-4 text-gray-500">
+              <div className="text-center py-4 text-gray-400">
                 <p className="text-sm">Alguns mercados extras não puderam ser carregados</p>
               </div>
             )}
@@ -259,15 +259,15 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {hasExtraMarkets && extraMarkets.markets.map(renderExtraMarket)}
             
             {!hasMainMarkets && !hasExtraMarkets && !isLoadingAny && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-400">
                 <p>Nenhum mercado disponível para este jogo</p>
               </div>
             )}
           </div>
         </ScrollArea>
         
-        <div className="p-3 border-t border-gray-300 bg-gray-200/60">
-          <p className="text-xs text-gray-500 text-center">
+        <div className="p-3 border-t border-[#444] bg-[#282828]">
+          <p className="text-xs text-gray-400 text-center">
             Resultado Final inclui bônus de +15%
           </p>
         </div>
