@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateLeagueName } from "@/lib/leagueTranslations";
+import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import { PromoBanners } from "@/components/PromoBanners";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
@@ -88,11 +89,14 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen">
-        <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-          <div className="flex items-center gap-2">
+        <header className="sticky top-0 z-50 px-3 py-2 grid grid-cols-3 items-center" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+          <div className="flex items-center">
             <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex justify-center">
+            <img src={fwSportsLogo} alt="FW Sports" className="h-10 w-auto" />
+          </div>
+          <div className="flex items-center justify-end gap-2">
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
               <History className="w-3.5 h-3.5" /><span>Meus Bilhetes</span>
               {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
