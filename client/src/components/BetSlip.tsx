@@ -300,9 +300,14 @@ export function BetSlip({
   return (
     <>
     <div className="fixed inset-0 bg-black/50 z-[299] md:hidden" onClick={onClose} />
-    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[300] flex flex-col shadow-xl">
-      <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
-        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[300] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex flex-col items-center pt-2 pb-1 md:hidden flex-shrink-0 cursor-pointer active:opacity-70"
+        onClick={() => setIsMinimized(true)}
+        data-testid="button-minimize-betslip"
+      >
+        <div className="w-10 h-1 rounded-full bg-muted-foreground/40" />
+        <span className="text-[10px] text-muted-foreground/60 mt-0.5">minimizar</span>
       </div>
       <CardHeader className="border-b border-card-border flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
@@ -311,15 +316,6 @@ export function BetSlip({
             <CardTitle className="text-lg">Bilhete de Apostas</CardTitle>
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setIsMinimized(true)}
-              className="md:hidden"
-              data-testid="button-minimize-betslip"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </Button>
             {selections.length > 0 && (
               <Button 
                 size="icon" 
