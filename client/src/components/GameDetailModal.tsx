@@ -107,7 +107,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       <div key={market.id} className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-200">{market.label}</span>
-          <span className="text-xs text-gray-400">{bookmaker}</span>
         </div>
         <div className={`grid gap-2 ${market.values.length <= 2 ? 'grid-cols-2' : market.values.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
           {market.values.map((value) => {
@@ -189,7 +188,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                   <span className="text-sm font-semibold text-gray-200">
                     {marketLabels.h2h}
                   </span>
-                  <span className="text-xs text-gray-400">{h2hMarket.bookmaker}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {h2hMarket.outcomes.map((outcome: any) => {
