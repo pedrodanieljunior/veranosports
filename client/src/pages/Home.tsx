@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import { PromoBanners } from "@/components/PromoBanners";
-import frameImage from "@assets/site_fw_1772212313242.png";
+import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
