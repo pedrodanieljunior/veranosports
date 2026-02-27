@@ -103,7 +103,12 @@ export function BetSlip({
 
   if (placedBet) {
     return (
-      <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-[300] flex flex-col shadow-xl">
+      <>
+        <div className="fixed inset-0 bg-black/50 z-[299] md:hidden" onClick={onClose} />
+        <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[300] flex flex-col shadow-xl">
+          <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
         <CardHeader className="border-b border-card-border flex-shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -257,11 +262,17 @@ export function BetSlip({
           </CardContent>
         </ScrollArea>
       </Card>
+      </>
     );
   }
 
   return (
-    <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-[300] flex flex-col shadow-xl">
+    <>
+    <div className="fixed inset-0 bg-black/50 z-[299] md:hidden" onClick={onClose} />
+    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[300] flex flex-col shadow-xl">
+      <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
+        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+      </div>
       <CardHeader className="border-b border-card-border flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -420,5 +431,6 @@ export function BetSlip({
         )}
       </CardContent>
     </Card>
+    </>
   );
 }
