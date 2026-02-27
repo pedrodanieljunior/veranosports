@@ -36,6 +36,8 @@ interface BetSlipProps {
   onPlaceBet: (stake: number) => void;
   placedBet: PlacedBetWithPix | null;
   isPlacing: boolean;
+  isMinimized: boolean;
+  onToggleMinimize: (val: boolean) => void;
 }
 
 export function BetSlip({ 
@@ -45,10 +47,11 @@ export function BetSlip({
   onClose,
   onPlaceBet,
   placedBet,
-  isPlacing
+  isPlacing,
+  isMinimized,
+  onToggleMinimize,
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
-  const [isMinimized, setIsMinimized] = useState(false);
   const { toast } = useToast();
 
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
@@ -271,7 +274,7 @@ export function BetSlip({
     return (
       <div
         className="fixed bottom-0 left-0 right-0 z-[300] md:hidden"
-        onClick={() => setIsMinimized(false)}
+        onClick={() => onToggleMinimize(false)}
         data-testid="betslip-minimized-bar"
       >
         <div className="mx-3 mb-3 rounded-2xl bg-card border border-card-border shadow-xl px-4 py-3 flex items-center justify-between cursor-pointer">
@@ -303,7 +306,7 @@ export function BetSlip({
     <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[300] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
       <div
         className="flex flex-col items-center pt-2 pb-1 md:hidden flex-shrink-0 cursor-pointer active:opacity-70"
-        onClick={() => setIsMinimized(true)}
+        onClick={() => onToggleMinimize(true)}
         data-testid="button-minimize-betslip"
       >
         <div className="w-10 h-1 rounded-full bg-muted-foreground/40" />

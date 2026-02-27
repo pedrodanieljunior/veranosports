@@ -22,6 +22,7 @@ export default function Home() {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [selections, setSelections] = useState<Selection[]>([]);
   const [showBetSlip, setShowBetSlip] = useState(false);
+  const [isBetSlipMinimized, setIsBetSlipMinimized] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const { toast } = useToast();
@@ -79,6 +80,7 @@ export default function Home() {
     if (!alreadySelected) {
       setShowBetSlip(true);
       setShowHistory(false);
+      if (selectedGame) setIsBetSlipMinimized(true);
     }
   };
   const handleRemoveSelection = (selectionId: string) => setSelections((prev) => prev.filter((s) => s.id !== selectionId));
@@ -101,7 +103,7 @@ export default function Home() {
             <img src={fwSportsLogo} alt="FW Sports" className="h-10 w-auto" />
           </div>
           <div className="flex items-center justify-end">
-            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md" data-testid="button-open-betslip-mobile">
+            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md" data-testid="button-open-betslip-mobile">
               <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
               {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
             </button>
@@ -174,7 +176,7 @@ export default function Home() {
                   {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
                 </button>
                 <button
-                  onClick={() => { setShowBetSlip(true); setShowHistory(false); }}
+                  onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }}
                   className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
                   data-testid="button-open-betslip"
                 >
@@ -202,7 +204,7 @@ export default function Home() {
 
       {/* Modals */}
       <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} />
-      {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} />}
+      {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} />}
       {showHistory && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
     </div>
   );
