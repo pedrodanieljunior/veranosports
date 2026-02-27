@@ -75,7 +75,6 @@ export default function Home() {
     });
     const alreadySelected = selections.find((s) => s.id === selection.id);
     if (!alreadySelected) {
-      setSelectedGame(null);
       setShowBetSlip(true);
       setShowHistory(false);
     }

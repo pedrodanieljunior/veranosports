@@ -373,9 +373,9 @@ export function BetSlip({
               </div>
 
               {isCappedAtMax && (
-                <div className="bg-yellow-500/10 border border-yellow-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-capped-max">
-                  <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-yellow-700 dark:text-yellow-400">Os ganhos se limitam a R$15.000,00</p>
+                <div className="bg-red-500/10 border border-red-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-capped-max">
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 dark:text-red-400 font-semibold">Retorno potencial ultrapassa o limite de R$15.000,00. Reduza o valor apostado para continuar.</p>
                 </div>
               )}
 
@@ -409,7 +409,7 @@ export function BetSlip({
                 className="w-full" 
                 size="lg"
                 onClick={handlePlaceBet}
-                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0 || isDailyLimitReached}
+                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0 || isDailyLimitReached || isCappedAtMax}
                 data-testid="button-place-bet"
               >
                 {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}

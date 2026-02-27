@@ -714,7 +714,9 @@ export async function registerRoutes(
       let potentialWin = validatedData.stake * totalOdds;
 
       if (potentialWin > MAX_BET_PAYOUT) {
-        potentialWin = MAX_BET_PAYOUT;
+        return res.status(400).json({
+          error: `O retorno potencial de R$${potentialWin.toFixed(2)} ultrapassa o limite máximo de R$${MAX_BET_PAYOUT.toLocaleString('pt-BR')},00 por bilhete. Reduza o valor apostado.`,
+        });
       }
 
       const dailyRemaining = DAILY_LIMIT - dailyTotal;
