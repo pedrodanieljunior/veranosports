@@ -103,7 +103,7 @@ export function BetSlip({
 
   if (placedBet) {
     return (
-      <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-50 flex flex-col shadow-xl">
+      <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-[300] flex flex-col shadow-xl">
         <CardHeader className="border-b border-card-border flex-shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -261,7 +261,7 @@ export function BetSlip({
   }
 
   return (
-    <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-50 flex flex-col shadow-xl">
+    <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-[300] flex flex-col shadow-xl">
       <CardHeader className="border-b border-card-border flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
