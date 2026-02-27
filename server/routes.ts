@@ -417,39 +417,100 @@ export async function registerRoutes(
   // Endpoint para buscar próximos jogos do Brasileirão
   app.get("/api/games/brasileirao", async (req, res) => {
     try {
-      if (!ODDS_API_KEY) {
-        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
-      }
-      
       const cacheKey = "games_brasileirao";
       const cached = cache.get<any[]>(cacheKey);
       if (cached) {
         return res.json(cached);
       }
-      
-      const oddsUrl = `${ODDS_API_BASE}/sports/soccer_brazil_campeonato/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
-      const response = await fetch(oddsUrl);
-      
-      if (!response.ok) {
-        return res.json([]);
+
+      let games: any[] = [];
+
+      // Tentar The Odds API primeiro
+      if (ODDS_API_KEY) {
+        const oddsUrl = `${ODDS_API_BASE}/sports/soccer_brazil_campeonato/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+        const response = await fetch(oddsUrl);
+        if (response.ok) {
+          const rawGames = await response.json();
+          games = rawGames
+            .map((game: any) => ({
+              id: game.id,
+              sportKey: game.sport_key,
+              sportTitle: game.sport_title,
+              commenceTime: game.commence_time,
+              homeTeam: game.home_team,
+              awayTeam: game.away_team,
+              bookmakers: game.bookmakers || []
+            }))
+            .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
+            .slice(0, 10);
+        }
       }
-      
-      const rawGames = await response.json();
-      
-      // Transformar e ordenar por data
-      const games = rawGames
-        .map((game: any) => ({
-          id: game.id,
-          sportKey: game.sport_key,
-          sportTitle: game.sport_title,
-          commenceTime: game.commence_time,
-          homeTeam: game.home_team,
-          awayTeam: game.away_team,
-          bookmakers: game.bookmakers || []
-        }))
-        .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
-        .slice(0, 10); // Limitar a 10 próximos jogos
-      
+
+      // Fallback para API-Football com janela de 60 dias + temporada anterior se vazio
+      if (games.length === 0 && API_FOOTBALL_KEY) {
+        const currentYear = new Date().getFullYear();
+        const today = new Date().toISOString().split('T')[0];
+        const next60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        const fetchBrasileiraoFixtures = async (season: number) => {
+          const r = await fetch(
+            `${API_FOOTBALL_BASE}/fixtures?league=71&season=${season}&from=${today}&to=${next60Days}`,
+            { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+          );
+          if (!r.ok) return [];
+          const data = await r.json();
+          return data.response?.slice(0, 10) || [];
+        };
+
+        let fixtures = await fetchBrasileiraoFixtures(currentYear);
+        if (fixtures.length === 0) {
+          console.log(`Brasileirão ${currentYear} sem jogos, tentando ${currentYear - 1}`);
+          fixtures = await fetchBrasileiraoFixtures(currentYear - 1);
+        }
+
+        games = await Promise.all(
+          fixtures.map(async (fixture: any) => {
+            let bookmakers: any[] = [];
+            try {
+              const oddsResponse = await fetch(
+                `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+              );
+              if (oddsResponse.ok) {
+                const oddsData = await oddsResponse.json();
+                const bets = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
+                const h2h = bets.find((b: any) => b.name === "Match Winner");
+                if (h2h) {
+                  bookmakers = [{
+                    key: "api-football",
+                    title: "API-Football",
+                    markets: [{
+                      key: "h2h",
+                      outcomes: h2h.values.map((v: any) => ({
+                        name: v.value === "Home" ? fixture.teams.home.name :
+                              v.value === "Away" ? fixture.teams.away.name : "Empate",
+                        price: parseFloat(v.odd)
+                      }))
+                    }]
+                  }];
+                }
+              }
+            } catch (err) {
+              console.error("Error fetching brasileirao fixture odds:", err);
+            }
+            return {
+              id: `api-football-${fixture.fixture.id}`,
+              sportKey: "soccer_brazil_campeonato",
+              sportTitle: "Brasileirão Série A",
+              commenceTime: fixture.fixture.date,
+              homeTeam: fixture.teams.home.name,
+              awayTeam: fixture.teams.away.name,
+              bookmakers
+            };
+          })
+        );
+      }
+
       cache.set(cacheKey, games, CACHE_TTL_ODDS);
       res.json(games);
     } catch (error) {
@@ -525,17 +586,28 @@ export async function registerRoutes(
           console.log(`Using API-Football for ${sportKey}`);
           
           const today = new Date().toISOString().split('T')[0];
-          const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const next60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
           
-          try {
+          const fetchFixtures = async (season: number) => {
             const fixturesResponse = await fetch(
-              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${today}&to=${nextWeek}`,
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${next60Days}`,
               { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
             );
-            
-            if (fixturesResponse.ok) {
-              const fixturesData = await fixturesResponse.json();
-              const fixtures = fixturesData.response?.slice(0, 15) || [];
+            if (!fixturesResponse.ok) return [];
+            const fixturesData = await fixturesResponse.json();
+            return fixturesData.response?.slice(0, 15) || [];
+          };
+
+          try {
+            let fixtures = await fetchFixtures(league.season);
+
+            // Se não encontrou jogos, tenta a temporada anterior
+            if (fixtures.length === 0) {
+              console.log(`No fixtures found for season ${league.season}, trying ${league.season - 1}`);
+              fixtures = await fetchFixtures(league.season - 1);
+            }
+
+            if (fixtures.length > 0) {
               
               games = await Promise.all(
                 fixtures.map(async (fixture: any) => {
