@@ -85,7 +85,7 @@ export default function Home() {
   const handlePlaceBet = (stake: number) => placeBetMutation.mutate({ selections, stake });
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen">
         <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
@@ -109,7 +109,7 @@ export default function Home() {
       </div>
 
       {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
-      <div className="hidden md:block h-screen overflow-y-scroll relative desktop-scroll">
+      <div className="hidden md:block h-screen overflow-y-scroll overflow-x-hidden relative desktop-scroll">
         {/* FRAME IMAGE - fixed background covering entire page */}
         <img
           src={frameImage}
