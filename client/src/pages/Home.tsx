@@ -73,7 +73,12 @@ export default function Home() {
       }
       return [...prev, selection];
     });
-    if (!showBetSlip && selections.length === 0) setShowBetSlip(true);
+    const alreadySelected = selections.find((s) => s.id === selection.id);
+    if (!alreadySelected) {
+      setSelectedGame(null);
+      setShowBetSlip(true);
+      setShowHistory(false);
+    }
   };
   const handleRemoveSelection = (selectionId: string) => setSelections((prev) => prev.filter((s) => s.id !== selectionId));
   const handleClearAll = () => { setSelections([]); setPlacedBet(null); };
