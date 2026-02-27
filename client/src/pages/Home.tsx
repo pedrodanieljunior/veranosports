@@ -67,8 +67,9 @@ export default function Home() {
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
       if (exists) return prev.filter((s) => s.id !== selection.id);
-      if (prev.length >= 3) {
-        toast({ title: "Máximo de 3 seleções por bilhete", variant: "destructive" });
+      const selectionsFromSameGame = prev.filter((s) => s.gameId === selection.gameId);
+      if (selectionsFromSameGame.length >= 3) {
+        toast({ title: "Máximo de 3 mercados por jogo", variant: "destructive" });
         return prev;
       }
       return [...prev, selection];

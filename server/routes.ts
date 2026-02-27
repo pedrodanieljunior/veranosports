@@ -671,7 +671,7 @@ export async function registerRoutes(
 
   const MAX_BET_PAYOUT = 15000;
   const DAILY_LIMIT = 50000;
-  const MAX_SELECTIONS = 3;
+  const MAX_MARKETS_PER_GAME = 3;
 
   app.get("/api/limits", async (req, res) => {
     try {
@@ -682,7 +682,7 @@ export async function registerRoutes(
         dailyLimit: DAILY_LIMIT,
         dailyRemaining,
         maxBetPayout: MAX_BET_PAYOUT,
-        maxSelections: MAX_SELECTIONS,
+        maxMarketsPerGame: MAX_MARKETS_PER_GAME,
         isDailyLimitReached: dailyTotal >= DAILY_LIMIT,
       });
     } catch (error) {
@@ -695,10 +695,15 @@ export async function registerRoutes(
     try {
       const validatedData = insertBetSlipSchema.parse(req.body);
 
-      if (validatedData.selections.length > MAX_SELECTIONS) {
-        return res.status(400).json({
-          error: `Máximo de ${MAX_SELECTIONS} seleções por bilhete`,
-        });
+      // Verificar máximo de 3 mercados por jogo
+      const selectionsByGame: Record<string, number> = {};
+      for (const sel of validatedData.selections) {
+        selectionsByGame[sel.gameId] = (selectionsByGame[sel.gameId] || 0) + 1;
+        if (selectionsByGame[sel.gameId] > MAX_MARKETS_PER_GAME) {
+          return res.status(400).json({
+            error: `Máximo de ${MAX_MARKETS_PER_GAME} mercados por jogo no bilhete`,
+          });
+        }
       }
 
       const dailyTotal = await storage.getDailyTotalPotentialWin();

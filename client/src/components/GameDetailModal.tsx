@@ -75,6 +75,14 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
+  const selectionsForThisGame = selections.filter(s => s.gameId === game.id);
+  const gameSelectionLimitReached = selectionsForThisGame.length >= 3;
+
+  const isButtonDisabled = (outcomeName: string, marketKey: string) => {
+    const selected = isSelected(outcomeName, marketKey);
+    return !selected && gameSelectionLimitReached;
+  };
+
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
     const finalOdds = marketKey === "h2h" ? calculateH2hBoostedOdd(originalOdds) : originalOdds;
     const selection: Selection = {
@@ -124,14 +132,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             else if (value.value.includes("Over")) displayLabel = value.value.replace("Over", "Mais ");
             else if (value.value.includes("Under")) displayLabel = value.value.replace("Under", "Menos ");
             
+            const disabled = isButtonDisabled(outcomeKey, marketKey);
             return (
               <button
                 key={value.value}
-                onClick={() => handleOddClick(outcomeKey, value.odd, marketKey, bookmaker)}
-                className={`flex flex-col items-center p-2.5 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
-                  selected
-                    ? "bg-green-900/30 border-green-500"
-                    : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666]"
+                onClick={() => !disabled && handleOddClick(outcomeKey, value.odd, marketKey, bookmaker)}
+                disabled={disabled}
+                className={`flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
+                  disabled
+                    ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                    : selected
+                      ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
+                      : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
                 }`}
                 data-testid={`button-modal-extra-${market.id}-${value.value}`}
               >
@@ -198,14 +210,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                     const displayName = isDraw ? "Empate" : 
                                         isHome ? game.homeTeam.substring(0, 10) : 
                                         game.awayTeam.substring(0, 10);
+                    const disabled = isButtonDisabled(outcome.name, "h2h");
                     return (
                       <button
                         key={outcome.name}
-                        onClick={() => handleOddClick(outcome.name, outcome.price, "h2h", h2hMarket.bookmaker)}
-                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 ${
-                          selected
-                            ? "bg-green-900/30 border-green-500"
-                            : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666]"
+                        onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "h2h", h2hMarket.bookmaker)}
+                        disabled={disabled}
+                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                          disabled
+                            ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                            : selected
+                              ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
+                              : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
                         }`}
                         data-testid={`button-modal-h2h-${outcome.name}`}
                       >
@@ -264,7 +280,12 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
           </div>
         </ScrollArea>
         
-        <div className="p-3 border-t border-[#444] bg-[#282828]">
+        <div className="p-3 border-t border-[#444] bg-[#282828] space-y-1">
+          {gameSelectionLimitReached && (
+            <p className="text-xs text-yellow-400 text-center font-semibold">
+              Limite de 3 mercados por jogo atingido
+            </p>
+          )}
           <p className="text-xs text-gray-400 text-center">
             Resultado Final inclui bônus de +15%
           </p>
