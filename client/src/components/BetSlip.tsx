@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { SiTelegram } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +48,7 @@ export function BetSlip({
   isPlacing
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
+  const [isMinimized, setIsMinimized] = useState(false);
   const { toast } = useToast();
 
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
@@ -266,6 +267,36 @@ export function BetSlip({
     );
   }
 
+  if (isMinimized) {
+    return (
+      <div
+        className="fixed bottom-0 left-0 right-0 z-[300] md:hidden"
+        onClick={() => setIsMinimized(false)}
+        data-testid="betslip-minimized-bar"
+      >
+        <div className="mx-3 mb-3 rounded-2xl bg-card border border-card-border shadow-xl px-4 py-3 flex items-center justify-between cursor-pointer">
+          <div className="flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-primary" />
+            <span className="font-bold text-sm">Bilhete de Apostas</span>
+            {selections.length > 0 && (
+              <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                {selections.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {selections.length > 0 && (
+              <span className="text-sm font-mono font-bold text-primary">
+                {totalOdds.toFixed(2)}x
+              </span>
+            )}
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
     <div className="fixed inset-0 bg-black/50 z-[299] md:hidden" onClick={onClose} />
@@ -280,6 +311,15 @@ export function BetSlip({
             <CardTitle className="text-lg">Bilhete de Apostas</CardTitle>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setIsMinimized(true)}
+              className="md:hidden"
+              data-testid="button-minimize-betslip"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </Button>
             {selections.length > 0 && (
               <Button 
                 size="icon" 
