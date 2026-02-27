@@ -312,30 +312,31 @@ export function BetSlip({
                 {selections.map((selection) => (
                   <div 
                     key={selection.id}
-                    className="p-3 rounded-md bg-muted/50 border border-border relative group"
+                    className="p-3 rounded-md bg-muted/50 border border-border"
                   >
-                    <button
-                      onClick={() => onRemoveSelection(selection.id)}
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      data-testid={`button-remove-selection-${selection.id}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                    
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">{selection.sportTitle}</p>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs text-muted-foreground truncate">{selection.sportTitle}</p>
+                          <p className="text-xs text-primary font-medium text-right flex-shrink-0">{selection.outcome}</p>
+                        </div>
                         <p className="font-medium text-sm truncate">
                           {selection.homeTeam} vs {selection.awayTeam}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(selection.commenceTime), "dd/MM HH:mm", { locale: ptBR })}
-                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(selection.commenceTime), "dd/MM HH:mm", { locale: ptBR })}
+                          </p>
+                          <p className="font-bold text-sm">{selection.odds.toFixed(2)}</p>
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs text-primary font-medium">{selection.outcome}</p>
-                        <p className="font-bold">{selection.odds.toFixed(2)}</p>
-                      </div>
+                      <button
+                        onClick={() => onRemoveSelection(selection.id)}
+                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/80 transition-colors mt-0.5"
+                        data-testid={`button-remove-selection-${selection.id}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                 ))}
