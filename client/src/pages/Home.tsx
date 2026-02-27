@@ -111,10 +111,14 @@ export default function Home() {
       {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
       <div className="hidden md:block h-screen overflow-y-scroll overflow-x-hidden relative desktop-scroll">
         {/* FRAME IMAGE - fixed background covering entire page */}
-        <img
-          src={frameImage}
-          alt=""
-          className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
+        <div
+          className="fixed inset-0 z-0 pointer-events-none select-none"
+          style={{
+            backgroundImage: `url(${frameImage})`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+          }}
           data-testid="img-frame"
         />
 
