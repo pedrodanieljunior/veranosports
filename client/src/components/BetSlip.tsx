@@ -332,10 +332,10 @@ export function BetSlip({
                       </div>
                       <button
                         onClick={() => onRemoveSelection(selection.id)}
-                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/80 transition-colors mt-0.5"
+                        className="flex-shrink-0 w-4 h-4 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center hover:bg-destructive transition-colors mt-1"
                         data-testid={`button-remove-selection-${selection.id}`}
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   </div>
