@@ -519,6 +519,71 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/search/games", async (req, res) => {
+    try {
+      const team = (req.query.team as string || "").trim().toLowerCase();
+      if (!team || team.length < 2) return res.json([]);
+
+      const cacheKey = `search_team_${team}`;
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) return res.json(cached);
+
+      const leagues = [
+        "soccer_brazil_campeonato",
+        "soccer_epl",
+        "soccer_spain_la_liga",
+        "soccer_italy_serie_a",
+        "soccer_germany_bundesliga",
+        "soccer_france_ligue_one",
+        "soccer_uefa_champs_league",
+        "soccer_uefa_europa_league",
+        "soccer_brazil_campeonato_serie_b",
+        "soccer_spain_segunda_division",
+        "soccer_england_league1",
+        "soccer_portugal_primeira_liga",
+        "soccer_netherlands_eredivisie",
+        "soccer_argentina_primera_division",
+      ];
+
+      let results: any[] = [];
+
+      if (ODDS_API_KEY) {
+        const fetches = leagues.map(league =>
+          fetch(`${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`)
+            .then(r => r.ok ? r.json() : [])
+            .catch(() => [])
+        );
+        const responses = await Promise.all(fetches);
+        const now = new Date();
+        for (const games of responses) {
+          if (!Array.isArray(games)) continue;
+          for (const game of games) {
+            const home = (game.home_team || "").toLowerCase();
+            const away = (game.away_team || "").toLowerCase();
+            if ((home.includes(team) || away.includes(team)) && new Date(game.commence_time) >= now) {
+              results.push({
+                id: game.id,
+                sportKey: game.sport_key,
+                sportTitle: game.sport_title,
+                commenceTime: game.commence_time,
+                homeTeam: game.home_team,
+                awayTeam: game.away_team,
+                bookmakers: game.bookmakers || []
+              });
+            }
+          }
+        }
+        results.sort((a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
+      }
+
+      cache.set(cacheKey, results, 5 * 60 * 1000);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching games:", error);
+      res.status(500).json({ error: "Failed to search games" });
+    }
+  });
+
   app.get("/api/odds/:sportKey", async (req, res) => {
     try {
       const { sportKey } = req.params;

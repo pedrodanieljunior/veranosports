@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { GamesList } from "@/components/GamesList";
@@ -27,6 +27,11 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
   const { toast } = useToast();
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
@@ -39,12 +44,18 @@ export default function Home() {
   const games = selectedSport ? leagueGames : todayGames;
   const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
-  const filteredGames = searchQuery.trim()
-    ? games.filter(g =>
-        g.homeTeam.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.awayTeam.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : games;
+
+  const isSearching = debouncedSearch.trim().length >= 2;
+  const { data: searchResults = [], isLoading: searchLoading } = useQuery<Game[]>({
+    queryKey: ["/api/search/games", debouncedSearch.trim()],
+    queryFn: () => fetch(`/api/search/games?team=${encodeURIComponent(debouncedSearch.trim())}`).then(r => r.json()),
+    enabled: isSearching,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isTyping = searchQuery.trim().length >= 2 && !isSearching;
+  const filteredGames = isSearching ? searchResults : games;
+  const isLoadingGames = isTyping || (isSearching ? searchLoading : gamesLoading);
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({ queryKey: ["/api/bets"] });
 
@@ -165,7 +176,7 @@ export default function Home() {
           </div>
         </header>
         <div className="flex-1">
-          <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport && !searchQuery} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday && !searchQuery ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
+          <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday && !isSearching && !isTyping ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
         </div>
       </div>
 
