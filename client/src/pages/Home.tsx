@@ -91,9 +91,9 @@ export default function Home() {
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
         <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-          <div className="flex items-center gap-1">
-            <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
+          <div className="flex flex-col items-start">
             <img src={fwSportsLogo} alt="FW Sports" className="h-14 w-auto" />
+            <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
