@@ -35,17 +35,17 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
 
   return (
     <div 
-      className={`rounded-lg border cursor-pointer transition-all hover:shadow-md ${isDark ? 'bg-[#d4d4d4]' : 'bg-white'} ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : isDark ? 'border-gray-400' : 'border-gray-200'}`}
+      className={`rounded-lg border cursor-pointer transition-all ${isDark ? 'bg-[#2d2d2d] hover:bg-[#323232]' : 'bg-white hover:shadow-md'} ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : isDark ? 'border-[#404040]' : 'border-gray-200'}`}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
-      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-gray-400 bg-[#c8c8c8]' : 'border-gray-100 bg-gray-50'}`}>
+      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-[#3a3a3a] bg-[#252525]' : 'border-gray-100 bg-gray-50'}`}>
         {isLive ? (
           <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse border-0">
             AO VIVO
           </Badge>
         ) : (
-          <div className="flex items-center gap-1 text-[11px] text-gray-500">
+          <div className={`flex items-center gap-1 text-[11px] ${isDark ? 'text-[#aaaaaa]' : 'text-gray-500'}`}>
             <Clock className="w-3 h-3" />
             <span>{formattedDate}</span>
           </div>
@@ -56,50 +56,50 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
               {selectionsForGame.length}
             </Badge>
           )}
-          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <ChevronRight className={`w-4 h-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`} />
         </div>
       </div>
       
       <div className="p-2.5">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-600 shrink-0">
+          <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${isDark ? 'bg-[#3d3d3d] text-white/70' : 'bg-gray-100 text-gray-600'}`}>
             {game.homeTeam.substring(0, 2).toUpperCase()}
           </div>
-          <span className="text-xs font-medium text-gray-800 truncate flex-1" data-testid={`text-home-team-${game.id}`}>
+          <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-home-team-${game.id}`}>
             {game.homeTeam}
           </span>
           {homeOdd && (
-            <span className="text-sm font-bold text-green-600 ml-auto tabular-nums">
+            <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
               {calculateBoostedOdd(homeOdd.price).toFixed(2)}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-2 mb-1.5 pl-8">
-          <span className="text-[11px] text-gray-400 flex-1">Empate</span>
+          <span className={`text-[11px] flex-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Empate</span>
           {drawOdd && (
-            <span className="text-sm font-bold text-green-600 ml-auto tabular-nums">
+            <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
               {calculateBoostedOdd(drawOdd.price).toFixed(2)}
             </span>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-600 shrink-0">
+          <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${isDark ? 'bg-[#3d3d3d] text-white/70' : 'bg-gray-100 text-gray-600'}`}>
             {game.awayTeam.substring(0, 2).toUpperCase()}
           </div>
-          <span className="text-xs font-medium text-gray-800 truncate flex-1" data-testid={`text-away-team-${game.id}`}>
+          <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-away-team-${game.id}`}>
             {game.awayTeam}
           </span>
           {awayOdd && (
-            <span className="text-sm font-bold text-green-600 ml-auto tabular-nums">
+            <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
               {calculateBoostedOdd(awayOdd.price).toFixed(2)}
             </span>
           )}
         </div>
         
         {!h2hMarket && (
-          <div className="text-center pt-1.5 text-[10px] text-gray-400">
+          <div className={`text-center pt-1.5 text-[10px] ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
             Clique para ver mercados
           </div>
         )}
