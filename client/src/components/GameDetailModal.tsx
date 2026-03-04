@@ -286,9 +286,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               Limite de 3 mercados por jogo atingido
             </p>
           )}
-          <p className="text-xs text-gray-400 text-center">
-            Resultado Final inclui bônus de +15%
-          </p>
         </div>
       </DialogContent>
     </Dialog>
