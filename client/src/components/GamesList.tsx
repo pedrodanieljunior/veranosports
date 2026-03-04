@@ -182,19 +182,20 @@ export function GamesList({
             game={game}
             selections={selections}
             onClick={() => onGameClick(game)}
+            isDark={isDark}
           />
         ))}
       </div>
 
       {isTodayGames && upcomingBrasileirao.length > 0 && (
-        <div className="mt-6 pt-4 border-t border-gray-200">
+        <div className={`mt-6 pt-4 border-t ${isDark ? "border-white/20" : "border-gray-200"}`}>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-5 h-3.5 rounded-sm overflow-hidden flex">
               <div className="w-1/3 bg-green-500" />
               <div className="w-1/3 bg-yellow-400" />
               <div className="w-1/3 bg-blue-500" />
             </div>
-            <h3 className="text-sm font-bold text-gray-800">Próximos Jogos do Brasileirão</h3>
+            <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-800"}`}>Próximos Jogos do Brasileirão</h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
             {upcomingBrasileirao.map((game) => (
@@ -203,6 +204,7 @@ export function GamesList({
                 game={game}
                 selections={selections}
                 onClick={() => onGameClick(game)}
+                isDark={isDark}
               />
             ))}
           </div>

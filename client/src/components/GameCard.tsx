@@ -11,9 +11,10 @@ interface GameCardProps {
   game: Game;
   selections: Selection[];
   onClick: () => void;
+  isDark?: boolean;
 }
 
-export function GameCard({ game, selections, onClick }: GameCardProps) {
+export function GameCard({ game, selections, onClick, isDark = false }: GameCardProps) {
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
   const now = new Date();
@@ -34,11 +35,11 @@ export function GameCard({ game, selections, onClick }: GameCardProps) {
 
   return (
     <div 
-      className={`bg-white rounded-lg border cursor-pointer transition-all hover:shadow-md ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : 'border-gray-200'}`}
+      className={`rounded-lg border cursor-pointer transition-all hover:shadow-md ${isDark ? 'bg-[#d4d4d4]' : 'bg-white'} ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : isDark ? 'border-gray-400' : 'border-gray-200'}`}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-gray-400 bg-[#c8c8c8]' : 'border-gray-100 bg-gray-50'}`}>
         {isLive ? (
           <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse border-0">
             AO VIVO
