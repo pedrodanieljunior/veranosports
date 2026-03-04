@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { GamesList } from "@/components/GamesList";
@@ -14,6 +12,7 @@ import { History, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import { PromoBanners } from "@/components/PromoBanners";
@@ -93,20 +92,39 @@ export default function Home() {
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
         <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-          <div className="flex flex-col items-start">
+          <div className="flex flex-col items-start gap-1">
             <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
-            <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center px-2">
-            <span className="text-black font-extrabold text-sm leading-tight">
-              {selectedSport ? translateLeagueName(sports.find(s => s.key === selectedSport)?.title || selectedSport) : "Jogos do Dia"}
-            </span>
-            <span className="text-black/70 font-medium text-[10px] leading-tight capitalize">
-              {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-            </span>
-            <span className="text-black/60 font-medium text-[10px]">
-              {gamesLoading ? "carregando..." : `${games.length} jogo${games.length !== 1 ? "s" : ""}`}
-            </span>
+            <div className="flex items-center gap-1">
+              <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
+                    <span className="text-sm">🏆</span>
+                    <span className="text-white font-bold text-xs leading-tight">Principais<br/>Ligas</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
+                  <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
+                  {[
+                    { key: "soccer_brazil_campeonato", label: "🇧🇷 Brasileirão Série A" },
+                    { key: "soccer_england_league1", label: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League" },
+                    { key: "soccer_uefa_champs_league", label: "⭐ Champions League" },
+                    { key: "soccer_spain_la_liga", label: "🇪🇸 La Liga" },
+                    { key: "soccer_italy_serie_a", label: "🇮🇹 Serie A" },
+                    { key: "soccer_germany_bundesliga", label: "🇩🇪 Bundesliga" },
+                  ].map(({ key, label }) => {
+                    const sport = sports.find(s => s.key === key);
+                    if (!sport) return null;
+                    return (
+                      <button key={key} onClick={() => handleSelectSport(key)}
+                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors ${selectedSport === key ? "bg-yellow-500 text-black" : "text-white hover:bg-white/10"}`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
