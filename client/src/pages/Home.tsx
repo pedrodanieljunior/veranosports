@@ -100,7 +100,7 @@ export default function Home() {
             </button>
           </div>
           <div className="flex justify-center">
-            <img src={fwSportsLogo} alt="FW Sports" className="h-10 w-auto" />
+            <img src={fwSportsLogo} alt="FW Sports" className="h-16 w-auto" />
           </div>
           <div className="flex items-center justify-end">
             <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md" data-testid="button-open-betslip-mobile">
