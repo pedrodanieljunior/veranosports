@@ -19,6 +19,7 @@ interface GamesListProps {
   isTodayGames?: boolean;
   upcomingBrasileirao?: Game[];
   brasileiraoLoading?: boolean;
+  isDark?: boolean;
 }
 
 export function GamesList({ 
@@ -31,7 +32,8 @@ export function GamesList({
   onRefresh,
   isTodayGames = false,
   upcomingBrasileirao = [],
-  brasileiraoLoading = false
+  brasileiraoLoading = false,
+  isDark = false
 }: GamesListProps) {
   const [activeLeague, setActiveLeague] = useState<string | null>(null);
 
@@ -118,20 +120,20 @@ export function GamesList({
             <>
               <div className="flex items-center gap-2 mb-0.5">
                 <Star className="w-5 h-5 text-yellow-500" />
-                <h2 className="text-lg font-bold text-gray-800" data-testid="text-today-games">
+                <h2 className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-800"}`} data-testid="text-today-games">
                   Jogos do Dia
                 </h2>
               </div>
-              <p className="text-xs text-gray-500 capitalize">
+              <p className={`text-xs capitalize ${isDark ? "text-white/70" : "text-gray-500"}`}>
                 {formattedDate} - {games.length} {games.length === 1 ? "Jogo" : "Jogos"} Nas Principais Ligas
               </p>
             </>
           ) : (
             <>
-              <h2 className="text-lg font-bold text-gray-800" data-testid="text-games-count">
+              <h2 className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-800"}`} data-testid="text-games-count">
                 {games.length} {games.length === 1 ? "Jogo" : "Jogos"} Disponíveis
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className={`text-xs ${isDark ? "text-white/70" : "text-gray-500"}`}>
                 Clique no jogo para ver todos os mercados
               </p>
             </>

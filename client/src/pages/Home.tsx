@@ -110,7 +110,7 @@ export default function Home() {
           </div>
         </header>
         <div className="flex-1">
-          <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
+          <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
         </div>
       </div>
 
