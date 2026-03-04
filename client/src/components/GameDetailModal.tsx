@@ -150,7 +150,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">
                   {displayLabel}
                 </span>
-                <span className={`font-bold text-base ${selected ? "text-green-400" : "text-gray-100"}`}>
+                <span className="font-bold text-base text-[#f5c518]">
                   {value.odd.toFixed(2)}
                 </span>
               </button>
@@ -229,7 +229,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                           {displayName}
                         </span>
                         <div className="flex items-center gap-1">
-                          <span className={`font-bold text-lg ${selected ? "text-green-400" : "text-gray-100"}`}>
+                          <span className="font-bold text-lg text-[#f5c518]">
                             {boostedOdd.toFixed(2)}
                           </span>
                           <TrendingUp className="w-3 h-3 text-green-500" />
