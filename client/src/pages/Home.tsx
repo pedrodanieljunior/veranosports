@@ -8,7 +8,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { GameDetailModal } from "@/components/GameDetailModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { History, Receipt } from "lucide-react";
+import { History, Receipt, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,8 @@ export default function Home() {
   const [isBetSlipMinimized, setIsBetSlipMinimized] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const { toast } = useToast();
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
@@ -38,6 +40,12 @@ export default function Home() {
   const games = selectedSport ? leagueGames : todayGames;
   const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
+  const filteredGames = searchQuery.trim()
+    ? games.filter(g =>
+        g.homeTeam.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        g.awayTeam.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : games;
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({ queryKey: ["/api/bets"] });
 
@@ -94,36 +102,65 @@ export default function Home() {
         <header className="sticky top-0 z-50 px-3 py-2 flex items-start justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           <div className="flex flex-col items-start gap-1">
             <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
-            <div className="flex flex-row flex-nowrap items-center gap-1">
-              <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
-                    <span className="text-sm">🏆</span>
-                    <span className="text-white font-bold text-[10px] whitespace-nowrap">Principais Ligas</span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
-                  <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
-                  {[
-                    { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
-                    { key: "soccer_england_league1", label: "Premier League" },
-                    { key: "soccer_uefa_champs_league", label: "Champions League" },
-                    { key: "soccer_spain_la_liga", label: "La Liga" },
-                    { key: "soccer_italy_serie_a", label: "Serie A" },
-                    { key: "soccer_germany_bundesliga", label: "Bundesliga" },
-                  ].map(({ key, label }) => {
-                    const sport = sports.find(s => s.key === key);
-                    if (!sport) return null;
-                    return (
-                      <button key={key} onClick={() => handleSelectSport(key)}
-                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors ${selectedSport === key ? "bg-yellow-500 text-black" : "text-white hover:bg-white/10"}`}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-row flex-nowrap items-center gap-1">
+                <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
+                      <span className="text-sm">🏆</span>
+                      <span className="text-white font-bold text-[10px] whitespace-nowrap">Principais Ligas</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
+                    <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
+                    {[
+                      { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
+                      { key: "soccer_england_league1", label: "Premier League" },
+                      { key: "soccer_uefa_champs_league", label: "Champions League" },
+                      { key: "soccer_spain_la_liga", label: "La Liga" },
+                      { key: "soccer_italy_serie_a", label: "Serie A" },
+                      { key: "soccer_germany_bundesliga", label: "Bundesliga" },
+                    ].map(({ key, label }) => {
+                      const sport = sports.find(s => s.key === key);
+                      if (!sport) return null;
+                      return (
+                        <button key={key} onClick={() => handleSelectSport(key)}
+                          className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors ${selectedSport === key ? "bg-yellow-500 text-black" : "text-white hover:bg-white/10"}`}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+                <button
+                  onClick={() => { setShowSearch(s => !s); setSearchQuery(""); }}
+                  className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors ${showSearch ? "bg-yellow-400 text-black" : "bg-black/20 hover:bg-black/30 text-white"}`}
+                  data-testid="button-search-teams"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span className="font-bold text-[10px] whitespace-nowrap">Buscar</span>
+                </button>
+              </div>
+              {showSearch && (
+                <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+                  <Search className="w-3 h-3 text-white/60 shrink-0" />
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Nome do time..."
+                    className="flex-1 bg-transparent text-white text-xs placeholder-white/50 outline-none min-w-0"
+                    data-testid="input-search-teams"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-row flex-nowrap items-start gap-1 mt-6">
@@ -138,7 +175,7 @@ export default function Home() {
           </div>
         </header>
         <div className="flex-1">
-          <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
+          <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport && !searchQuery} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday && !searchQuery ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
         </div>
       </div>
 
