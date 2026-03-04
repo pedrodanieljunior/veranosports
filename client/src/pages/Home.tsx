@@ -88,9 +88,9 @@ export default function Home() {
   const handlePlaceBet = (stake: number) => placeBetMutation.mutate({ selections, stake });
 
   return (
-    <div className="min-h-screen bg-gray-100 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
-      <div className="md:hidden flex flex-col min-h-screen">
+      <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
         <header className="sticky top-0 z-50 px-3 py-2 grid grid-cols-3 items-center" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           <div className="flex items-center gap-2">
             <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />

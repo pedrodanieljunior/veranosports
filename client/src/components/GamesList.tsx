@@ -149,7 +149,7 @@ export function GamesList({
       </div>
 
       {isTodayGames && leagueNames.length > 1 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide px-1 py-2 rounded-xl" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           {leagueNames.map((league) => {
             const leagueKey = gamesByLeague?.[league]?.[0]?.sportKey || "";
             const displayName = translateLeagueName(leagueKey, league);
@@ -159,8 +159,8 @@ export function GamesList({
                 onClick={() => setActiveLeague(league)}
                 className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   currentLeague === league
-                    ? "bg-yellow-500 text-white shadow-sm"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
+                    ? "bg-white text-yellow-700 shadow-sm font-bold"
+                    : "bg-black/20 text-white hover:bg-black/30"
                 }`}
                 data-testid={`button-league-tab-${league}`}
               >
