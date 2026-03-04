@@ -1,8 +1,7 @@
 import { Game, Selection } from "@shared/schema";
 import { GameCard } from "./GameCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, AlertCircle, RefreshCw, Calendar, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Trophy, AlertCircle, Star, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
@@ -15,7 +14,6 @@ interface GamesListProps {
   isLoading: boolean;
   error: Error | null;
   selectedSport: string | null;
-  onRefresh: () => void;
   isTodayGames?: boolean;
   upcomingBrasileirao?: Game[];
   brasileiraoLoading?: boolean;
@@ -29,7 +27,6 @@ export function GamesList({
   isLoading, 
   error,
   selectedSport,
-  onRefresh,
   isTodayGames = false,
   upcomingBrasileirao = [],
   brasileiraoLoading = false,
@@ -62,10 +59,9 @@ export function GamesList({
         <p className="text-sm text-gray-500 max-w-md mb-4">
           {error.message || "Não foi possível carregar os jogos. Tente novamente."}
         </p>
-        <Button onClick={onRefresh} className="bg-green-600 hover:bg-green-700 text-white" data-testid="button-retry">
-          <RefreshCw className="w-4 h-4 mr-2" />
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg" data-testid="button-retry">
           Tentar Novamente
-        </Button>
+        </button>
       </div>
     );
   }
@@ -139,15 +135,6 @@ export function GamesList({
             </>
           )}
         </div>
-        <Button 
-          size="sm" 
-          onClick={onRefresh} 
-          className="bg-green-600 hover:bg-green-700 text-white text-xs h-8"
-          data-testid="button-refresh-games"
-        >
-          <RefreshCw className="w-3 h-3 mr-1" />
-          Atualizar
-        </Button>
       </div>
 
       {isTodayGames && leagueNames.length > 1 && (

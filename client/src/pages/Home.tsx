@@ -28,16 +28,15 @@ export default function Home() {
   const { toast } = useToast();
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
-  const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError, refetch: refetchTodayGames } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport });
-  const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport });
+  const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, refetchInterval: 5 * 60 * 1000 });
+  const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, refetchInterval: 5 * 60 * 1000 });
   const hasBrasileiraoToday = todayGames.some(g => g.sportKey === "soccer_brazil_campeonato");
   const upcomingBrasileirao = brasileiraoGames.filter(g => !todayGames.some(tg => tg.id === g.id)).slice(0, 6);
-  const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError, refetch: refetchLeagueGames } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport });
+  const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, refetchInterval: 5 * 60 * 1000 });
 
   const games = selectedSport ? leagueGames : todayGames;
   const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
-  const refetchGames = selectedSport ? refetchLeagueGames : refetchTodayGames;
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({ queryKey: ["/api/bets"] });
 
@@ -110,7 +109,7 @@ export default function Home() {
           </div>
         </header>
         <div className="flex-1">
-          <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
+          <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
         </div>
       </div>
 
@@ -196,7 +195,7 @@ export default function Home() {
 
             {/* Games content */}
             <div className="pb-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} onRefresh={() => refetchGames()} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
+              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
             </div>
           </div>
         </div>
