@@ -91,7 +91,7 @@ export default function Home() {
     <div className="min-h-screen overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
-        <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+        <header className="sticky top-0 z-50 px-3 py-2 flex items-start justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           <div className="flex flex-col items-start gap-1">
             <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
             <div className="flex items-center gap-1">
@@ -126,12 +126,12 @@ export default function Home() {
               </Popover>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
+          <div className="flex flex-col items-end gap-1">
+            <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
               <History className="w-3.5 h-3.5" /><span>Apostas</span>
               {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
             </button>
-            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md" data-testid="button-open-betslip-mobile">
+            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
               <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
               {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
             </button>
