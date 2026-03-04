@@ -94,13 +94,13 @@ export default function Home() {
         <header className="sticky top-0 z-50 px-3 py-2 flex items-start justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           <div className="flex flex-col items-start gap-1">
             <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
-            <div className="flex items-center gap-1">
+            <div className="flex flex-row flex-nowrap items-center gap-1">
               <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
+                  <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
                     <span className="text-sm">🏆</span>
-                    <span className="text-white font-bold text-xs whitespace-nowrap">Principais Ligas</span>
+                    <span className="text-white font-bold text-xs whitespace-nowrap">Principais</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
