@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { GamesList } from "@/components/GamesList";
@@ -94,6 +96,17 @@ export default function Home() {
           <div className="flex flex-col items-start">
             <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
             <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center px-2">
+            <span className="text-black font-extrabold text-sm leading-tight">
+              {selectedSport ? translateLeagueName(sports.find(s => s.key === selectedSport)?.title || selectedSport) : "Jogos do Dia"}
+            </span>
+            <span className="text-black/70 font-medium text-[10px] leading-tight capitalize">
+              {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+            </span>
+            <span className="text-black/60 font-medium text-[10px]">
+              {gamesLoading ? "carregando..." : `${games.length} jogo${games.length !== 1 ? "s" : ""}`}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
