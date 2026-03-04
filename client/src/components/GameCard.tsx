@@ -2,6 +2,7 @@ import { Game, Selection } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
+import { JerseyIcon } from "@/components/JerseyIcon";
 
 function calculateBoostedOdd(originalOdd: number): number {
   return originalOdd * 1.15;
@@ -62,8 +63,8 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
       
       <div className="p-2.5">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${isDark ? 'bg-[#3d3d3d] text-white/70' : 'bg-gray-100 text-gray-600'}`}>
-            {game.homeTeam.substring(0, 2).toUpperCase()}
+          <div className="w-6 h-6 shrink-0 flex items-center justify-center">
+            <JerseyIcon teamName={game.homeTeam} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-home-team-${game.id}`}>
             {game.homeTeam}
@@ -85,8 +86,8 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
         </div>
         
         <div className="flex items-center gap-2">
-          <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${isDark ? 'bg-[#3d3d3d] text-white/70' : 'bg-gray-100 text-gray-600'}`}>
-            {game.awayTeam.substring(0, 2).toUpperCase()}
+          <div className="w-6 h-6 shrink-0 flex items-center justify-center">
+            <JerseyIcon teamName={game.awayTeam} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-away-team-${game.id}`}>
             {game.awayTeam}
