@@ -177,7 +177,7 @@ export function GamesList({
       {isTodayGames && upcomingBrasileirao.length > 0 && (
         <div className={`mt-6 pt-4 border-t ${isDark ? "border-white/20" : "border-gray-200"}`}>
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl leading-none">🇧🇷</span>
+            <img src="https://flagcdn.com/24x18/br.png" alt="Brasil" className="w-6 h-auto rounded-sm" />
             <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-800"}`}>Próximos Jogos do Brasileirão</h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
