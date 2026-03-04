@@ -99,79 +99,81 @@ export default function Home() {
     <div className="min-h-screen overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
-        <header className="sticky top-0 z-50 px-3 py-2 flex items-start justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-          <div className="flex flex-col items-start gap-1">
-            <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-row flex-nowrap items-center gap-1">
-                <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
-                      <span className="text-sm">🏆</span>
-                      <span className="text-white font-bold text-[10px] whitespace-nowrap">Principais Ligas</span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
-                    <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
-                    {[
-                      { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
-                      { key: "soccer_england_league1", label: "Premier League" },
-                      { key: "soccer_uefa_champs_league", label: "Champions League" },
-                      { key: "soccer_spain_la_liga", label: "La Liga" },
-                      { key: "soccer_italy_serie_a", label: "Serie A" },
-                      { key: "soccer_germany_bundesliga", label: "Bundesliga" },
-                    ].map(({ key, label }) => {
-                      const sport = sports.find(s => s.key === key);
-                      if (!sport) return null;
-                      return (
-                        <button key={key} onClick={() => handleSelectSport(key)}
-                          className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors ${selectedSport === key ? "bg-yellow-500 text-black" : "text-white hover:bg-white/10"}`}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </PopoverContent>
-                </Popover>
-                <button
-                  onClick={() => { setShowSearch(s => !s); setSearchQuery(""); }}
-                  className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors ${showSearch ? "bg-yellow-400 text-black" : "bg-black/20 hover:bg-black/30 text-white"}`}
-                  data-testid="button-search-teams"
-                >
-                  <Search className="w-3.5 h-3.5" />
-                  <span className="font-bold text-[10px] whitespace-nowrap">Buscar</span>
-                </button>
-              </div>
-              {showSearch && (
-                <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-                  <Search className="w-3 h-3 text-white/60 shrink-0" />
-                  <input
-                    autoFocus
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Nome do time..."
-                    className="flex-1 bg-transparent text-white text-xs placeholder-white/50 outline-none min-w-0"
-                    data-testid="input-search-teams"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              )}
+        <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+          {/* Row 1: Logo + Apostas/Bilhete */}
+          <div className="flex items-center justify-between">
+            <img src={fwSportsLogo} alt="FW Sports" className="h-16 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
+            <div className="flex flex-row flex-nowrap items-center gap-2">
+              <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
+                <History className="w-3.5 h-3.5" /><span>Apostas</span>
+                {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
+              </button>
+              <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
+                <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
+                {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
+              </button>
             </div>
           </div>
-          <div className="flex flex-row flex-nowrap items-start gap-1 mt-6">
-            <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/95 text-gray-800 font-bold text-[11px] shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
-              <History className="w-3 h-3" /><span>Apostas</span>
-              {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
-            </button>
-            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white font-bold text-[11px] shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
-              <Receipt className="w-3 h-3" /><span>Bilhete</span>
-              {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
-            </button>
+          {/* Row 2: League buttons + Search */}
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-row flex-nowrap items-center gap-1">
+              <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
+                    <span className="text-sm">🏆</span>
+                    <span className="text-white font-bold text-[10px] whitespace-nowrap">Principais Ligas</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
+                  <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
+                  {[
+                    { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
+                    { key: "soccer_england_league1", label: "Premier League" },
+                    { key: "soccer_uefa_champs_league", label: "Champions League" },
+                    { key: "soccer_spain_la_liga", label: "La Liga" },
+                    { key: "soccer_italy_serie_a", label: "Serie A" },
+                    { key: "soccer_germany_bundesliga", label: "Bundesliga" },
+                  ].map(({ key, label }) => {
+                    const sport = sports.find(s => s.key === key);
+                    if (!sport) return null;
+                    return (
+                      <button key={key} onClick={() => handleSelectSport(key)}
+                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors ${selectedSport === key ? "bg-yellow-500 text-black" : "text-white hover:bg-white/10"}`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </PopoverContent>
+              </Popover>
+              <button
+                onClick={() => { setShowSearch(s => !s); setSearchQuery(""); }}
+                className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors ${showSearch ? "bg-yellow-400 text-black" : "bg-black/20 hover:bg-black/30 text-white"}`}
+                data-testid="button-search-teams"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span className="font-bold text-[10px] whitespace-nowrap">Buscar</span>
+              </button>
+            </div>
+            {showSearch && (
+              <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+                <Search className="w-3 h-3 text-white/60 shrink-0" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Nome do time..."
+                  className="flex-1 bg-transparent text-white text-xs placeholder-white/50 outline-none min-w-0"
+                  data-testid="input-search-teams"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </header>
         <div className="flex-1">
