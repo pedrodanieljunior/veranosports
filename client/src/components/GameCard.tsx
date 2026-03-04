@@ -35,11 +35,11 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
 
   return (
     <div 
-      className={`rounded-lg border cursor-pointer transition-all ${isDark ? 'bg-[#2d2d2d] hover:bg-[#323232]' : 'bg-white hover:shadow-md'} ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : isDark ? 'border-[#404040]' : 'border-gray-200'}`}
+      className={`rounded-lg border cursor-pointer transition-all ${isDark ? 'bg-[#4a4a4a] hover:bg-[#505050]' : 'bg-white hover:shadow-md'} ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : isDark ? 'border-[#5a5a5a]' : 'border-gray-200'}`}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
-      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-[#3a3a3a] bg-[#252525]' : 'border-gray-100 bg-gray-50'}`}>
+      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-[#5a5a5a] bg-[#3d3d3d]' : 'border-gray-100 bg-gray-50'}`}>
         {isLive ? (
           <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse border-0">
             AO VIVO
