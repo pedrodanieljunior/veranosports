@@ -126,13 +126,13 @@ export default function Home() {
               </Popover>
             </div>
           </div>
-          <div className="flex flex-row flex-nowrap items-start gap-1 mt-4 mr-40">
-            <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
-              <History className="w-3.5 h-3.5" /><span>Apostas</span>
+          <div className="flex flex-col items-end gap-1 mt-1">
+            <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/95 text-gray-800 font-bold text-[11px] shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
+              <History className="w-3 h-3" /><span>Apostas</span>
               {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
             </button>
-            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
-              <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
+            <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white font-bold text-[11px] shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
+              <Receipt className="w-3 h-3" /><span>Bilhete</span>
               {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
             </button>
           </div>
