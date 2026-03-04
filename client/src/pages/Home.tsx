@@ -126,7 +126,7 @@ export default function Home() {
               </Popover>
             </div>
           </div>
-          <div className="flex flex-row flex-nowrap items-start gap-1 mt-4">
+          <div className="flex flex-row flex-nowrap items-start gap-1 mt-4 mr-6">
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
               <History className="w-3.5 h-3.5" /><span>Apostas</span>
               {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
