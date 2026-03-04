@@ -27,7 +27,6 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const { toast } = useToast();
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
@@ -146,34 +145,23 @@ export default function Home() {
                   })}
                 </PopoverContent>
               </Popover>
-              <button
-                onClick={() => { setShowSearch(s => !s); setSearchQuery(""); }}
-                className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors ${showSearch ? "bg-yellow-400 text-black" : "bg-black/20 hover:bg-black/30 text-white"}`}
-                data-testid="button-search-teams"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span className="font-bold text-[10px] whitespace-nowrap">Buscar</span>
-              </button>
             </div>
-            {showSearch && (
-              <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-                <Search className="w-3 h-3 text-white/60 shrink-0" />
-                <input
-                  autoFocus
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Nome do time..."
-                  className="flex-1 bg-transparent text-white text-xs placeholder-white/50 outline-none min-w-0"
-                  data-testid="input-search-teams"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+              <Search className="w-3 h-3 text-white/60 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar time..."
+                className="flex-1 bg-transparent text-white text-xs placeholder-white/50 outline-none min-w-0"
+                data-testid="input-search-teams"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
         </header>
         <div className="flex-1">
