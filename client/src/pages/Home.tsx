@@ -106,12 +106,12 @@ export default function Home() {
                 <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
                   <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
                   {[
-                    { key: "soccer_brazil_campeonato", label: "🇧🇷 Brasileirão Série A" },
-                    { key: "soccer_england_league1", label: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League" },
-                    { key: "soccer_uefa_champs_league", label: "⭐ Champions League" },
-                    { key: "soccer_spain_la_liga", label: "🇪🇸 La Liga" },
-                    { key: "soccer_italy_serie_a", label: "🇮🇹 Serie A" },
-                    { key: "soccer_germany_bundesliga", label: "🇩🇪 Bundesliga" },
+                    { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
+                    { key: "soccer_england_league1", label: "Premier League" },
+                    { key: "soccer_uefa_champs_league", label: "Champions League" },
+                    { key: "soccer_spain_la_liga", label: "La Liga" },
+                    { key: "soccer_italy_serie_a", label: "Serie A" },
+                    { key: "soccer_germany_bundesliga", label: "Bundesliga" },
                   ].map(({ key, label }) => {
                     const sport = sports.find(s => s.key === key);
                     if (!sport) return null;
