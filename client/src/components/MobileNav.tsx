@@ -1,8 +1,6 @@
 import { Sport } from "@shared/schema";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Menu } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
@@ -25,9 +23,10 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden text-white hover:bg-white/20" data-testid="button-mobile-menu">
-          <Menu className="w-5 h-5" />
-        </Button>
+        <button className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-mobile-menu">
+          <span className="text-sm">⚽</span>
+          <span className="text-white font-bold text-xs leading-tight">Ligas de<br/>Futebol</span>
+        </button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0 border-0" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 50%, #d4960a 100%)" }}>
         <div className="flex flex-col h-full">

@@ -92,7 +92,7 @@ export default function Home() {
       <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
         <header className="sticky top-0 z-50 px-3 py-2 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
           <div className="flex flex-col items-start">
-            <img src={fwSportsLogo} alt="FW Sports" className="h-14 w-auto" />
+            <img src={fwSportsLogo} alt="FW Sports" className="h-20 w-auto" />
             <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
           </div>
           <div className="flex items-center gap-2">
