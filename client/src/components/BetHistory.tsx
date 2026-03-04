@@ -20,7 +20,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-primary" />
-            <CardTitle className="text-lg">Meus Bilhetes</CardTitle>
+            <CardTitle className="text-lg">Apostas</CardTitle>
           </div>
           <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-history">
             <X className="w-4 h-4" />

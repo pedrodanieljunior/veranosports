@@ -29,7 +29,7 @@ export function Header({ selectionsCount, betsCount, onOpenBetSlip, onOpenHistor
             data-testid="button-open-history"
           >
             <History className="w-4 h-4" />
-            <span>Meus Bilhetes</span>
+            <span>Apostas</span>
             {betsCount > 0 && (
               <Badge 
                 variant="secondary" 

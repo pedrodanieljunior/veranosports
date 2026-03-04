@@ -94,7 +94,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
             <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md" data-testid="button-open-history-mobile">
-              <History className="w-3.5 h-3.5" /><span>Meus Bilhetes</span>
+              <History className="w-3.5 h-3.5" /><span>Apostas</span>
               {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
             </button>
           </div>
@@ -171,7 +171,7 @@ export default function Home() {
                   className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors"
                   data-testid="button-open-history"
                 >
-                  <History className="w-4 h-4" /><span>Meus Bilhetes</span>
+                  <History className="w-4 h-4" /><span>Apostas</span>
                   {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
                 </button>
                 <button
