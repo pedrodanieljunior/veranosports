@@ -100,7 +100,7 @@ export default function Home() {
                 <PopoverTrigger asChild>
                   <button className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
                     <span className="text-sm">🏆</span>
-                    <span className="text-white font-bold text-xs leading-tight">Principais<br/>Ligas</span>
+                    <span className="text-white font-bold text-xs whitespace-nowrap">Principais Ligas</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">

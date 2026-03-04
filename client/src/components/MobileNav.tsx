@@ -25,7 +25,7 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
       <SheetTrigger asChild>
         <button className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-mobile-menu">
           <span className="text-sm">⚽</span>
-          <span className="text-white font-bold text-xs leading-tight">Ligas de<br/>Futebol</span>
+          <span className="text-white font-bold text-xs whitespace-nowrap">Ligas de Futebol</span>
         </button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0 border-0" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 50%, #d4960a 100%)" }}>
