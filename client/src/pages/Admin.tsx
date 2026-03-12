@@ -953,7 +953,7 @@ export default function Admin() {
                       { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400"/>, label:"Entradas", value:R$(entrada), color:"text-blue-400" },
                       { icon: <ArrowDownCircle className="w-5 h-5 text-red-400"/>, label:"Saídas", value:R$(saida), color:"text-red-400" },
                       { icon: lucro>=0?<TrendingUp className="w-5 h-5 text-green-400"/>:<TrendingDown className="w-5 h-5 text-red-400"/>, label:"Lucro Líquido", value:R$(lucro), color:lucro>=0?"text-green-400":"text-red-400" },
-                      { icon: <Wallet className="w-5 h-5 text-yellow-400"/>, label:"Provisionamento", value:R$(pendente), color:"text-yellow-400" },
+                      { icon: <Wallet className="w-5 h-5 text-yellow-400"/>, label:"Exposição pendente", value:R$(pendente), color:"text-yellow-400" },
                     ].map(({icon,label,value,color})=>(
                       <Card key={label}>
                         <CardContent className="p-3">
