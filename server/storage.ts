@@ -217,13 +217,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDailyTotalPotentialWin(): Promise<number> {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    
     const [result] = await db.select({
       total: sql<number>`COALESCE(SUM(${betSlipsTable.potentialWin}), 0)`
     }).from(betSlipsTable)
-      .where(gte(betSlipsTable.createdAt, todayStart));
+      .where(eq(betSlipsTable.status, "pending"));
     
     return Number(result?.total ?? 0);
   }
