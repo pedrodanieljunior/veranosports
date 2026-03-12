@@ -125,12 +125,14 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               return part;
             };
 
+            const isTeamToScoreFirst = market.name === "Team To Score First";
             let displayLabel = value.value;
             if (value.value === "Yes") displayLabel = "Sim";
             else if (value.value === "No") displayLabel = "Não";
             else if (value.value === "Home") displayLabel = game.homeTeam.substring(0, 10);
             else if (value.value === "Away") displayLabel = game.awayTeam.substring(0, 10);
-            else if (value.value === "Draw") displayLabel = "Empate";
+            else if (value.value === "Draw" || value.value === "No Goal" || value.value === "Nenhum Gol") displayLabel = isTeamToScoreFirst ? "Nenhum" : "Empate";
+            else if (value.value === "Nenhum") displayLabel = "Nenhum";
             else if (value.value === "Odd") displayLabel = "Ímpar";
             else if (value.value === "Even") displayLabel = "Par";
             else if (value.value.includes("Over")) displayLabel = value.value.replace("Over", "Mais ");
