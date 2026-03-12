@@ -86,6 +86,32 @@ const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
 const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 
+// Ligas permitidas — ordem exata de exibição
+const ALLOWED_LEAGUES_ORDERED = [
+  "soccer_argentina_primera_division",
+  "soccer_brazil_campeonato",
+  "soccer_brazil_serie_b",
+  "soccer_conmebol_copa_libertadores",
+  "soccer_epl",
+  "soccer_fa_cup",
+  "soccer_france_ligue_one",
+  "soccer_germany_bundesliga",
+  "soccer_italy_serie_a",
+  "soccer_japan_j_league",
+  "soccer_mexico_ligamx",
+  "soccer_netherlands_eredivisie",
+  "soccer_portugal_primeira_liga",
+  "soccer_spain_la_liga",
+  "soccer_turkey_super_league",
+  "soccer_uefa_champs_league",
+  "soccer_uefa_europa_conference_league",
+  "soccer_uefa_europa_league",
+  "soccer_usa_mls",
+  "soccer_brazil_copa_do_brasil",
+  "soccer_conmebol_copa_sudamericana",
+];
+const ALLOWED_LEAGUES_SET = new Set(ALLOWED_LEAGUES_ORDERED);
+
 // Função para gerar mercados extras quando API-Football não encontra correspondência
 // IMPORTANTE: esses valores são as odds BASE (antes do boost de +20% aplicado no frontend)
 // Para que após o boost fiquem realistas, os valores aqui devem ser ~17% menores que o mercado real
@@ -227,14 +253,15 @@ export async function registerRoutes(
       
       const sports = await response.json();
       
-      // Filtrar apenas futebol e adicionar leagueId da API-Football para mercados extras
-      const soccerSports = sports
-        .filter((s: any) => s.group === "Soccer" && s.active)
-        .map((s: any) => ({
-          ...s,
-          leagueId: LEAGUE_MAPPING[s.key] || null
-        }));
-      
+      // Filtrar apenas ligas permitidas, na ordem definida
+      const sportsMap = new Map(sports.map((s: any) => [s.key, s]));
+      const soccerSports = ALLOWED_LEAGUES_ORDERED
+        .filter(key => sportsMap.has(key))
+        .map(key => {
+          const s = sportsMap.get(key);
+          return { ...s, leagueId: LEAGUE_MAPPING[key] || null };
+        });
+
       cache.set("sports", soccerSports, CACHE_TTL_SPORTS);
       res.json(soccerSports);
     } catch (error) {
@@ -532,22 +559,7 @@ export async function registerRoutes(
       const cached = cache.get<any[]>(cacheKey);
       if (cached) return res.json(cached);
 
-      const leagues = [
-        "soccer_brazil_campeonato",
-        "soccer_epl",
-        "soccer_spain_la_liga",
-        "soccer_italy_serie_a",
-        "soccer_germany_bundesliga",
-        "soccer_france_ligue_one",
-        "soccer_uefa_champs_league",
-        "soccer_uefa_europa_league",
-        "soccer_brazil_campeonato_serie_b",
-        "soccer_spain_segunda_division",
-        "soccer_england_league1",
-        "soccer_portugal_primeira_liga",
-        "soccer_netherlands_eredivisie",
-        "soccer_argentina_primera_division",
-      ];
+      const leagues = ALLOWED_LEAGUES_ORDERED;
 
       let results: any[] = [];
 
