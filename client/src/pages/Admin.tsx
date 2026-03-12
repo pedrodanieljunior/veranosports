@@ -73,7 +73,7 @@ export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
-  const [riskOpen, setRiskOpen] = useState<{ low: boolean; mid: boolean; high: boolean }>({ low: false, mid: false, high: false });
+  const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
@@ -465,33 +465,36 @@ export default function Admin() {
               {/* Painel de classificação por risco */}
               {(() => {
                 const pending = bets.filter(b => !b.verified && b.status === "pending");
-                const groups: { key: "low" | "mid" | "high"; label: string; range: string; color: string; dot: string; border: string; bg: string; badgeCls: string; textCls: string; bets: typeof pending }[] = [
+                const groups: { key: "low" | "mid" | "high"; label: string; range: string; dot: string; border: string; bg: string; badgeCls: string; textCls: string; bets: typeof pending }[] = [
                   {
                     key: "low", label: "Risco Baixo", range: "até R$5.000",
-                    color: "text-green-400", dot: "bg-green-500", border: "border-green-500/40", bg: "bg-green-500/5",
+                    dot: "bg-green-500", border: "border-green-500/40", bg: "bg-green-500/5",
                     badgeCls: "bg-green-500/20 text-green-400 border-green-500/30", textCls: "text-green-400",
                     bets: pending.filter(b => b.potentialWin <= 5000),
                   },
                   {
                     key: "mid", label: "Risco Médio", range: "R$5.001 – R$10.000",
-                    color: "text-orange-400", dot: "bg-orange-500", border: "border-orange-500/40", bg: "bg-orange-500/5",
+                    dot: "bg-orange-500", border: "border-orange-500/40", bg: "bg-orange-500/5",
                     badgeCls: "bg-orange-500/20 text-orange-400 border-orange-500/30", textCls: "text-orange-400",
                     bets: pending.filter(b => b.potentialWin > 5000 && b.potentialWin <= 10000),
                   },
                   {
                     key: "high", label: "Risco Alto", range: "R$10.001 – R$15.000",
-                    color: "text-red-400", dot: "bg-red-500", border: "border-red-500/40", bg: "bg-red-500/5",
+                    dot: "bg-red-500", border: "border-red-500/40", bg: "bg-red-500/5",
                     badgeCls: "bg-red-500/20 text-red-400 border-red-500/30", textCls: "text-red-400",
                     bets: pending.filter(b => b.potentialWin > 10000),
                   },
                 ];
+                const activeGroup = groups.find(g => g.key === riskSelected) ?? null;
                 return (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {groups.map(g => (
-                      <div key={g.key} className={`rounded-lg border-2 ${g.border} ${g.bg} overflow-hidden`}>
+                  <div className="space-y-3">
+                    {/* 3 cards sempre com a mesma altura */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {groups.map(g => (
                         <button
-                          className="w-full p-4 text-left cursor-pointer hover:brightness-110 transition-all"
-                          onClick={() => setRiskOpen(prev => ({ ...prev, [g.key]: !prev[g.key] }))}
+                          key={g.key}
+                          className={`rounded-lg border-2 ${g.border} ${g.bg} p-4 text-left transition-all hover:brightness-110 ${riskSelected === g.key ? "ring-2 ring-offset-1 ring-offset-background " + g.border : ""}`}
+                          onClick={() => setRiskSelected(riskSelected === g.key ? null : g.key)}
                           data-testid={`button-risk-${g.key}`}
                         >
                           <div className="flex items-center gap-3 mb-3">
@@ -499,7 +502,7 @@ export default function Admin() {
                             <p className={`font-semibold text-sm ${g.textCls}`}>{g.label}</p>
                             <Badge className={`ml-auto ${g.badgeCls}`}>{g.bets.length} bilhete(s)</Badge>
                             <span className={g.textCls}>
-                              {riskOpen[g.key] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              {riskSelected === g.key ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mb-1">Retorno {g.range}</p>
@@ -508,38 +511,52 @@ export default function Admin() {
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
                         </button>
+                      ))}
+                    </div>
 
-                        {riskOpen[g.key] && (
-                          <div className="border-t border-current/10 px-4 pb-4 pt-3 space-y-2">
-                            {g.bets.length === 0 ? (
-                              <p className="text-xs text-muted-foreground text-center py-3">Nenhum bilhete nessa faixa.</p>
-                            ) : g.bets.map(bet => (
-                              <div key={bet.id} className="rounded border border-current/10 bg-background/40 p-3 text-sm">
-                                <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
-                                  <span className="font-mono font-bold text-xs">#{bet.id.slice(0,8).toUpperCase()}</span>
-                                  <span className="text-xs text-muted-foreground">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
+                    {/* Painel de detalhes — aparece abaixo dos 3 cards, largura total */}
+                    {activeGroup && (
+                      <div className={`rounded-lg border-2 ${activeGroup.border} ${activeGroup.bg} p-4`}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className={`w-3 h-3 rounded-full ${activeGroup.dot}`} />
+                          <p className={`font-semibold text-sm ${activeGroup.textCls}`}>
+                            Bilhetes — {activeGroup.label}
+                          </p>
+                          <span className="text-xs text-muted-foreground ml-1">({activeGroup.bets.length} bilhete(s))</span>
+                        </div>
+                        {activeGroup.bets.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">Nenhum bilhete nessa faixa.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {activeGroup.bets.map(bet => (
+                              <div key={bet.id} className="flex items-center justify-between gap-4 rounded border border-current/10 bg-background/40 p-3 flex-wrap">
+                                <div className="space-y-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-mono font-bold text-xs">#{bet.id.slice(0,8).toUpperCase()}</span>
+                                    <span className="text-xs text-muted-foreground">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate max-w-xs">
+                                    {bet.selections.map(s=>`${s.homeTeam} x ${s.awayTeam}`).join(" · ")}
+                                  </p>
                                 </div>
-                                <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
-                                  {bet.selections.map(s=>`${s.homeTeam} x ${s.awayTeam}`).join(" · ")}
-                                </p>
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-4">
                                   <div>
                                     <p className="text-xs text-muted-foreground">Apostado</p>
                                     <p className="font-bold text-sm">R${bet.stake.toFixed(2)}</p>
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xs text-muted-foreground">Retorno</p>
-                                    <p className={`font-bold text-sm ${g.textCls}`}>R${bet.potentialWin.toFixed(2)}</p>
+                                    <p className={`font-bold text-sm ${activeGroup.textCls}`}>R${bet.potentialWin.toFixed(2)}</p>
                                   </div>
                                   <Button
                                     size="sm"
-                                    className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 h-7"
-                                    onClick={(e) => { e.stopPropagation(); updateVerifiedMutation.mutate({ id: bet.id, verified: true }); }}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: true })}
                                     disabled={updateVerifiedMutation.isPending}
                                     data-testid={`button-validate-risk-${bet.id}`}
                                   >
-                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                    Confirmar
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Confirmar Pago
                                   </Button>
                                 </div>
                               </div>
@@ -547,7 +564,7 @@ export default function Admin() {
                           </div>
                         )}
                       </div>
-                    ))}
+                    )}
                   </div>
                 );
               })()}
