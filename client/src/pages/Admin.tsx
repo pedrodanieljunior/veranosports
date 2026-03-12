@@ -95,6 +95,7 @@ const SIMPLE_BET_GAME_LIMIT = 15000;
 export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<"today" | "week" | "month" | "all">("all");
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
   const [finPeriod, setFinPeriod] = useState<"all" | "month" | "week" | "today">("month");
@@ -328,8 +329,22 @@ export default function Admin() {
   };
 
   const filteredBets = bets.filter(bet => {
-    if (statusFilter === "all") return true;
-    return bet.status === statusFilter;
+    if (statusFilter !== "all" && bet.status !== statusFilter) return false;
+    if (periodFilter !== "all") {
+      const created = new Date(bet.createdAt);
+      const now = new Date();
+      if (periodFilter === "today") {
+        return created.toDateString() === now.toDateString();
+      } else if (periodFilter === "week") {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return created >= startOfWeek;
+      } else if (periodFilter === "month") {
+        return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+      }
+    }
+    return true;
   });
 
   const stats = {
@@ -1083,19 +1098,33 @@ export default function Admin() {
           <TabsContent value="bilhetes">
           <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <CardTitle>Bilhetes ({filteredBets.length})</CardTitle>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40" data-testid="select-status-filter">
-                  <SelectValue placeholder="Filtrar status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
-                  <SelectItem value="won">Ganhos</SelectItem>
-                  <SelectItem value="lost">Perdidos</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-md overflow-hidden border border-border text-xs">
+                  {(["today","week","month","all"] as const).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPeriodFilter(p)}
+                      data-testid={`btn-period-${p}`}
+                      className={`px-3 py-1.5 transition-colors ${periodFilter === p ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {{ today:"Hoje", week:"Semana", month:"Mês", all:"Todos" }[p]}
+                    </button>
+                  ))}
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-36" data-testid="select-status-filter">
+                    <SelectValue placeholder="Filtrar status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos status</SelectItem>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="won">Ganhos</SelectItem>
+                    <SelectItem value="lost">Perdidos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
