@@ -200,6 +200,10 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Team To Score First",
     "Corners Over Under",
     "Total Corners",
+    "Cards Over/Under",
+    "Total - Cards",
+    "Yellow Cards",
+    "Red Cards",
   ]);
 
   // Agrupar bets do mesmo mercado de TODOS os bookmakers, deduplicando por valor
