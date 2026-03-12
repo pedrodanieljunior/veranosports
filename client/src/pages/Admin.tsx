@@ -27,7 +27,9 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Banknote,
-  Trophy
+  Trophy,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -71,6 +73,7 @@ export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
+  const [riskOpen, setRiskOpen] = useState<"low" | "mid" | "high" | null>(null);
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
@@ -462,53 +465,89 @@ export default function Admin() {
               {/* Painel de classificação por risco */}
               {(() => {
                 const pending = bets.filter(b => !b.verified && b.status === "pending");
-                const low    = pending.filter(b => b.potentialWin <= 5000);
-                const mid    = pending.filter(b => b.potentialWin > 5000 && b.potentialWin <= 10000);
-                const high   = pending.filter(b => b.potentialWin > 10000);
+                const groups: { key: "low" | "mid" | "high"; label: string; range: string; color: string; dot: string; border: string; bg: string; badgeCls: string; textCls: string; bets: typeof pending }[] = [
+                  {
+                    key: "low", label: "Risco Baixo", range: "até R$5.000",
+                    color: "text-green-400", dot: "bg-green-500", border: "border-green-500/40", bg: "bg-green-500/5",
+                    badgeCls: "bg-green-500/20 text-green-400 border-green-500/30", textCls: "text-green-400",
+                    bets: pending.filter(b => b.potentialWin <= 5000),
+                  },
+                  {
+                    key: "mid", label: "Risco Médio", range: "R$5.001 – R$10.000",
+                    color: "text-orange-400", dot: "bg-orange-500", border: "border-orange-500/40", bg: "bg-orange-500/5",
+                    badgeCls: "bg-orange-500/20 text-orange-400 border-orange-500/30", textCls: "text-orange-400",
+                    bets: pending.filter(b => b.potentialWin > 5000 && b.potentialWin <= 10000),
+                  },
+                  {
+                    key: "high", label: "Risco Alto", range: "R$10.001 – R$15.000",
+                    color: "text-red-400", dot: "bg-red-500", border: "border-red-500/40", bg: "bg-red-500/5",
+                    badgeCls: "bg-red-500/20 text-red-400 border-red-500/30", textCls: "text-red-400",
+                    bets: pending.filter(b => b.potentialWin > 10000),
+                  },
+                ];
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="border-green-500/40 bg-green-500/5">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
-                          <p className="font-semibold text-sm text-green-400">Risco Baixo</p>
-                          <Badge className="ml-auto bg-green-500/20 text-green-400 border-green-500/30">{low.length} bilhete(s)</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-1">Retorno potencial até R$5.000</p>
-                        <p className="text-2xl font-bold text-green-400">
-                          R${low.reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="border-orange-500/40 bg-orange-500/5">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-3 h-3 rounded-full bg-orange-500 shrink-0" />
-                          <p className="font-semibold text-sm text-orange-400">Risco Médio</p>
-                          <Badge className="ml-auto bg-orange-500/20 text-orange-400 border-orange-500/30">{mid.length} bilhete(s)</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-1">Retorno entre R$5.001 e R$10.000</p>
-                        <p className="text-2xl font-bold text-orange-400">
-                          R${mid.reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="border-red-500/40 bg-red-500/5">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
-                          <p className="font-semibold text-sm text-red-400">Risco Alto</p>
-                          <Badge className="ml-auto bg-red-500/20 text-red-400 border-red-500/30">{high.length} bilhete(s)</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-1">Retorno entre R$10.001 e R$15.000</p>
-                        <p className="text-2xl font-bold text-red-400">
-                          R${high.reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
-                      </CardContent>
-                    </Card>
+                    {groups.map(g => (
+                      <div key={g.key} className={`rounded-lg border-2 ${g.border} ${g.bg} overflow-hidden`}>
+                        <button
+                          className="w-full p-4 text-left cursor-pointer hover:brightness-110 transition-all"
+                          onClick={() => setRiskOpen(riskOpen === g.key ? null : g.key)}
+                          data-testid={`button-risk-${g.key}`}
+                        >
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className={`w-3 h-3 rounded-full ${g.dot} shrink-0`} />
+                            <p className={`font-semibold text-sm ${g.textCls}`}>{g.label}</p>
+                            <Badge className={`ml-auto ${g.badgeCls}`}>{g.bets.length} bilhete(s)</Badge>
+                            <span className={g.textCls}>
+                              {riskOpen === g.key ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-1">Retorno {g.range}</p>
+                          <p className={`text-2xl font-bold ${g.textCls}`}>
+                            R${g.bets.reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
+                        </button>
+
+                        {riskOpen === g.key && (
+                          <div className="border-t border-current/10 px-4 pb-4 pt-3 space-y-2">
+                            {g.bets.length === 0 ? (
+                              <p className="text-xs text-muted-foreground text-center py-3">Nenhum bilhete nessa faixa.</p>
+                            ) : g.bets.map(bet => (
+                              <div key={bet.id} className="rounded border border-current/10 bg-background/40 p-3 text-sm">
+                                <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                                  <span className="font-mono font-bold text-xs">#{bet.id.slice(0,8).toUpperCase()}</span>
+                                  <span className="text-xs text-muted-foreground">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
+                                  {bet.selections.map(s=>`${s.homeTeam} x ${s.awayTeam}`).join(" · ")}
+                                </p>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Apostado</p>
+                                    <p className="font-bold text-sm">R${bet.stake.toFixed(2)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Retorno</p>
+                                    <p className={`font-bold text-sm ${g.textCls}`}>R${bet.potentialWin.toFixed(2)}</p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 h-7"
+                                    onClick={(e) => { e.stopPropagation(); updateVerifiedMutation.mutate({ id: bet.id, verified: true }); }}
+                                    disabled={updateVerifiedMutation.isPending}
+                                    data-testid={`button-validate-risk-${bet.id}`}
+                                  >
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Confirmar
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 );
               })()}
