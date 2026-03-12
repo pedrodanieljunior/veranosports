@@ -55,6 +55,8 @@ export const gameSchema = z.object({
   commenceTime: z.string(),
   homeTeam: z.string(),
   awayTeam: z.string(),
+  homeLogo: z.string().optional(),
+  awayLogo: z.string().optional(),
   bookmakers: z.array(bookmakerSchema),
 });
 

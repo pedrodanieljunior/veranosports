@@ -21,16 +21,17 @@ async function fetchBadgeUrl(teamName: string): Promise<string | null> {
 
 interface TeamBadgeProps {
   teamName: string;
+  logoUrl?: string;
   size?: number;
 }
 
-export function TeamBadge({ teamName, size = 24 }: TeamBadgeProps) {
+export function TeamBadge({ teamName, logoUrl, size = 24 }: TeamBadgeProps) {
   const [badgeUrl, setBadgeUrl] = useState<string | null | undefined>(
-    teamName in badgeCache ? badgeCache[teamName] : undefined
+    logoUrl ?? (teamName in badgeCache ? badgeCache[teamName] : undefined)
   );
   const [failed, setFailed] = useState(false);
 
-  if (badgeUrl === undefined) {
+  if (!logoUrl && badgeUrl === undefined) {
     fetchBadgeUrl(teamName).then(setBadgeUrl);
   }
 

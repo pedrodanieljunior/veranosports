@@ -435,6 +435,8 @@ export async function registerRoutes(
               commenceTime: fixture.fixture.date,
               homeTeam: fixture.teams.home.name,
               awayTeam: fixture.teams.away.name,
+              homeLogo: fixture.teams.home.logo,
+              awayLogo: fixture.teams.away.logo,
               bookmakers: [],
               _priority: LEAGUE_PRIORITY[league.key] ?? 3,
             });
@@ -562,6 +564,8 @@ export async function registerRoutes(
               commenceTime: fixture.fixture.date,
               homeTeam: fixture.teams.home.name,
               awayTeam: fixture.teams.away.name,
+              homeLogo: fixture.teams.home.logo,
+              awayLogo: fixture.teams.away.logo,
               bookmakers
             };
           })
@@ -782,6 +786,8 @@ export async function registerRoutes(
                     commenceTime: fixture.fixture.date,
                     homeTeam: fixture.teams.home.name,
                     awayTeam: fixture.teams.away.name,
+                    homeLogo: fixture.teams.home.logo,
+                    awayLogo: fixture.teams.away.logo,
                     bookmakers
                   };
                 })

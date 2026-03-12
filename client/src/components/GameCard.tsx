@@ -54,7 +54,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
       <div className="p-2.5">
         <div className="flex items-center gap-2 mb-1.5">
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
-            <TeamBadge teamName={game.homeTeam} size={22} />
+            <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-home-team-${game.id}`}>
             {game.homeTeam}
@@ -77,7 +77,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
         
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
-            <TeamBadge teamName={game.awayTeam} size={22} />
+            <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-away-team-${game.id}`}>
             {game.awayTeam}
