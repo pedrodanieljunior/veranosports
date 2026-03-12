@@ -186,7 +186,6 @@ function buildMarketsFromBookmaker(bookmaker: any, homeTeam: string, awayTeam: s
   };
 
   const allowedMarkets = new Set([
-    "Match Winner",
     "Both Teams Score",
     "HT/FT Double",
     "Exact Score",
