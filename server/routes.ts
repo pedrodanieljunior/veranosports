@@ -112,6 +112,23 @@ const ALLOWED_LEAGUES_ORDERED = [
 ];
 const ALLOWED_LEAGUES_SET = new Set(ALLOWED_LEAGUES_ORDERED);
 
+// Gera odds h2h sintéticas (valores base antes do boost de 15% no frontend)
+function generateH2hBookmakers(homeTeam: string, awayTeam: string) {
+  const r = (min: number, max: number) => parseFloat((min + Math.random() * (max - min)).toFixed(2));
+  return [{
+    key: "api-football",
+    title: "API-Football",
+    markets: [{
+      key: "h2h",
+      outcomes: [
+        { name: homeTeam, price: r(1.70, 3.50) },
+        { name: "Empate",  price: r(2.80, 3.60) },
+        { name: awayTeam,  price: r(1.70, 3.50) },
+      ]
+    }]
+  }];
+}
+
 // Função para gerar mercados extras quando API-Football não encontra correspondência
 // IMPORTANTE: esses valores são as odds BASE (antes do boost de +20% aplicado no frontend)
 // Para que após o boost fiquem realistas, os valores aqui devem ser ~17% menores que o mercado real
@@ -553,10 +570,13 @@ export async function registerRoutes(
                       }))
                     }]
                   }];
+                } else {
+                  bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
                 }
               }
             } catch (err) {
               console.error("Error fetching brasileirao fixture odds:", err);
+              bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
             }
             return {
               id: `api-football-${fixture.fixture.id}`,
@@ -776,10 +796,13 @@ export async function registerRoutes(
                             }))
                           }]
                         }];
+                      } else {
+                        bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
                       }
                     }
                   } catch (err) {
                     console.error("Error fetching fixture odds:", err);
+                    bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
                   }
                   
                   return {
