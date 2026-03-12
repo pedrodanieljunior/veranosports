@@ -73,7 +73,7 @@ export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
-  const [riskOpen, setRiskOpen] = useState<"low" | "mid" | "high" | null>(null);
+  const [riskOpen, setRiskOpen] = useState<{ low: boolean; mid: boolean; high: boolean }>({ low: false, mid: false, high: false });
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
@@ -491,7 +491,7 @@ export default function Admin() {
                       <div key={g.key} className={`rounded-lg border-2 ${g.border} ${g.bg} overflow-hidden`}>
                         <button
                           className="w-full p-4 text-left cursor-pointer hover:brightness-110 transition-all"
-                          onClick={() => setRiskOpen(riskOpen === g.key ? null : g.key)}
+                          onClick={() => setRiskOpen(prev => ({ ...prev, [g.key]: !prev[g.key] }))}
                           data-testid={`button-risk-${g.key}`}
                         >
                           <div className="flex items-center gap-3 mb-3">
@@ -499,7 +499,7 @@ export default function Admin() {
                             <p className={`font-semibold text-sm ${g.textCls}`}>{g.label}</p>
                             <Badge className={`ml-auto ${g.badgeCls}`}>{g.bets.length} bilhete(s)</Badge>
                             <span className={g.textCls}>
-                              {riskOpen === g.key ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              {riskOpen[g.key] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mb-1">Retorno {g.range}</p>
@@ -509,7 +509,7 @@ export default function Admin() {
                           <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
                         </button>
 
-                        {riskOpen === g.key && (
+                        {riskOpen[g.key] && (
                           <div className="border-t border-current/10 px-4 pb-4 pt-3 space-y-2">
                             {g.bets.length === 0 ? (
                               <p className="text-xs text-muted-foreground text-center py-3">Nenhum bilhete nessa faixa.</p>
