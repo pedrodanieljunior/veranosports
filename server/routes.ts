@@ -275,7 +275,8 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Corners Over Under": 4,
     "Total Corners": 4,
     "Team To Score First": 5,
-    "Exact Score": 6,
+    "Red Card": 6,
+    "Exact Score": 7,
   };
 
   const markets = Object.values(grouped).map((g) => {
@@ -321,6 +322,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         { value: "Não", odd: 1.24 }
       ]
     });
+    markets.sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
   }
 
   return {
