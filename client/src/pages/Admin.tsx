@@ -120,7 +120,7 @@ export default function Admin() {
     const db = bets.filter(b => new Date(b.createdAt).getDay() === idx);
     const e = db.reduce((s,b)=>s+b.stake,0);
     const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
-    return { day, Entrada: parseFloat(e.toFixed(2)), Saída: parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
+    return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
   }), [bets]);
 
   const finMarketRows = useMemo(() => {
@@ -845,7 +845,7 @@ export default function Admin() {
                     <p className="text-xl font-bold text-red-400">
                       R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
                     </p>
-                    <p className="text-xs text-muted-foreground">Saídas (prêmios pagos)</p>
+                    <p className="text-xs text-muted-foreground">Prêmios pagos</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -951,7 +951,7 @@ export default function Admin() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400"/>, label:"Entradas", value:R$(entrada), color:"text-blue-400" },
-                      { icon: <ArrowDownCircle className="w-5 h-5 text-red-400"/>, label:"Saídas", value:R$(saida), color:"text-red-400" },
+                      { icon: <ArrowDownCircle className="w-5 h-5 text-red-400"/>, label:"Prêmios pagos", value:R$(saida), color:"text-red-400" },
                       { icon: lucro>=0?<TrendingUp className="w-5 h-5 text-green-400"/>:<TrendingDown className="w-5 h-5 text-red-400"/>, label:"Lucro Líquido", value:R$(lucro), color:lucro>=0?"text-green-400":"text-red-400" },
                       { icon: <Wallet className="w-5 h-5 text-yellow-400"/>, label:"Exposição pendente", value:R$(pendente), color:"text-yellow-400" },
                     ].map(({icon,label,value,color})=>(
@@ -1003,7 +1003,7 @@ export default function Admin() {
                           <Tooltip formatter={(v:number)=>R$(v)} contentStyle={{background:"#1a1a1a",border:"1px solid #333",borderRadius:8}} />
                           <Legend />
                           <Bar dataKey="Entrada" fill="#3b82f6" radius={[3,3,0,0]}/>
-                          <Bar dataKey="Saída" fill="#ef4444" radius={[3,3,0,0]}/>
+                          <Bar dataKey="Prêmios pagos" fill="#ef4444" radius={[3,3,0,0]}/>
                           <Bar dataKey="Lucro" radius={[3,3,0,0]}>
                             {finDayData.map((entry, i) => (
                               <Cell key={i} fill={entry.Lucro >= 0 ? "#22c55e" : "#f87171"} />
