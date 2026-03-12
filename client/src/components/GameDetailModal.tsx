@@ -121,7 +121,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             const translateHalf = (part: string) => {
               if (part === "Home") return "Casa";
               if (part === "Away") return "Fora";
-              if (part === "Draw") return "Emp";
+              if (part === "Draw") return "Empate";
               return part;
             };
 
