@@ -280,18 +280,31 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
 
   const markets = Object.values(grouped).map((g) => {
     let values = g.values;
-    if (g.name === "Goals Over/Under" || g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
+    let label = g.label;
+
+    if (g.name === "Goals Over/Under") {
+      // Mostrar apenas a linha 2.5 com rótulos Sim/Não
+      const over = values.find((v) => v.value === "Over 2.5");
+      const under = values.find((v) => v.value === "Under 2.5");
+      values = [
+        { value: "Sim", odd: over?.odd ?? 1.90 },
+        { value: "Não", odd: under?.odd ?? 1.90 },
+      ];
+      label = "Total de Gols 2,5";
+    } else if (g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
       values = values.filter((v) => isStandardGoalLine(v.value));
+      if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
       values = values.filter((v) => isStandardCornerLine(v.value));
-    }
-    if (overUnderMarkets.has(g.name)) {
+      if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
+    } else if (overUnderMarkets.has(g.name)) {
       values = sortOverUnder(values);
     }
+
     return {
       id: g.id,
       name: g.name,
-      label: g.label,
+      label,
       values,
     };
   }).sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
