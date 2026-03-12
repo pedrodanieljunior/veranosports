@@ -38,6 +38,7 @@ interface BetSlipProps {
   isPlacing: boolean;
   isMinimized: boolean;
   onToggleMinimize: (val: boolean) => void;
+  gameLimitRemaining?: number | null;
 }
 
 export function BetSlip({ 
@@ -50,6 +51,7 @@ export function BetSlip({
   isPlacing,
   isMinimized,
   onToggleMinimize,
+  gameLimitRemaining,
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
   const { toast } = useToast();
@@ -430,6 +432,34 @@ export function BetSlip({
                   <p className="text-xs text-red-700 dark:text-red-400 font-semibold">Retorno potencial ultrapassa o limite de R$15.000,00. Reduza o valor apostado para continuar.</p>
                 </div>
               )}
+
+              {gameLimitRemaining != null && gameLimitRemaining > 0 && selections.length === 1 && (() => {
+                const maxStake = Math.floor(gameLimitRemaining / totalOdds * 100) / 100;
+                if (maxStake <= 0) return null;
+                return (
+                  <div className="bg-amber-500/10 border border-amber-500/50 rounded-md p-3 flex items-center gap-3" data-testid="alert-game-limit-suggestion">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-amber-300 font-semibold mb-0.5">Limite do jogo atingido</p>
+                      <p className="text-xs text-amber-200/80">
+                        Aposta máxima sugerida para este jogo:
+                      </p>
+                      <p className="text-sm font-bold text-amber-300 mt-0.5">
+                        R$ {maxStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-500/50 text-amber-300 hover:bg-amber-500/20 text-xs shrink-0"
+                      onClick={() => setStake(maxStake.toFixed(2))}
+                      data-testid="button-use-suggested-stake"
+                    >
+                      Usar
+                    </Button>
+                  </div>
+                );
+              })()}
 
               {isNearDailyLimit && !isCappedAtMax && (
                 <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">

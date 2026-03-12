@@ -26,6 +26,7 @@ export default function Home() {
   const [isBetSlipMinimized, setIsBetSlipMinimized] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
+  const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
@@ -104,16 +105,20 @@ export default function Home() {
     onSuccess: (data: BetSlipType) => {
       setPlacedBet(data);
       setSelections([]);
+      setGameLimitRemaining(null);
       queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
       toast({ title: "Bilhete gerado com sucesso!", description: `Código: #${data.id.slice(0, 8).toUpperCase()}` });
     },
     onError: (error: Error) => {
       let description = error.message;
+      let remaining: number | null = null;
       try {
         const parsed = JSON.parse(error.message.replace(/^\d+:\s*/, ''));
         if (parsed.error) description = parsed.error;
+        if (typeof parsed.remaining === "number") remaining = parsed.remaining;
       } catch {}
+      setGameLimitRemaining(remaining);
       toast({ title: "Erro ao gerar bilhete", description, variant: "destructive" });
     },
   });
@@ -121,6 +126,7 @@ export default function Home() {
   const handleSelectSport = (sportKey: string) => setSelectedSport(sportKey);
   const handleToggleSelection = (selection: Selection) => {
     if (placedBet) setPlacedBet(null);
+    setGameLimitRemaining(null);
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
       if (exists) return prev.filter((s) => s.id !== selection.id);
@@ -307,7 +313,7 @@ export default function Home() {
 
       {/* Modals */}
       <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} />
-      {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} />}
+      {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
       {showHistory && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
     </div>
   );
