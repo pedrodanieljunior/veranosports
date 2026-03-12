@@ -157,19 +157,19 @@ export default function Home() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-              <Search className="w-3 h-3 text-white/60 shrink-0" />
+            <div className="flex items-center gap-1.5 bg-black/30 border border-white/40 rounded-lg px-2.5 py-1.5">
+              <Search className="w-3.5 h-3.5 text-white shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar time..."
-                className="flex-1 bg-transparent text-white text-xs placeholder-white/50 outline-none min-w-0"
+                className="flex-1 bg-transparent text-white text-xs font-medium placeholder-white/70 outline-none min-w-0"
                 data-testid="input-search-teams"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
-                  <X className="w-3 h-3" />
+                <button onClick={() => setSearchQuery("")} className="text-white/80 hover:text-white">
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
