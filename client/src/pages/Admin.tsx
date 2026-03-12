@@ -874,8 +874,6 @@ export default function Admin() {
               const totalBets = periodBets.length;
               const wonBets   = periodBets.filter(b=>b.status==="won").length;
               const lostBets  = periodBets.filter(b=>b.status==="lost").length;
-              const taxa      = totalBets > 0 ? (wonBets/totalBets)*100 : 0;
-              const oddMedia  = totalBets > 0 ? periodBets.reduce((s,b)=>s+b.totalOdds,0)/totalBets : 0;
 
               const bestDay  = [...finDayData].sort((a,b)=>b.Lucro-a.Lucro)[0];
               const worstDay = [...finDayData].sort((a,b)=>a.Lucro-b.Lucro)[0];
@@ -924,12 +922,11 @@ export default function Admin() {
                   </div>
 
                   {/* KPI cards linha 2 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
                       { icon: <CalendarDays className="w-5 h-5 text-primary"/>, label:"Total de Bilhetes", value: totalBets.toString() },
                       { icon: <Trophy className="w-5 h-5 text-green-400"/>, label:`Ganhos / Perdidos`, value:`${wonBets} / ${lostBets}` },
                       { icon: <Target className="w-5 h-5 text-orange-400"/>, label:"Taxa de Acerto", value: PCT(wonBets,totalBets) },
-                      { icon: <BarChart2 className="w-5 h-5 text-purple-400"/>, label:"Odd Média", value: oddMedia>0?oddMedia.toFixed(2):"—" },
                     ].map(({icon,label,value})=>(
                       <Card key={label}>
                         <CardContent className="p-3">
