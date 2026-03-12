@@ -1703,6 +1703,144 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Auto-resolver bilhete buscando resultado real na API-Football
+  app.post("/api/admin/bets/:id/auto-resolve", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bet = await storage.getBetSlip(id);
+      if (!bet) return res.status(404).json({ error: "Bilhete não encontrado" });
+
+      // Extrair fixture IDs únicos das seleções (formato: api-football-{fixtureId}-...)
+      const fixtureIds = [...new Set(
+        bet.selections
+          .map(s => s.gameId.startsWith("api-football-") ? s.gameId.replace("api-football-", "") : null)
+          .filter(Boolean) as string[]
+      )];
+
+      if (fixtureIds.length === 0) {
+        return res.status(400).json({ error: "Bilhete sem fixtures da API-Football para resolver automaticamente." });
+      }
+
+      // Buscar resultados de todos os fixtures
+      const fixtureResults = new Map<string, {
+        statusShort: string;
+        homeGoals: number; awayGoals: number;
+        htHome: number; htAway: number;
+        homeTeam: string; awayTeam: string;
+      }>();
+
+      for (const fid of fixtureIds) {
+        const url = `https://v3.football.api-sports.io/fixtures?id=${fid}`;
+        const resp = await fetch(url, {
+          headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
+        });
+        const data: any = await resp.json();
+        const fix = data?.response?.[0];
+        if (!fix) continue;
+        fixtureResults.set(fid, {
+          statusShort: fix.fixture?.status?.short ?? "",
+          homeGoals: fix.goals?.home ?? 0,
+          awayGoals: fix.goals?.away ?? 0,
+          htHome: fix.score?.halftime?.home ?? 0,
+          htAway: fix.score?.halftime?.away ?? 0,
+          homeTeam: fix.teams?.home?.name ?? "",
+          awayTeam: fix.teams?.away?.name ?? "",
+        });
+      }
+
+      // Verificar se todos os jogos terminaram
+      const notFinished = fixtureIds.filter(fid => {
+        const r = fixtureResults.get(fid);
+        return !r || !["FT","AET","PEN","AWD","WO"].includes(r.statusShort);
+      });
+      if (notFinished.length > 0) {
+        const statuses = notFinished.map(fid => fixtureResults.get(fid)?.statusShort || "não encontrado").join(", ");
+        return res.status(422).json({ error: `Jogo ainda não encerrado (status: ${statuses}). Tente novamente após o fim da partida.` });
+      }
+
+      // Resolver cada seleção
+      const resolvedSelections = bet.selections.map(sel => {
+        const fid = sel.gameId.startsWith("api-football-") ? sel.gameId.replace("api-football-", "") : null;
+        if (!fid) return sel;
+        const fix = fixtureResults.get(fid);
+        if (!fix) return sel;
+
+        const { homeGoals, awayGoals, htHome, htAway, homeTeam, awayTeam } = fix;
+
+        let selResult: "won" | "lost" = "lost";
+
+        if (sel.marketKey === "h2h") {
+          // Resultado 1X2
+          const actual = homeGoals > awayGoals ? homeTeam
+                       : awayGoals > homeGoals ? awayTeam
+                       : "Empate";
+          // Comparar normalizado (case-insensitive, trim)
+          selResult = sel.outcome.trim().toLowerCase() === actual.trim().toLowerCase() ? "won" : "lost";
+
+        } else if (sel.marketKey === "extra-1") {
+          // Ambas as equipes marcam (BTTS)
+          const btts = homeGoals > 0 && awayGoals > 0;
+          const betYes = sel.outcome.toLowerCase().includes("sim") || sel.outcome.toLowerCase().includes("yes");
+          selResult = (btts === betYes) ? "won" : "lost";
+
+        } else if (sel.marketKey === "extra-2") {
+          // HT/FT — formato: "HT/FT Double-{HT}/{FT}"
+          const htResult = htHome > htAway ? homeTeam : htAway > htHome ? awayTeam : "Empate";
+          const ftResult = homeGoals > awayGoals ? homeTeam : awayGoals > homeGoals ? awayTeam : "Empate";
+          const actualCombo = `${htResult}/${ftResult}`;
+          // Extrair o combo do outcome: "HT/FT Double-X/Y"
+          const outcomePart = sel.outcome.replace(/^HT\/FT Double-/i, "").trim();
+          selResult = outcomePart.toLowerCase() === actualCombo.toLowerCase() ? "won" : "lost";
+
+        } else if (sel.marketKey === "extra-5") {
+          // Total de gols (Over/Under 2.5)
+          const total = homeGoals + awayGoals;
+          const over = sel.outcome.toLowerCase().includes("over") || sel.outcome.toLowerCase().includes("acima") || sel.outcome.toLowerCase().includes("mais");
+          selResult = (over ? total > 2.5 : total <= 2.5) ? "won" : "lost";
+
+        } else if (sel.marketKey === "extra-4") {
+          // Placar exato — formato: "X-Y" ou "X:Y"
+          const outcomeParts = sel.outcome.match(/(\d+)[:\-](\d+)/);
+          if (outcomeParts) {
+            const [, og, ag] = outcomeParts;
+            selResult = parseInt(og) === homeGoals && parseInt(ag) === awayGoals ? "won" : "lost";
+          }
+        }
+        // Para outros mercados, mantém pending (não conseguimos resolver automaticamente)
+        else {
+          return sel; // mantém resultado anterior
+        }
+
+        return { ...sel, result: selResult };
+      });
+
+      // Calcular status geral
+      const allResolved = resolvedSelections.every(s => s.result !== "pending");
+      const anyLost = resolvedSelections.some(s => s.result === "lost");
+      const newStatus: "pending" | "won" | "lost" = allResolved ? (anyLost ? "lost" : "won") : "pending";
+
+      // Salvar seleções resolvidas individualmente e status
+      let updatedBet = bet;
+      for (const sel of resolvedSelections) {
+        if (sel.result !== "pending") {
+          const r = await storage.updateSelectionResult(updatedBet.id, sel.id, sel.result as "won" | "lost");
+          if (r) updatedBet = r;
+        }
+      }
+      if (newStatus !== "pending") {
+        const r = await storage.updateBetSlipStatus(updatedBet.id, newStatus);
+        if (r) updatedBet = r;
+      }
+
+      const resolvedCount = resolvedSelections.filter(s => s.result !== "pending").length;
+      res.json({ bet: updatedBet, resolvedCount, total: bet.selections.length, status: newStatus });
+
+    } catch (error) {
+      console.error("Error auto-resolving bet:", error);
+      res.status(500).json({ error: "Erro ao resolver bilhete automaticamente." });
+    }
+  });
+
   // Admin: Atualizar status de verificação (pagamento confirmado)
   app.patch("/api/admin/bets/:id/verified", async (req, res) => {
     try {

@@ -271,6 +271,34 @@ export default function Admin() {
     },
   });
 
+  const autoResolveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/admin/bets/${id}/auto-resolve`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      toast({
+        title: data.status === "pending"
+          ? `Resolvido parcialmente (${data.resolvedCount}/${data.total} seleções)`
+          : data.status === "won" ? "Bilhete ganhou!" : "Bilhete perdeu",
+        description: data.status === "won"
+          ? "Todas as seleções foram confirmadas como vencedoras."
+          : data.status === "lost"
+          ? "Pelo menos uma seleção foi perdida."
+          : `${data.resolvedCount} de ${data.total} seleções resolvidas. Mercados não suportados mantidos como pendentes.`,
+      });
+    },
+    onError: async (error: any) => {
+      let msg = "Não foi possível resolver automaticamente.";
+      try {
+        const body = await error.json?.();
+        if (body?.error) msg = body.error;
+      } catch {}
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+    },
+  });
+
   const updateVerifiedMutation = useMutation({
     mutationFn: async ({ id, verified }: { id: string; verified: boolean }) => {
       await apiRequest("PATCH", `/api/admin/bets/${id}/verified`, { verified });
@@ -1208,6 +1236,21 @@ export default function Admin() {
                                 </SelectItem>
                               </SelectContent>
                             </Select>
+
+                            {bet.status === "pending" && bet.selections.some(s => s.gameId.startsWith("api-football-")) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                                onClick={() => autoResolveMutation.mutate(bet.id)}
+                                disabled={autoResolveMutation.isPending}
+                                data-testid={`button-auto-resolve-${bet.id}`}
+                                title="Buscar resultado real na API-Football e resolver seleções automaticamente"
+                              >
+                                <Zap className={`w-4 h-4 mr-1 ${autoResolveMutation.isPending ? 'animate-pulse' : ''}`} />
+                                Resolver Auto
+                              </Button>
+                            )}
 
                             <Button 
                               variant="outline" 
