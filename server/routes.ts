@@ -195,17 +195,29 @@ function buildMarketsFromBookmaker(bookmaker: any, homeTeam: string, awayTeam: s
     "Total Corners",
   ]);
 
-  const markets = bookmaker.bets
+  // Agrupar bets do mesmo mercado (ex: múltiplas linhas de Escanteios) em um único bloco
+  const grouped: Record<string, { id: number; name: string; label: string; values: { value: string; odd: number }[] }> = {};
+
+  bookmaker.bets
     .filter((bet: any) => allowedMarkets.has(bet.name))
-    .map((bet: any) => ({
-      id: bet.id,
-      name: bet.name,
-      label: marketLabels[bet.name] || bet.name,
-      values: bet.values?.map((v: any) => ({
+    .forEach((bet: any) => {
+      const key = bet.name;
+      if (!grouped[key]) {
+        grouped[key] = {
+          id: bet.id,
+          name: bet.name,
+          label: marketLabels[bet.name] || bet.name,
+          values: []
+        };
+      }
+      const vals = bet.values?.map((v: any) => ({
         value: v.value,
         odd: parseFloat(v.odd)
-      })) || []
-    }));
+      })) || [];
+      grouped[key].values.push(...vals);
+    });
+
+  const markets = Object.values(grouped);
 
   return {
     homeTeam,
