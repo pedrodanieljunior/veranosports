@@ -234,12 +234,39 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       });
   }
 
-  const markets = Object.values(grouped).map((g) => ({
-    id: g.id,
-    name: g.name,
-    label: g.label,
-    values: g.values,
-  }));
+  // Filtrar linhas não-padrão (Asian quarter lines como 2.75, 3.25, etc.)
+  // Para Gols: manter apenas linhas x.5 (0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
+  // Para Escanteios: manter apenas linhas x.5 e inteiros (8, 8.5, 9, 9.5, 10, 10.5...)
+  function isStandardGoalLine(value: string): boolean {
+    const match = value.match(/^(Over|Under)\s+([\d.]+)$/i);
+    if (!match) return true;
+    const num = parseFloat(match[2]);
+    const decimal = num - Math.floor(num);
+    return decimal === 0.5;
+  }
+
+  function isStandardCornerLine(value: string): boolean {
+    const match = value.match(/^(Over|Under)\s+([\d.]+)$/i);
+    if (!match) return true;
+    const num = parseFloat(match[2]);
+    const decimal = num - Math.floor(num);
+    return decimal === 0 || decimal === 0.5;
+  }
+
+  const markets = Object.values(grouped).map((g) => {
+    let values = g.values;
+    if (g.name === "Goals Over/Under" || g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
+      values = values.filter((v) => isStandardGoalLine(v.value));
+    } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
+      values = values.filter((v) => isStandardCornerLine(v.value));
+    }
+    return {
+      id: g.id,
+      name: g.name,
+      label: g.label,
+      values,
+    };
+  });
 
   return {
     homeTeam,
