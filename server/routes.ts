@@ -656,16 +656,112 @@ export async function registerRoutes(
           )
         );
 
+        // Coletar fixtures por liga
+        const fixturesByLeague: Array<{ league: { id: number; key: string; name: string; season: number }; fixtures: any[] }> = [];
         for (const { league, fixtures } of fixtureResults) {
           const upcoming = fixtures.filter((f: any) => {
             const status = f.fixture?.status?.short;
             const gameDate = new Date(f.fixture?.date).getTime();
             return status === "NS" && gameDate > nowMs && gameDate <= next24hMs;
           }).slice(0, 5);
+          if (upcoming.length > 0) fixturesByLeague.push({ league, fixtures: upcoming });
+        }
 
+        // Buscar odds sequencialmente por liga (evita throttling da API)
+        const todayOddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
+        const bkPreferred = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
+
+        const extractH2hFromBk = (bk: any, title?: string) => {
+          if (!bk) return null;
+          const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+          if (!h2h || h2h.values?.length < 2) return null;
+          return [{
+            key: "api-football",
+            title: title || bk.name,
+            markets: [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
+              name: v.value === "Home" ? "__HOME__" : v.value === "Away" ? "__AWAY__" : "Empate",
+              price: parseFloat(v.odd)
+            }))}]
+          }];
+        };
+
+        const populateFromBulk = (entries: any[]) => {
+          for (const entry of entries) {
+            const fid = entry.fixture?.id;
+            if (!fid || todayOddsMap.has(fid)) continue;
+            const allBks: any[] = entry.bookmakers || [];
+            const bk = allBks.find((b: any) => bkPreferred.includes(b.name)) || allBks[0];
+            const result = extractH2hFromBk(bk);
+            if (result) todayOddsMap.set(fid, result);
+          }
+        };
+
+        for (const { league, fixtures: upcoming } of fixturesByLeague) {
+          // 1. Verificar se o cache da liga já tem os dados (populado pelo endpoint /api/odds/:sportKey)
+          const leagueCache = cache.get<any[]>(`odds_${league.key}`);
+          if (leagueCache) {
+            for (const game of leagueCache) {
+              const fid = parseInt(game.id.replace("api-football-", ""), 10);
+              if (!isNaN(fid) && !todayOddsMap.has(fid) && game.bookmakers?.length > 0) {
+                todayOddsMap.set(fid, game.bookmakers);
+              }
+            }
+            continue; // liga já está em cache, pular busca de odds
+          }
+
+          // 2. Buscar odds em bloco para esta liga (hoje e amanhã sequencialmente)
+          const fidSet = new Set(upcoming.map((f: any) => f.fixture.id));
+          for (const dateStr of [todayStr, next24hStr]) {
+            if ([...fidSet].every(fid => todayOddsMap.has(fid))) break; // todos já encontrados
+            try {
+              const r = await fetch(
+                `${API_FOOTBALL_BASE}/odds?league=${league.id}&season=${league.season}&date=${dateStr}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+              );
+              if (r.ok) populateFromBulk((await r.json()).response || []);
+            } catch (e) { /* silently ignore */ }
+          }
+
+          // 3. Fallback individual para fixtures ainda sem odds após o bulk
+          const missed = upcoming.filter((f: any) => !todayOddsMap.has(f.fixture.id));
+          for (const fixture of missed) {
+            const fid = fixture.fixture.id;
+            try {
+              const r = await fetch(
+                `${API_FOOTBALL_BASE}/odds?fixture=${fid}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+              );
+              if (r.ok) {
+                const d = await r.json();
+                const allBks: any[] = d.response?.[0]?.bookmakers || [];
+                const bk = allBks.find((b: any) => bkPreferred.includes(b.name)) || allBks[0];
+                const result = extractH2hFromBk(bk);
+                if (result) todayOddsMap.set(fid, result);
+              }
+            } catch (e) { /* silently ignore */ }
+          }
+        }
+
+        for (const { league, fixtures: upcoming } of fixturesByLeague) {
           for (const fixture of upcoming) {
+            const fid = fixture.fixture.id;
+            let bkData = todayOddsMap.get(fid);
+            if (bkData) {
+              // Substituir placeholders com nomes reais
+              bkData = bkData.map(bk => ({
+                ...bk,
+                markets: bk.markets.map((mkt: any) => ({
+                  ...mkt,
+                  outcomes: mkt.outcomes.map((o: any) => ({
+                    ...o,
+                    name: o.name === "__HOME__" ? formatTeamName(fixture.teams.home.name) :
+                          o.name === "__AWAY__" ? formatTeamName(fixture.teams.away.name) : o.name
+                  }))
+                }))
+              }));
+            }
             allGames.push({
-              id: `api-football-${fixture.fixture.id}`,
+              id: `api-football-${fid}`,
               sportKey: league.key,
               sportTitle: league.name,
               commenceTime: fixture.fixture.date,
@@ -673,7 +769,7 @@ export async function registerRoutes(
               awayTeam: formatTeamName(fixture.teams.away.name),
               homeLogo: fixture.teams.home.logo,
               awayLogo: fixture.teams.away.logo,
-              bookmakers: [],
+              bookmakers: bkData || [],
               _priority: LEAGUE_PRIORITY[league.key] ?? 3,
             });
           }
