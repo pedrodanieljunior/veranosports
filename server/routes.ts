@@ -250,7 +250,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     if (!match) return true;
     const num = parseFloat(match[2]);
     const decimal = num - Math.floor(num);
-    return decimal === 0 || decimal === 0.5;
+    return decimal === 0.5;
   }
 
   const markets = Object.values(grouped).map((g) => {
