@@ -1056,7 +1056,7 @@ export default function Admin() {
                                   <th className="text-center py-2 px-2 text-red-400">Perdidas</th>
                                   <th className="text-center py-2 px-2 text-yellow-400">Pend.</th>
                                   <th className="text-right py-2 px-2">Entrada</th>
-                                  <th className="text-right py-2 px-2">Saída</th>
+                                  <th className="text-right py-2 px-2">Prêmios pagos</th>
                                   <th className="text-right py-2">Lucro</th>
                                 </tr>
                               </thead>
