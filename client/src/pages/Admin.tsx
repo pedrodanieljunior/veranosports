@@ -612,7 +612,7 @@ export default function Admin() {
                           </div>
                           <p className="text-xs text-muted-foreground mb-1">Retorno {g.range}</p>
                           <p className={`text-2xl font-bold ${g.textCls}`}>
-                            R${g.bets.reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                            R${g.bets.reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">exposição total nessa faixa</p>
                         </button>
@@ -813,7 +813,7 @@ export default function Admin() {
                   <div className="flex justify-between text-sm font-medium">
                     <span className="text-muted-foreground">
                       Usado: <span className="text-foreground font-bold">
-                        R${(limitsData?.dailyTotal ?? 0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                        R${(limitsData?.dailyTotal ?? 0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                       </span>
                     </span>
                     <span className="text-muted-foreground">
@@ -821,7 +821,7 @@ export default function Admin() {
                     </span>
                     <span className="text-muted-foreground">
                       Disponível: <span className={`font-bold ${limitsData?.isDailyLimitReached ? "text-red-400" : "text-green-500"}`}>
-                        R${(limitsData?.dailyRemaining ?? 50000).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                        R${(limitsData?.dailyRemaining ?? 50000).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                       </span>
                     </span>
                   </div>
@@ -834,7 +834,7 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
                     <p className="text-xl font-bold text-green-500">
-                      R${bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                      R${bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Entradas (PIX confirmados)</p>
                   </CardContent>
@@ -843,7 +843,7 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <ArrowDownCircle className="w-5 h-5 mx-auto mb-1 text-red-400" />
                     <p className="text-xl font-bold text-red-400">
-                      R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                      R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Prêmios pagos</p>
                   </CardContent>
@@ -852,7 +852,7 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
                     <p className="text-xl font-bold text-blue-500">
-                      R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                      R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Exposição pendente</p>
                   </CardContent>
@@ -864,7 +864,7 @@ export default function Admin() {
                       (bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)) >= 0
                         ? "text-green-500" : "text-red-400"
                     }`}>
-                      R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                      R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Saldo líquido</p>
                   </CardContent>
