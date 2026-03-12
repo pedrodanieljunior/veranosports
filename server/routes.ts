@@ -204,37 +204,42 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
 
   // Agrupar bets do mesmo mercado de TODOS os bookmakers, deduplicando por valor
   // Isso maximiza as linhas disponíveis (ex: escanteios Over 8.5, 9.5, 10.5, 11.5...)
-  const grouped: Record<string, { id: number; name: string; label: string; seenValues: Set<string>; values: { value: string; odd: number }[] }> = {};
+  const grouped: Record<string, { id: number; name: string; label: string; seenKeys: Record<string, boolean>; values: { value: string; odd: number }[] }> = {};
 
   for (const bk of bookmakers) {
-    const bets = bk.bets || [];
+    const bets: any[] = bk.bets || [];
     bets
       .filter((bet: any) => allowedMarkets.has(bet.name))
       .forEach((bet: any) => {
-        const key = bet.name;
+        const key: string = bet.name;
         if (!grouped[key]) {
           grouped[key] = {
             id: bet.id,
             name: bet.name,
             label: marketLabels[bet.name] || bet.name,
-            seenValues: new Set(),
+            seenKeys: {},
             values: []
           };
         }
-        const vals: { value: string; odd: number }[] = bet.values?.map((v: any) => ({
-          value: v.value,
+        const vals: { value: string; odd: number }[] = (bet.values || []).map((v: any) => ({
+          value: String(v.value),
           odd: parseFloat(v.odd)
-        })) || [];
+        }));
         for (const v of vals) {
-          if (!grouped[key].seenValues.has(v.value)) {
-            grouped[key].seenValues.add(v.value);
+          if (!grouped[key].seenKeys[v.value]) {
+            grouped[key].seenKeys[v.value] = true;
             grouped[key].values.push(v);
           }
         }
       });
   }
 
-  const markets = Object.values(grouped).map(({ seenValues: _, ...rest }) => rest);
+  const markets = Object.values(grouped).map((g) => ({
+    id: g.id,
+    name: g.name,
+    label: g.label,
+    values: g.values,
+  }));
 
   return {
     homeTeam,
