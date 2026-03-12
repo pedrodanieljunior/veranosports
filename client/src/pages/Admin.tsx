@@ -118,7 +118,7 @@ export default function Admin() {
 
   const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
     const db = bets.filter(b => new Date(b.createdAt).getDay() === idx);
-    const e = db.reduce((s,b)=>s+b.stake,0);
+    const e = db.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
     const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
     return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
   }), [bets]);
@@ -130,7 +130,7 @@ export default function Admin() {
       keys.forEach(key => {
         const cur = map.get(key) ?? { total:0, won:0, lost:0, pending:0, entrada:0, saida:0 };
         cur.total++;
-        cur.entrada += bet.stake;
+        if (bet.verified) cur.entrada += bet.stake;
         if (bet.status==="won") { cur.won++; cur.saida += bet.potentialWin; }
         else if (bet.status==="lost") cur.lost++;
         else cur.pending++;
@@ -910,7 +910,7 @@ export default function Admin() {
           <TabsContent value="financeiro">
             {(() => {
 
-              const entrada   = periodBets.reduce((s,b)=>s+b.stake,0);
+              const entrada   = periodBets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
               const saida     = periodBets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
               const lucro     = entrada - saida;
               const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
