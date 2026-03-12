@@ -113,30 +113,6 @@ export function GamesList({
   const today = new Date();
   const formattedDate = format(today, "EEEE, d 'de' MMMM", { locale: ptBR });
 
-  // Ícones de bandeira por liga
-  const LEAGUE_FLAGS: Record<string, string> = {
-    "soccer_brazil_campeonato": "🇧🇷",
-    "soccer_brazil_serie_b": "🇧🇷",
-    "soccer_brazil_copa_do_brasil": "🇧🇷",
-    "soccer_conmebol_copa_libertadores": "🌎",
-    "soccer_conmebol_copa_sudamericana": "🌎",
-    "soccer_uefa_champs_league": "⭐",
-    "soccer_uefa_europa_league": "🇪🇺",
-    "soccer_uefa_europa_conference_league": "🇪🇺",
-    "soccer_epl": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "soccer_fa_cup": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "soccer_spain_la_liga": "🇪🇸",
-    "soccer_germany_bundesliga": "🇩🇪",
-    "soccer_italy_serie_a": "🇮🇹",
-    "soccer_france_ligue_one": "🇫🇷",
-    "soccer_portugal_primeira_liga": "🇵🇹",
-    "soccer_netherlands_eredivisie": "🇳🇱",
-    "soccer_turkey_super_league": "🇹🇷",
-    "soccer_argentina_primera_division": "🇦🇷",
-    "soccer_mexico_ligamx": "🇲🇽",
-    "soccer_usa_mls": "🇺🇸",
-    "soccer_japan_j_league": "🇯🇵",
-  };
 
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-auto bg-transparent">
@@ -174,12 +150,11 @@ export function GamesList({
           {leagueOrder.map((league) => {
             const leagueKey = gamesByLeague?.[league]?.[0]?.sportKey || "";
             const displayName = translateLeagueName(leagueKey, league);
-            const flag = LEAGUE_FLAGS[leagueKey] || "⚽";
             return (
               <button
                 key={league}
                 onClick={() => setActiveLeague(league)}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   currentLeague === league
                     ? "bg-yellow-500 text-white shadow-sm font-bold"
                     : isDark
@@ -188,9 +163,7 @@ export function GamesList({
                 }`}
                 data-testid={`button-league-tab-${league}`}
               >
-                <span>{flag}</span>
-                <span>{displayName}</span>
-                <span className="text-[10px] opacity-70">({gamesByLeague?.[league]?.length})</span>
+                {displayName} <span className="text-[10px] opacity-70">({gamesByLeague?.[league]?.length})</span>
               </button>
             );
           })}
@@ -213,7 +186,6 @@ export function GamesList({
             const leagueGames = gamesByLeague?.[league] || [];
             const leagueKey = leagueGames[0]?.sportKey || "";
             const displayName = translateLeagueName(leagueKey, league);
-            const flag = LEAGUE_FLAGS[leagueKey] || "⚽";
             return (
               <div key={league}>
                 <button
@@ -221,7 +193,6 @@ export function GamesList({
                   className={`flex items-center gap-2 mb-3 w-full text-left group`}
                   data-testid={`button-league-section-${leagueKey}`}
                 >
-                  <span className="text-base">{flag}</span>
                   <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-800"}`}>
                     {displayName}
                   </h3>
