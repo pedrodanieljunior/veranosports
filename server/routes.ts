@@ -6,6 +6,21 @@ import { z } from "zod";
 import { cache } from "./cache";
 import QRCode from "qrcode";
 
+// Formatar nome de time com Title Case, preservando conectivos portugueses em minúsculo
+function formatTeamName(name: string): string {
+  if (!name) return name;
+  const minorWords = new Set(['da', 'de', 'do', 'dos', 'das', 'e', 'a', 'as', 'os', 'em', 'no', 'na', 'nos', 'nas', 'ao', 'aos', 'the', 'of', 'and']);
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map((word, index) => {
+      if (!word) return word;
+      if (index > 0 && minorWords.has(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
 // Configuração PIX - telefone com código do país
 const PIX_KEY = "+5592993848238";
 const PIX_NAME = "WENDELL SILVA DE SOUZA";
@@ -582,8 +597,8 @@ export async function registerRoutes(
                 sportKey: game.sport_key,
                 sportTitle: game.sport_title,
                 commenceTime: game.commence_time,
-                homeTeam: game.home_team,
-                awayTeam: game.away_team,
+                homeTeam: formatTeamName(game.home_team),
+                awayTeam: formatTeamName(game.away_team),
                 bookmakers: game.bookmakers || [],
                 _priority: LEAGUE_PRIORITY[game.sport_key] ?? 3,
               });
@@ -654,8 +669,8 @@ export async function registerRoutes(
               sportKey: league.key,
               sportTitle: league.name,
               commenceTime: fixture.fixture.date,
-              homeTeam: fixture.teams.home.name,
-              awayTeam: fixture.teams.away.name,
+              homeTeam: formatTeamName(fixture.teams.home.name),
+              awayTeam: formatTeamName(fixture.teams.away.name),
               homeLogo: fixture.teams.home.logo,
               awayLogo: fixture.teams.away.logo,
               bookmakers: [],
@@ -741,27 +756,27 @@ export async function registerRoutes(
                     markets: [{
                       key: "h2h",
                       outcomes: h2h.values.map((v: any) => ({
-                        name: v.value === "Home" ? fixture.teams.home.name :
-                              v.value === "Away" ? fixture.teams.away.name : "Empate",
+                        name: v.value === "Home" ? formatTeamName(fixture.teams.home.name) :
+                              v.value === "Away" ? formatTeamName(fixture.teams.away.name) : "Empate",
                         price: parseFloat(v.odd)
                       }))
                     }]
                   }];
                 } else {
-                  bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
+                  bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
                 }
               }
             } catch (err) {
               console.error("Error fetching brasileirao fixture odds:", err);
-              bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
+              bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
             }
             return {
               id: `api-football-${fixture.fixture.id}`,
               sportKey: "soccer_brazil_campeonato",
               sportTitle: "Brasileirão Série A",
               commenceTime: fixture.fixture.date,
-              homeTeam: fixture.teams.home.name,
-              awayTeam: fixture.teams.away.name,
+              homeTeam: formatTeamName(fixture.teams.home.name),
+              awayTeam: formatTeamName(fixture.teams.away.name),
               homeLogo: fixture.teams.home.logo,
               awayLogo: fixture.teams.away.logo,
               bookmakers
@@ -788,8 +803,8 @@ export async function registerRoutes(
               sportKey: game.sport_key,
               sportTitle: game.sport_title,
               commenceTime: game.commence_time,
-              homeTeam: game.home_team,
-              awayTeam: game.away_team,
+              homeTeam: formatTeamName(game.home_team),
+              awayTeam: formatTeamName(game.away_team),
               bookmakers: game.bookmakers || []
             }))
             .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
@@ -840,8 +855,8 @@ export async function registerRoutes(
                 sportKey: game.sport_key,
                 sportTitle: game.sport_title,
                 commenceTime: game.commence_time,
-                homeTeam: game.home_team,
-                awayTeam: game.away_team,
+                homeTeam: formatTeamName(game.home_team),
+                awayTeam: formatTeamName(game.away_team),
                 bookmakers: game.bookmakers || []
               });
             }
@@ -897,8 +912,8 @@ export async function registerRoutes(
               sportKey: game.sport_key,
               sportTitle: game.sport_title,
               commenceTime: game.commence_time,
-              homeTeam: game.home_team,
-              awayTeam: game.away_team,
+              homeTeam: formatTeamName(game.home_team),
+              awayTeam: formatTeamName(game.away_team),
               bookmakers: game.bookmakers || []
             }));
         } else {
@@ -994,19 +1009,19 @@ export async function registerRoutes(
                           markets: [{
                             key: "h2h",
                             outcomes: h2h.values.map((v: any) => ({
-                              name: v.value === "Home" ? fixture.teams.home.name : 
-                                    v.value === "Away" ? fixture.teams.away.name : "Empate",
+                              name: v.value === "Home" ? formatTeamName(fixture.teams.home.name) : 
+                                    v.value === "Away" ? formatTeamName(fixture.teams.away.name) : "Empate",
                               price: parseFloat(v.odd)
                             }))
                           }]
                         }];
                       } else {
-                        bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
+                        bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
                       }
                     }
                   } catch (err) {
                     console.error("Error fetching fixture odds:", err);
-                    bookmakers = generateH2hBookmakers(fixture.teams.home.name, fixture.teams.away.name);
+                    bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
                   }
                   
                   return {
@@ -1014,8 +1029,8 @@ export async function registerRoutes(
                     sportKey: sportKey,
                     sportTitle: league.name,
                     commenceTime: fixture.fixture.date,
-                    homeTeam: fixture.teams.home.name,
-                    awayTeam: fixture.teams.away.name,
+                    homeTeam: formatTeamName(fixture.teams.home.name),
+                    awayTeam: formatTeamName(fixture.teams.away.name),
                     homeLogo: fixture.teams.home.logo,
                     awayLogo: fixture.teams.away.logo,
                     bookmakers
@@ -1360,8 +1375,8 @@ export async function registerRoutes(
             return {
               id: fixture.fixture.id,
               date: fixture.fixture.date,
-              homeTeam: fixture.teams.home.name,
-              awayTeam: fixture.teams.away.name,
+              homeTeam: formatTeamName(fixture.teams.home.name),
+              awayTeam: formatTeamName(fixture.teams.away.name),
               homeLogo: fixture.teams.home.logo,
               awayLogo: fixture.teams.away.logo,
               league: fixture.league.name,
@@ -1377,8 +1392,8 @@ export async function registerRoutes(
             return {
               id: fixture.fixture.id,
               date: fixture.fixture.date,
-              homeTeam: fixture.teams.home.name,
-              awayTeam: fixture.teams.away.name,
+              homeTeam: formatTeamName(fixture.teams.home.name),
+              awayTeam: formatTeamName(fixture.teams.away.name),
               homeLogo: fixture.teams.home.logo,
               awayLogo: fixture.teams.away.logo,
               league: fixture.league.name,
