@@ -383,13 +383,26 @@ export async function registerRoutes(
 
         const footballLeagues = [
           { id: 71, key: "soccer_brazil_campeonato", name: "Campeonato Brasileiro Série A", season: brazilianSeason },
+          { id: 72, key: "soccer_brazil_serie_b", name: "Brasileirão Série B", season: brazilianSeason },
+          { id: 73, key: "soccer_brazil_copa_do_brasil", name: "Copa do Brasil", season: brazilianSeason },
+          { id: 13, key: "soccer_conmebol_copa_libertadores", name: "Copa Libertadores", season: brazilianSeason },
+          { id: 11, key: "soccer_conmebol_copa_sudamericana", name: "Copa Sul-Americana", season: brazilianSeason },
           { id: 2, key: "soccer_uefa_champs_league", name: "UEFA Champions League", season: europeanSeason },
           { id: 39, key: "soccer_epl", name: "Premier League", season: europeanSeason },
+          { id: 45, key: "soccer_fa_cup", name: "FA Cup", season: europeanSeason },
           { id: 140, key: "soccer_spain_la_liga", name: "La Liga – Espanha", season: europeanSeason },
           { id: 78, key: "soccer_germany_bundesliga", name: "Bundesliga – Alemanha", season: europeanSeason },
           { id: 135, key: "soccer_italy_serie_a", name: "Serie A – Itália", season: europeanSeason },
           { id: 61, key: "soccer_france_ligue_one", name: "Ligue 1 – França", season: europeanSeason },
           { id: 3, key: "soccer_uefa_europa_league", name: "UEFA Europa League", season: europeanSeason },
+          { id: 848, key: "soccer_uefa_europa_conference_league", name: "Conference League", season: europeanSeason },
+          { id: 94, key: "soccer_portugal_primeira_liga", name: "Primeira Liga – Portugal", season: europeanSeason },
+          { id: 88, key: "soccer_netherlands_eredivisie", name: "Eredivisie – Holanda", season: europeanSeason },
+          { id: 203, key: "soccer_turkey_super_league", name: "Süper Lig – Turquia", season: europeanSeason },
+          { id: 128, key: "soccer_argentina_primera_division", name: "Primera División – Argentina", season: brazilianSeason },
+          { id: 262, key: "soccer_mexico_ligamx", name: "Liga MX – México", season: brazilianSeason },
+          { id: 253, key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
+          { id: 98, key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
         ];
 
         const todayStr = new Date().toISOString().split('T')[0];
@@ -673,15 +686,26 @@ export async function registerRoutes(
         
         const leagueMapping: Record<string, { id: number; name: string; season: number }> = {
           "soccer_brazil_campeonato": { id: 71, name: "Brasileirão Série A", season: brazilianSeason },
+          "soccer_brazil_serie_b": { id: 72, name: "Brasileirão Série B", season: brazilianSeason },
+          "soccer_brazil_copa_do_brasil": { id: 73, name: "Copa do Brasil", season: brazilianSeason },
+          "soccer_conmebol_copa_libertadores": { id: 13, name: "Copa Libertadores", season: brazilianSeason },
+          "soccer_conmebol_copa_sudamericana": { id: 11, name: "Copa Sudamericana", season: brazilianSeason },
           "soccer_epl": { id: 39, name: "Premier League", season: europeanSeason },
+          "soccer_fa_cup": { id: 45, name: "FA Cup", season: europeanSeason },
           "soccer_spain_la_liga": { id: 140, name: "La Liga", season: europeanSeason },
           "soccer_italy_serie_a": { id: 135, name: "Serie A", season: europeanSeason },
           "soccer_germany_bundesliga": { id: 78, name: "Bundesliga", season: europeanSeason },
           "soccer_france_ligue_one": { id: 61, name: "Ligue 1", season: europeanSeason },
           "soccer_uefa_champs_league": { id: 2, name: "Champions League", season: europeanSeason },
           "soccer_uefa_europa_league": { id: 3, name: "Europa League", season: europeanSeason },
+          "soccer_uefa_europa_conference_league": { id: 848, name: "Conference League", season: europeanSeason },
           "soccer_portugal_primeira_liga": { id: 94, name: "Primeira Liga", season: europeanSeason },
           "soccer_netherlands_eredivisie": { id: 88, name: "Eredivisie", season: europeanSeason },
+          "soccer_turkey_super_league": { id: 203, name: "Süper Lig", season: europeanSeason },
+          "soccer_argentina_primera_division": { id: 128, name: "Primera División", season: brazilianSeason },
+          "soccer_mexico_ligamx": { id: 262, name: "Liga MX", season: brazilianSeason },
+          "soccer_usa_mls": { id: 253, name: "MLS", season: 2026 },
+          "soccer_japan_j_league": { id: 98, name: "J1 League", season: 2026 },
         };
         
         const league = leagueMapping[sportKey];
