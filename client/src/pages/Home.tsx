@@ -37,12 +37,19 @@ export default function Home() {
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
   const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, refetchInterval: 5 * 60 * 1000 });
   const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, refetchInterval: 5 * 60 * 1000 });
-  const hasBrasileiraoToday = todayGames.some(g => g.sportKey === "soccer_brazil_campeonato");
-  const upcomingBrasileirao = brasileiraoGames.filter(g => !todayGames.some(tg => tg.id === g.id)).slice(0, 6);
   const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, refetchInterval: 5 * 60 * 1000 });
 
-  const games = selectedSport ? leagueGames : todayGames;
-  const gamesLoading = selectedSport ? leagueGamesLoading : todayGamesLoading;
+  // Merge: Brasileirão sempre primeiro, deduplicando com os jogos de hoje
+  const mergedTodayGames: Game[] = (() => {
+    const todayIds = new Set(todayGames.map(g => g.id));
+    const extraBr = brasileiraoGames.filter(g => !todayIds.has(g.id));
+    const brFromToday = todayGames.filter(g => g.sportKey === "soccer_brazil_campeonato");
+    const otherToday = todayGames.filter(g => g.sportKey !== "soccer_brazil_campeonato");
+    return [...brFromToday, ...extraBr, ...otherToday];
+  })();
+
+  const games = selectedSport ? leagueGames : mergedTodayGames;
+  const gamesLoading = selectedSport ? leagueGamesLoading : (todayGamesLoading && brasileiraoLoading);
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
 
   const isSearching = debouncedSearch.trim().length >= 2;
@@ -176,7 +183,7 @@ export default function Home() {
           </div>
         </header>
         <div className="flex-1">
-          <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday && !isSearching && !isTyping ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} isDark={true} />
+          <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
         </div>
       </div>
 
@@ -262,7 +269,7 @@ export default function Home() {
 
             {/* Games content */}
             <div className="pb-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} upcomingBrasileirao={!selectedSport && !hasBrasileiraoToday ? upcomingBrasileirao : []} brasileiraoLoading={brasileiraoLoading} />
+              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} />
             </div>
           </div>
         </div>
