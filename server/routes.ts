@@ -253,12 +253,30 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     return decimal === 0.5;
   }
 
+  const overUnderMarkets = new Set(["Goals Over/Under", "Goals Over/Under First Half", "Goals Over/Under - Second Half", "Corners Over Under", "Total Corners"]);
+
+  function sortOverUnder(values: { value: string; odd: number }[]) {
+    return [...values].sort((a, b) => {
+      const parseVal = (s: string) => {
+        const m = s.match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return 0;
+        const num = parseFloat(m[2]);
+        const isUnder = m[1].toLowerCase() === "under" ? 0.1 : 0;
+        return num + isUnder;
+      };
+      return parseVal(a.value) - parseVal(b.value);
+    });
+  }
+
   const markets = Object.values(grouped).map((g) => {
     let values = g.values;
     if (g.name === "Goals Over/Under" || g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
       values = values.filter((v) => isStandardGoalLine(v.value));
     } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
       values = values.filter((v) => isStandardCornerLine(v.value));
+    }
+    if (overUnderMarkets.has(g.name)) {
+      values = sortOverUnder(values);
     }
     return {
       id: g.id,
