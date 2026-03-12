@@ -139,7 +139,7 @@ export default function Home() {
                   <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
                   {[
                     { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
-                    { key: "soccer_england_league1", label: "Premier League" },
+                    { key: "soccer_epl", label: "Premier League" },
                     { key: "soccer_uefa_champs_league", label: "Champions League" },
                     { key: "soccer_spain_la_liga", label: "La Liga" },
                     { key: "soccer_italy_serie_a", label: "Serie A" },

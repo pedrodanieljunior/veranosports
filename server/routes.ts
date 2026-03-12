@@ -233,40 +233,43 @@ export async function registerRoutes(
 
   app.get("/api/sports", async (req, res) => {
     try {
-      if (!ODDS_API_KEY) {
-        return res.status(500).json({ error: "ODDS_API_KEY not configured" });
-      }
-      
-      const cached = cache.get<any[]>("sports");
-      if (cached) {
-        return res.json(cached);
-      }
-      
-      // Buscar esportes da The Odds API
-      const response = await fetch(`${ODDS_API_BASE}/sports?apiKey=${ODDS_API_KEY}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("The Odds API sports error:", errorText);
-        return res.status(response.status).json({ error: "Failed to fetch sports" });
-      }
-      
-      const sports = await response.json();
-      
-      // Filtrar apenas ligas permitidas, na ordem definida
-      const sportsMap = new Map(sports.map((s: any) => [s.key, s]));
-      const soccerSports = ALLOWED_LEAGUES_ORDERED
-        .filter(key => sportsMap.has(key))
-        .map(key => {
-          const s = sportsMap.get(key);
-          return { ...s, leagueId: LEAGUE_MAPPING[key] || null };
-        });
+      // Lista estática — sem chamada à API externa, sem consumir cota
+      const LEAGUE_TITLES: Record<string, string> = {
+        "soccer_brazil_campeonato": "Brasileirão Série A",
+        "soccer_conmebol_copa_libertadores": "Copa Libertadores",
+        "soccer_brazil_copa_do_brasil": "Copa do Brasil",
+        "soccer_conmebol_copa_sudamericana": "Copa Sul-Americana",
+        "soccer_brazil_serie_b": "Brasileirão Série B",
+        "soccer_uefa_champs_league": "UEFA Champions League",
+        "soccer_uefa_europa_league": "UEFA Europa League",
+        "soccer_uefa_europa_conference_league": "UEFA Conference League",
+        "soccer_epl": "Premier League",
+        "soccer_fa_cup": "Copa da Inglaterra",
+        "soccer_france_ligue_one": "Ligue 1",
+        "soccer_germany_bundesliga": "Bundesliga",
+        "soccer_italy_serie_a": "Serie A",
+        "soccer_japan_j_league": "J-League",
+        "soccer_mexico_ligamx": "Liga MX",
+        "soccer_usa_mls": "MLS",
+        "soccer_netherlands_eredivisie": "Eredivisie",
+        "soccer_portugal_primeira_liga": "Primeira Liga",
+        "soccer_spain_la_liga": "La Liga",
+        "soccer_turkey_super_league": "Superliga",
+        "soccer_argentina_primera_division": "Primera División",
+      };
 
-      cache.set("sports", soccerSports, CACHE_TTL_SPORTS);
+      const soccerSports = ALLOWED_LEAGUES_ORDERED.map(key => ({
+        key,
+        group: "Soccer",
+        title: LEAGUE_TITLES[key] || key,
+        active: true,
+        leagueId: LEAGUE_MAPPING[key] || null,
+      }));
+
       res.json(soccerSports);
     } catch (error) {
-      console.error("Error fetching sports:", error);
-      res.status(500).json({ error: "Failed to fetch sports" });
+      console.error("Error building sports list:", error);
+      res.status(500).json({ error: "Failed to build sports list" });
     }
   });
 
