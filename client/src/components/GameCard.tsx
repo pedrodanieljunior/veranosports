@@ -18,10 +18,6 @@ interface GameCardProps {
 export function GameCard({ game, selections, onClick, isDark = false }: GameCardProps) {
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
-  const now = new Date();
-  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const isLive = isValidDate && gameDate <= now && gameDate >= twoHoursAgo;
-  
   const bestBookmaker = game.bookmakers[0];
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
   
@@ -41,16 +37,10 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
       data-testid={`card-game-${game.id}`}
     >
       <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-[#5a5a5a] bg-[#3d3d3d]' : 'border-gray-100 bg-gray-50'}`}>
-        {isLive ? (
-          <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse border-0">
-            AO VIVO
-          </Badge>
-        ) : (
-          <div className={`flex items-center gap-1 text-[11px] ${isDark ? 'text-[#aaaaaa]' : 'text-gray-500'}`}>
-            <Clock className="w-3 h-3" />
-            <span>{formattedDate}</span>
-          </div>
-        )}
+        <div className={`flex items-center gap-1 text-[11px] ${isDark ? 'text-[#aaaaaa]' : 'text-gray-500'}`}>
+          <Clock className="w-3 h-3" />
+          <span>{formattedDate}</span>
+        </div>
         <div className="ml-auto flex items-center gap-1">
           {hasSelections && (
             <Badge className="bg-yellow-500 text-white text-[10px] px-1.5 py-0 border-0">

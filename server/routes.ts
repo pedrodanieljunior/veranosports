@@ -266,9 +266,8 @@ export async function registerRoutes(
           "soccer_france_ligue_one",
         ];
         
-        const today = new Date();
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+        const now = new Date();
+        const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         
         for (const league of popularLeagues.slice(0, 3)) {
           try {
@@ -286,7 +285,7 @@ export async function registerRoutes(
               const todayGames = rawGames
                 .filter((game: any) => {
                   const gameDate = new Date(game.commence_time);
-                  return gameDate >= todayStart && gameDate < tomorrowStart;
+                  return gameDate > now && gameDate <= next24h;
                 })
                 .map((game: any) => ({
                   id: game.id,
@@ -325,13 +324,15 @@ export async function registerRoutes(
           { id: 61, name: "Ligue 1", season: europeanSeason },
         ];
         
-        const today = new Date().toISOString().split('T')[0];
-        const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const next24hStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const nowMs = Date.now();
+        const next24hMs = nowMs + 24 * 60 * 60 * 1000;
         
         for (const league of footballLeagues.slice(0, 5)) {
           try {
             const fixturesResponse = await fetch(
-              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${today}&to=${nextWeek}`,
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
               { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
             );
             
@@ -339,14 +340,11 @@ export async function registerRoutes(
               const fixturesData = await fixturesResponse.json();
               const allFixtures = fixturesData.response || [];
               
-              // Filtrar jogos que não terminaram (NS = Not Started, ou em andamento)
-              const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+              // Apenas jogos não iniciados nas próximas 24 horas
               const fixtures = allFixtures.filter((f: any) => {
                 const status = f.fixture?.status?.short;
-                const gameDate = new Date(f.fixture?.date);
-                // Incluir jogos não iniciados ou em andamento (não finalizados)
-                return status === "NS" || status === "1H" || status === "HT" || status === "2H" || 
-                       (status !== "FT" && status !== "AET" && status !== "PEN" && gameDate > twoHoursAgo);
+                const gameDate = new Date(f.fixture?.date).getTime();
+                return status === "NS" && gameDate > nowMs && gameDate <= next24hMs;
               });
               
               const gamesWithOdds = await Promise.all(
@@ -431,7 +429,13 @@ export async function registerRoutes(
         const response = await fetch(oddsUrl);
         if (response.ok) {
           const rawGames = await response.json();
+          const nowTs = Date.now();
+          const next24hTs = nowTs + 24 * 60 * 60 * 1000;
           games = rawGames
+            .filter((game: any) => {
+              const t = new Date(game.commence_time).getTime();
+              return t > nowTs && t <= next24hTs;
+            })
             .map((game: any) => ({
               id: game.id,
               sportKey: game.sport_key,
@@ -610,15 +614,22 @@ export async function registerRoutes(
           const remaining = response.headers.get('x-requests-remaining');
           console.log(`The Odds API - Requests remaining: ${remaining}`);
           
-          games = rawGames.map((game: any) => ({
-            id: game.id,
-            sportKey: game.sport_key,
-            sportTitle: game.sport_title,
-            commenceTime: game.commence_time,
-            homeTeam: game.home_team,
-            awayTeam: game.away_team,
-            bookmakers: game.bookmakers || []
-          }));
+          const nowTs2 = Date.now();
+          const next24hTs2 = nowTs2 + 24 * 60 * 60 * 1000;
+          games = rawGames
+            .filter((game: any) => {
+              const t = new Date(game.commence_time).getTime();
+              return t > nowTs2 && t <= next24hTs2;
+            })
+            .map((game: any) => ({
+              id: game.id,
+              sportKey: game.sport_key,
+              sportTitle: game.sport_title,
+              commenceTime: game.commence_time,
+              homeTeam: game.home_team,
+              awayTeam: game.away_team,
+              bookmakers: game.bookmakers || []
+            }));
         } else {
           useApiFootball = true;
         }

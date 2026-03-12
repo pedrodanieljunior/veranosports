@@ -31,7 +31,6 @@ interface FootballGameCardProps {
 
 export function FootballGameCard({ fixture, selections, onToggleSelection }: FootballGameCardProps) {
   const gameDate = new Date(fixture.date);
-  const isLive = gameDate <= new Date();
   
   const matchWinner = fixture.odds.find(o => o.name === "Match Winner");
   const btts = fixture.odds.find(o => o.name === "Both Teams Score");
@@ -132,16 +131,10 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
         <div className="p-4 border-b border-card-border bg-muted/30">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              {isLive ? (
-                <Badge variant="destructive" className="animate-pulse">
-                  AO VIVO
-                </Badge>
-              ) : (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{format(gameDate, "dd MMM HH:mm", { locale: ptBR })}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{format(gameDate, "dd MMM HH:mm", { locale: ptBR })}</span>
+              </div>
             </div>
             
             <Badge variant="secondary" className="text-xs">

@@ -50,9 +50,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   if (!game) return null;
   
   const gameDate = new Date(game.commenceTime);
-  const now = new Date();
-  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const isLive = gameDate <= now && gameDate >= twoHoursAgo;
   
   const allMarkets: Record<string, { outcomes: any[]; bookmaker: string }> = {};
   
@@ -170,16 +167,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-[#333333] to-[#282828] text-gray-100 border-[#444]">
         <DialogHeader className="p-4 border-b border-[#444] bg-[#333333]">
           <div className="flex items-center gap-2 mb-2">
-            {isLive ? (
-              <Badge variant="destructive" className="animate-pulse">
-                AO VIVO
-              </Badge>
-            ) : (
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <Clock className="w-3.5 h-3.5" />
-                <span>{format(gameDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{format(gameDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+            </div>
             <Badge variant="secondary" className="text-xs bg-[#444] text-gray-300">
               {game.sportTitle}
             </Badge>
