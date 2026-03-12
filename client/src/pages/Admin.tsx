@@ -919,8 +919,9 @@ export default function Admin() {
               const lostBets  = periodBets.filter(b=>b.status==="lost").length;
 
               const resolvedBets = wonBets + lostBets;
-              const bestDay  = [...finDayData].sort((a,b)=>b.Lucro-a.Lucro)[0];
-              const worstDay = [...finDayData].sort((a,b)=>a.Lucro-b.Lucro)[0];
+              const activeDays = finDayData.filter(d => d.Entrada > 0 || d["Prêmios pagos"] > 0);
+              const bestDay  = activeDays.length ? [...activeDays].sort((a,b)=>b.Lucro-a.Lucro)[0] : null;
+              const worstDay = activeDays.length ? [...activeDays].sort((a,b)=>a.Lucro-b.Lucro)[0] : null;
               const marketChartData = finMarketRows.map(r=>({ name: r.label, Apostas: r.total, Lucro: parseFloat(r.lucro.toFixed(2)) }));
               const handlePrint = () => window.print();
 
@@ -991,8 +992,8 @@ export default function Admin() {
                           Fluxo por Dia da Semana (histórico completo)
                         </CardTitle>
                         <div className="flex gap-3 text-xs">
-                          <span className="text-green-400">↑ Melhor: <strong>{bestDay?.day}</strong> ({R$(bestDay?.Lucro??0)})</span>
-                          <span className="text-red-400">↓ Pior: <strong>{worstDay?.day}</strong> ({R$(worstDay?.Lucro??0)})</span>
+                          {bestDay ? <span className="text-green-400">↑ Melhor: <strong>{bestDay.day}</strong> ({R$(bestDay.Lucro)})</span> : null}
+                          {worstDay && worstDay !== bestDay ? <span className="text-red-400">↓ Pior: <strong>{worstDay.day}</strong> ({R$(worstDay.Lucro)})</span> : null}
                         </div>
                       </div>
                     </CardHeader>
