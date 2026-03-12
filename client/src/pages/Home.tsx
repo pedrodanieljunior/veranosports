@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { GamesList } from "@/components/GamesList";
 import { BetSlip } from "@/components/BetSlip";
@@ -40,15 +40,45 @@ export default function Home() {
   const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, refetchInterval: 5 * 60 * 1000 });
 
   // Merge: Brasileirão sempre primeiro, deduplicando com os jogos de hoje
-  const mergedTodayGames: Game[] = (() => {
+  const mergedTodayGames: Game[] = useMemo(() => {
     const todayIds = new Set(todayGames.map(g => g.id));
     const extraBr = brasileiraoGames.filter(g => !todayIds.has(g.id));
     const brFromToday = todayGames.filter(g => g.sportKey === "soccer_brazil_campeonato");
     const otherToday = todayGames.filter(g => g.sportKey !== "soccer_brazil_campeonato");
     return [...brFromToday, ...extraBr, ...otherToday];
-  })();
+  }, [todayGames, brasileiraoGames]);
 
-  const games = selectedSport ? leagueGames : mergedTodayGames;
+  // Buscar odds de cada liga que aparece nos jogos do dia
+  const uniqueSportKeys = useMemo(() =>
+    !selectedSport ? [...new Set(mergedTodayGames.map(g => g.sportKey))] : [],
+    [mergedTodayGames, selectedSport]
+  );
+  const leagueOddsResults = useQueries({
+    queries: uniqueSportKeys.map(sportKey => ({
+      queryKey: [`/api/odds/${sportKey}`],
+      enabled: !selectedSport && uniqueSportKeys.length > 0,
+      staleTime: 5 * 60 * 1000,
+      refetchInterval: 5 * 60 * 1000,
+    })),
+  });
+
+  // Mesclar odds buscadas nos jogos do dia (por ID de jogo)
+  const todayGamesWithOdds: Game[] = useMemo(() => {
+    const oddsById: Record<string, Game["bookmakers"]> = {};
+    for (const result of leagueOddsResults) {
+      const gamesWithOdds = result.data as Game[] | undefined;
+      if (gamesWithOdds) {
+        for (const g of gamesWithOdds) {
+          if (g.bookmakers?.length) oddsById[g.id] = g.bookmakers;
+        }
+      }
+    }
+    return mergedTodayGames.map(g =>
+      oddsById[g.id] ? { ...g, bookmakers: oddsById[g.id] } : g
+    );
+  }, [mergedTodayGames, leagueOddsResults]);
+
+  const games = selectedSport ? leagueGames : todayGamesWithOdds;
   const gamesLoading = selectedSport ? leagueGamesLoading : (todayGamesLoading && brasileiraoLoading);
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
 
