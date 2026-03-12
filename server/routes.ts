@@ -268,6 +268,16 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     });
   }
 
+  const marketOrder: Record<string, number> = {
+    "Goals Over/Under": 1,
+    "HT/FT Double": 2,
+    "Both Teams Score": 3,
+    "Corners Over Under": 4,
+    "Total Corners": 4,
+    "Team To Score First": 5,
+    "Exact Score": 6,
+  };
+
   const markets = Object.values(grouped).map((g) => {
     let values = g.values;
     if (g.name === "Goals Over/Under" || g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
@@ -284,7 +294,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       label: g.label,
       values,
     };
-  });
+  }).sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
 
   return {
     homeTeam,
