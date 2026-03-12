@@ -969,7 +969,7 @@ export default function Admin() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { icon: <CalendarDays className="w-5 h-5 text-primary"/>, label:"Total de Bilhetes", value: totalBets.toString() },
-                      { icon: <Trophy className="w-5 h-5 text-green-400"/>, label:`Ganhos / Perdidos / Pendentes`, value:`${wonBets} / ${lostBets} / ${totalBets - resolvedBets}` },
+                      { icon: <Trophy className="w-5 h-5 text-green-400"/>, label:`Ganhos / Perdidos / Pendentes`, value: <span><span className="text-green-400">{wonBets}</span> / <span className="text-red-400">{lostBets}</span> / <span className="text-yellow-400">{totalBets - resolvedBets}</span></span> },
                       { icon: <Target className="w-5 h-5 text-green-400"/>, label:"Taxa de Acerto", value: PCT(wonBets, resolvedBets) },
                       { icon: <XCircle className="w-5 h-5 text-red-400"/>, label:"Taxa de Erros", value: PCT(lostBets, resolvedBets) },
                     ].map(({icon,label,value})=>(
