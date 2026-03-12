@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import {
   Clock, 
   DollarSign, 
   TrendingUp,
+  TrendingDown,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -29,31 +30,53 @@ import {
   Banknote,
   Trophy,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileDown,
+  Target,
+  CalendarDays,
 } from "lucide-react";
-import { format } from "date-fns";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Cell,
+} from "recharts";
+import { format, startOfWeek, startOfMonth, subDays, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+
+const MARKET_LABELS: Record<string, string> = {
+  "h2h": "Resultado Final",
+  "match_winner": "Resultado Final",
+  "spreads": "Handicap",
+  "totals": "Total de Gols",
+  "extra-1": "Ambas Marcam",
+  "extra-2": "Intervalo/Final",
+  "extra-4": "Placar Exato",
+  "extra-5": "Total de Gols 2.5",
+  "extra-6": "Primeiro a Marcar",
+  "extra-11": "Escanteios",
+  "extra-15": "Cartão Vermelho",
+};
+const getMarketLabel = (key: string) => MARKET_LABELS[key] ?? key;
+
+const R$ = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const PCT = (v: number, t: number) => t > 0 ? `${((v / t) * 100).toFixed(1)}%` : "0%";
+
+const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 type BetStatus = "pending" | "won" | "lost";
 
@@ -74,10 +97,49 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
+  const [finPeriod, setFinPeriod] = useState<"all" | "month" | "week" | "today">("month");
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
   });
+
+  // ── Financeiro: dados calculados no nível do componente ──────────────────
+  const periodBets = useMemo(() => {
+    const now = new Date();
+    if (finPeriod === "today") {
+      const s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return bets.filter(b => new Date(b.createdAt) >= s);
+    }
+    if (finPeriod === "week") return bets.filter(b => new Date(b.createdAt) >= startOfWeek(now, { locale: ptBR }));
+    if (finPeriod === "month") return bets.filter(b => new Date(b.createdAt) >= startOfMonth(now));
+    return bets;
+  }, [bets, finPeriod]);
+
+  const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
+    const db = bets.filter(b => new Date(b.createdAt).getDay() === idx);
+    const e = db.reduce((s,b)=>s+b.stake,0);
+    const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+    return { day, Entrada: parseFloat(e.toFixed(2)), Saída: parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
+  }), [bets]);
+
+  const finMarketRows = useMemo(() => {
+    const map = new Map<string, { total:number; won:number; lost:number; pending:number; entrada:number; saida:number }>();
+    periodBets.forEach(bet => {
+      const keys = bet.selections.length > 1 ? ["__multi__"] : bet.selections.map(s=>s.marketKey);
+      keys.forEach(key => {
+        const cur = map.get(key) ?? { total:0, won:0, lost:0, pending:0, entrada:0, saida:0 };
+        cur.total++;
+        cur.entrada += bet.stake;
+        if (bet.status==="won") { cur.won++; cur.saida += bet.potentialWin; }
+        else if (bet.status==="lost") cur.lost++;
+        else cur.pending++;
+        map.set(key, cur);
+      });
+    });
+    return Array.from(map.entries())
+      .map(([key,v])=>({ key, label: key==="__multi__"?"Múltiplas":getMarketLabel(key), ...v, lucro: v.entrada-v.saida }))
+      .sort((a,b)=>b.total-a.total);
+  }, [periodBets]);
 
   const { data: gameLimitsData, isLoading: gameLimitsLoading, refetch: refetchGameLimits } = useQuery<{ totals: GameLimitEntry[]; limit: number }>({
     queryKey: ["/api/admin/game-limits"],
@@ -803,101 +865,194 @@ export default function Admin() {
 
           {/* ── FINANCEIRO ────────────────────────────────────── */}
           <TabsContent value="financeiro">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <DollarSign className="w-6 h-6 mx-auto mb-1 text-primary" />
-                    <p className="text-xl font-bold">R${bets.reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p>
-                    <p className="text-xs text-muted-foreground">Total Apostado</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Trophy className="w-6 h-6 mx-auto mb-1 text-green-500" />
-                    <p className="text-xl font-bold text-green-500">R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p>
-                    <p className="text-xs text-muted-foreground">Total Prêmios</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <TrendingUp className="w-6 h-6 mx-auto mb-1 text-blue-500" />
-                    <p className="text-xl font-bold text-blue-500">R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p>
-                    <p className="text-xs text-muted-foreground">Exposição Pendente</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Banknote className="w-6 h-6 mx-auto mb-1 text-yellow-500" />
-                    <p className={`text-xl font-bold ${(bets.reduce((s,b)=>s+b.stake,0)-bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0))>=0?"text-green-500":"text-red-400"}`}>
-                      R${(bets.reduce((s,b)=>s+b.stake,0)-bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2})}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Lucro / Prejuízo</p>
-                  </CardContent>
-                </Card>
-              </div>
+            {(() => {
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-primary" />
-                    Resumo por Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+              const entrada   = periodBets.reduce((s,b)=>s+b.stake,0);
+              const saida     = periodBets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+              const lucro     = entrada - saida;
+              const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
+              const totalBets = periodBets.length;
+              const wonBets   = periodBets.filter(b=>b.status==="won").length;
+              const lostBets  = periodBets.filter(b=>b.status==="lost").length;
+              const taxa      = totalBets > 0 ? (wonBets/totalBets)*100 : 0;
+              const oddMedia  = totalBets > 0 ? periodBets.reduce((s,b)=>s+b.totalOdds,0)/totalBets : 0;
+
+              const bestDay  = [...finDayData].sort((a,b)=>b.Lucro-a.Lucro)[0];
+              const worstDay = [...finDayData].sort((a,b)=>a.Lucro-b.Lucro)[0];
+              const marketChartData = finMarketRows.map(r=>({ name: r.label, Apostas: r.total, Lucro: parseFloat(r.lucro.toFixed(2)) }));
+              const handlePrint = () => window.print();
+
+              return (
+                <div className="space-y-5 print:space-y-3" id="financial-report">
+                  {/* Header: período + botão PDF */}
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {(["today","week","month","all"] as const).map(p => (
+                        <Button
+                          key={p}
+                          size="sm"
+                          variant={finPeriod===p?"default":"outline"}
+                          onClick={()=>setFinPeriod(p)}
+                          className="text-xs"
+                          data-testid={`button-fin-period-${p}`}
+                        >
+                          {{ today:"Hoje", week:"Esta Semana", month:"Este Mês", all:"Todos" }[p]}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-2 print:hidden" onClick={handlePrint} data-testid="button-print-report">
+                      <FileDown className="w-4 h-4" />
+                      Exportar PDF
+                    </Button>
+                  </div>
+
+                  {/* KPI cards linha 1 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                      { label:"Pendentes", filter:(b:BetSlipType)=>b.status==="pending", color:"text-yellow-500", barColor:"bg-yellow-500" },
-                      { label:"Ganhos", filter:(b:BetSlipType)=>b.status==="won", color:"text-green-500", barColor:"bg-green-500" },
-                      { label:"Perdidos", filter:(b:BetSlipType)=>b.status==="lost", color:"text-red-400", barColor:"bg-red-400" },
-                    ].map(({label,filter,color,barColor})=>{
-                      const group = bets.filter(filter);
-                      const totalStake = group.reduce((s,b)=>s+b.stake,0);
-                      const pct = bets.length > 0 ? (group.length / bets.length) * 100 : 0;
-                      return (
-                        <div key={label}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className={`text-sm font-medium ${color}`}>{label}</span>
-                            <div className="flex gap-4 text-xs text-muted-foreground">
-                              <span>{group.length} bilhete(s)</span>
-                              <span>R${totalStake.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
-                              <span>{pct.toFixed(1)}%</span>
-                            </div>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2.5">
-                            <div className={`${barColor} h-2.5 rounded-full transition-all`} style={{width:`${pct}%`}} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                      { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400"/>, label:"Entradas", value:R$(entrada), color:"text-blue-400" },
+                      { icon: <ArrowDownCircle className="w-5 h-5 text-red-400"/>, label:"Saídas", value:R$(saida), color:"text-red-400" },
+                      { icon: lucro>=0?<TrendingUp className="w-5 h-5 text-green-400"/>:<TrendingDown className="w-5 h-5 text-red-400"/>, label:"Lucro Líquido", value:R$(lucro), color:lucro>=0?"text-green-400":"text-red-400" },
+                      { icon: <Wallet className="w-5 h-5 text-yellow-400"/>, label:"Provisionamento", value:R$(pendente), color:"text-yellow-400" },
+                    ].map(({icon,label,value,color})=>(
+                      <Card key={label}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-muted-foreground">{label}</p></div>
+                          <p className={`text-lg font-bold ${color}`}>{value}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Odds Médias</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <p className="text-2xl font-bold text-primary">
-                        {bets.length > 0 ? (bets.reduce((s,b)=>s+b.totalOdds,0)/bets.length).toFixed(2) : "—"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Odd Média Geral</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-green-500">
-                        {bets.filter(b=>b.status==="won").length > 0
-                          ? (bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.totalOdds,0)/bets.filter(b=>b.status==="won").length).toFixed(2)
-                          : "—"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Odd Média (Ganhos)</p>
-                    </div>
+                  {/* KPI cards linha 2 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { icon: <CalendarDays className="w-5 h-5 text-primary"/>, label:"Total de Bilhetes", value: totalBets.toString() },
+                      { icon: <Trophy className="w-5 h-5 text-green-400"/>, label:`Ganhos / Perdidos`, value:`${wonBets} / ${lostBets}` },
+                      { icon: <Target className="w-5 h-5 text-orange-400"/>, label:"Taxa de Acerto", value: PCT(wonBets,totalBets) },
+                      { icon: <BarChart2 className="w-5 h-5 text-purple-400"/>, label:"Odd Média", value: oddMedia>0?oddMedia.toFixed(2):"—" },
+                    ].map(({icon,label,value})=>(
+                      <Card key={label}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-muted-foreground">{label}</p></div>
+                          <p className="text-lg font-bold">{value}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+
+                  {/* Gráfico por dia da semana */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <BarChart2 className="w-4 h-4 text-primary"/>
+                          Fluxo por Dia da Semana (histórico completo)
+                        </CardTitle>
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-green-400">↑ Melhor: <strong>{bestDay?.day}</strong> ({R$(bestDay?.Lucro??0)})</span>
+                          <span className="text-red-400">↓ Pior: <strong>{worstDay?.day}</strong> ({R$(worstDay?.Lucro??0)})</span>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-3">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={finDayData} margin={{top:4,right:8,left:0,bottom:0}}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                          <XAxis dataKey="day" tick={{fontSize:11}} stroke="#666" />
+                          <YAxis tick={{fontSize:10}} stroke="#666" tickFormatter={v=>`R$${(v/1000).toFixed(0)}k`} />
+                          <Tooltip formatter={(v:number)=>R$(v)} contentStyle={{background:"#1a1a1a",border:"1px solid #333",borderRadius:8}} />
+                          <Legend />
+                          <Bar dataKey="Entrada" fill="#3b82f6" radius={[3,3,0,0]}/>
+                          <Bar dataKey="Saída" fill="#ef4444" radius={[3,3,0,0]}/>
+                          <Bar dataKey="Lucro" radius={[3,3,0,0]}>
+                            {finDayData.map((entry, i) => (
+                              <Cell key={i} fill={entry.Lucro >= 0 ? "#22c55e" : "#f87171"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Tabela + gráfico por mercado */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <PieChart className="w-4 h-4 text-primary"/>
+                        Desempenho por Mercado
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 space-y-4">
+                      {finMarketRows.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">Nenhum dado no período selecionado.</p>
+                      ) : (
+                        <>
+                          {/* Gráfico de barras por mercado */}
+                          <ResponsiveContainer width="100%" height={180}>
+                            <BarChart data={marketChartData} margin={{top:4,right:8,left:0,bottom:20}}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#333"/>
+                              <XAxis dataKey="name" tick={{fontSize:9}} angle={-25} textAnchor="end" stroke="#666" interval={0}/>
+                              <YAxis yAxisId="left" tick={{fontSize:10}} stroke="#666"/>
+                              <YAxis yAxisId="right" orientation="right" tick={{fontSize:10}} stroke="#666" tickFormatter={v=>`R$${(v/1000).toFixed(0)}k`}/>
+                              <Tooltip formatter={(v:any,n:string)=>n==="Apostas"?`${v} apostas`:R$(v)} contentStyle={{background:"#1a1a1a",border:"1px solid #333",borderRadius:8}}/>
+                              <Legend />
+                              <Bar yAxisId="left" dataKey="Apostas" fill="#8b5cf6" radius={[3,3,0,0]}/>
+                              <Bar yAxisId="right" dataKey="Lucro" radius={[3,3,0,0]}>
+                                {marketChartData.map((entry,i)=>(
+                                  <Cell key={i} fill={entry.Lucro>=0?"#22c55e":"#ef4444"}/>
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+
+                          {/* Tabela detalhada */}
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-border text-muted-foreground">
+                                  <th className="text-left py-2 pr-3">Mercado</th>
+                                  <th className="text-center py-2 px-2">Total</th>
+                                  <th className="text-center py-2 px-2 text-green-400">Ganhas</th>
+                                  <th className="text-center py-2 px-2 text-red-400">Perdidas</th>
+                                  <th className="text-center py-2 px-2 text-yellow-400">Pend.</th>
+                                  <th className="text-right py-2 px-2">Entrada</th>
+                                  <th className="text-right py-2 px-2">Saída</th>
+                                  <th className="text-right py-2">Lucro</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {finMarketRows.map(r=>(
+                                  <tr key={r.key} className="border-b border-border/40 hover:bg-muted/30">
+                                    <td className="py-2 pr-3 font-medium">{r.label}</td>
+                                    <td className="text-center py-2 px-2">{r.total}</td>
+                                    <td className="text-center py-2 px-2 text-green-400">{r.won}</td>
+                                    <td className="text-center py-2 px-2 text-red-400">{r.lost}</td>
+                                    <td className="text-center py-2 px-2 text-yellow-400">{r.pending}</td>
+                                    <td className="text-right py-2 px-2 font-mono">{R$(r.entrada)}</td>
+                                    <td className="text-right py-2 px-2 font-mono">{R$(r.saida)}</td>
+                                    <td className={`text-right py-2 font-bold font-mono ${r.lucro>=0?"text-green-400":"text-red-400"}`}>{R$(r.lucro)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="border-t-2 border-border font-bold">
+                                  <td className="py-2 pr-3">TOTAL</td>
+                                  <td className="text-center py-2 px-2">{totalBets}</td>
+                                  <td className="text-center py-2 px-2 text-green-400">{wonBets}</td>
+                                  <td className="text-center py-2 px-2 text-red-400">{lostBets}</td>
+                                  <td className="text-center py-2 px-2 text-yellow-400">{periodBets.filter(b=>b.status==="pending").length}</td>
+                                  <td className="text-right py-2 px-2 font-mono">{R$(entrada)}</td>
+                                  <td className="text-right py-2 px-2 font-mono">{R$(saida)}</td>
+                                  <td className={`text-right py-2 font-mono font-bold ${lucro>=0?"text-green-400":"text-red-400"}`}>{R$(lucro)}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="bilhetes">
