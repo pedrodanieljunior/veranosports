@@ -118,6 +118,13 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             const outcomeKey = `${market.name}-${value.value}`;
             const selected = isSelected(outcomeKey, marketKey);
             
+            const translateHalf = (part: string) => {
+              if (part === "Home") return "Casa";
+              if (part === "Away") return "Fora";
+              if (part === "Draw") return "Emp";
+              return part;
+            };
+
             let displayLabel = value.value;
             if (value.value === "Yes") displayLabel = "Sim";
             else if (value.value === "No") displayLabel = "Não";
@@ -128,6 +135,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             else if (value.value === "Even") displayLabel = "Par";
             else if (value.value.includes("Over")) displayLabel = value.value.replace("Over", "Mais ");
             else if (value.value.includes("Under")) displayLabel = value.value.replace("Under", "Menos ");
+            else if (value.value.includes("/")) {
+              const parts = value.value.split("/");
+              displayLabel = parts.map(translateHalf).join("/");
+            }
             
             const disabled = isButtonDisabled(outcomeKey, marketKey);
             return (
