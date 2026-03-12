@@ -146,7 +146,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Goals Over/Under": "Total de Gols",
     "Goals Over/Under First Half": "Gols 1º Tempo",
     "HT/FT Double": "Intervalo/Final",
-    "Both Teams Score": "Ambas Marcam (BTTS)",
+    "Both Teams Score": "Ambas Marcam",
     "Handicap Result": "Resultado com Handicap",
     "Exact Score": "Placar Exato",
     "Highest Scoring Half": "Tempo com Mais Gols",
