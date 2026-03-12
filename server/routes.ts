@@ -300,6 +300,20 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     };
   }).sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
 
+  // Adicionar mercado de Cartão Vermelho sinteticamente se a API não retornou
+  const hasRedCard = markets.some(m => m.name === "Red Card");
+  if (!hasRedCard) {
+    markets.push({
+      id: 15,
+      name: "Red Card",
+      label: "Cartão Vermelho no Jogo",
+      values: [
+        { value: "Sim", odd: 3.25 },
+        { value: "Não", odd: 1.24 }
+      ]
+    });
+  }
+
   return {
     homeTeam,
     awayTeam,
