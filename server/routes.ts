@@ -482,26 +482,31 @@ export async function registerRoutes(
         }
       }
 
-      // Fallback para API-Football com janela de 60 dias + temporada anterior se vazio
+      // Fallback para API-Football — janela de 24h, apenas jogos NS
       if (games.length === 0 && API_FOOTBALL_KEY) {
         const currentYear = new Date().getFullYear();
+        const nowMs = Date.now();
+        const next24hMs = nowMs + 24 * 60 * 60 * 1000;
         const today = new Date().toISOString().split('T')[0];
-        const next60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
 
         const fetchBrasileiraoFixtures = async (season: number) => {
           const r = await fetch(
-            `${API_FOOTBALL_BASE}/fixtures?league=71&season=${season}&from=${today}&to=${next60Days}`,
+            `${API_FOOTBALL_BASE}/fixtures?league=71&season=${season}&from=${today}&to=${next24hStr}`,
             { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
           );
           if (!r.ok) return [];
           const data = await r.json();
-          return data.response?.slice(0, 10) || [];
+          return (data.response || []).filter((f: any) => {
+            const status = f.fixture?.status?.short;
+            const t = new Date(f.fixture?.date).getTime();
+            return status === "NS" && t > nowMs && t <= next24hMs;
+          }).slice(0, 10);
         };
 
         let fixtures = await fetchBrasileiraoFixtures(currentYear);
         if (fixtures.length === 0) {
-          console.log(`Brasileirão ${currentYear} sem jogos, tentando ${currentYear - 1}`);
-          fixtures = await fetchBrasileiraoFixtures(currentYear - 1);
+          console.log(`Brasileirão ${currentYear} sem jogos nas próximas 24h`);
         }
 
         games = await Promise.all(
@@ -575,13 +580,15 @@ export async function registerRoutes(
             .catch(() => [])
         );
         const responses = await Promise.all(fetches);
-        const now = new Date();
+        const nowMs = Date.now();
+        const next24hMs = nowMs + 24 * 60 * 60 * 1000;
         for (const games of responses) {
           if (!Array.isArray(games)) continue;
           for (const game of games) {
             const home = (game.home_team || "").toLowerCase();
             const away = (game.away_team || "").toLowerCase();
-            if ((home.includes(team) || away.includes(team)) && new Date(game.commence_time) >= now) {
+            const t = new Date(game.commence_time).getTime();
+            if ((home.includes(team) || away.includes(team)) && t > nowMs && t <= next24hMs) {
               results.push({
                 id: game.id,
                 sportKey: game.sport_key,
@@ -677,27 +684,32 @@ export async function registerRoutes(
         const league = leagueMapping[sportKey];
         if (league) {
           console.log(`Using API-Football for ${sportKey}`);
-          
+
+          const nowMs = Date.now();
+          const next24hMs = nowMs + 24 * 60 * 60 * 1000;
           const today = new Date().toISOString().split('T')[0];
-          const next60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
           
           const fetchFixtures = async (season: number) => {
             const fixturesResponse = await fetch(
-              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${next60Days}`,
+              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${season}&from=${today}&to=${next24hStr}`,
               { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
             );
             if (!fixturesResponse.ok) return [];
             const fixturesData = await fixturesResponse.json();
-            return fixturesData.response?.slice(0, 15) || [];
+            return (fixturesData.response || []).filter((f: any) => {
+              const status = f.fixture?.status?.short;
+              const t = new Date(f.fixture?.date).getTime();
+              return status === "NS" && t > nowMs && t <= next24hMs;
+            }).slice(0, 15);
           };
 
           try {
             let fixtures = await fetchFixtures(league.season);
 
-            // Se não encontrou jogos, tenta a temporada anterior
+            // Se não encontrou jogos nas próximas 24h, retorna vazio (não tenta temporada anterior)
             if (fixtures.length === 0) {
-              console.log(`No fixtures found for season ${league.season}, trying ${league.season - 1}`);
-              fixtures = await fetchFixtures(league.season - 1);
+              console.log(`No fixtures in next 24h for ${sportKey} season ${league.season}`);
             }
 
             if (fixtures.length > 0) {
