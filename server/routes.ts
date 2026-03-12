@@ -291,7 +291,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         { value: "Sim", odd: over?.odd ?? 1.90 },
         { value: "Não", odd: under?.odd ?? 1.90 },
       ];
-      label = "Total de Gols 2,5";
+      label = "Total de Gols mais de 2,5";
     } else if (g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
       values = values.filter((v) => isStandardGoalLine(v.value));
       if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
