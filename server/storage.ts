@@ -3,6 +3,16 @@ import { db } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
+export interface GameSimpleBetTotal {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  sportTitle: string;
+  total: number;
+  count: number;
+  isBlocked: boolean;
+}
+
 export interface IStorage {
   createBetSlip(data: InsertBetSlip): Promise<BetSlip>;
   getBetSlip(id: string): Promise<BetSlip | undefined>;
@@ -15,6 +25,8 @@ export interface IStorage {
   updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined>;
   getDailyBetSlips(): Promise<BetSlip[]>;
   getDailyTotalPotentialWin(): Promise<number>;
+  getGameSimpleBetTotals(): Promise<GameSimpleBetTotal[]>;
+  getBlockedGameIds(): Promise<Set<string>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -214,6 +226,46 @@ export class DatabaseStorage implements IStorage {
       .where(gte(betSlipsTable.createdAt, todayStart));
     
     return Number(result?.total ?? 0);
+  }
+
+  async getGameSimpleBetTotals(): Promise<GameSimpleBetTotal[]> {
+    const SIMPLE_BET_GAME_LIMIT = 15000;
+    const allBets = await db.select().from(betSlipsTable);
+
+    const totals: Record<string, GameSimpleBetTotal> = {};
+
+    for (const bet of allBets) {
+      const selections = bet.selections as BetSlip["selections"];
+      if (selections.length !== 1) continue;
+
+      const sel = selections[0];
+      const gameId = sel.gameId;
+
+      if (!totals[gameId]) {
+        totals[gameId] = {
+          gameId,
+          homeTeam: sel.homeTeam,
+          awayTeam: sel.awayTeam,
+          sportTitle: sel.sportTitle,
+          total: 0,
+          count: 0,
+          isBlocked: false,
+        };
+      }
+
+      totals[gameId].total += bet.potentialWin;
+      totals[gameId].count += 1;
+    }
+
+    return Object.values(totals).map(t => ({
+      ...t,
+      isBlocked: t.total >= SIMPLE_BET_GAME_LIMIT,
+    })).sort((a, b) => b.total - a.total);
+  }
+
+  async getBlockedGameIds(): Promise<Set<string>> {
+    const totals = await this.getGameSimpleBetTotals();
+    return new Set(totals.filter(t => t.isBlocked).map(t => t.gameId));
   }
 }
 

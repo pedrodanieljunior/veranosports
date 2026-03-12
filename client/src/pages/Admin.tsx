@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Trash2, 
   RefreshCw, 
@@ -16,7 +18,9 @@ import {
   XCircle,
   AlertCircle,
   Copy,
-  Zap
+  Zap,
+  ShieldAlert,
+  BarChart2
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,12 +48,30 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 type BetStatus = "pending" | "won" | "lost";
 
+interface GameLimitEntry {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  sportTitle: string;
+  total: number;
+  count: number;
+  isBlocked: boolean;
+}
+
+const SIMPLE_BET_GAME_LIMIT = 15000;
+
 export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [adminTab, setAdminTab] = useState<string>("bilhetes");
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
+  });
+
+  const { data: gameLimitsData, isLoading: gameLimitsLoading, refetch: refetchGameLimits } = useQuery<{ totals: GameLimitEntry[]; limit: number }>({
+    queryKey: ["/api/admin/game-limits"],
+    refetchInterval: 30 * 1000,
   });
 
   const deleteBetMutation = useMutation({
@@ -323,7 +345,92 @@ export default function Admin() {
           </Card>
         </div>
 
-        <Card>
+        <Tabs value={adminTab} onValueChange={setAdminTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="bilhetes" data-testid="tab-bilhetes">
+              <DollarSign className="w-4 h-4 mr-2" />
+              Bilhetes
+            </TabsTrigger>
+            <TabsTrigger value="limites" data-testid="tab-limites">
+              <BarChart2 className="w-4 h-4 mr-2" />
+              Limites por Jogo
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="limites">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-yellow-500" />
+                    Limites de Apostas Simples por Jogo
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => refetchGameLimits()} data-testid="button-refresh-game-limits">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Atualizar
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Limite de R$15.000 em retorno potencial de apostas simples (1 mercado) por jogo. Ao atingir o limite, o jogo é removido do site automaticamente.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {gameLimitsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+                  </div>
+                ) : !gameLimitsData?.totals.length ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <BarChart2 className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>Nenhuma aposta simples registrada ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {gameLimitsData.totals.map((entry) => {
+                      const pct = Math.min(100, (entry.total / SIMPLE_BET_GAME_LIMIT) * 100);
+                      const remaining = Math.max(0, SIMPLE_BET_GAME_LIMIT - entry.total);
+                      return (
+                        <div key={entry.gameId} className={`rounded-lg border p-4 ${entry.isBlocked ? "border-red-500/50 bg-red-500/5" : "border-border"}`}>
+                          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {entry.homeTeam} <span className="text-muted-foreground">vs</span> {entry.awayTeam}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{entry.sportTitle} · {entry.count} aposta{entry.count !== 1 ? "s" : ""} simples</p>
+                            </div>
+                            <div className="text-right">
+                              {entry.isBlocked ? (
+                                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 flex items-center gap-1">
+                                  <ShieldAlert className="w-3 h-3" />
+                                  Jogo Bloqueado
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-yellow-500 border-yellow-500/30">
+                                  Disponível: R${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Progress
+                            value={pct}
+                            className={`h-3 ${entry.isBlocked ? "[&>div]:bg-red-500" : pct >= 80 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500"}`}
+                            data-testid={`progress-game-${entry.gameId}`}
+                          />
+                          <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                            <span>R${entry.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            <span>{pct.toFixed(1)}% de R$15.000</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="bilhetes">
+          <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle>Bilhetes ({filteredBets.length})</CardTitle>
@@ -525,6 +632,8 @@ export default function Admin() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

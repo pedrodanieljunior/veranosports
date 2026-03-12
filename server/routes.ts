@@ -455,7 +455,8 @@ export async function registerRoutes(
 
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
       cache.set(cacheKey, finalGames, 30 * 60 * 1000); // cache 30 minutos
-      res.json(finalGames);
+      const blockedIds = await storage.getBlockedGameIds();
+      res.json(blockedIds.size > 0 ? finalGames.filter((g: any) => !blockedIds.has(g.id)) : finalGames);
     } catch (error) {
       console.error("Error fetching today's games:", error);
       res.status(500).json({ error: "Failed to fetch today's games" });
@@ -573,7 +574,8 @@ export async function registerRoutes(
       }
 
       cache.set(cacheKey, games, CACHE_TTL_ODDS);
-      res.json(games);
+      const blockedIds = await storage.getBlockedGameIds();
+      res.json(blockedIds.size > 0 ? games.filter((g: any) => !blockedIds.has(g.id)) : games);
     } catch (error) {
       console.error("Error fetching Brasileirão games:", error);
       res.status(500).json({ error: "Failed to fetch Brasileirão games" });
@@ -625,7 +627,8 @@ export async function registerRoutes(
       }
 
       cache.set(cacheKey, results, 5 * 60 * 1000);
-      res.json(results);
+      const blockedIds = await storage.getBlockedGameIds();
+      res.json(blockedIds.size > 0 ? results.filter((g: any) => !blockedIds.has(g.id)) : results);
     } catch (error) {
       console.error("Error searching games:", error);
       res.status(500).json({ error: "Failed to search games" });
@@ -800,7 +803,8 @@ export async function registerRoutes(
       }
       
       cache.set(cacheKey, games, CACHE_TTL_ODDS);
-      res.json(games);
+      const blockedIds = await storage.getBlockedGameIds();
+      res.json(blockedIds.size > 0 ? games.filter((g: any) => !blockedIds.has(g.id)) : games);
     } catch (error) {
       console.error("Error fetching odds:", error);
       res.status(500).json({ error: "Failed to fetch odds" });
@@ -829,6 +833,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/game-limits", async (req, res) => {
+    try {
+      const totals = await storage.getGameSimpleBetTotals();
+      res.json({ totals, limit: MAX_BET_PAYOUT });
+    } catch (error) {
+      console.error("Error fetching game limits:", error);
+      res.status(500).json({ error: "Erro ao buscar limites por jogo" });
+    }
+  });
+
   app.post("/api/bets", async (req, res) => {
     try {
       const validatedData = insertBetSlipSchema.parse(req.body);
@@ -840,6 +854,30 @@ export async function registerRoutes(
         if (selectionsByGame[sel.gameId] > MAX_MARKETS_PER_GAME) {
           return res.status(400).json({
             error: `Máximo de ${MAX_MARKETS_PER_GAME} mercados por jogo no bilhete`,
+          });
+        }
+      }
+
+      // Verificar limite de R$15.000 em apostas simples por jogo
+      if (validatedData.selections.length === 1) {
+        const sel = validatedData.selections[0];
+        const gameTotals = await storage.getGameSimpleBetTotals();
+        const gameTotal = gameTotals.find(t => t.gameId === sel.gameId);
+        const totalOddsPreview = sel.odds;
+        const potentialWinPreview = validatedData.stake * totalOddsPreview;
+
+        if (gameTotal && (gameTotal.total + potentialWinPreview) > MAX_BET_PAYOUT) {
+          const remaining = Math.max(0, MAX_BET_PAYOUT - gameTotal.total);
+          if (remaining <= 0) {
+            return res.status(400).json({
+              error: `Este jogo atingiu o limite de apostas simples (R$15.000). Experimente uma aposta múltipla ou escolha outro jogo.`,
+              isGameLimitReached: true,
+            });
+          }
+          return res.status(400).json({
+            error: `Retorno potencial excede o limite disponível para apostas simples neste jogo. Máximo disponível: R$${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`,
+            isGameLimitReached: true,
+            remaining,
           });
         }
       }
