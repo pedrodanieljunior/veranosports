@@ -1006,7 +1006,7 @@ export default function Admin() {
                           <Legend />
                           <Bar dataKey="Entrada" fill="#3b82f6" radius={[3,3,0,0]}/>
                           <Bar dataKey="Prêmios pagos" fill="#ef4444" radius={[3,3,0,0]}/>
-                          <Bar dataKey="Lucro" radius={[3,3,0,0]}>
+                          <Bar dataKey="Lucro" fill="#22c55e" radius={[3,3,0,0]}>
                             {finDayData.map((entry, i) => (
                               <Cell key={i} fill={entry.Lucro >= 0 ? "#22c55e" : "#f87171"} />
                             ))}
