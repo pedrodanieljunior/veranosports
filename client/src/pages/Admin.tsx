@@ -990,7 +990,7 @@ export default function Admin() {
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <CardTitle className="text-sm flex items-center gap-2">
                           <BarChart2 className="w-4 h-4 text-primary"/>
-                          Fluxo por Dia da Semana (histórico completo)
+                          Fluxo por Dia da Semana
                         </CardTitle>
                         <div className="flex gap-3 text-xs">
                           {bestDay ? <span className="text-green-400">↑ Melhor: <strong>{bestDay.day}</strong> ({R$(bestDay.Lucro)})</span> : null}
