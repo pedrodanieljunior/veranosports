@@ -129,8 +129,15 @@ function generateH2hBookmakers(homeTeam: string, awayTeam: string) {
   }];
 }
 
-// Helper para converter dados do bookmaker da API-Football em formato de mercados
-function buildMarketsFromBookmaker(bookmaker: any, homeTeam: string, awayTeam: string) {
+// Helper para converter dados de múltiplos bookmakers da API-Football em formato de mercados
+// Agrega valores de todos os bookmakers para ter mais linhas (ex: escanteios)
+function buildMarketsFromBookmaker(bookmakerOrBookmakers: any, homeTeam: string, awayTeam: string) {
+  const bookmakers: any[] = Array.isArray(bookmakerOrBookmakers) ? bookmakerOrBookmakers : [bookmakerOrBookmakers];
+  const primaryBookmaker = bookmakers[0];
+  return buildMarketsFromBookmakers(bookmakers, primaryBookmaker?.name || "API-Football", homeTeam, awayTeam);
+}
+
+function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, homeTeam: string, awayTeam: string) {
   const marketLabels: Record<string, string> = {
     "Match Winner": "Resultado Final",
     "Home/Away": "Casa/Fora",
@@ -195,34 +202,44 @@ function buildMarketsFromBookmaker(bookmaker: any, homeTeam: string, awayTeam: s
     "Total Corners",
   ]);
 
-  // Agrupar bets do mesmo mercado (ex: múltiplas linhas de Escanteios) em um único bloco
-  const grouped: Record<string, { id: number; name: string; label: string; values: { value: string; odd: number }[] }> = {};
+  // Agrupar bets do mesmo mercado de TODOS os bookmakers, deduplicando por valor
+  // Isso maximiza as linhas disponíveis (ex: escanteios Over 8.5, 9.5, 10.5, 11.5...)
+  const grouped: Record<string, { id: number; name: string; label: string; seenValues: Set<string>; values: { value: string; odd: number }[] }> = {};
 
-  bookmaker.bets
-    .filter((bet: any) => allowedMarkets.has(bet.name))
-    .forEach((bet: any) => {
-      const key = bet.name;
-      if (!grouped[key]) {
-        grouped[key] = {
-          id: bet.id,
-          name: bet.name,
-          label: marketLabels[bet.name] || bet.name,
-          values: []
-        };
-      }
-      const vals = bet.values?.map((v: any) => ({
-        value: v.value,
-        odd: parseFloat(v.odd)
-      })) || [];
-      grouped[key].values.push(...vals);
-    });
+  for (const bk of bookmakers) {
+    const bets = bk.bets || [];
+    bets
+      .filter((bet: any) => allowedMarkets.has(bet.name))
+      .forEach((bet: any) => {
+        const key = bet.name;
+        if (!grouped[key]) {
+          grouped[key] = {
+            id: bet.id,
+            name: bet.name,
+            label: marketLabels[bet.name] || bet.name,
+            seenValues: new Set(),
+            values: []
+          };
+        }
+        const vals: { value: string; odd: number }[] = bet.values?.map((v: any) => ({
+          value: v.value,
+          odd: parseFloat(v.odd)
+        })) || [];
+        for (const v of vals) {
+          if (!grouped[key].seenValues.has(v.value)) {
+            grouped[key].seenValues.add(v.value);
+            grouped[key].values.push(v);
+          }
+        }
+      });
+  }
 
-  const markets = Object.values(grouped);
+  const markets = Object.values(grouped).map(({ seenValues: _, ...rest }) => rest);
 
   return {
     homeTeam,
     awayTeam,
-    bookmaker: bookmaker.name,
+    bookmaker: bookmakerName,
     markets
   };
 }
@@ -1323,9 +1340,9 @@ export async function registerRoutes(
         );
         if (oddsResp.ok) {
           const oddsData = await oddsResp.json();
-          const bookmaker = oddsData.response?.[0]?.bookmakers?.[0];
-          if (bookmaker) {
-            const result = buildMarketsFromBookmaker(bookmaker, String(homeTeam), String(awayTeam));
+          const allBookmakers = oddsData.response?.[0]?.bookmakers || [];
+          if (allBookmakers.length > 0) {
+            const result = buildMarketsFromBookmaker(allBookmakers, String(homeTeam), String(awayTeam));
             cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
             return res.json(result);
           }
@@ -1422,15 +1439,15 @@ export async function registerRoutes(
       }
       
       const oddsData = await oddsResponse.json();
-      const bookmaker = oddsData.response?.[0]?.bookmakers?.[0];
+      const allBookmakers = oddsData.response?.[0]?.bookmakers || [];
       
-      if (!bookmaker) {
+      if (allBookmakers.length === 0) {
         cache.set(cacheKey, { markets: [] }, CACHE_TTL_FOOTBALL);
         return res.json({ markets: [] });
       }
       
       const result = {
-        ...buildMarketsFromBookmaker(bookmaker, matchingFixture.teams.home.name, matchingFixture.teams.away.name),
+        ...buildMarketsFromBookmaker(allBookmakers, matchingFixture.teams.home.name, matchingFixture.teams.away.name),
         fixtureId: matchingFixture.fixture.id,
       };
       
