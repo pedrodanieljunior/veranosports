@@ -37,7 +37,7 @@ interface GameDetailModalProps {
 export function GameDetailModal({ game, open, onClose, selections, onToggleSelection }: GameDetailModalProps) {
   // API-Football extra markets
   const extraMarketsQueryKey = game ? 
-    `/api/football/extra-markets?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&commenceTime=${encodeURIComponent(game.commenceTime)}` : 
+    `/api/football/extra-markets?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&commenceTime=${encodeURIComponent(game.commenceTime)}&gameId=${encodeURIComponent(game.id)}` : 
     null;
   
   const { data: extraMarkets, isLoading: loadingExtra, isError: errorExtra } = useQuery<ExtraMarketsResponse>({

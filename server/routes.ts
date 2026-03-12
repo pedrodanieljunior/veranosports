@@ -129,6 +129,93 @@ function generateH2hBookmakers(homeTeam: string, awayTeam: string) {
   }];
 }
 
+// Helper para converter dados do bookmaker da API-Football em formato de mercados
+function buildMarketsFromBookmaker(bookmaker: any, homeTeam: string, awayTeam: string) {
+  const marketLabels: Record<string, string> = {
+    "Match Winner": "Resultado Final",
+    "Home/Away": "Casa/Fora",
+    "Second Half Winner": "Vencedor 2º Tempo",
+    "Asian Handicap": "Handicap Asiático",
+    "Goals Over/Under": "Total de Gols",
+    "Goals Over/Under First Half": "Gols 1º Tempo",
+    "HT/FT Double": "Intervalo/Final",
+    "Both Teams Score": "Ambas Marcam (BTTS)",
+    "Handicap Result": "Resultado com Handicap",
+    "Exact Score": "Placar Exato",
+    "Highest Scoring Half": "Tempo com Mais Gols",
+    "Double Chance": "Dupla Chance",
+    "First Half Winner": "Vencedor 1º Tempo",
+    "Team To Score First": "Primeira Equipe a Marcar",
+    "Team To Score Last": "Última Equipe a Marcar",
+    "Total - Home": "Total Gols Casa",
+    "Total - Away": "Total Gols Visitante",
+    "Handicap Result - First Half": "Handicap 1º Tempo",
+    "Asian Handicap First Half": "Handicap Asiático 1º Tempo",
+    "Double Chance - First Half": "Dupla Chance 1º Tempo",
+    "Odd/Even": "Ímpar/Par",
+    "Odd/Even - First Half": "Ímpar/Par 1º Tempo",
+    "Results/Both Teams Score": "Resultado + Ambas Marcam",
+    "Result/Total Goals": "Resultado + Total Gols",
+    "Goals Over/Under - Second Half": "Gols 2º Tempo",
+    "Clean Sheet - Home": "Sem Sofrer Gol - Casa",
+    "Clean Sheet - Away": "Sem Sofrer Gol - Visitante",
+    "Win to Nil - Home": "Vitória sem Sofrer Gol - Casa",
+    "Win to Nil - Away": "Vitória sem Sofrer Gol - Visitante",
+    "Correct Score - First Half": "Placar Exato 1º Tempo",
+    "Win Both Halves": "Vencer Ambos os Tempos",
+    "Double Chance - Second Half": "Dupla Chance 2º Tempo",
+    "Both Teams Score - First Half": "Ambas Marcam 1º Tempo",
+    "Both Teams To Score - Second Half": "Ambas Marcam 2º Tempo",
+    "Win To Nil": "Vencer sem Sofrer Gol",
+    "Exact Goals Number": "Número Exato de Gols",
+    "To Win Either Half": "Vencer um dos Tempos",
+    "Home Team Exact Goals Number": "Gols Exatos Casa",
+    "Away Team Exact Goals Number": "Gols Exatos Visitante",
+    "Home Team Score a Goal": "Casa Marca",
+    "Away Team Score a Goal": "Visitante Marca",
+    "Corners Over Under": "Total de Escanteios",
+    "Winning Margin": "Margem de Vitória",
+    "Total Goals/Both Teams To Score": "Total Gols + Ambas Marcam",
+    "Goal Line": "Linha de Gols",
+    "Corners 1x2": "Escanteios 1x2",
+    "Corners Asian Handicap": "Escanteios Handicap Asiático",
+    "Cards Over/Under": "Total de Cartões",
+    "First Corner": "Primeiro Escanteio",
+    "Last Corner": "Último Escanteio",
+    "To Qualify": "Classificação"
+  };
+
+  const allowedMarkets = new Set([
+    "Match Winner",
+    "Both Teams Score",
+    "HT/FT Double",
+    "Exact Score",
+    "Goals Over/Under",
+    "Team To Score First",
+    "Corners Over Under",
+    "Total Corners",
+  ]);
+
+  const markets = bookmaker.bets
+    .filter((bet: any) => allowedMarkets.has(bet.name))
+    .map((bet: any) => ({
+      id: bet.id,
+      name: bet.name,
+      label: marketLabels[bet.name] || bet.name,
+      values: bet.values?.map((v: any) => ({
+        value: v.value,
+        odd: parseFloat(v.odd)
+      })) || []
+    }));
+
+  return {
+    homeTeam,
+    awayTeam,
+    bookmaker: bookmaker.name,
+    markets
+  };
+}
+
 // Função para gerar mercados extras quando API-Football não encontra correspondência
 // IMPORTANTE: esses valores são as odds BASE (antes do boost de +20% aplicado no frontend)
 // Para que após o boost fiquem realistas, os valores aqui devem ser ~17% menores que o mercado real
@@ -1199,18 +1286,44 @@ export async function registerRoutes(
         return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
       
-      const { homeTeam, awayTeam, commenceTime } = req.query;
+      const { homeTeam, awayTeam, commenceTime, gameId } = req.query;
       
       if (!homeTeam || !awayTeam) {
         return res.status(400).json({ error: "homeTeam and awayTeam are required" });
       }
-      
-      const cacheKey = `extra_markets_${homeTeam}_${awayTeam}_${commenceTime || ''}`;
+
+      // Se temos o gameId com fixture ID da API-Football, usar diretamente (mais confiável)
+      const directFixtureId = typeof gameId === "string" && gameId.startsWith("api-football-")
+        ? gameId.replace("api-football-", "")
+        : null;
+
+      const cacheKey = `extra_markets_${directFixtureId || `${homeTeam}_${awayTeam}_${commenceTime || ''}`}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) {
         return res.json(cached);
       }
       
+      // Atalho: se temos o fixture ID diretamente, buscar odds sem name-matching
+      if (directFixtureId) {
+        console.log(`[API-Football] Using direct fixture ID: ${directFixtureId}`);
+        const oddsResp = await fetch(
+          `${API_FOOTBALL_BASE}/odds?fixture=${directFixtureId}`,
+          { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+        );
+        if (oddsResp.ok) {
+          const oddsData = await oddsResp.json();
+          const bookmaker = oddsData.response?.[0]?.bookmakers?.[0];
+          if (bookmaker) {
+            const result = buildMarketsFromBookmaker(bookmaker, String(homeTeam), String(awayTeam));
+            cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
+            return res.json(result);
+          }
+        }
+        // Se a API não devolveu odds, retornar vazio (não gerar sintético)
+        cache.set(cacheKey, { markets: [] }, CACHE_TTL_FOOTBALL);
+        return res.json({ markets: [] });
+      }
+
       // Parse game date if provided for better matching
       let gameDate: Date | null = null;
       if (commenceTime) {
@@ -1305,88 +1418,9 @@ export async function registerRoutes(
         return res.json({ markets: [] });
       }
       
-      // Mapeamento de nomes de mercado para português
-      const marketLabels: Record<string, string> = {
-        "Match Winner": "Resultado Final",
-        "Home/Away": "Casa/Fora",
-        "Second Half Winner": "Vencedor 2º Tempo",
-        "Asian Handicap": "Handicap Asiático",
-        "Goals Over/Under": "Total de Gols",
-        "Goals Over/Under First Half": "Gols 1º Tempo",
-        "HT/FT Double": "Intervalo/Final",
-        "Both Teams Score": "Ambas Marcam (BTTS)",
-        "Handicap Result": "Resultado com Handicap",
-        "Exact Score": "Placar Exato",
-        "Highest Scoring Half": "Tempo com Mais Gols",
-        "Double Chance": "Dupla Chance",
-        "First Half Winner": "Vencedor 1º Tempo",
-        "Team To Score First": "Primeira Equipe a Marcar",
-        "Team To Score Last": "Última Equipe a Marcar",
-        "Total - Home": "Total Gols Casa",
-        "Total - Away": "Total Gols Visitante",
-        "Handicap Result - First Half": "Handicap 1º Tempo",
-        "Asian Handicap First Half": "Handicap Asiático 1º Tempo",
-        "Double Chance - First Half": "Dupla Chance 1º Tempo",
-        "Odd/Even": "Ímpar/Par",
-        "Odd/Even - First Half": "Ímpar/Par 1º Tempo",
-        "Results/Both Teams Score": "Resultado + Ambas Marcam",
-        "Result/Total Goals": "Resultado + Total Gols",
-        "Goals Over/Under - Second Half": "Gols 2º Tempo",
-        "Clean Sheet - Home": "Sem Sofrer Gol - Casa",
-        "Clean Sheet - Away": "Sem Sofrer Gol - Visitante",
-        "Win to Nil - Home": "Vitória sem Sofrer Gol - Casa",
-        "Win to Nil - Away": "Vitória sem Sofrer Gol - Visitante",
-        "Correct Score - First Half": "Placar Exato 1º Tempo",
-        "Win Both Halves": "Vencer Ambos os Tempos",
-        "Double Chance - Second Half": "Dupla Chance 2º Tempo",
-        "Both Teams Score - First Half": "Ambas Marcam 1º Tempo",
-        "Both Teams To Score - Second Half": "Ambas Marcam 2º Tempo",
-        "Win To Nil": "Vencer sem Sofrer Gol",
-        "Exact Goals Number": "Número Exato de Gols",
-        "To Win Either Half": "Vencer um dos Tempos",
-        "Home Team Exact Goals Number": "Gols Exatos Casa",
-        "Away Team Exact Goals Number": "Gols Exatos Visitante",
-        "Home Team Score a Goal": "Casa Marca",
-        "Away Team Score a Goal": "Visitante Marca",
-        "Corners Over Under": "Total de Escanteios",
-        "Winning Margin": "Margem de Vitória",
-        "Total Goals/Both Teams To Score": "Total Gols + Ambas Marcam",
-        "Goal Line": "Linha de Gols",
-        "Corners 1x2": "Escanteios 1x2",
-        "Corners Asian Handicap": "Escanteios Handicap Asiático",
-        "Cards Over/Under": "Total de Cartões",
-        "First Corner": "Primeiro Escanteio",
-        "Last Corner": "Último Escanteio",
-        "To Qualify": "Classificação"
-      };
-      
-      const allowedMarkets = new Set([
-        "Match Winner",
-        "Both Teams Score",
-        "HT/FT Double",
-        "Exact Score",
-        "Goals Over/Under",
-        "Team To Score First",
-        "Corners Over Under",
-        "Total Corners",
-      ]);
-      
-      const markets = bookmaker.bets.filter((bet: any) => allowedMarkets.has(bet.name)).map((bet: any) => ({
-        id: bet.id,
-        name: bet.name,
-        label: marketLabels[bet.name] || bet.name,
-        values: bet.values?.map((v: any) => ({
-          value: v.value,
-          odd: parseFloat(v.odd)
-        })) || []
-      }));
-      
       const result = {
+        ...buildMarketsFromBookmaker(bookmaker, matchingFixture.teams.home.name, matchingFixture.teams.away.name),
         fixtureId: matchingFixture.fixture.id,
-        homeTeam: matchingFixture.teams.home.name,
-        awayTeam: matchingFixture.teams.away.name,
-        bookmaker: bookmaker.name,
-        markets
       };
       
       cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
