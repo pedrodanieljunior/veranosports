@@ -280,159 +280,164 @@ export async function registerRoutes(
       }
       
       let allGames: any[] = [];
-      let useApiFootball = false;
-      
-      // Tentar The Odds API primeiro
+      let quotaExceeded = false;
+
+      // Prioridade de liga (maior = mais importante para exibição)
+      const LEAGUE_PRIORITY: Record<string, number> = {
+        "soccer_brazil_campeonato": 10,
+        "soccer_uefa_champs_league": 10,
+        "soccer_epl": 9,
+        "soccer_spain_la_liga": 9,
+        "soccer_conmebol_copa_libertadores": 8,
+        "soccer_brazil_copa_do_brasil": 8,
+        "soccer_germany_bundesliga": 8,
+        "soccer_italy_serie_a": 8,
+        "soccer_france_ligue_one": 7,
+        "soccer_uefa_europa_league": 7,
+        "soccer_conmebol_copa_sudamericana": 7,
+        "soccer_uefa_europa_conference_league": 6,
+        "soccer_fa_cup": 6,
+        "soccer_brazil_serie_b": 6,
+        "soccer_portugal_primeira_liga": 5,
+        "soccer_netherlands_eredivisie": 5,
+        "soccer_turkey_super_league": 5,
+        "soccer_argentina_primera_division": 5,
+        "soccer_mexico_ligamx": 4,
+        "soccer_usa_mls": 4,
+        "soccer_japan_j_league": 4,
+      };
+
+      // Ligas para buscar jogos do dia (as mais prováveis de ter jogos diariamente)
+      const todayLeagues = [
+        "soccer_brazil_campeonato",
+        "soccer_uefa_champs_league",
+        "soccer_epl",
+        "soccer_spain_la_liga",
+        "soccer_germany_bundesliga",
+        "soccer_italy_serie_a",
+        "soccer_france_ligue_one",
+        "soccer_uefa_europa_league",
+        "soccer_conmebol_copa_libertadores",
+        "soccer_conmebol_copa_sudamericana",
+        "soccer_brazil_copa_do_brasil",
+        "soccer_brazil_serie_b",
+        "soccer_uefa_europa_conference_league",
+        "soccer_fa_cup",
+        "soccer_portugal_primeira_liga",
+        "soccer_netherlands_eredivisie",
+        "soccer_turkey_super_league",
+        "soccer_argentina_primera_division",
+        "soccer_mexico_ligamx",
+        "soccer_usa_mls",
+        "soccer_japan_j_league",
+      ];
+
+      // Tentar The Odds API — buscar todas as ligas em paralelo
       if (ODDS_API_KEY) {
-        const popularLeagues = [
-          "soccer_brazil_campeonato",
-          "soccer_epl",
-          "soccer_spain_la_liga",
-          "soccer_italy_serie_a",
-          "soccer_germany_bundesliga",
-          "soccer_france_ligue_one",
-        ];
-        
         const now = new Date();
         const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        
-        for (const league of popularLeagues.slice(0, 3)) {
-          try {
-            const oddsUrl = `${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
-            const response = await fetch(oddsUrl);
-            
-            if (response.status === 401) {
-              console.log("The Odds API quota exceeded, switching to API-Football");
-              useApiFootball = true;
-              break;
+
+        const results = await Promise.all(
+          todayLeagues.map(league =>
+            fetch(`${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`)
+              .then(r => {
+                if (r.status === 401) { quotaExceeded = true; return []; }
+                return r.ok ? r.json() : [];
+              })
+              .catch(() => [])
+          )
+        );
+
+        for (const rawGames of results) {
+          if (!Array.isArray(rawGames)) continue;
+          for (const game of rawGames) {
+            const gameDate = new Date(game.commence_time);
+            if (gameDate > now && gameDate <= next24h) {
+              allGames.push({
+                id: game.id,
+                sportKey: game.sport_key,
+                sportTitle: game.sport_title,
+                commenceTime: game.commence_time,
+                homeTeam: game.home_team,
+                awayTeam: game.away_team,
+                bookmakers: game.bookmakers || [],
+                _priority: LEAGUE_PRIORITY[game.sport_key] ?? 3,
+              });
             }
-            
-            if (response.ok) {
-              const rawGames = await response.json();
-              const todayGames = rawGames
-                .filter((game: any) => {
-                  const gameDate = new Date(game.commence_time);
-                  return gameDate > now && gameDate <= next24h;
-                })
-                .map((game: any) => ({
-                  id: game.id,
-                  sportKey: game.sport_key,
-                  sportTitle: game.sport_title,
-                  commenceTime: game.commence_time,
-                  homeTeam: game.home_team,
-                  awayTeam: game.away_team,
-                  bookmakers: game.bookmakers || []
-                }));
-              allGames = [...allGames, ...todayGames];
-            }
-          } catch (err) {
-            console.error(`Error fetching ${league}:`, err);
           }
         }
       } else {
-        useApiFootball = true;
+        quotaExceeded = true;
       }
-      
-      // Usar API-Football se The Odds API falhou ou não tem jogos
-      if ((useApiFootball || allGames.length === 0) && API_FOOTBALL_KEY) {
+
+      // Usar API-Football como fallback se quota excedida ou sem jogos
+      if ((quotaExceeded || allGames.length === 0) && API_FOOTBALL_KEY) {
         console.log("Using API-Football for today's games");
-        
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth();
         const europeanSeason = currentMonth >= 7 ? currentYear : currentYear - 1;
         const brazilianSeason = currentYear;
-        
+
         const footballLeagues = [
-          { id: 71, name: "Brasileirão Série A", season: brazilianSeason },
-          { id: 39, name: "Premier League", season: europeanSeason },
-          { id: 140, name: "La Liga", season: europeanSeason },
-          { id: 135, name: "Serie A", season: europeanSeason },
-          { id: 78, name: "Bundesliga", season: europeanSeason },
-          { id: 61, name: "Ligue 1", season: europeanSeason },
+          { id: 71, key: "soccer_brazil_campeonato", name: "Campeonato Brasileiro Série A", season: brazilianSeason },
+          { id: 2, key: "soccer_uefa_champs_league", name: "UEFA Champions League", season: europeanSeason },
+          { id: 39, key: "soccer_epl", name: "Premier League", season: europeanSeason },
+          { id: 140, key: "soccer_spain_la_liga", name: "La Liga – Espanha", season: europeanSeason },
+          { id: 78, key: "soccer_germany_bundesliga", name: "Bundesliga – Alemanha", season: europeanSeason },
+          { id: 135, key: "soccer_italy_serie_a", name: "Serie A – Itália", season: europeanSeason },
+          { id: 61, key: "soccer_france_ligue_one", name: "Ligue 1 – França", season: europeanSeason },
+          { id: 3, key: "soccer_uefa_europa_league", name: "UEFA Europa League", season: europeanSeason },
         ];
-        
+
         const todayStr = new Date().toISOString().split('T')[0];
         const next24hStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-        
-        for (const league of footballLeagues.slice(0, 5)) {
-          try {
-            const fixturesResponse = await fetch(
-              `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
-              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-            );
-            
-            if (fixturesResponse.ok) {
-              const fixturesData = await fixturesResponse.json();
-              const allFixtures = fixturesData.response || [];
-              
-              // Apenas jogos não iniciados nas próximas 24 horas
-              const fixtures = allFixtures.filter((f: any) => {
-                const status = f.fixture?.status?.short;
-                const gameDate = new Date(f.fixture?.date).getTime();
-                return status === "NS" && gameDate > nowMs && gameDate <= next24hMs;
-              });
-              
-              const gamesWithOdds = await Promise.all(
-                fixtures.slice(0, 5).map(async (fixture: any) => {
-                  let bookmakers: any[] = [];
-                  
-                  try {
-                    const oddsResponse = await fetch(
-                      `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
-                      { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-                    );
-                    
-                    if (oddsResponse.ok) {
-                      const oddsData = await oddsResponse.json();
-                      const bets = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
-                      
-                      const h2h = bets.find((b: any) => b.name === "Match Winner");
-                      if (h2h) {
-                        bookmakers = [{
-                          key: "api-football",
-                          title: "API-Football",
-                          markets: [{
-                            key: "h2h",
-                            outcomes: h2h.values.map((v: any) => ({
-                              name: v.value === "Home" ? fixture.teams.home.name : 
-                                    v.value === "Away" ? fixture.teams.away.name : "Empate",
-                              price: parseFloat(v.odd)
-                            }))
-                          }]
-                        }];
-                      }
-                    }
-                  } catch (err) {
-                    console.error("Error fetching odds:", err);
-                  }
-                  
-                  return {
-                    id: `api-football-${fixture.fixture.id}`,
-                    sportKey: `soccer_${league.name.toLowerCase().replace(/\s+/g, '_')}`,
-                    sportTitle: league.name,
-                    commenceTime: fixture.fixture.date,
-                    homeTeam: fixture.teams.home.name,
-                    awayTeam: fixture.teams.away.name,
-                    bookmakers
-                  };
-                })
-              );
-              
-              allGames = [...allGames, ...gamesWithOdds];
-            }
-          } catch (err) {
-            console.error(`Error fetching football league ${league.id}:`, err);
+
+        const fixtureResults = await Promise.all(
+          footballLeagues.map(league =>
+            fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+              .then(r => r.ok ? r.json() : { response: [] })
+              .then(data => ({ league, fixtures: data.response || [] }))
+              .catch(() => ({ league, fixtures: [] }))
+          )
+        );
+
+        for (const { league, fixtures } of fixtureResults) {
+          const upcoming = fixtures.filter((f: any) => {
+            const status = f.fixture?.status?.short;
+            const gameDate = new Date(f.fixture?.date).getTime();
+            return status === "NS" && gameDate > nowMs && gameDate <= next24hMs;
+          }).slice(0, 5);
+
+          for (const fixture of upcoming) {
+            allGames.push({
+              id: `api-football-${fixture.fixture.id}`,
+              sportKey: league.key,
+              sportTitle: league.name,
+              commenceTime: fixture.fixture.date,
+              homeTeam: fixture.teams.home.name,
+              awayTeam: fixture.teams.away.name,
+              bookmakers: [],
+              _priority: LEAGUE_PRIORITY[league.key] ?? 3,
+            });
           }
         }
       }
-      
-      allGames.sort((a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
-      console.log(`Games today endpoint - Found ${allGames.length} games`);
-      
-      cache.set(cacheKey, allGames, CACHE_TTL_ODDS);
-      res.json(allGames);
+
+      // Ordenar: por prioridade de liga (desc) depois por horário (asc)
+      allGames.sort((a, b) => {
+        if (b._priority !== a._priority) return b._priority - a._priority;
+        return new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime();
+      });
+
+      // Remover campo interno _priority
+      const finalGames = allGames.map(({ _priority, ...g }) => g);
+
+      console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
+      cache.set(cacheKey, finalGames, 30 * 60 * 1000); // cache 30 minutos
+      res.json(finalGames);
     } catch (error) {
       console.error("Error fetching today's games:", error);
       res.status(500).json({ error: "Failed to fetch today's games" });
