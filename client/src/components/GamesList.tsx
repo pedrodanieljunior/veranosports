@@ -101,11 +101,23 @@ export function GamesList({
     : null;
 
   // Manter ordem original (já vem ordenada por prioridade do backend)
+  // Garante que o Brasileirão (soccer_brazil_campeonato) seja sempre o primeiro
   const leagueOrder = isTodayGames
-    ? Array.from(new Set(games.map(g => g.sportTitle)))
+    ? (() => {
+        const titles = Array.from(new Set(games.map(g => g.sportTitle)));
+        const brasileiraoTitle = games.find(g => g.sportKey === "soccer_brazil_campeonato")?.sportTitle;
+        if (brasileiraoTitle && titles.includes(brasileiraoTitle)) {
+          return [brasileiraoTitle, ...titles.filter(t => t !== brasileiraoTitle)];
+        }
+        return titles;
+      })()
     : [];
 
-  const currentLeague = activeLeague && gamesByLeague?.[activeLeague] ? activeLeague : leagueOrder[0] || null;
+  // Aba padrão: Brasileirão, se disponível
+  const defaultLeague = leagueOrder.find(t =>
+    games.find(g => g.sportTitle === t && g.sportKey === "soccer_brazil_campeonato")
+  ) || leagueOrder[0] || null;
+  const currentLeague = activeLeague && gamesByLeague?.[activeLeague] ? activeLeague : defaultLeague;
   const tabGames = isTodayGames && currentLeague && gamesByLeague
     ? gamesByLeague[currentLeague]
     : games;
