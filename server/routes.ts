@@ -98,7 +98,7 @@ const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
-const CACHE_TTL_ODDS = 10 * 60 * 1000; // 10 minutos
+const CACHE_TTL_ODDS = 30 * 60 * 1000; // 30 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 
 // Ligas permitidas — ordem exata de exibição
@@ -878,6 +878,12 @@ export async function registerRoutes(
     try {
       const { sportKey } = req.params;
       const cacheKey = `odds_${sportKey}`;
+
+      // Para o Brasileirão, reusar o cache unificado para evitar odds inconsistentes
+      if (sportKey === "soccer_brazil_campeonato") {
+        const brCache = cache.get<any[]>("games_brasileirao");
+        if (brCache) return res.json(brCache);
+      }
       
       const cached = cache.get<any[]>(cacheKey);
       if (cached) {
