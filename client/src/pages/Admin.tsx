@@ -20,7 +20,14 @@ import {
   Copy,
   Zap,
   ShieldAlert,
-  BarChart2
+  BarChart2,
+  ClipboardCheck,
+  Wallet,
+  PieChart,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Banknote,
+  Trophy
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -346,7 +353,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={adminTab} onValueChange={setAdminTab}>
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 flex-wrap h-auto gap-1">
             <TabsTrigger value="bilhetes" data-testid="tab-bilhetes">
               <DollarSign className="w-4 h-4 mr-2" />
               Bilhetes
@@ -354,6 +361,18 @@ export default function Admin() {
             <TabsTrigger value="limites" data-testid="tab-limites">
               <BarChart2 className="w-4 h-4 mr-2" />
               Limites por Jogo
+            </TabsTrigger>
+            <TabsTrigger value="validacao" data-testid="tab-validacao">
+              <ClipboardCheck className="w-4 h-4 mr-2" />
+              Validação
+            </TabsTrigger>
+            <TabsTrigger value="caixa" data-testid="tab-caixa">
+              <Wallet className="w-4 h-4 mr-2" />
+              Caixa
+            </TabsTrigger>
+            <TabsTrigger value="financeiro" data-testid="tab-financeiro">
+              <PieChart className="w-4 h-4 mr-2" />
+              Financeiro
             </TabsTrigger>
           </TabsList>
 
@@ -427,6 +446,248 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* ── VALIDAÇÃO ─────────────────────────────────────── */}
+          <TabsContent value="validacao">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-blue-500" />
+                    Validação de Pagamentos
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-validacao">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Atualizar
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Bilhetes pendentes aguardando confirmação de pagamento via PIX.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-3">{[1,2,3].map(i=><Skeleton key={i} className="h-16 w-full"/>)}</div>
+                ) : bets.filter(b => !b.verified && b.status === "pending").length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-4 opacity-30 text-green-500" />
+                    <p>Nenhum bilhete aguardando validação.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {bets.filter(b => !b.verified && b.status === "pending").map(bet => (
+                      <div key={bet.id} className="flex items-center justify-between gap-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 flex-wrap">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm font-bold">#{bet.id.slice(0,8).toUpperCase()}</span>
+                            <Badge variant="secondary">Pendente</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {bet.selections.map(s=>`${s.homeTeam} vs ${s.awayTeam}`).join(" · ")}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Apostado</p>
+                            <p className="font-bold text-sm">R${bet.stake.toFixed(2)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Retorno</p>
+                            <p className="font-bold text-sm text-green-500">R${bet.potentialWin.toFixed(2)}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: true })}
+                            disabled={updateVerifiedMutation.isPending}
+                            data-testid={`button-validate-${bet.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Confirmar Pago
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── CAIXA ─────────────────────────────────────────── */}
+          <TabsContent value="caixa">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="border-green-500/30 bg-green-500/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <ArrowUpCircle className="w-6 h-6 text-green-500" />
+                      <p className="text-sm font-medium text-muted-foreground">Total Recebido (Entradas)</p>
+                    </div>
+                    <p className="text-3xl font-bold text-green-500">
+                      R${bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{bets.filter(b=>b.verified).length} bilhete(s) confirmado(s)</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-red-500/30 bg-red-500/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <ArrowDownCircle className="w-6 h-6 text-red-400" />
+                      <p className="text-sm font-medium text-muted-foreground">Total Pago (Saídas)</p>
+                    </div>
+                    <p className="text-3xl font-bold text-red-400">
+                      R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{bets.filter(b=>b.status==="won").length} bilhete(s) ganho(s)</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Banknote className="w-6 h-6 text-primary" />
+                      <p className="text-sm font-medium text-muted-foreground">Saldo Líquido</p>
+                    </div>
+                    <p className={`text-3xl font-bold ${
+                      (bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)) >= 0
+                        ? "text-green-500" : "text-red-400"
+                    }`}>
+                      R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Entradas menos saídas</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-primary" />
+                    Bilhetes Não Pagos (A Receber)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {bets.filter(b=>!b.verified && b.status==="pending").length === 0 ? (
+                    <p className="text-center py-6 text-muted-foreground text-sm">Nenhum bilhete pendente de pagamento.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {bets.filter(b=>!b.verified && b.status==="pending").map(bet=>(
+                        <div key={bet.id} className="flex items-center justify-between text-sm border rounded p-3 flex-wrap gap-2">
+                          <span className="font-mono font-bold">#{bet.id.slice(0,8).toUpperCase()}</span>
+                          <span className="text-muted-foreground text-xs">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
+                          <span className="font-bold">R${bet.stake.toFixed(2)}</span>
+                          <Badge variant="secondary" className="text-yellow-500 border-yellow-500/30">Aguardando PIX</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── FINANCEIRO ────────────────────────────────────── */}
+          <TabsContent value="financeiro">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <DollarSign className="w-6 h-6 mx-auto mb-1 text-primary" />
+                    <p className="text-xl font-bold">R${bets.reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p>
+                    <p className="text-xs text-muted-foreground">Total Apostado</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Trophy className="w-6 h-6 mx-auto mb-1 text-green-500" />
+                    <p className="text-xl font-bold text-green-500">R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p>
+                    <p className="text-xs text-muted-foreground">Total Prêmios</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="w-6 h-6 mx-auto mb-1 text-blue-500" />
+                    <p className="text-xl font-bold text-blue-500">R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p>
+                    <p className="text-xs text-muted-foreground">Exposição Pendente</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Banknote className="w-6 h-6 mx-auto mb-1 text-yellow-500" />
+                    <p className={`text-xl font-bold ${(bets.reduce((s,b)=>s+b.stake,0)-bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0))>=0?"text-green-500":"text-red-400"}`}>
+                      R${(bets.reduce((s,b)=>s+b.stake,0)-bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Lucro / Prejuízo</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-primary" />
+                    Resumo por Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { label:"Pendentes", filter:(b:BetSlipType)=>b.status==="pending", color:"text-yellow-500", barColor:"bg-yellow-500" },
+                      { label:"Ganhos", filter:(b:BetSlipType)=>b.status==="won", color:"text-green-500", barColor:"bg-green-500" },
+                      { label:"Perdidos", filter:(b:BetSlipType)=>b.status==="lost", color:"text-red-400", barColor:"bg-red-400" },
+                    ].map(({label,filter,color,barColor})=>{
+                      const group = bets.filter(filter);
+                      const totalStake = group.reduce((s,b)=>s+b.stake,0);
+                      const pct = bets.length > 0 ? (group.length / bets.length) * 100 : 0;
+                      return (
+                        <div key={label}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`text-sm font-medium ${color}`}>{label}</span>
+                            <div className="flex gap-4 text-xs text-muted-foreground">
+                              <span>{group.length} bilhete(s)</span>
+                              <span>R${totalStake.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+                              <span>{pct.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2.5">
+                            <div className={`${barColor} h-2.5 rounded-full transition-all`} style={{width:`${pct}%`}} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Odds Médias</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-primary">
+                        {bets.length > 0 ? (bets.reduce((s,b)=>s+b.totalOdds,0)/bets.length).toFixed(2) : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Odd Média Geral</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-500">
+                        {bets.filter(b=>b.status==="won").length > 0
+                          ? (bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.totalOdds,0)/bets.filter(b=>b.status==="won").length).toFixed(2)
+                          : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Odd Média (Ganhos)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="bilhetes">
