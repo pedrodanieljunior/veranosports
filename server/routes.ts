@@ -200,7 +200,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Team To Score First",
     "Corners Over Under",
     "Total Corners",
-    "Cards Over/Under",
   ]);
 
   // Agrupar bets do mesmo mercado de TODOS os bookmakers, deduplicando por valor
@@ -254,7 +253,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     return decimal === 0.5;
   }
 
-  const overUnderMarkets = new Set(["Goals Over/Under", "Goals Over/Under First Half", "Goals Over/Under - Second Half", "Corners Over Under", "Total Corners", "Cards Over/Under"]);
+  const overUnderMarkets = new Set(["Goals Over/Under", "Goals Over/Under First Half", "Goals Over/Under - Second Half", "Corners Over Under", "Total Corners"]);
 
   function sortOverUnder(values: { value: string; odd: number }[]) {
     return [...values].sort((a, b) => {
@@ -277,7 +276,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Total Corners": 4,
     "Team To Score First": 5,
     "Exact Score": 6,
-    "Cards Over/Under": 7,
   };
 
   const markets = Object.values(grouped).map((g) => {
@@ -286,8 +284,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       values = values.filter((v) => isStandardGoalLine(v.value));
     } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
       values = values.filter((v) => isStandardCornerLine(v.value));
-    } else if (g.name === "Cards Over/Under") {
-      values = values.filter((v) => isStandardGoalLine(v.value));
     }
     if (overUnderMarkets.has(g.name)) {
       values = sortOverUnder(values);
