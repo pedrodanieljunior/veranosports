@@ -206,10 +206,10 @@ export function GamesList({
         </div>
       )}
 
-      {/* Seções por liga (todas as ligas, uma abaixo da outra) */}
+      {/* Seções por liga (todas as ligas exceto a já exibida na aba, uma abaixo da outra) */}
       {isTodayGames && leagueOrder.length > 0 && (
         <div className={`border-t ${isDark ? "border-white/20" : "border-gray-200"} pt-4 space-y-6`}>
-          {leagueOrder.map((league) => {
+          {leagueOrder.filter(league => league !== currentLeague).map((league) => {
             const leagueGames = gamesByLeague?.[league] || [];
             const leagueKey = leagueGames[0]?.sportKey || "";
             const displayName = translateLeagueName(leagueKey, league);
