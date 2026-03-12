@@ -577,35 +577,8 @@ export async function registerRoutes(
 
       let games: any[] = [];
 
-      // Tentar The Odds API primeiro
-      if (ODDS_API_KEY) {
-        const oddsUrl = `${ODDS_API_BASE}/sports/soccer_brazil_campeonato/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
-        const response = await fetch(oddsUrl);
-        if (response.ok) {
-          const rawGames = await response.json();
-          const nowTs = Date.now();
-          const next24hTs = nowTs + 24 * 60 * 60 * 1000;
-          games = rawGames
-            .filter((game: any) => {
-              const t = new Date(game.commence_time).getTime();
-              return t > nowTs && t <= next24hTs;
-            })
-            .map((game: any) => ({
-              id: game.id,
-              sportKey: game.sport_key,
-              sportTitle: game.sport_title,
-              commenceTime: game.commence_time,
-              homeTeam: game.home_team,
-              awayTeam: game.away_team,
-              bookmakers: game.bookmakers || []
-            }))
-            .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
-            .slice(0, 10);
-        }
-      }
-
-      // Fallback para API-Football — janela de 24h, apenas jogos NS
-      if (games.length === 0 && API_FOOTBALL_KEY) {
+      // API-Football PRIMEIRO — odds reais da bookmaker correta (ex: 3.90 para Remo)
+      if (API_FOOTBALL_KEY) {
         const currentYear = new Date().getFullYear();
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
@@ -677,6 +650,33 @@ export async function registerRoutes(
             };
           })
         );
+      }
+
+      // Fallback para The Odds API se API-Football não retornou dados
+      if (games.length === 0 && ODDS_API_KEY) {
+        const oddsUrl = `${ODDS_API_BASE}/sports/soccer_brazil_campeonato/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+        const response = await fetch(oddsUrl);
+        if (response.ok) {
+          const rawGames = await response.json();
+          const nowTs = Date.now();
+          const next24hTs = nowTs + 24 * 60 * 60 * 1000;
+          games = rawGames
+            .filter((game: any) => {
+              const t = new Date(game.commence_time).getTime();
+              return t > nowTs && t <= next24hTs;
+            })
+            .map((game: any) => ({
+              id: game.id,
+              sportKey: game.sport_key,
+              sportTitle: game.sport_title,
+              commenceTime: game.commence_time,
+              homeTeam: game.home_team,
+              awayTeam: game.away_team,
+              bookmakers: game.bookmakers || []
+            }))
+            .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
+            .slice(0, 10);
+        }
       }
 
       cache.set(cacheKey, games, CACHE_TTL_ODDS);
