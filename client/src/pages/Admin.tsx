@@ -641,7 +641,7 @@ export default function Admin() {
                     </CardTitle>
                     <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-validacao">
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Atualizar
+                      Recarregar
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
