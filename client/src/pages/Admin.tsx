@@ -81,6 +81,13 @@ export default function Admin() {
     refetchInterval: 30 * 1000,
   });
 
+  const { data: limitsData, refetch: refetchLimits } = useQuery<{
+    dailyTotal: number; dailyLimit: number; dailyRemaining: number; isDailyLimitReached: boolean;
+  }>({
+    queryKey: ["/api/limits"],
+    refetchInterval: 30 * 1000,
+  });
+
   const deleteBetMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/bets/${id}`);
@@ -522,65 +529,140 @@ export default function Admin() {
           {/* ── CAIXA ─────────────────────────────────────────── */}
           <TabsContent value="caixa">
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="border-green-500/30 bg-green-500/5">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-2">
-                      <ArrowUpCircle className="w-6 h-6 text-green-500" />
-                      <p className="text-sm font-medium text-muted-foreground">Total Recebido (Entradas)</p>
+
+              {/* Painel central — Caixa Diário R$50.000 */}
+              <Card className={`border-2 ${
+                limitsData?.isDailyLimitReached ? "border-red-500 bg-red-500/5" :
+                (limitsData?.dailyTotal ?? 0) / 50000 >= 0.8 ? "border-yellow-500 bg-yellow-500/5" :
+                "border-green-500/40 bg-green-500/5"
+              }`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <Wallet className="w-7 h-7 text-primary" />
+                      <div>
+                        <p className="text-lg font-bold">Caixa Diário</p>
+                        <p className="text-xs text-muted-foreground">Limite máximo de exposição: R$50.000,00</p>
+                      </div>
                     </div>
-                    <p className="text-3xl font-bold text-green-500">
+                    <div className="flex items-center gap-2">
+                      {limitsData?.isDailyLimitReached ? (
+                        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-sm px-3 py-1">
+                          <XCircle className="w-4 h-4 mr-1" /> LIMITE ATINGIDO
+                        </Badge>
+                      ) : (limitsData?.dailyTotal ?? 0) / 50000 >= 0.8 ? (
+                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-sm px-3 py-1">
+                          <AlertCircle className="w-4 h-4 mr-1" /> ATENÇÃO
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-sm px-3 py-1">
+                          <CheckCircle className="w-4 h-4 mr-1" /> OPERANDO
+                        </Badge>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => refetchLimits()} data-testid="button-refresh-caixa">
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Barra de progresso principal */}
+                  <div className="mb-3">
+                    <Progress
+                      value={Math.min(100, ((limitsData?.dailyTotal ?? 0) / 50000) * 100)}
+                      className={`h-6 ${
+                        limitsData?.isDailyLimitReached ? "[&>div]:bg-red-500" :
+                        (limitsData?.dailyTotal ?? 0) / 50000 >= 0.8 ? "[&>div]:bg-yellow-500" :
+                        "[&>div]:bg-green-500"
+                      }`}
+                      data-testid="progress-caixa-diario"
+                    />
+                  </div>
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-muted-foreground">
+                      Usado: <span className="text-foreground font-bold">
+                        R${(limitsData?.dailyTotal ?? 0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      {(((limitsData?.dailyTotal ?? 0) / 50000) * 100).toFixed(1)}% de R$50.000,00
+                    </span>
+                    <span className="text-muted-foreground">
+                      Disponível: <span className={`font-bold ${limitsData?.isDailyLimitReached ? "text-red-400" : "text-green-500"}`}>
+                        R${(limitsData?.dailyRemaining ?? 50000).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                      </span>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cards secundários */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
+                    <p className="text-xl font-bold text-green-500">
                       R${bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{bets.filter(b=>b.verified).length} bilhete(s) confirmado(s)</p>
+                    <p className="text-xs text-muted-foreground">Entradas (PIX confirmados)</p>
                   </CardContent>
                 </Card>
-                <Card className="border-red-500/30 bg-red-500/5">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-2">
-                      <ArrowDownCircle className="w-6 h-6 text-red-400" />
-                      <p className="text-sm font-medium text-muted-foreground">Total Pago (Saídas)</p>
-                    </div>
-                    <p className="text-3xl font-bold text-red-400">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <ArrowDownCircle className="w-5 h-5 mx-auto mb-1 text-red-400" />
+                    <p className="text-xl font-bold text-red-400">
                       R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{bets.filter(b=>b.status==="won").length} bilhete(s) ganho(s)</p>
+                    <p className="text-xs text-muted-foreground">Saídas (prêmios pagos)</p>
                   </CardContent>
                 </Card>
-                <Card className="border-primary/30 bg-primary/5">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Banknote className="w-6 h-6 text-primary" />
-                      <p className="text-sm font-medium text-muted-foreground">Saldo Líquido</p>
-                    </div>
-                    <p className={`text-3xl font-bold ${
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                    <p className="text-xl font-bold text-blue-500">
+                      R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Exposição pendente</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Banknote className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
+                    <p className={`text-xl font-bold ${
                       (bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)) >= 0
                         ? "text-green-500" : "text-red-400"
                     }`}>
                       R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2})}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">Entradas menos saídas</p>
+                    <p className="text-xs text-muted-foreground">Saldo líquido</p>
                   </CardContent>
                 </Card>
               </div>
 
+              {/* Bilhetes pendentes de recebimento */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-primary" />
-                    Bilhetes Não Pagos (A Receber)
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    Aguardando Pagamento PIX ({bets.filter(b=>!b.verified && b.status==="pending").length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {bets.filter(b=>!b.verified && b.status==="pending").length === 0 ? (
-                    <p className="text-center py-6 text-muted-foreground text-sm">Nenhum bilhete pendente de pagamento.</p>
+                    <p className="text-center py-6 text-muted-foreground text-sm">Nenhum bilhete aguardando pagamento.</p>
                   ) : (
                     <div className="space-y-2">
                       {bets.filter(b=>!b.verified && b.status==="pending").map(bet=>(
                         <div key={bet.id} className="flex items-center justify-between text-sm border rounded p-3 flex-wrap gap-2">
-                          <span className="font-mono font-bold">#{bet.id.slice(0,8).toUpperCase()}</span>
+                          <span className="font-mono font-bold text-xs">#{bet.id.slice(0,8).toUpperCase()}</span>
                           <span className="text-muted-foreground text-xs">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
-                          <span className="font-bold">R${bet.stake.toFixed(2)}</span>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Apostado</p>
+                            <p className="font-bold">R${bet.stake.toFixed(2)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Retorno potencial</p>
+                            <p className="font-bold text-blue-400">R${bet.potentialWin.toFixed(2)}</p>
+                          </div>
                           <Badge variant="secondary" className="text-yellow-500 border-yellow-500/30">Aguardando PIX</Badge>
                         </div>
                       ))}
