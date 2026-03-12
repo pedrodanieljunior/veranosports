@@ -1040,7 +1040,7 @@ export default function Admin() {
                               <Tooltip formatter={(v:any,n:string)=>n==="Apostas"?`${v} apostas`:R$(v)} contentStyle={{background:"#1a1a1a",border:"1px solid #333",borderRadius:8}}/>
                               <Legend />
                               <Bar yAxisId="left" dataKey="Apostas" fill="#8b5cf6" radius={[3,3,0,0]}/>
-                              <Bar yAxisId="right" dataKey="Lucro" radius={[3,3,0,0]}>
+                              <Bar yAxisId="right" dataKey="Lucro" fill="#22c55e" radius={[3,3,0,0]}>
                                 {marketChartData.map((entry,i)=>(
                                   <Cell key={i} fill={entry.Lucro>=0?"#22c55e":"#ef4444"}/>
                                 ))}
