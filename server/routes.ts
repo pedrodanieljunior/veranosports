@@ -737,52 +737,110 @@ export async function registerRoutes(
           console.log(`Brasileirão ${currentYear} sem jogos nas próximas 24h`);
         }
 
-        games = await Promise.all(
-          fixtures.map(async (fixture: any) => {
-            let bookmakers: any[] = [];
+        // Buscar todas as odds do Brasileirão de uma vez (hoje + amanhã, pois jogos como 00:30 ficam no dia seguinte)
+        const preferredNames = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
+        const oddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
+        const tomorrow = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const processOddsEntries = (entries: any[]) => {
+          for (const entry of entries) {
+            const fid = entry.fixture?.id;
+            if (!fid || oddsMap.has(fid)) continue;
+            const allBks: any[] = entry.bookmakers || [];
+            const chosenBk = allBks.find((bk: any) => preferredNames.includes(bk.name)) || allBks[0];
+            const bets = chosenBk?.bets || [];
+            const h2h = bets.find((b: any) => b.name === "Match Winner");
+            if (h2h && h2h.values?.length >= 2) {
+              console.log(`[BR-bulk] ${fid} bookmaker: ${chosenBk.name}`);
+              oddsMap.set(fid, [{
+                key: "api-football",
+                title: chosenBk.name,
+                markets: [{
+                  key: "h2h",
+                  outcomes: h2h.values.map((v: any) => ({
+                    name: v.value === "Home" ? "HOME_PLACEHOLDER" :
+                          v.value === "Away" ? "AWAY_PLACEHOLDER" : "Empate",
+                    price: parseFloat(v.odd)
+                  }))
+                }]
+              }]);
+            }
+          }
+        };
+        try {
+          const [resp1, resp2] = await Promise.all([
+            fetch(`${API_FOOTBALL_BASE}/odds?league=71&season=${currentYear}&date=${today}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+            fetch(`${API_FOOTBALL_BASE}/odds?league=71&season=${currentYear}&date=${tomorrow}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+          ]);
+          if (resp1.ok) { const d = await resp1.json(); processOddsEntries(d.response || []); }
+          if (resp2.ok) { const d = await resp2.json(); processOddsEntries(d.response || []); }
+          console.log(`[BR-bulk] odds carregadas para ${oddsMap.size} fixtures`);
+        } catch (err) {
+          console.error("[BR-bulk] Erro ao buscar odds em bloco:", err);
+        }
+
+        // Para fixtures que não estavam no bulk, buscar individualmente
+        const missedFixtures = fixtures.filter((f: any) => !oddsMap.has(f.fixture.id));
+        if (missedFixtures.length > 0) {
+          await Promise.all(missedFixtures.map(async (fixture: any) => {
+            const fid = fixture.fixture.id;
             try {
-              const oddsResponse = await fetch(
-                `${API_FOOTBALL_BASE}/odds?fixture=${fixture.fixture.id}`,
-                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-              );
-              if (oddsResponse.ok) {
-                const oddsData = await oddsResponse.json();
-                const bets = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
+              const r = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${fid}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } });
+              if (r.ok) {
+                const d = await r.json();
+                const allBks: any[] = d.response?.[0]?.bookmakers || [];
+                const chosenBk = allBks.find((bk: any) => preferredNames.includes(bk.name)) || allBks[0];
+                const bets = chosenBk?.bets || [];
                 const h2h = bets.find((b: any) => b.name === "Match Winner");
-                if (h2h) {
-                  bookmakers = [{
+                if (h2h && h2h.values?.length >= 2) {
+                  console.log(`[BR-indiv] ${fid} bookmaker: ${chosenBk.name}`);
+                  oddsMap.set(fid, [{
                     key: "api-football",
-                    title: "API-Football",
-                    markets: [{
-                      key: "h2h",
-                      outcomes: h2h.values.map((v: any) => ({
-                        name: v.value === "Home" ? formatTeamName(fixture.teams.home.name) :
-                              v.value === "Away" ? formatTeamName(fixture.teams.away.name) : "Empate",
-                        price: parseFloat(v.odd)
-                      }))
-                    }]
-                  }];
+                    title: chosenBk.name,
+                    markets: [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
+                      name: v.value === "Home" ? "HOME_PLACEHOLDER" : v.value === "Away" ? "AWAY_PLACEHOLDER" : "Empate",
+                      price: parseFloat(v.odd)
+                    }))}]
+                  }]);
                 } else {
-                  bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
+                  console.warn(`[BR-indiv] fixture ${fid} sem Match Winner, bookmakers: ${allBks.length}`);
                 }
               }
-            } catch (err) {
-              console.error("Error fetching brasileirao fixture odds:", err);
-              bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
-            }
-            return {
-              id: `api-football-${fixture.fixture.id}`,
-              sportKey: "soccer_brazil_campeonato",
-              sportTitle: "Brasileirão Série A",
-              commenceTime: fixture.fixture.date,
-              homeTeam: formatTeamName(fixture.teams.home.name),
-              awayTeam: formatTeamName(fixture.teams.away.name),
-              homeLogo: fixture.teams.home.logo,
-              awayLogo: fixture.teams.away.logo,
-              bookmakers
-            };
-          })
-        );
+            } catch (e) { console.error(`[BR-indiv] erro fixture ${fid}:`, e); }
+          }));
+        }
+
+        games = fixtures.map((fixture: any) => {
+          const fid = fixture.fixture.id;
+          let bookmakers = oddsMap.get(fid);
+          if (bookmakers) {
+            // Substituir placeholders pelos nomes reais dos times
+            bookmakers = bookmakers.map(bk => ({
+              ...bk,
+              markets: bk.markets.map((mkt: any) => ({
+                ...mkt,
+                outcomes: mkt.outcomes.map((o: any) => ({
+                  ...o,
+                  name: o.name === "HOME_PLACEHOLDER" ? formatTeamName(fixture.teams.home.name) :
+                        o.name === "AWAY_PLACEHOLDER" ? formatTeamName(fixture.teams.away.name) : o.name
+                }))
+              }))
+            }));
+          } else {
+            console.warn(`[BR] Sem odds da API para fixture ${fid}, usando gerado`);
+            bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
+          }
+          return {
+            id: `api-football-${fid}`,
+            sportKey: "soccer_brazil_campeonato",
+            sportTitle: "Brasileirão Série A",
+            commenceTime: fixture.fixture.date,
+            homeTeam: formatTeamName(fixture.teams.home.name),
+            awayTeam: formatTeamName(fixture.teams.away.name),
+            homeLogo: fixture.teams.home.logo,
+            awayLogo: fixture.teams.away.logo,
+            bookmakers
+          };
+        });
       }
 
       // Fallback para The Odds API se API-Football não retornou dados
@@ -1005,13 +1063,15 @@ export async function registerRoutes(
                     
                     if (oddsResponse.ok) {
                       const oddsData = await oddsResponse.json();
-                      const bets = oddsData.response?.[0]?.bookmakers?.[0]?.bets || [];
-                      
+                      const allBookmakers2: any[] = oddsData.response?.[0]?.bookmakers || [];
+                      const preferredNames2 = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
+                      let chosenBk2 = allBookmakers2.find(bk => preferredNames2.includes(bk.name)) || allBookmakers2[0];
+                      const bets = chosenBk2?.bets || [];
                       const h2h = bets.find((b: any) => b.name === "Match Winner");
-                      if (h2h) {
+                      if (h2h && h2h.values?.length >= 2) {
                         bookmakers = [{
                           key: "api-football",
-                          title: "API-Football",
+                          title: chosenBk2.name,
                           markets: [{
                             key: "h2h",
                             outcomes: h2h.values.map((v: any) => ({
