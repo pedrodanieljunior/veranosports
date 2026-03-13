@@ -280,6 +280,22 @@ export default function Home() {
             {/* Buttons area - positioned at top right of the white area */}
             <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "8vh" }}>
               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 w-56">
+                  <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Buscar time..."
+                    className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none min-w-0"
+                    data-testid="input-search-teams-desktop"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
                   className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors"
@@ -309,7 +325,7 @@ export default function Home() {
 
             {/* Games content */}
             <div className="pb-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} isDark={true} />
+              <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
             </div>
           </div>
         </div>
