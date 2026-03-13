@@ -6,7 +6,7 @@ import { X, History, Receipt, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
-import { translateMarket } from "@/lib/marketLabels";
+import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { useToast } from "@/hooks/use-toast";
 
 interface BetHistoryProps {
@@ -35,7 +35,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     for (const [game, sels] of Object.entries(gameGrouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${s.odds.toFixed(2)}`);
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey, s.homeTeam, s.awayTeam)} @${s.odds.toFixed(2)}`);
       }
       lines.push("");
     }
@@ -103,7 +103,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
                             <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
                             <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                           </div>
-                          <p className="text-foreground font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                          <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                         </div>
                         <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{sel.odds.toFixed(2)}</span>
                       </div>

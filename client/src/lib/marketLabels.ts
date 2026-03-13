@@ -62,3 +62,59 @@ export function translateMarket(key: string): string {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+const VALUE_TRANSLATIONS: Record<string, string> = {
+  Yes: "Sim",
+  No: "Não",
+  Draw: "Empate",
+  "No Goal": "Sem Gol",
+  Odd: "Ímpar",
+  Even: "Par",
+};
+
+function translateHalf(part: string, homeTeam?: string, awayTeam?: string): string {
+  if (part === "Home") return homeTeam || "Casa";
+  if (part === "Away") return awayTeam || "Fora";
+  if (part === "Draw") return "Empate";
+  return part;
+}
+
+export function formatOutcome(
+  outcome: string,
+  marketKey: string,
+  homeTeam?: string,
+  awayTeam?: string
+): string {
+  let value = outcome;
+
+  const allKnownPrefixes = [
+    ...Object.keys(MARKET_LABELS).filter((k) => !k.startsWith("extra-") && !["h2h","spreads","totals","btts","ht_ft","exact_score","first_to_score","corners","red_card"].includes(k)),
+    marketKey,
+  ];
+  for (const prefix of allKnownPrefixes) {
+    if (outcome.startsWith(prefix + "-")) {
+      value = outcome.slice(prefix.length + 1);
+      break;
+    }
+  }
+
+  if (value === outcome && marketKey && outcome.startsWith(marketKey + "-")) {
+    value = outcome.slice(marketKey.length + 1);
+  }
+
+  if (VALUE_TRANSLATIONS[value]) return VALUE_TRANSLATIONS[value];
+
+  if (value === "Home") return homeTeam || "Casa";
+  if (value === "Away") return awayTeam || "Fora";
+
+  value = value.replace(/\bOver\b/g, "Mais").replace(/\bUnder\b/g, "Menos");
+
+  if (value.includes("/")) {
+    return value
+      .split("/")
+      .map((p) => translateHalf(p.trim(), homeTeam, awayTeam))
+      .join("/");
+  }
+
+  return value;
+}

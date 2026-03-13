@@ -10,7 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { translateMarket } from "@/lib/marketLabels";
+import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
@@ -267,7 +267,7 @@ export function BetSlip({
                                       <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
                                       <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                     </div>
-                                    <p className="text-foreground font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                                    <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                   </div>
                                   <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{sel.odds.toFixed(2)}</span>
                                 </div>
@@ -459,7 +459,7 @@ export function BetSlip({
                                       <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
                                       <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                     </div>
-                                    <p className="text-foreground font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                                    <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                   </div>
                                   <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
                                     <span className="text-yellow-400 font-bold text-xs">{sel.odds.toFixed(2)}</span>
