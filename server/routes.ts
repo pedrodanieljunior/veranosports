@@ -1393,6 +1393,20 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/market-settings", async (req, res) => {
+    try {
+      const cached = cache.get<any[]>("market_settings");
+      if (cached) return res.json(cached);
+
+      const settings = await storage.getMarketSettings();
+      cache.set("market_settings", settings, 30 * 1000);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching market settings:", error);
+      res.status(500).json({ error: "Failed to fetch market settings" });
+    }
+  });
+
   app.put("/api/admin/market-settings", async (req, res) => {
     try {
       const updates = req.body;

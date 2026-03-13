@@ -3,10 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
-
-function calculateBoostedOdd(originalOdd: number): number {
-  return originalOdd * 1.15;
-}
+import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface GameCardProps {
   game: Game;
@@ -16,6 +13,10 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, selections, onClick, isDark = false }: GameCardProps) {
+  const { getBoostMultiplier, hasBoosted } = useMarketSettings();
+  const isBoosted = hasBoosted("h2h");
+  const multiplier = getBoostMultiplier("h2h");
+
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
   const bestBookmaker = game.bookmakers[0];
@@ -29,6 +30,8 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
   const hasSelections = selectionsForGame.length > 0;
 
   const formattedDate = isValidDate ? format(gameDate, "dd/MM HH:mm") : "A definir";
+
+  const displayOdd = (price: number) => isBoosted ? (price * multiplier).toFixed(2) : price.toFixed(2);
 
   return (
     <div 
@@ -61,7 +64,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           </span>
           {homeOdd && (
             <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
-              {calculateBoostedOdd(homeOdd.price).toFixed(2)}
+              {displayOdd(homeOdd.price)}
             </span>
           )}
         </div>
@@ -70,7 +73,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           <span className={`text-[11px] flex-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Empate</span>
           {drawOdd && (
             <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
-              {calculateBoostedOdd(drawOdd.price).toFixed(2)}
+              {displayOdd(drawOdd.price)}
             </span>
           )}
         </div>
@@ -84,7 +87,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           </span>
           {awayOdd && (
             <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
-              {calculateBoostedOdd(awayOdd.price).toFixed(2)}
+              {displayOdd(awayOdd.price)}
             </span>
           )}
         </div>

@@ -29,6 +29,7 @@ export interface IStorage {
   getBlockedGameIds(): Promise<Set<string>>;
   getMarketSettings(): Promise<MarketSetting[]>;
   updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]>;
+  seedMarketSettings(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -265,6 +266,27 @@ export class DatabaseStorage implements IStorage {
   async getBlockedGameIds(): Promise<Set<string>> {
     const totals = await this.getGameSimpleBetTotals();
     return new Set(totals.filter(t => t.isBlocked).map(t => t.gameId));
+  }
+
+  async seedMarketSettings(): Promise<void> {
+    const existing = await db.select().from(marketSettingsTable);
+    if (existing.length > 0) return;
+
+    const defaults = [
+      { marketKey: "h2h", marketName: "Resultado Final (1X2)", boostPercent: 15 },
+      { marketKey: "totals", marketName: "Total de Gols", boostPercent: 0 },
+      { marketKey: "ht_ft", marketName: "Intervalo/Final", boostPercent: 0 },
+      { marketKey: "btts", marketName: "Ambas Marcam", boostPercent: 0 },
+      { marketKey: "corners", marketName: "Total de Escanteios", boostPercent: 0 },
+      { marketKey: "first_to_score", marketName: "Primeira Equipe a Marcar", boostPercent: 0 },
+      { marketKey: "red_card", marketName: "Cartão Vermelho no Jogo", boostPercent: 0 },
+      { marketKey: "exact_score", marketName: "Placar Exato", boostPercent: 0 },
+    ];
+
+    for (const d of defaults) {
+      await db.insert(marketSettingsTable).values(d);
+    }
+    console.log("Market settings seeded with 8 default markets");
   }
 
   async getMarketSettings(): Promise<MarketSetting[]> {
