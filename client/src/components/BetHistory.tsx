@@ -1,4 +1,4 @@
-import { BetSlip as BetSlipType } from "@shared/schema";
+import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,6 +6,7 @@ import { X, History, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { translateMarket } from "@/lib/marketLabels";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -13,96 +14,141 @@ interface BetHistoryProps {
   onClose: () => void;
 }
 
+function BetCard({ bet }: { bet: BetSlipType }) {
+  const grouped: Record<string, Selection[]> = {};
+  for (const sel of bet.selections) {
+    const key = sel.gameId;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(sel);
+  }
+
+  return (
+    <div data-testid={`bet-history-item-${bet.id}`} className="space-y-3">
+      <div className="bg-primary/10 border border-primary rounded-md px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground mb-0.5">Código do Bilhete</p>
+            <p className="font-mono text-base font-bold text-primary" data-testid={`text-bet-id-${bet.id}`}>
+              #{bet.id.slice(0, 8).toUpperCase()}
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {format(new Date(bet.createdAt), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {Object.entries(grouped).map(([gameId, sels]) => {
+          const first = sels[0];
+          const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+          return (
+            <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
+              <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-base">⚽</span>
+                  <span className="font-semibold text-foreground text-sm truncate">
+                    {first.homeTeam} vs {first.awayTeam}
+                  </span>
+                </div>
+                <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
+                  {gameOdds.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="px-4 py-3">
+                <div className="relative pl-5">
+                  <div
+                    className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                    style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
+                  />
+                  {sels.map((sel, idx) => (
+                    <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
+                      <div className="flex items-center justify-between relative">
+                        <div>
+                          <div className="flex items-center gap-0 relative">
+                            <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
+                            <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                          </div>
+                          <p className="text-foreground font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                        </div>
+                        <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{sel.odds.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-xl bg-muted border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="text-muted-foreground text-sm">Odds total</span>
+          <span className="text-foreground font-bold text-lg">{bet.totalOdds.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+          <span className="text-muted-foreground text-sm">Valor Apostado</span>
+          <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-2">
+          <span className="text-muted-foreground text-sm">Retorno Potencial</span>
+          <span className="text-yellow-400 font-bold">R$ {bet.potentialWin.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
   return (
-    <Card className="fixed right-4 bottom-4 top-20 w-96 max-w-[calc(100vw-2rem)] z-50 flex flex-col shadow-xl">
-      <CardHeader className="border-b border-card-border flex-shrink-0">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" />
-            <CardTitle className="text-lg">Apostas</CardTitle>
-          </div>
-          <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-history">
-            <X className="w-4 h-4" />
-          </Button>
+    <>
+      <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
+      <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl">
+        <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
-      </CardHeader>
-      
-      <CardContent className="flex-1 overflow-hidden p-4">
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
-          </div>
-        ) : bets.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-            <Receipt className="w-16 h-16 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">
-              Nenhum bilhete gerado ainda
-            </p>
-            <p className="text-sm text-muted-foreground/70 mt-1">
-              Selecione odds e gere seu primeiro bilhete
-            </p>
-          </div>
-        ) : (
-          <ScrollArea className="h-full">
-            <div className="space-y-3">
-              {bets.map((bet) => (
-                <div 
-                  key={bet.id}
-                  className="p-4 rounded-md bg-muted/50 border border-border"
-                  data-testid={`bet-history-item-${bet.id}`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div>
-                      <p className="font-mono text-sm font-bold text-primary">
-                        #{bet.id.slice(0, 8).toUpperCase()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Retorno</p>
-                      <p className="font-bold text-primary">
-                        R$ {bet.potentialWin.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1 mb-3">
-                    {bet.selections.slice(0, 2).map((selection) => (
-                      <div key={selection.id} className="text-xs">
-                        <span className="text-muted-foreground">
-                          {selection.homeTeam} vs {selection.awayTeam}
-                        </span>
-                        <span className="ml-2 font-medium text-primary">
-                          {selection.outcome} @ {selection.odds.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                    {bet.selections.length > 2 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{bet.selections.length - 2} mais seleções
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex justify-between text-xs pt-2 border-t border-border">
-                    <span className="text-muted-foreground">
-                      Aposta: R$ {bet.stake.toFixed(2)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      Odds: {bet.totalOdds.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+        <CardHeader className="border-b border-card-border flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">Apostas</CardTitle>
             </div>
-          </ScrollArea>
-        )}
-      </CardContent>
-    </Card>
+            <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-history">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <ScrollArea className="flex-1">
+          <CardContent className="p-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : bets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-8">
+                <Receipt className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground">
+                  Nenhum bilhete gerado ainda
+                </p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Selecione odds e gere seu primeiro bilhete
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {bets.map((bet) => (
+                  <BetCard key={bet.id} bet={bet} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </ScrollArea>
+      </Card>
+    </>
   );
 }
