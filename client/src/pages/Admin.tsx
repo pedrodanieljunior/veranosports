@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, Banner } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,8 @@ import {
   FileDown,
   Target,
   CalendarDays,
+  Image,
+  Upload,
 } from "lucide-react";
 import {
   BarChart,
@@ -521,6 +523,10 @@ export default function Admin() {
             <TabsTrigger value="mercados" data-testid="tab-mercados">
               <Target className="w-4 h-4 mr-2" />
               Mercados
+            </TabsTrigger>
+            <TabsTrigger value="banners" data-testid="tab-banners">
+              <Image className="w-4 h-4 mr-2" />
+              Banners
             </TabsTrigger>
           </TabsList>
 
@@ -1475,8 +1481,153 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="banners">
+            <BannersTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
+  );
+}
+
+function BannersTab() {
+  const { toast } = useToast();
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
+
+  const { data: banners = [], isLoading } = useQuery<Banner[]>({
+    queryKey: ["/api/banners"],
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async ({ slot, file }: { slot: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(`/api/admin/banners/${slot}`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Falha no upload");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
+      toast({ title: "Banner enviado com sucesso" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao enviar banner", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (slot: number) => {
+      const res = await fetch(`/api/admin/banners/${slot}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Falha ao remover");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
+      toast({ title: "Banner removido" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao remover banner", variant: "destructive" });
+    },
+  });
+
+  const handleFileSelect = (slot: number, file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande (max 5MB)", variant: "destructive" });
+      return;
+    }
+    uploadMutation.mutate({ slot, file });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Image className="w-5 h-5" />
+          Banners do Site
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Gerencie os 4 banners exibidos no carrossel do site. Tamanho recomendado: 1200x400px.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-48 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(slot => {
+              const banner = banners.find(b => b.slotNumber === slot);
+              return (
+                <div
+                  key={slot}
+                  className="border rounded-lg overflow-hidden bg-card"
+                  data-testid={`banner-slot-${slot}`}
+                >
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b">
+                    <span className="text-sm font-medium">Slot {slot}</span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRefs.current[slot - 1]?.click()}
+                        disabled={uploadMutation.isPending}
+                        data-testid={`button-upload-${slot}`}
+                      >
+                        <Upload className="w-3 h-3 mr-1" />
+                        {banner ? "Trocar" : "Enviar"}
+                      </Button>
+                      {banner && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteMutation.mutate(slot)}
+                          disabled={deleteMutation.isPending}
+                          data-testid={`button-delete-banner-${slot}`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    ref={el => { fileInputRefs.current[slot - 1] = el; }}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect(slot, file);
+                      e.target.value = "";
+                    }}
+                    data-testid={`input-file-${slot}`}
+                  />
+                  <div className="aspect-[3/1] bg-muted/30 flex items-center justify-center">
+                    {banner ? (
+                      <img
+                        src={`/uploads/banners/${banner.filename}`}
+                        alt={`Banner ${slot}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <Image className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p className="text-xs">Nenhum banner</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

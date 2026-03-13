@@ -1,5 +1,23 @@
 import { z } from "zod";
-import { pgTable, text, real, timestamp, jsonb, boolean, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, real, timestamp, jsonb, boolean, serial, integer } from "drizzle-orm/pg-core";
+
+export const bannersTable = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  slotNumber: integer("slot_number").notNull().unique(),
+  filename: text("filename").notNull(),
+  active: boolean("active").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const bannerSchema = z.object({
+  id: z.number(),
+  slotNumber: z.number(),
+  filename: z.string(),
+  active: z.boolean(),
+  updatedAt: z.string(),
+});
+
+export type Banner = z.infer<typeof bannerSchema>;
 
 export const marketSettingsTable = pgTable("market_settings", {
   id: serial("id").primaryKey(),

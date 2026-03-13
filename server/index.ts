@@ -1,4 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
+import fs from "fs";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -62,6 +64,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const uploadsDir = path.join(process.cwd(), "uploads", "banners");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
   await storage.seedMarketSettings();
   await registerRoutes(httpServer, app);
 

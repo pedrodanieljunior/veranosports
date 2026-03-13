@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, betSlipsTable, marketSettingsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, betSlipsTable, marketSettingsTable, bannersTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -30,6 +30,9 @@ export interface IStorage {
   getMarketSettings(): Promise<MarketSetting[]>;
   updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]>;
   seedMarketSettings(): Promise<void>;
+  getBanners(): Promise<Banner[]>;
+  upsertBanner(slotNumber: number, filename: string): Promise<Banner>;
+  deleteBanner(slotNumber: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -306,6 +309,44 @@ export class DatabaseStorage implements IStorage {
         .where(eq(marketSettingsTable.marketKey, u.marketKey));
     }
     return this.getMarketSettings();
+  }
+
+  async getBanners(): Promise<Banner[]> {
+    const results = await db.select().from(bannersTable).where(eq(bannersTable.active, true)).orderBy(bannersTable.slotNumber);
+    return results.map(r => ({
+      id: r.id,
+      slotNumber: r.slotNumber,
+      filename: r.filename,
+      active: r.active,
+      updatedAt: r.updatedAt.toISOString(),
+    }));
+  }
+
+  async upsertBanner(slotNumber: number, filename: string): Promise<Banner> {
+    const existing = await db.select().from(bannersTable).where(eq(bannersTable.slotNumber, slotNumber));
+    let result;
+    if (existing.length > 0) {
+      [result] = await db.update(bannersTable)
+        .set({ filename, active: true, updatedAt: new Date() })
+        .where(eq(bannersTable.slotNumber, slotNumber))
+        .returning();
+    } else {
+      [result] = await db.insert(bannersTable)
+        .values({ slotNumber, filename, active: true })
+        .returning();
+    }
+    return {
+      id: result.id,
+      slotNumber: result.slotNumber,
+      filename: result.filename,
+      active: result.active,
+      updatedAt: result.updatedAt.toISOString(),
+    };
+  }
+
+  async deleteBanner(slotNumber: number): Promise<boolean> {
+    const result = await db.delete(bannersTable).where(eq(bannersTable.slotNumber, slotNumber)).returning();
+    return result.length > 0;
   }
 }
 

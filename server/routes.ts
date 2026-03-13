@@ -5,6 +5,31 @@ import { insertBetSlipSchema } from "@shared/schema";
 import { z } from "zod";
 import { cache } from "./cache";
 import QRCode from "qrcode";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const bannerStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(process.cwd(), "uploads", "banners");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `banner-${Date.now()}${ext}`);
+  },
+});
+const bannerUpload = multer({
+  storage: bannerStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype.split("/")[1]);
+    cb(null, ext && mime);
+  },
+});
 
 // Formatar nome de time com Title Case, preservando conectivos portugueses em minúsculo
 function formatTeamName(name: string): string {
@@ -1419,6 +1444,65 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating market settings:", error);
       res.status(500).json({ error: "Failed to update market settings" });
+    }
+  });
+
+  // Banner routes
+  app.get("/api/banners", async (req, res) => {
+    try {
+      const cached = cache.get<any[]>("banners");
+      if (cached) return res.json(cached);
+      const banners = await storage.getBanners();
+      cache.set("banners", banners, 60 * 1000);
+      res.json(banners);
+    } catch (error) {
+      console.error("Error fetching banners:", error);
+      res.status(500).json({ error: "Failed to fetch banners" });
+    }
+  });
+
+  app.post("/api/admin/banners/:slot", bannerUpload.single("image"), async (req, res) => {
+    try {
+      const slot = parseInt(req.params.slot);
+      if (isNaN(slot) || slot < 1 || slot > 4) {
+        return res.status(400).json({ error: "Slot must be 1-4" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: "No image uploaded" });
+      }
+      const existing = await storage.getBanners();
+      const oldBanner = existing.find(b => b.slotNumber === slot);
+      if (oldBanner) {
+        const oldPath = path.join(process.cwd(), "uploads", "banners", oldBanner.filename);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      const banner = await storage.upsertBanner(slot, req.file.filename);
+      cache.delete("banners");
+      res.json(banner);
+    } catch (error) {
+      console.error("Error uploading banner:", error);
+      res.status(500).json({ error: "Failed to upload banner" });
+    }
+  });
+
+  app.delete("/api/admin/banners/:slot", async (req, res) => {
+    try {
+      const slot = parseInt(req.params.slot);
+      if (isNaN(slot) || slot < 1 || slot > 4) {
+        return res.status(400).json({ error: "Slot must be 1-4" });
+      }
+      const banners = await storage.getBanners();
+      const banner = banners.find(b => b.slotNumber === slot);
+      if (banner) {
+        const filePath = path.join(process.cwd(), "uploads", "banners", banner.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+      await storage.deleteBanner(slot);
+      cache.delete("banners");
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting banner:", error);
+      res.status(500).json({ error: "Failed to delete banner" });
     }
   });
 

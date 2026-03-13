@@ -6,6 +6,7 @@ import { BetSlip } from "@/components/BetSlip";
 import { BetHistory } from "@/components/BetHistory";
 import { MobileNav } from "@/components/MobileNav";
 import { GameDetailModal } from "@/components/GameDetailModal";
+import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { History, Receipt, Search, X } from "lucide-react";
@@ -218,6 +219,9 @@ export default function Home() {
             </div>
           </div>
         </header>
+        <div className="px-3 pt-2">
+          <MobileBannerCarousel />
+        </div>
         <div className="flex-1">
           <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
         </div>
