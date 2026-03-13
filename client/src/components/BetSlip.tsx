@@ -11,6 +11,32 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
+const MARKET_LABELS: Record<string, string> = {
+  h2h: "Resultado Final",
+  spreads: "Handicap",
+  totals: "Total de Gols",
+  btts: "Ambos Marcam",
+  ht_ft: "Intervalo/Final",
+  exact_score: "Placar Exato",
+  first_to_score: "Primeiro a Marcar",
+  corners: "Escanteios",
+  red_card: "Cartão Vermelho",
+  "extra-1": "Ambos Marcam",
+  "extra-2": "Intervalo/Final",
+  "extra-4": "Placar Exato",
+  "extra-5": "Total de Gols 2.5",
+  "extra-6": "Primeiro a Marcar",
+  "extra-11": "Escanteios",
+  "extra-15": "Cartão Vermelho",
+};
+
+function translateMarket(key: string): string {
+  if (MARKET_LABELS[key]) return MARKET_LABELS[key];
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
   pixQrCode?: string;
@@ -70,25 +96,38 @@ export function BetSlip({
     }
   };
 
-  const sharePixCode = async () => {
-    if (placedBet?.pixCode) {
-      const shareText = `🎰 Bilhete FW Sports\n\n📋 Código: #${placedBet.id.slice(0, 8).toUpperCase()}\n💰 Valor: R$ ${placedBet.stake.toFixed(2)}\n🎯 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}\n\n📱 Código PIX:\n${placedBet.pixCode}`;
-      
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Bilhete FW Sports',
-            text: shareText,
-          });
-        } catch (err) {
-        }
-      } else {
-        navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Conteúdo copiado!",
-          description: "Compartilhe com quem você quiser.",
-        });
+  const shareBet = async () => {
+    if (!placedBet) return;
+    const grouped: Record<string, Selection[]> = {};
+    for (const sel of placedBet.selections) {
+      const gameLabel = `${sel.homeTeam} vs ${sel.awayTeam}`;
+      if (!grouped[gameLabel]) grouped[gameLabel] = [];
+      grouped[gameLabel].push(sel);
+    }
+    let lines = [`🎯 Bilhete FW Sports\n`];
+    for (const [game, sels] of Object.entries(grouped)) {
+      lines.push(`⚽ ${game}`);
+      for (const s of sels) {
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${s.odds.toFixed(2)}`);
       }
+      lines.push("");
+    }
+    lines.push(`📊 Odds Total: ${placedBet.totalOdds.toFixed(2)}`);
+    lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
+    lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
+    lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
+    lines.push(`📅 ${format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
+    if (placedBet.pixCode) {
+      lines.push(`\n📱 Código PIX:\n${placedBet.pixCode}`);
+    }
+    const shareText = lines.join("\n");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Bilhete FW Sports", text: shareText });
+      } catch (err) {}
+    } else {
+      navigator.clipboard.writeText(shareText);
+      toast({ title: "Bilhete copiado!", description: "Cole onde quiser para compartilhar." });
     }
   };
   
@@ -185,7 +224,7 @@ export function BetSlip({
                   </Button>
                   <Button 
                     className="flex-1 bg-green-600 text-white hover:bg-green-700" 
-                    onClick={sharePixCode}
+                    onClick={shareBet}
                     data-testid="button-share-pix"
                   >
                     <Share2 className="w-4 h-4 mr-2" />
@@ -213,50 +252,91 @@ export function BetSlip({
               </div>
             )}
             
-            <div className="space-y-3">
-              {placedBet.selections.map((selection) => (
-                <div 
-                  key={selection.id}
-                  className="p-3 rounded-md bg-muted/50 border border-border"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">{selection.sportTitle}</p>
-                      <p className="font-medium text-sm truncate">
-                        {selection.homeTeam} vs {selection.awayTeam}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(selection.commenceTime), "dd/MM HH:mm", { locale: ptBR })}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-primary font-medium">{selection.outcome}</p>
-                      <p className="font-bold">{selection.odds.toFixed(2)}</p>
-                    </div>
-                  </div>
+            {(() => {
+              const grouped: Record<string, Selection[]> = {};
+              for (const sel of placedBet.selections) {
+                const key = sel.gameId;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(sel);
+              }
+              return (
+                <div className="space-y-3">
+                  {Object.entries(grouped).map(([gameId, sels]) => {
+                    const first = sels[0];
+                    const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+                    return (
+                      <div key={gameId} className="rounded-xl bg-[#2a2a2a] overflow-hidden" data-testid={`card-game-${gameId}`}>
+                        <div className="flex items-center justify-between px-4 py-3 bg-[#333] border-b border-white/10">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base">⚽</span>
+                            <span className="font-semibold text-white text-sm truncate">
+                              {first.homeTeam} vs {first.awayTeam}
+                            </span>
+                          </div>
+                          <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
+                            {gameOdds.toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="px-4 py-3">
+                          <div className="relative pl-5">
+                            <div
+                              className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                              style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
+                            />
+                            {sels.map((sel, idx) => (
+                              <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
+                                <div className="flex items-center gap-0 relative">
+                                  <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-[#2a2a2a] z-10" />
+                                  <span className="text-gray-400 text-xs">{translateMarket(sel.marketKey)}</span>
+                                </div>
+                                <p className="text-white font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-card-border space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Valor Apostado</span>
-                <span className="font-medium">R$ {placedBet.stake.toFixed(2)}</span>
+              );
+            })()}
+
+            <div className="mt-4 rounded-xl bg-[#2a2a2a] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <span className="text-gray-400 text-sm">Odds total</span>
+                <span className="text-white font-bold text-lg">{placedBet.totalOdds.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Odds Total</span>
-                <span className="font-medium">{placedBet.totalOdds.toFixed(2)}</span>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
+                <span className="text-gray-400 text-sm">Valor Apostado</span>
+                <span className="text-white font-medium">R$ {placedBet.stake.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-lg pt-2 border-t border-card-border">
-                <span className="font-medium">Retorno Potencial</span>
-                <span className="font-bold text-primary" data-testid="text-potential-win">
-                  R$ {placedBet.potentialWin.toFixed(2)}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
+                <span className="text-gray-400 text-sm">Retorno Potencial</span>
+                <span className="text-yellow-400 font-bold" data-testid="text-potential-win">R$ {placedBet.potentialWin.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-gray-500 text-xs">
+                  {format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}
+                </span>
+                <span className="text-gray-500 text-xs">
+                  ID: {placedBet.id.slice(0, 10).toUpperCase()}
                 </span>
               </div>
             </div>
-            
+
+            <Button
+              className="w-full mt-4 bg-green-600 text-white hover:bg-green-700"
+              onClick={shareBet}
+              data-testid="button-share-bet"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Compartilhar Bilhete
+            </Button>
+
             <Button 
-              className="w-full mt-4" 
+              className="w-full mt-2" 
+              variant="outline"
               onClick={() => {
                 onClearAll();
                 onClose();
