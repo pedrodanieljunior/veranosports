@@ -45,7 +45,7 @@ function Carousel({ banners }: { banners: Banner[] }) {
 
   return (
     <div
-      className="relative w-full max-w-[50%] mx-auto mr-8 overflow-hidden rounded-xl shadow-md"
+      className="relative w-full max-w-[50%] ml-auto overflow-hidden rounded-xl shadow-md"
       data-testid="desktop-banner-carousel"
     >
       <div style={{ aspectRatio: "3/1" }} className="relative">
