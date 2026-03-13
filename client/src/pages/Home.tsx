@@ -280,18 +280,18 @@ export default function Home() {
             {/* Buttons area - positioned at top right of the white area */}
             <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "8vh" }}>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-56 border border-white/30 shadow-sm" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-                  <Search className="w-4 h-4 text-white shrink-0" />
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-56 border border-black/10 shadow-sm" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+                  <Search className="w-4 h-4 text-gray-900/70 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Buscar time..."
-                    className="flex-1 bg-transparent text-white text-sm font-medium placeholder-white/70 outline-none min-w-0"
+                    className="flex-1 bg-transparent text-gray-900 text-sm font-medium placeholder-gray-900/50 outline-none min-w-0"
                     data-testid="input-search-teams-desktop"
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery("")} className="text-white/80 hover:text-white">
+                    <button onClick={() => setSearchQuery("")} className="text-gray-900/60 hover:text-gray-900">
                       <X className="w-4 h-4" />
                     </button>
                   )}
