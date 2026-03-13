@@ -145,7 +145,7 @@ export default function Admin() {
   }, [periodBets]);
 
   const { data: marketSettings = [], isLoading: marketSettingsLoading } = useQuery<MarketSetting[]>({
-    queryKey: ["/api/market-settings"],
+    queryKey: ["/api/admin/market-settings"],
     staleTime: 30 * 1000,
   });
 
@@ -163,7 +163,7 @@ export default function Admin() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/market-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/market-settings"] });
       toast({ title: "Mercados atualizados", description: "As configurações de boost foram salvas com sucesso." });
     },
     onError: () => {
