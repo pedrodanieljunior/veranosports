@@ -5,6 +5,7 @@ export const bannersTable = pgTable("banners", {
   id: serial("id").primaryKey(),
   slotNumber: integer("slot_number").notNull().unique(),
   filename: text("filename").notNull(),
+  url: text("url").notNull(),
   active: boolean("active").notNull().default(true),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -13,6 +14,7 @@ export const bannerSchema = z.object({
   id: z.number(),
   slotNumber: z.number(),
   filename: z.string(),
+  url: z.string(),
   active: z.boolean(),
   updatedAt: z.string(),
 });

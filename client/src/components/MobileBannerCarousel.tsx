@@ -25,7 +25,7 @@ export function MobileBannerCarousel() {
 
   useEffect(() => {
     if (activeBanners.length <= 1) return;
-    const interval = setInterval(next, 5000);
+    const interval = setInterval(next, 4000);
     return () => clearInterval(interval);
   }, [next, activeBanners.length]);
 
@@ -55,7 +55,7 @@ export function MobileBannerCarousel() {
         {activeBanners.map((banner, idx) => (
           <img
             key={banner.id}
-            src={`/uploads/banners/${banner.filename}`}
+            src={banner.url}
             alt={`Banner ${banner.slotNumber}`}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               idx === current ? "opacity-100" : "opacity-0"

@@ -31,7 +31,7 @@ export interface IStorage {
   updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]>;
   seedMarketSettings(): Promise<void>;
   getBanners(): Promise<Banner[]>;
-  upsertBanner(slotNumber: number, filename: string): Promise<Banner>;
+  upsertBanner(slotNumber: number, filename: string, url: string): Promise<Banner>;
   deleteBanner(slotNumber: number): Promise<boolean>;
 }
 
@@ -317,28 +317,30 @@ export class DatabaseStorage implements IStorage {
       id: r.id,
       slotNumber: r.slotNumber,
       filename: r.filename,
+      url: r.url,
       active: r.active,
       updatedAt: r.updatedAt.toISOString(),
     }));
   }
 
-  async upsertBanner(slotNumber: number, filename: string): Promise<Banner> {
+  async upsertBanner(slotNumber: number, filename: string, url: string): Promise<Banner> {
     const existing = await db.select().from(bannersTable).where(eq(bannersTable.slotNumber, slotNumber));
     let result;
     if (existing.length > 0) {
       [result] = await db.update(bannersTable)
-        .set({ filename, active: true, updatedAt: new Date() })
+        .set({ filename, url, active: true, updatedAt: new Date() })
         .where(eq(bannersTable.slotNumber, slotNumber))
         .returning();
     } else {
       [result] = await db.insert(bannersTable)
-        .values({ slotNumber, filename, active: true })
+        .values({ slotNumber, filename, url, active: true })
         .returning();
     }
     return {
       id: result.id,
       slotNumber: result.slotNumber,
       filename: result.filename,
+      url: result.url,
       active: result.active,
       updatedAt: result.updatedAt.toISOString(),
     };

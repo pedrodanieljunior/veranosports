@@ -1476,7 +1476,8 @@ export async function registerRoutes(
         const oldPath = path.join(process.cwd(), "uploads", "banners", oldBanner.filename);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
-      const banner = await storage.upsertBanner(slot, req.file.filename);
+      const url = `/uploads/banners/${req.file.filename}`;
+      const banner = await storage.upsertBanner(slot, req.file.filename, url);
       cache.delete("banners");
       res.json(banner);
     } catch (error) {
