@@ -639,15 +639,15 @@ export async function registerRoutes(
         quotaExceeded = true;
       }
 
-      // Usar API-Football como fallback se quota excedida ou sem jogos
-      if ((quotaExceeded || allGames.length === 0) && API_FOOTBALL_KEY) {
-        console.log("Using API-Football for today's games");
+      const coveredSportKeys = new Set(allGames.map(g => g.sportKey));
+
+      if (API_FOOTBALL_KEY) {
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth();
         const europeanSeason = currentMonth >= 7 ? currentYear : currentYear - 1;
         const brazilianSeason = currentYear;
 
-        const footballLeagues = [
+        const allFootballLeagues = [
           { id: 71, key: "soccer_brazil_campeonato", name: "Campeonato Brasileiro Série A", season: brazilianSeason },
           { id: 72, key: "soccer_brazil_serie_b", name: "Brasileirão Série B", season: brazilianSeason },
           { id: 73, key: "soccer_brazil_copa_do_brasil", name: "Copa do Brasil", season: brazilianSeason },
@@ -671,20 +671,33 @@ export async function registerRoutes(
           { id: 98, key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
         ];
 
+        const footballLeagues = allFootballLeagues.filter(l => !coveredSportKeys.has(l.key));
+        if (footballLeagues.length > 0) {
+        console.log(`Using API-Football for ${footballLeagues.length} uncovered leagues: ${footballLeagues.map(l => l.key).join(", ")}`);
+
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
         const todayStr = toManausDateStr(nowMs);
         const next24hStr = toManausDateStr(next24hMs);
 
-        const fixtureResults = await Promise.all(
-          footballLeagues.map(league =>
-            fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
-              { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
-              .then(r => r.ok ? r.json() : { response: [] })
-              .then(data => ({ league, fixtures: data.response || [] }))
-              .catch(() => ({ league, fixtures: [] }))
-          )
-        );
+        const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = [];
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < footballLeagues.length; i += BATCH_SIZE) {
+          const batch = footballLeagues.slice(i, i + BATCH_SIZE);
+          const batchResults = await Promise.all(
+            batch.map(league =>
+              fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+                .then(r => r.ok ? r.json() : { response: [] })
+                .then(data => ({ league, fixtures: data.response || [] }))
+                .catch(() => ({ league, fixtures: [] }))
+            )
+          );
+          fixtureResults.push(...batchResults);
+          if (i + BATCH_SIZE < footballLeagues.length) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
 
         // Coletar fixtures por liga
         const fixturesByLeague: Array<{ league: { id: number; key: string; name: string; season: number }; fixtures: any[] }> = [];
@@ -804,6 +817,7 @@ export async function registerRoutes(
             });
           }
         }
+      }
       }
 
       // Ordenar: por prioridade de liga (desc) depois por horário (asc)
