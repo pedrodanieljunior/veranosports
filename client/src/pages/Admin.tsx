@@ -119,11 +119,11 @@ export default function Admin() {
   }, [bets, finPeriod]);
 
   const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
-    const db = bets.filter(b => new Date(b.createdAt).getDay() === idx);
+    const db = periodBets.filter(b => new Date(b.createdAt).getDay() === idx);
     const e = db.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
     const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
     return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
-  }), [bets]);
+  }), [periodBets]);
 
   const finMarketRows = useMemo(() => {
     const map = new Map<string, { total:number; won:number; lost:number; pending:number; entrada:number; saida:number }>();
