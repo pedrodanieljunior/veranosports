@@ -1611,7 +1611,7 @@ function BannersTab() {
                   <div className="aspect-[3/1] bg-muted/30 flex items-center justify-center">
                     {banner ? (
                       <img
-                        src={banner.url}
+                        src={`${banner.url}?t=${new Date(banner.updatedAt).getTime()}`}
                         alt={`Banner ${slot}`}
                         className="w-full h-full object-cover"
                       />
