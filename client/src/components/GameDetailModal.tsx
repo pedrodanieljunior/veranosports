@@ -84,7 +84,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       const id = mk.replace("extra-", "");
       const nameMap: Record<string, string> = {
         "1": "btts", "8": "btts",
-        "2": "ht_ft", "5": "ht_ft",
+        "2": "ht_ft", "5": "totals",
         "4": "exact_score",
         "3": "totals",
         "6": "first_to_score",
