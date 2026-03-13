@@ -45,7 +45,7 @@ function RotatingBanner({ images, interval = 4000, objectPosition = "center" }: 
 
 export function PromoBanners() {
   return (
-    <div className="flex gap-3 w-full max-w-[70%] mx-auto mr-8">
+    <div className="flex gap-3 w-full max-w-[50%] ml-auto">
       <div className="flex-1">
         <RotatingBanner images={[banner1a, banner1b]} interval={4000} />
       </div>
