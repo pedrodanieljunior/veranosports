@@ -278,7 +278,7 @@ export default function Home() {
           {/* RIGHT CONTENT AREA - positioned over the white area in the frame */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Buttons area - positioned at top right of the white area */}
-            <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "8vh" }}>
+            <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "12vh" }}>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-56 border border-black/10 shadow-sm" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
                   <Search className="w-4 h-4 text-gray-900/70 shrink-0" />
@@ -316,7 +316,7 @@ export default function Home() {
             </div>
 
             {/* Spacer to push content down to align with sidebar leagues */}
-            <div className="flex-shrink-0" style={{ height: "22vh" }} />
+            <div className="flex-shrink-0" style={{ height: "24vh" }} />
 
             {/* Promo banners */}
             <div className="pb-4 flex-shrink-0" style={{ paddingLeft: "3vw", paddingRight: "1vw" }}>
