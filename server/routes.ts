@@ -126,6 +126,11 @@ const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
 const CACHE_TTL_ODDS = 30 * 60 * 1000; // 30 minutos
 const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
 
+const MANAUS_OFFSET_MS = -4 * 60 * 60 * 1000;
+function toManausDateStr(ms: number): string {
+  return new Date(ms + MANAUS_OFFSET_MS).toISOString().split('T')[0];
+}
+
 // Ligas permitidas — ordem exata de exibição
 const ALLOWED_LEAGUES_ORDERED = [
   "soccer_argentina_primera_division",
@@ -666,10 +671,10 @@ export async function registerRoutes(
           { id: 98, key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
         ];
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        const next24hStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
+        const todayStr = toManausDateStr(nowMs);
+        const next24hStr = toManausDateStr(next24hMs);
 
         const fixtureResults = await Promise.all(
           footballLeagues.map(league =>
@@ -836,8 +841,8 @@ export async function registerRoutes(
         const currentYear = new Date().getFullYear();
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-        const today = new Date().toISOString().split('T')[0];
-        const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
+        const today = toManausDateStr(nowMs);
+        const next24hStr = toManausDateStr(next24hMs);
 
         const fetchBrasileiraoFixtures = async (season: number) => {
           const r = await fetch(
@@ -861,7 +866,7 @@ export async function registerRoutes(
         // Buscar todas as odds do Brasileirão de uma vez (hoje + amanhã, pois jogos como 00:30 ficam no dia seguinte)
         const preferredNames = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
         const oddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
-        const tomorrow = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const tomorrow = toManausDateStr(nowMs + 24 * 60 * 60 * 1000);
         const processOddsEntries = (entries: any[]) => {
           for (const entry of entries) {
             const fid = entry.fixture?.id;
@@ -1145,8 +1150,8 @@ export async function registerRoutes(
 
           const nowMs = Date.now();
           const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-          const today = new Date().toISOString().split('T')[0];
-          const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
+          const today = toManausDateStr(nowMs);
+          const next24hStr = toManausDateStr(next24hMs);
           
           const fetchFixtures = async (season: number) => {
             const fixturesResponse = await fetch(
@@ -1626,8 +1631,8 @@ export async function registerRoutes(
       }
       
       // Buscar jogos próximos
-      const today = new Date().toISOString().split('T')[0];
-      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const today = toManausDateStr(Date.now());
+      const nextWeek = toManausDateStr(Date.now() + 7 * 24 * 60 * 60 * 1000);
       
       // Determinar a temporada atual (ligas europeias vão de agosto a maio do ano seguinte)
       const currentYear = new Date().getFullYear();
@@ -1758,8 +1763,8 @@ export async function registerRoutes(
       const fromDate = gameDate ? new Date(gameDate.getTime() - 24 * 60 * 60 * 1000) : today;
       const toDate = gameDate ? new Date(gameDate.getTime() + 24 * 60 * 60 * 1000) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
       
-      const from = fromDate.toISOString().split('T')[0];
-      const to = toDate.toISOString().split('T')[0];
+      const from = toManausDateStr(fromDate.getTime());
+      const to = toManausDateStr(toDate.getTime());
       
       // Buscar por nome do time da casa (primeira palavra significativa)
       const homeWords = String(homeTeam).toLowerCase().split(' ').filter(w => w.length > 2 && !['fc', 'sc', 'cf', 'ac', 'cd', 'rc'].includes(w));
@@ -1920,8 +1925,8 @@ export async function registerRoutes(
       }
       
       // Adicionar margem de 1 dia antes e depois
-      const fromDate = new Date(oldestGameDate.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const toDate = new Date(Math.min(newestGameDate.getTime() + 24 * 60 * 60 * 1000, today.getTime())).toISOString().split('T')[0];
+      const fromDate = toManausDateStr(oldestGameDate.getTime() - 24 * 60 * 60 * 1000);
+      const toDate = toManausDateStr(Math.min(newestGameDate.getTime() + 24 * 60 * 60 * 1000, today.getTime()));
       
       console.log(`Buscando resultados de ${fromDate} até ${toDate}`);
       
