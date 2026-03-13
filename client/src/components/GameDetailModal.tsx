@@ -80,18 +80,30 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const marketKeyToBoostKey = (mk: string): string => {
     if (mk === "h2h") return "h2h";
+    const nameToBoostKey: Record<string, string> = {
+      "Both Teams Score": "btts",
+      "HT/FT Double": "ht_ft",
+      "Goals Over/Under": "totals",
+      "Goals Over/Under First Half": "totals",
+      "Exact Score": "exact_score",
+      "Team To Score First": "first_to_score",
+      "Corners Over Under": "corners",
+      "Total Corners": "corners",
+      "Red Card": "red_card",
+    };
+    if (nameToBoostKey[mk]) return nameToBoostKey[mk];
     if (mk.startsWith("extra-")) {
       const id = mk.replace("extra-", "");
-      const nameMap: Record<string, string> = {
+      const idMap: Record<string, string> = {
         "1": "btts", "8": "btts",
-        "2": "ht_ft", "5": "totals",
-        "4": "exact_score",
-        "3": "totals",
+        "2": "ht_ft", "9": "ht_ft",
+        "5": "totals",
+        "4": "exact_score", "11": "exact_score",
         "6": "first_to_score",
-        "11": "corners",
         "15": "red_card",
+        "45": "corners", "46": "corners",
       };
-      return nameMap[id] || mk;
+      return idMap[id] || mk;
     }
     return mk;
   };
@@ -123,7 +135,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const renderExtraMarket = (market: ExtraMarket) => {
     const bookmaker = extraMarkets?.bookmaker || "API-Football";
-    const marketKey = `extra-${market.id}`;
+    const marketKey = market.name;
     const boostKey = marketKeyToBoostKey(marketKey);
     const isBoosted = hasBoosted(boostKey);
     const boostPct = getBoostPercent(boostKey);

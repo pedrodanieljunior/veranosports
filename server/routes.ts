@@ -2250,31 +2250,29 @@ export async function registerRoutes(
           const actual = homeGoals > awayGoals ? homeTeam
                        : awayGoals > homeGoals ? awayTeam
                        : "Empate";
-          // Comparar normalizado (case-insensitive, trim)
           selResult = sel.outcome.trim().toLowerCase() === actual.trim().toLowerCase() ? "won" : "lost";
 
-        } else if (sel.marketKey === "extra-1") {
+        } else if (sel.marketKey === "extra-1" || sel.marketKey === "extra-8" || sel.marketKey === "Both Teams Score") {
           // Ambas as equipes marcam (BTTS)
           const btts = homeGoals > 0 && awayGoals > 0;
           const betYes = sel.outcome.toLowerCase().includes("sim") || sel.outcome.toLowerCase().includes("yes");
           selResult = (btts === betYes) ? "won" : "lost";
 
-        } else if (sel.marketKey === "extra-2") {
+        } else if (sel.marketKey === "extra-2" || sel.marketKey === "extra-9" || sel.marketKey === "HT/FT Double") {
           // HT/FT — formato: "HT/FT Double-{HT}/{FT}"
           const htResult = htHome > htAway ? homeTeam : htAway > htHome ? awayTeam : "Empate";
           const ftResult = homeGoals > awayGoals ? homeTeam : awayGoals > homeGoals ? awayTeam : "Empate";
           const actualCombo = `${htResult}/${ftResult}`;
-          // Extrair o combo do outcome: "HT/FT Double-X/Y"
           const outcomePart = sel.outcome.replace(/^HT\/FT Double-/i, "").trim();
           selResult = outcomePart.toLowerCase() === actualCombo.toLowerCase() ? "won" : "lost";
 
-        } else if (sel.marketKey === "extra-5") {
+        } else if (sel.marketKey === "extra-5" || sel.marketKey === "Goals Over/Under") {
           // Total de gols (Over/Under 2.5)
           const total = homeGoals + awayGoals;
-          const over = sel.outcome.toLowerCase().includes("over") || sel.outcome.toLowerCase().includes("acima") || sel.outcome.toLowerCase().includes("mais");
+          const over = sel.outcome.toLowerCase().includes("over") || sel.outcome.toLowerCase().includes("acima") || sel.outcome.toLowerCase().includes("mais") || sel.outcome.toLowerCase().includes("sim");
           selResult = (over ? total > 2.5 : total <= 2.5) ? "won" : "lost";
 
-        } else if (sel.marketKey === "extra-4") {
+        } else if (sel.marketKey === "extra-4" || sel.marketKey === "extra-11" || sel.marketKey === "Exact Score") {
           // Placar exato — formato: "X-Y" ou "X:Y"
           const outcomeParts = sel.outcome.match(/(\d+)[:\-](\d+)/);
           if (outcomeParts) {
