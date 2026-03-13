@@ -116,7 +116,7 @@ export function BetSlip({
     lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
     lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
-    lines.push(`📅 ${format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
+    lines.push(`📅 Data: ${format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
     if (placedBet.pixCode) {
       lines.push(`\n📱 Código PIX:\n${placedBet.pixCode}`);
     }
