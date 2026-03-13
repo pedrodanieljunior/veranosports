@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
-import { PromoBanners } from "@/components/PromoBanners";
+import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
@@ -304,7 +304,7 @@ export default function Home() {
 
             {/* Promo banners */}
             <div className="pb-4 flex-shrink-0" style={{ paddingLeft: "3vw", paddingRight: "1vw" }}>
-              <PromoBanners />
+              <DesktopBannerCarousel />
             </div>
 
             {/* Games content */}
