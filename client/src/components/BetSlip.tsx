@@ -265,8 +265,8 @@ export function BetSlip({
                     const first = sels[0];
                     const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
                     return (
-                      <div key={gameId} className="rounded-xl bg-[#2a2a2a] overflow-hidden" data-testid={`card-game-${gameId}`}>
-                        <div className="flex items-center justify-between px-4 py-3 bg-[#333] border-b border-white/10">
+                      <div key={gameId} className="rounded-xl bg-[#1e1e1e] border border-white/10 overflow-hidden" data-testid={`card-game-${gameId}`}>
+                        <div className="flex items-center justify-between px-4 py-3 bg-[#282828] border-b border-white/10">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-base">⚽</span>
                             <span className="font-semibold text-white text-sm truncate">
@@ -287,7 +287,7 @@ export function BetSlip({
                             {sels.map((sel, idx) => (
                               <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
                                 <div className="flex items-center gap-0 relative">
-                                  <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-[#2a2a2a] z-10" />
+                                  <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-[#1e1e1e] z-10" />
                                   <span className="text-gray-400 text-xs">{translateMarket(sel.marketKey)}</span>
                                 </div>
                                 <p className="text-white font-semibold text-sm mt-0.5">{sel.outcome}</p>
@@ -302,7 +302,7 @@ export function BetSlip({
               );
             })()}
 
-            <div className="mt-4 rounded-xl bg-[#2a2a2a] overflow-hidden">
+            <div className="mt-4 rounded-xl bg-[#1e1e1e] border border-white/10 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <span className="text-gray-400 text-sm">Odds total</span>
                 <span className="text-white font-bold text-lg">{placedBet.totalOdds.toFixed(2)}</span>
@@ -441,39 +441,63 @@ export function BetSlip({
         ) : (
           <>
             <ScrollArea className="flex-1 -mx-4 px-4">
-              <div className="space-y-3">
-                {selections.map((selection) => (
-                  <div 
-                    key={selection.id}
-                    className="p-3 rounded-md bg-muted/50 border border-border"
-                  >
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs text-muted-foreground truncate">{selection.sportTitle}</p>
-                          <p className="text-xs text-primary font-medium text-right flex-shrink-0">{selection.outcome}</p>
+              {(() => {
+                const grouped: Record<string, Selection[]> = {};
+                for (const sel of selections) {
+                  const key = sel.gameId;
+                  if (!grouped[key]) grouped[key] = [];
+                  grouped[key].push(sel);
+                }
+                return (
+                  <div className="space-y-3">
+                    {Object.entries(grouped).map(([gameId, sels]) => {
+                      const first = sels[0];
+                      const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+                      return (
+                        <div key={gameId} className="rounded-xl bg-[#1e1e1e] border border-white/10 overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
+                          <div className="flex items-center justify-between px-3 py-2.5 bg-[#282828] border-b border-white/10">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm">⚽</span>
+                              <span className="font-semibold text-white text-sm truncate">
+                                {first.homeTeam} vs {first.awayTeam}
+                              </span>
+                            </div>
+                            <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
+                              {gameOdds.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="px-3 py-2.5">
+                            <div className="relative pl-5">
+                              <div
+                                className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                                style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
+                              />
+                              {sels.map((sel, idx) => (
+                                <div key={sel.id} className={`flex items-start justify-between ${idx > 0 ? "mt-3" : ""}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-0 relative">
+                                      <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-[#1e1e1e] z-10" />
+                                      <span className="text-gray-400 text-xs">{translateMarket(sel.marketKey)}</span>
+                                    </div>
+                                    <p className="text-white font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => onRemoveSelection(sel.id)}
+                                    className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors ml-2 mt-1"
+                                    data-testid={`button-remove-selection-${sel.id}`}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                        <p className="font-medium text-sm truncate">
-                          {selection.homeTeam} vs {selection.awayTeam}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(selection.commenceTime), "dd/MM HH:mm", { locale: ptBR })}
-                          </p>
-                          <p className="font-bold text-sm">{selection.odds.toFixed(2)}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => onRemoveSelection(selection.id)}
-                        className="flex-shrink-0 w-4 h-4 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center hover:bg-destructive transition-colors mt-1"
-                        data-testid={`button-remove-selection-${selection.id}`}
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </ScrollArea>
             
             <div className="mt-4 pt-4 border-t border-card-border space-y-4 flex-shrink-0">
