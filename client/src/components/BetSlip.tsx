@@ -265,11 +265,11 @@ export function BetSlip({
                     const first = sels[0];
                     const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
                     return (
-                      <div key={gameId} className="rounded-xl bg-[#1e1e1e] border border-white/10 overflow-hidden" data-testid={`card-game-${gameId}`}>
-                        <div className="flex items-center justify-between px-4 py-3 bg-[#282828] border-b border-white/10">
+                      <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-game-${gameId}`}>
+                        <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-base">⚽</span>
-                            <span className="font-semibold text-white text-sm truncate">
+                            <span className="font-semibold text-foreground text-sm truncate">
                               {first.homeTeam} vs {first.awayTeam}
                             </span>
                           </div>
@@ -286,11 +286,16 @@ export function BetSlip({
                             />
                             {sels.map((sel, idx) => (
                               <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
-                                <div className="flex items-center gap-0 relative">
-                                  <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-[#1e1e1e] z-10" />
-                                  <span className="text-gray-400 text-xs">{translateMarket(sel.marketKey)}</span>
+                                <div className="flex items-center justify-between relative">
+                                  <div>
+                                    <div className="flex items-center gap-0 relative">
+                                      <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
+                                      <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                    </div>
+                                    <p className="text-foreground font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                                  </div>
+                                  <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{sel.odds.toFixed(2)}</span>
                                 </div>
-                                <p className="text-white font-semibold text-sm mt-0.5">{sel.outcome}</p>
                               </div>
                             ))}
                           </div>
@@ -302,24 +307,24 @@ export function BetSlip({
               );
             })()}
 
-            <div className="mt-4 rounded-xl bg-[#1e1e1e] border border-white/10 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                <span className="text-gray-400 text-sm">Odds total</span>
-                <span className="text-white font-bold text-lg">{placedBet.totalOdds.toFixed(2)}</span>
+            <div className="mt-4 rounded-xl bg-muted border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <span className="text-muted-foreground text-sm">Odds total</span>
+                <span className="text-foreground font-bold text-lg">{placedBet.totalOdds.toFixed(2)}</span>
               </div>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-                <span className="text-gray-400 text-sm">Valor Apostado</span>
-                <span className="text-white font-medium">R$ {placedBet.stake.toFixed(2)}</span>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                <span className="text-muted-foreground text-sm">Valor Apostado</span>
+                <span className="text-foreground font-medium">R$ {placedBet.stake.toFixed(2)}</span>
               </div>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-                <span className="text-gray-400 text-sm">Retorno Potencial</span>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                <span className="text-muted-foreground text-sm">Retorno Potencial</span>
                 <span className="text-yellow-400 font-bold" data-testid="text-potential-win">R$ {placedBet.potentialWin.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-gray-500 text-xs">
+                <span className="text-muted-foreground/60 text-xs">
                   {format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}
                 </span>
-                <span className="text-gray-500 text-xs">
+                <span className="text-muted-foreground/60 text-xs">
                   ID: {placedBet.id.slice(0, 10).toUpperCase()}
                 </span>
               </div>
@@ -454,11 +459,11 @@ export function BetSlip({
                       const first = sels[0];
                       const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
                       return (
-                        <div key={gameId} className="rounded-xl bg-[#1e1e1e] border border-white/10 overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
-                          <div className="flex items-center justify-between px-3 py-2.5 bg-[#282828] border-b border-white/10">
+                        <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
+                          <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-sm">⚽</span>
-                              <span className="font-semibold text-white text-sm truncate">
+                              <span className="font-semibold text-foreground text-sm truncate">
                                 {first.homeTeam} vs {first.awayTeam}
                               </span>
                             </div>
@@ -476,18 +481,21 @@ export function BetSlip({
                                 <div key={sel.id} className={`flex items-start justify-between ${idx > 0 ? "mt-3" : ""}`}>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-0 relative">
-                                      <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-[#1e1e1e] z-10" />
-                                      <span className="text-gray-400 text-xs">{translateMarket(sel.marketKey)}</span>
+                                      <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
+                                      <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                     </div>
-                                    <p className="text-white font-semibold text-sm mt-0.5">{sel.outcome}</p>
+                                    <p className="text-foreground font-semibold text-sm mt-0.5">{sel.outcome}</p>
                                   </div>
-                                  <button
-                                    onClick={() => onRemoveSelection(sel.id)}
-                                    className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors ml-2 mt-1"
-                                    data-testid={`button-remove-selection-${sel.id}`}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
+                                  <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
+                                    <span className="text-yellow-400 font-bold text-xs">{sel.odds.toFixed(2)}</span>
+                                    <button
+                                      onClick={() => onRemoveSelection(sel.id)}
+                                      className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors"
+                                      data-testid={`button-remove-selection-${sel.id}`}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
