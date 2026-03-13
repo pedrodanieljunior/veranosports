@@ -309,7 +309,7 @@ export default function Home() {
 
             {/* Games content */}
             <div className="pb-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} />
+              <GamesList games={games} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={gamesLoading} error={gamesError as Error | null} selectedSport={selectedSport} isTodayGames={!selectedSport} isDark={true} />
             </div>
           </div>
         </div>
