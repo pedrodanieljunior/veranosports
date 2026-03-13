@@ -316,7 +316,7 @@ export default function Home() {
             </div>
 
             {/* Spacer to push content down to align with sidebar leagues */}
-            <div className="flex-shrink-0" style={{ height: "18vh" }} />
+            <div className="flex-shrink-0" style={{ height: "20vh" }} />
 
             {/* Promo banners */}
             <div className="pb-4 flex-shrink-0" style={{ paddingLeft: "3vw", paddingRight: "1vw" }}>
