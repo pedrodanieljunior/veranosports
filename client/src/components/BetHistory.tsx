@@ -2,11 +2,12 @@ import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, History, Receipt } from "lucide-react";
+import { X, History, Receipt, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateMarket } from "@/lib/marketLabels";
+import { useToast } from "@/hooks/use-toast";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -15,12 +16,44 @@ interface BetHistoryProps {
 }
 
 function BetCard({ bet }: { bet: BetSlipType }) {
+  const { toast } = useToast();
   const grouped: Record<string, Selection[]> = {};
   for (const sel of bet.selections) {
     const key = sel.gameId;
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(sel);
   }
+
+  const shareBet = async () => {
+    const gameGrouped: Record<string, Selection[]> = {};
+    for (const sel of bet.selections) {
+      const gameLabel = `${sel.homeTeam} vs ${sel.awayTeam}`;
+      if (!gameGrouped[gameLabel]) gameGrouped[gameLabel] = [];
+      gameGrouped[gameLabel].push(sel);
+    }
+    let lines = [`🎯 Bilhete FW Sports\n`];
+    for (const [game, sels] of Object.entries(gameGrouped)) {
+      lines.push(`⚽ ${game}`);
+      for (const s of sels) {
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${s.odds.toFixed(2)}`);
+      }
+      lines.push("");
+    }
+    lines.push(`📊 Odds Total: ${bet.totalOdds.toFixed(2)}`);
+    lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
+    lines.push(`🏆 Retorno: R$ ${bet.potentialWin.toFixed(2)}`);
+    lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
+    lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
+    const shareText = lines.join("\n");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Bilhete FW Sports", text: shareText });
+      } catch (err) {}
+    } else {
+      navigator.clipboard.writeText(shareText);
+      toast({ title: "Bilhete copiado!", description: "Cole onde quiser para compartilhar." });
+    }
+  };
 
   return (
     <div data-testid={`bet-history-item-${bet.id}`} className="space-y-3">
@@ -97,6 +130,15 @@ function BetCard({ bet }: { bet: BetSlipType }) {
           <span className="text-yellow-400 font-bold">R$ {bet.potentialWin.toFixed(2)}</span>
         </div>
       </div>
+
+      <Button
+        className="w-full bg-green-600 text-white hover:bg-green-700"
+        onClick={shareBet}
+        data-testid={`button-share-history-${bet.id}`}
+      >
+        <Share2 className="w-4 h-4 mr-2" />
+        Compartilhar Bilhete
+      </Button>
     </div>
   );
 }
