@@ -31,7 +31,8 @@ export interface IStorage {
   updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]>;
   seedMarketSettings(): Promise<void>;
   getBanners(): Promise<Banner[]>;
-  upsertBanner(slotNumber: number, filename: string, url: string): Promise<Banner>;
+  getBannersRaw(): Promise<any[]>;
+  upsertBanner(slotNumber: number, filename: string, url: string, imageData?: string, mimeType?: string): Promise<Banner>;
   deleteBanner(slotNumber: number): Promise<boolean>;
 }
 
@@ -323,17 +324,25 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async upsertBanner(slotNumber: number, filename: string, url: string): Promise<Banner> {
+  async getBannersRaw(): Promise<any[]> {
+    const results = await db.select().from(bannersTable).where(eq(bannersTable.active, true)).orderBy(bannersTable.slotNumber);
+    return results;
+  }
+
+  async upsertBanner(slotNumber: number, filename: string, url: string, imageData?: string, mimeType?: string): Promise<Banner> {
     const existing = await db.select().from(bannersTable).where(eq(bannersTable.slotNumber, slotNumber));
     let result;
+    const setData: any = { filename, url, active: true, updatedAt: new Date() };
+    if (imageData !== undefined) setData.imageData = imageData;
+    if (mimeType !== undefined) setData.mimeType = mimeType;
     if (existing.length > 0) {
       [result] = await db.update(bannersTable)
-        .set({ filename, url, active: true, updatedAt: new Date() })
+        .set(setData)
         .where(eq(bannersTable.slotNumber, slotNumber))
         .returning();
     } else {
       [result] = await db.insert(bannersTable)
-        .values({ slotNumber, filename, url, active: true })
+        .values({ slotNumber, filename, url, imageData, mimeType, active: true })
         .returning();
     }
     return {

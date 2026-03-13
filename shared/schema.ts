@@ -6,6 +6,8 @@ export const bannersTable = pgTable("banners", {
   slotNumber: integer("slot_number").notNull().unique(),
   filename: text("filename").notNull(),
   url: text("url").notNull(),
+  imageData: text("image_data"),
+  mimeType: text("mime_type"),
   active: boolean("active").notNull().default(true),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

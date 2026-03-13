@@ -1480,6 +1480,24 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/banners/:slot/image", async (req, res) => {
+    try {
+      const slot = parseInt(req.params.slot);
+      const banners = await storage.getBannersRaw();
+      const banner = banners.find((b: any) => b.slotNumber === slot);
+      if (!banner || !banner.imageData) {
+        return res.status(404).send("Not found");
+      }
+      const mimeType = banner.mimeType || "image/jpeg";
+      const buf = Buffer.from(banner.imageData, "base64");
+      res.set("Content-Type", mimeType);
+      res.set("Cache-Control", "public, max-age=86400");
+      res.send(buf);
+    } catch (error) {
+      res.status(500).send("Error");
+    }
+  });
+
   app.post("/api/admin/banners/:slot", bannerUpload.single("image"), async (req, res) => {
     try {
       const slot = parseInt(req.params.slot);
@@ -1489,14 +1507,11 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ error: "No image uploaded" });
       }
-      const existing = await storage.getBanners();
-      const oldBanner = existing.find(b => b.slotNumber === slot);
-      if (oldBanner) {
-        const oldPath = path.join(process.cwd(), "uploads", "banners", oldBanner.filename);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      const url = `/uploads/banners/${req.file.filename}`;
-      const banner = await storage.upsertBanner(slot, req.file.filename, url);
+      const imageData = fs.readFileSync(req.file.path).toString("base64");
+      const mimeType = req.file.mimetype;
+      fs.unlinkSync(req.file.path);
+      const url = `/api/banners/${slot}/image`;
+      const banner = await storage.upsertBanner(slot, req.file.originalname, url, imageData, mimeType);
       cache.delete("banners");
       res.json(banner);
     } catch (error) {
@@ -1510,12 +1525,6 @@ export async function registerRoutes(
       const slot = parseInt(req.params.slot);
       if (isNaN(slot) || slot < 1 || slot > 4) {
         return res.status(400).json({ error: "Slot must be 1-4" });
-      }
-      const banners = await storage.getBanners();
-      const banner = banners.find(b => b.slotNumber === slot);
-      if (banner) {
-        const filePath = path.join(process.cwd(), "uploads", "banners", banner.filename);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
       await storage.deleteBanner(slot);
       cache.delete("banners");
