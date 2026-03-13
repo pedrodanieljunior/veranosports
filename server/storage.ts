@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, betSlipsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, betSlipsTable, marketSettingsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -27,6 +27,8 @@ export interface IStorage {
   getDailyTotalPotentialWin(): Promise<number>;
   getGameSimpleBetTotals(): Promise<GameSimpleBetTotal[]>;
   getBlockedGameIds(): Promise<Set<string>>;
+  getMarketSettings(): Promise<MarketSetting[]>;
+  updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -263,6 +265,25 @@ export class DatabaseStorage implements IStorage {
   async getBlockedGameIds(): Promise<Set<string>> {
     const totals = await this.getGameSimpleBetTotals();
     return new Set(totals.filter(t => t.isBlocked).map(t => t.gameId));
+  }
+
+  async getMarketSettings(): Promise<MarketSetting[]> {
+    const results = await db.select().from(marketSettingsTable).orderBy(marketSettingsTable.id);
+    return results.map(r => ({
+      id: r.id,
+      marketKey: r.marketKey,
+      marketName: r.marketName,
+      boostPercent: r.boostPercent,
+    }));
+  }
+
+  async updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]> {
+    for (const u of updates) {
+      await db.update(marketSettingsTable)
+        .set({ boostPercent: u.boostPercent })
+        .where(eq(marketSettingsTable.marketKey, u.marketKey));
+    }
+    return this.getMarketSettings();
   }
 }
 

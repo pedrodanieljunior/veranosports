@@ -2,14 +2,11 @@ import { Game, Selection } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
-
-function calculateH2hBoostedOdd(originalOdd: number): number {
-  return originalOdd * 1.15;
-}
+import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface ExtraMarket {
   id: number;
@@ -35,7 +32,8 @@ interface GameDetailModalProps {
 }
 
 export function GameDetailModal({ game, open, onClose, selections, onToggleSelection }: GameDetailModalProps) {
-  // API-Football extra markets
+  const { getBoostMultiplier, hasBoosted, getBoostPercent } = useMarketSettings();
+
   const extraMarketsQueryKey = game ? 
     `/api/football/extra-markets?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&commenceTime=${encodeURIComponent(game.commenceTime)}&gameId=${encodeURIComponent(game.id)}` : 
     null;
@@ -80,8 +78,27 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     return !selected && gameSelectionLimitReached;
   };
 
+  const marketKeyToBoostKey = (mk: string): string => {
+    if (mk === "h2h") return "h2h";
+    if (mk.startsWith("extra-")) {
+      const id = mk.replace("extra-", "");
+      const nameMap: Record<string, string> = {
+        "1": "btts", "8": "btts",
+        "2": "ht_ft", "5": "ht_ft",
+        "4": "exact_score",
+        "3": "totals",
+        "6": "first_to_score",
+        "11": "corners",
+        "15": "red_card",
+      };
+      return nameMap[id] || mk;
+    }
+    return mk;
+  };
+
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
-    const finalOdds = marketKey === "h2h" ? calculateH2hBoostedOdd(originalOdds) : originalOdds;
+    const boostKey = marketKeyToBoostKey(marketKey);
+    const finalOdds = originalOdds * getBoostMultiplier(boostKey);
     const selection: Selection = {
       id: `${game.id}-${marketKey}-${outcomeName}`,
       gameId: game.id,
@@ -107,6 +124,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   const renderExtraMarket = (market: ExtraMarket) => {
     const bookmaker = extraMarkets?.bookmaker || "API-Football";
     const marketKey = `extra-${market.id}`;
+    const boostKey = marketKeyToBoostKey(marketKey);
+    const isBoosted = hasBoosted(boostKey);
+    const boostPct = getBoostPercent(boostKey);
     
     return (
       <div key={market.id} className="space-y-3">
@@ -117,6 +137,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
           {market.values.map((value) => {
             const outcomeKey = `${market.name}-${value.value}`;
             const selected = isSelected(outcomeKey, marketKey);
+            const displayOdd = isBoosted ? value.odd * getBoostMultiplier(boostKey) : value.odd;
             
             const translateHalf = (part: string) => {
               if (part === "Home") return "Casa";
@@ -160,9 +181,17 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">
                   {displayLabel}
                 </span>
-                <span className="font-bold text-base text-[#f5c518]">
-                  {value.odd.toFixed(2)}
-                </span>
+                <div className="flex flex-col items-center">
+                  <span className="font-bold text-base text-[#f5c518]">
+                    {displayOdd.toFixed(2)}
+                  </span>
+                  {isBoosted && (
+                    <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
+                      {value.odd.toFixed(2)}
+                      {boostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -208,7 +237,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <div className="grid grid-cols-3 gap-2">
                   {h2hMarket.outcomes.map((outcome: any) => {
                     const selected = isSelected(outcome.name, "h2h");
-                    const boostedOdd = calculateH2hBoostedOdd(outcome.price);
+                    const h2hBoosted = hasBoosted("h2h");
+                    const h2hBoostPct = getBoostPercent("h2h");
+                    const displayOdd = h2hBoosted ? outcome.price * getBoostMultiplier("h2h") : outcome.price;
                     const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
                     const isHome = outcome.name === game.homeTeam;
                     const displayName = isDraw ? "Empate" : 
@@ -234,13 +265,15 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         </span>
                         <div className="flex items-center gap-1">
                           <span className="font-bold text-lg text-[#f5c518]">
-                            {boostedOdd.toFixed(2)}
+                            {displayOdd.toFixed(2)}
                           </span>
-                          <TrendingUp className="w-3 h-3 text-green-500" />
+                          {h2hBoosted && (h2hBoostPct > 0 ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />)}
                         </div>
-                        <span className="text-[10px] text-gray-500 line-through">
-                          {outcome.price.toFixed(2)}
-                        </span>
+                        {h2hBoosted && (
+                          <span className="text-[10px] text-gray-500 line-through">
+                            {outcome.price.toFixed(2)}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

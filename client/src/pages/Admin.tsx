@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 const MARKET_LABELS: Record<string, string> = {
   "h2h": "Resultado Final",
@@ -99,6 +100,7 @@ export default function Admin() {
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
   const [finPeriod, setFinPeriod] = useState<"all" | "month" | "week" | "today">("month");
+  const [marketBoosts, setMarketBoosts] = useState<Record<string, number>>({});
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
@@ -141,6 +143,33 @@ export default function Admin() {
       .map(([key,v])=>({ key, label: key==="__multi__"?"Múltiplas":getMarketLabel(key), ...v, lucro: v.entrada-v.saida }))
       .sort((a,b)=>b.total-a.total);
   }, [periodBets]);
+
+  const { data: marketSettings = [], isLoading: marketSettingsLoading } = useQuery<MarketSetting[]>({
+    queryKey: ["/api/market-settings"],
+    staleTime: 30 * 1000,
+  });
+
+  useEffect(() => {
+    if (marketSettings.length > 0) {
+      const init: Record<string, number> = {};
+      marketSettings.forEach(s => { init[s.marketKey] = s.boostPercent; });
+      setMarketBoosts(init);
+    }
+  }, [marketSettings]);
+
+  const saveMarketSettingsMutation = useMutation({
+    mutationFn: async (updates: { marketKey: string; boostPercent: number }[]) => {
+      const response = await apiRequest("PUT", "/api/admin/market-settings", updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/market-settings"] });
+      toast({ title: "Mercados atualizados", description: "As configurações de boost foram salvas com sucesso." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível salvar as configurações.", variant: "destructive" });
+    },
+  });
 
   const { data: gameLimitsData, isLoading: gameLimitsLoading, refetch: refetchGameLimits } = useQuery<{ totals: GameLimitEntry[]; limit: number }>({
     queryKey: ["/api/admin/game-limits"],
@@ -488,6 +517,10 @@ export default function Admin() {
             <TabsTrigger value="financeiro" data-testid="tab-financeiro">
               <PieChart className="w-4 h-4 mr-2" />
               Financeiro
+            </TabsTrigger>
+            <TabsTrigger value="mercados" data-testid="tab-mercados">
+              <Target className="w-4 h-4 mr-2" />
+              Mercados
             </TabsTrigger>
           </TabsList>
 
@@ -1331,6 +1364,116 @@ export default function Admin() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="mercados">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5 text-primary" />
+                    Gerenciamento de Mercados
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const updates = Object.entries(marketBoosts).map(([marketKey, boostPercent]) => ({
+                        marketKey,
+                        boostPercent,
+                      }));
+                      saveMarketSettingsMutation.mutate(updates);
+                    }}
+                    disabled={saveMarketSettingsMutation.isPending}
+                    data-testid="button-save-market-settings"
+                  >
+                    {saveMarketSettingsMutation.isPending ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Salvar Alterações
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Controle o percentual de aumento ou diminuição das odds para cada mercado. Valores positivos aumentam a odd, negativos diminuem.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {marketSettingsLoading ? (
+                  <div className="space-y-4">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {marketSettings.map((setting) => {
+                      const currentBoost = marketBoosts[setting.marketKey] ?? setting.boostPercent;
+                      const isModified = currentBoost !== setting.boostPercent;
+                      return (
+                        <div
+                          key={setting.marketKey}
+                          className={`flex items-center justify-between gap-4 p-4 rounded-lg border transition-colors ${
+                            isModified ? "border-primary/50 bg-primary/5" : "border-border bg-muted/30"
+                          }`}
+                          data-testid={`market-row-${setting.marketKey}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{setting.marketName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {currentBoost > 0 ? (
+                                <span className="text-green-500 flex items-center gap-1">
+                                  <TrendingUp className="w-3 h-3" /> Odds aumentadas em {currentBoost}%
+                                </span>
+                              ) : currentBoost < 0 ? (
+                                <span className="text-red-500 flex items-center gap-1">
+                                  <TrendingDown className="w-3 h-3" /> Odds reduzidas em {Math.abs(currentBoost)}%
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">Sem alteração nas odds</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-8 h-8 p-0"
+                              onClick={() => setMarketBoosts(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? setting.boostPercent) - 1 }))}
+                              data-testid={`button-decrease-${setting.marketKey}`}
+                            >
+                              −
+                            </Button>
+                            <div className="relative w-20">
+                              <Input
+                                type="number"
+                                value={currentBoost}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val)) {
+                                    setMarketBoosts(prev => ({ ...prev, [setting.marketKey]: val }));
+                                  }
+                                }}
+                                className="text-center pr-6 h-8 text-sm"
+                                data-testid={`input-boost-${setting.marketKey}`}
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-8 h-8 p-0"
+                              onClick={() => setMarketBoosts(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? setting.boostPercent) + 1 }))}
+                              data-testid={`button-increase-${setting.marketKey}`}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

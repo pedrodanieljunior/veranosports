@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { pgTable, text, real, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, real, timestamp, jsonb, boolean, serial } from "drizzle-orm/pg-core";
+
+export const marketSettingsTable = pgTable("market_settings", {
+  id: serial("id").primaryKey(),
+  marketKey: text("market_key").notNull().unique(),
+  marketName: text("market_name").notNull(),
+  boostPercent: real("boost_percent").notNull().default(0),
+});
 
 export const betSlipsTable = pgTable("bet_slips", {
   id: text("id").primaryKey(),
@@ -97,3 +104,12 @@ export const insertBetSlipSchema = z.object({
 });
 
 export type InsertBetSlip = z.infer<typeof insertBetSlipSchema>;
+
+export const marketSettingSchema = z.object({
+  id: z.number(),
+  marketKey: z.string(),
+  marketName: z.string(),
+  boostPercent: z.number(),
+});
+
+export type MarketSetting = z.infer<typeof marketSettingSchema>;

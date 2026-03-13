@@ -1378,6 +1378,36 @@ export async function registerRoutes(
     }
   });
 
+  // Market settings (boost de odds por mercado)
+  app.get("/api/market-settings", async (req, res) => {
+    try {
+      const cached = cache.get<any[]>("market_settings");
+      if (cached) return res.json(cached);
+
+      const settings = await storage.getMarketSettings();
+      cache.set("market_settings", settings, 30 * 1000);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching market settings:", error);
+      res.status(500).json({ error: "Failed to fetch market settings" });
+    }
+  });
+
+  app.put("/api/admin/market-settings", async (req, res) => {
+    try {
+      const updates = req.body;
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ error: "Body must be an array of { marketKey, boostPercent }" });
+      }
+      const result = await storage.updateMarketSettings(updates);
+      cache.delete("market_settings");
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating market settings:", error);
+      res.status(500).json({ error: "Failed to update market settings" });
+    }
+  });
+
   // Todos os bilhetes para o painel admin (histórico completo)
   app.get("/api/admin/bets", async (req, res) => {
     try {

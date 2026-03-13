@@ -1,13 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TrendingUp } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Selection } from "@shared/schema";
-
-function calculateBoostedOdd(originalOdd: number): number {
-  return originalOdd * 1.15;
-}
+import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface FootballFixture {
   id: number;
@@ -31,6 +28,7 @@ interface FootballGameCardProps {
 
 export function FootballGameCard({ fixture, selections, onToggleSelection }: FootballGameCardProps) {
   const gameDate = new Date(fixture.date);
+  const { getBoostMultiplier, hasBoosted, getBoostPercent } = useMarketSettings();
   
   const matchWinner = fixture.odds.find(o => o.name === "Match Winner");
   const btts = fixture.odds.find(o => o.name === "Both Teams Score");
@@ -43,7 +41,8 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
   };
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, marketName: string) => {
-    const finalOdds = marketKey === "match_winner" ? calculateBoostedOdd(originalOdds) : originalOdds;
+    const boostKey = marketKey === "match_winner" ? "h2h" : marketKey;
+    const finalOdds = originalOdds * getBoostMultiplier(boostKey);
     const selection: Selection = {
       id: `${fixture.id}-${marketKey}-${outcomeName}`,
       gameId: String(fixture.id),
@@ -76,8 +75,10 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {market.values.slice(0, 6).map((outcome) => {
             const selected = isSelected(`${marketKey}-${outcome.value}`, marketKey);
-            const isMatchWinner = marketKey === "match_winner";
-            const displayOdd = isMatchWinner ? calculateBoostedOdd(outcome.odd) : outcome.odd;
+            const boostKey = marketKey === "match_winner" ? "h2h" : marketKey;
+            const isBoosted = hasBoosted(boostKey);
+            const boostPct = getBoostPercent(boostKey);
+            const displayOdd = isBoosted ? outcome.odd * getBoostMultiplier(boostKey) : outcome.odd;
             const displayValue = translateFn ? translateFn(outcome.value) : outcome.value;
             return (
               <button
@@ -97,10 +98,10 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
                   <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
                     {displayOdd.toFixed(2)}
                   </span>
-                  {isMatchWinner && (
+                  {isBoosted && (
                     <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
                       {outcome.odd.toFixed(2)}
-                      <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                      {boostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
                     </span>
                   )}
                 </div>
