@@ -874,25 +874,49 @@ export default function Admin() {
                         </p>
                       </div>
 
-                      {/* Barra de disponível */}
+                      {/* Barras de disponível + lucro */}
                       {(() => {
-                        const pct = Math.max(0, Math.min(100, (saldo / APORTE_INICIAL) * 100));
-                        const barColor = pct > 50 ? "bg-green-500" : pct > 20 ? "bg-yellow-500" : "bg-red-500";
+                        const saldoPct = Math.max(0, Math.min(100, (saldo / APORTE_INICIAL) * 100));
+                        const saldoColor = saldoPct > 50 ? "bg-green-500" : saldoPct > 20 ? "bg-yellow-500" : "bg-red-500";
+                        const lucroOp = ganhos - perdas;
+                        const lucroPct = Math.max(0, Math.min(100, (Math.abs(lucroOp) / APORTE_INICIAL) * 100));
+                        const lucroPositivo = lucroOp >= 0;
                         return (
-                          <div className="mb-6">
-                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                              <span>Disponível no caixa</span>
-                              <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
-                                {pct.toFixed(1)}%
-                              </span>
+                          <div className="mb-6 space-y-2">
+                            {/* Barra 1 — Disponível */}
+                            <div>
+                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <span>Disponível no caixa</span>
+                                <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                                  {saldoPct.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="w-full h-3 bg-muted rounded-t-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${saldoColor}`}
+                                  style={{ width: `${saldoPct}%` }}
+                                />
+                              </div>
                             </div>
-                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                                style={{ width: `${pct}%` }}
-                              />
+
+                            {/* Barra 2 — Lucro operacional */}
+                            <div>
+                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <span>Lucro operacional</span>
+                                <span className={`font-semibold ${lucroPositivo ? "text-amber-400" : "text-red-400"}`}>
+                                  {lucroPositivo ? "+" : "-"}R${Math.abs(lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                              <div className="w-full h-3 bg-muted rounded-b-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${lucroPositivo ? "bg-amber-400" : "bg-red-500"}`}
+                                  style={{ width: `${lucroPct}%` }}
+                                />
+                              </div>
                             </div>
-                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+
+                            {/* Legenda compartilhada */}
+                            <div className="flex justify-between text-xs text-muted-foreground">
                               <span>R$0</span>
                               <span>R$50.000</span>
                             </div>
