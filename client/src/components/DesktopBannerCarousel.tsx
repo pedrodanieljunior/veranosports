@@ -2,17 +2,26 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Banner } from "@shared/schema";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PromoBanners } from "./PromoBanners";
 
 export function DesktopBannerCarousel() {
-  const { data: banners = [] } = useQuery<Banner[]>({
+  const { data: banners = [], isLoading } = useQuery<Banner[]>({
     queryKey: ["/api/banners"],
   });
 
   const activeBanners = banners.filter(b => b.active);
 
+  if (isLoading) {
+    return (
+      <div
+        className="w-full max-w-[50%] ml-auto rounded-xl overflow-hidden bg-gray-200 animate-pulse"
+        style={{ aspectRatio: "3/1" }}
+        data-testid="desktop-banner-skeleton"
+      />
+    );
+  }
+
   if (activeBanners.length === 0) {
-    return <PromoBanners />;
+    return null;
   }
 
   return <Carousel banners={activeBanners} />;
