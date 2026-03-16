@@ -617,7 +617,13 @@ export default function Admin() {
                           </div>
                           <Progress
                             value={pct}
-                            className={`h-3 ${entry.isBlocked ? "[&>div]:bg-red-500" : pct >= 80 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500"}`}
+                            className={`h-3 ${
+                              entry.isBlocked || entry.total > 10000
+                                ? "[&>div]:bg-red-500"
+                                : entry.total > 5000
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-green-500"
+                            }`}
                             data-testid={`progress-game-${entry.gameId}`}
                           />
                           <div className="flex justify-between mt-1 text-xs text-muted-foreground">
