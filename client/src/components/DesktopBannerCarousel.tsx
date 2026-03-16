@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 export function DesktopBannerCarousel() {
   const { data: banners = [], isLoading } = useQuery<Banner[]>({
     queryKey: ["/api/banners"],
+    refetchInterval: 30000,
+    staleTime: 0,
   });
 
   const activeBanners = banners.filter(b => b.active);

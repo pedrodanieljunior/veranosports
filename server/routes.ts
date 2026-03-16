@@ -1472,7 +1472,7 @@ export async function registerRoutes(
       const cached = cache.get<any[]>("banners");
       if (cached) return res.json(cached);
       const banners = await storage.getBanners();
-      cache.set("banners", banners, 60 * 1000);
+      cache.set("banners", banners, 5 * 1000);
       res.json(banners);
     } catch (error) {
       console.error("Error fetching banners:", error);

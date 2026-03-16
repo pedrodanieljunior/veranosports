@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 export function MobileBannerCarousel() {
   const { data: banners = [] } = useQuery<Banner[]>({
     queryKey: ["/api/banners"],
+    refetchInterval: 30000,
+    staleTime: 0,
   });
 
   const [current, setCurrent] = useState(0);
