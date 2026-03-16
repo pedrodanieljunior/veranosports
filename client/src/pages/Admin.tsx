@@ -411,16 +411,16 @@ export default function Admin() {
   };
 
   const getStatusBadge = (status: string, verified?: boolean) => {
-    if (status === "won" && verified) {
-      return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Pago</Badge>;
+    if (!verified) {
+      return <Badge variant="secondary">Pendente</Badge>;
     }
     switch (status) {
       case "won":
-        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Ganhou</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Pago</Badge>;
       case "lost":
         return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Perdeu</Badge>;
       default:
-        return <Badge variant="secondary">Pendente</Badge>;
+        return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Em andamento</Badge>;
     }
   };
 
