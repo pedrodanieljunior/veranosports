@@ -416,7 +416,7 @@ export default function Admin() {
     }
     switch (status) {
       case "won":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Pago</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Ganhou</Badge>;
       case "lost":
         return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Perdeu</Badge>;
       default:
