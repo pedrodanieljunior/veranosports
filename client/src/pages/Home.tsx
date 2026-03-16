@@ -231,7 +231,7 @@ export default function Home() {
         <div className="flex-shrink-0 py-4 px-4 text-center border-t border-white/10">
           <button
             onClick={() => setShowRules(true)}
-            className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 text-yellow-400 hover:text-yellow-300 text-sm font-semibold transition-colors"
             data-testid="button-rules-mobile"
           >
             <BookOpen className="w-4 h-4" />
@@ -345,7 +345,7 @@ export default function Home() {
             <div className="pb-6 text-center" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
               <button
                 onClick={() => setShowRules(true)}
-                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 text-yellow-500 hover:text-yellow-400 text-sm font-semibold transition-colors"
                 data-testid="button-rules-desktop"
               >
                 <BookOpen className="w-4 h-4" />
