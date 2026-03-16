@@ -804,9 +804,10 @@ export default function Admin() {
 
               {/* Painel central — Caixa acumulado */}
               {(() => {
+                const APORTE_INICIAL = 50000;
                 const ganhos = bets.filter(b => b.status === "lost").reduce((s, b) => s + b.stake, 0);
                 const perdas = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
-                const saldo = ganhos - perdas;
+                const saldo = APORTE_INICIAL + ganhos - perdas;
                 const isPositive = saldo >= 0;
                 return (
                   <Card className={`border-2 ${isPositive ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}>
@@ -816,7 +817,7 @@ export default function Admin() {
                           <Wallet className="w-7 h-7 text-primary" />
                           <div>
                             <p className="text-lg font-bold">Caixa</p>
-                            <p className="text-xs text-muted-foreground">Saldo acumulado da casa (sem reinício diário)</p>
+                            <p className="text-xs text-muted-foreground">Aporte inicial: R$50.000,00 + operações acumuladas</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -835,7 +836,7 @@ export default function Admin() {
 
                       {/* Saldo principal */}
                       <div className="text-center mb-6">
-                        <p className="text-xs text-muted-foreground mb-1">Saldo da Casa</p>
+                        <p className="text-xs text-muted-foreground mb-1">Saldo atual do Caixa</p>
                         <p className={`text-4xl font-bold ${isPositive ? "text-green-500" : "text-red-400"}`}
                           data-testid="text-caixa-saldo">
                           {isPositive ? "+" : ""}R${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -843,20 +844,27 @@ export default function Admin() {
                       </div>
 
                       {/* Breakdown */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-green-500/10 rounded-lg p-4 text-center">
-                          <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
-                          <p className="text-lg font-bold text-green-500">
-                            R${ganhos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-muted/50 rounded-lg p-3 text-center">
+                          <Wallet className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-base font-bold">
+                            R$50.000,00
                           </p>
-                          <p className="text-xs text-muted-foreground">Ganhos (apostas perdidas)</p>
+                          <p className="text-xs text-muted-foreground">Aporte inicial</p>
                         </div>
-                        <div className="bg-red-500/10 rounded-lg p-4 text-center">
-                          <ArrowDownCircle className="w-5 h-5 mx-auto mb-1 text-red-400" />
-                          <p className="text-lg font-bold text-red-400">
-                            R${perdas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className="bg-green-500/10 rounded-lg p-3 text-center">
+                          <ArrowUpCircle className="w-4 h-4 mx-auto mb-1 text-green-500" />
+                          <p className="text-base font-bold text-green-500">
+                            +R${ganhos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
-                          <p className="text-xs text-muted-foreground">Perdas (prêmios pagos)</p>
+                          <p className="text-xs text-muted-foreground">Apostas perdidas</p>
+                        </div>
+                        <div className="bg-red-500/10 rounded-lg p-3 text-center">
+                          <ArrowDownCircle className="w-4 h-4 mx-auto mb-1 text-red-400" />
+                          <p className="text-base font-bold text-red-400">
+                            -R${perdas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Prêmios pagos</p>
                         </div>
                       </div>
                     </CardContent>
