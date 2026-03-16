@@ -144,26 +144,29 @@ export default function Admin() {
   const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
     const db = periodBets.filter(b => new Date(b.createdAt).getDay() === idx);
     const e = db.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
-    const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
-    return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
+    const s2 = db.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+    const lucroEntrada = db.filter(b=>b.verified && b.status==="lost").reduce((s,b)=>s+b.stake,0);
+    return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((lucroEntrada-s2).toFixed(2)) };
   }), [periodBets]);
 
   const finMarketRows = useMemo(() => {
-    const map = new Map<string, { total:number; won:number; lost:number; pending:number; entrada:number; saida:number }>();
+    const map = new Map<string, { total:number; won:number; lost:number; pending:number; entrada:number; saida:number; lucroEntrada:number }>();
     periodBets.forEach(bet => {
       const keys = bet.selections.length > 1 ? ["__multi__"] : bet.selections.map(s=>s.marketKey);
       keys.forEach(key => {
-        const cur = map.get(key) ?? { total:0, won:0, lost:0, pending:0, entrada:0, saida:0 };
+        const cur = map.get(key) ?? { total:0, won:0, lost:0, pending:0, entrada:0, saida:0, lucroEntrada:0 };
         cur.total++;
-        if (bet.verified) cur.entrada += bet.stake;
-        if (bet.status==="won") { cur.won++; cur.saida += bet.potentialWin; }
+        if (bet.status==="won") cur.won++;
         else if (bet.status==="lost") cur.lost++;
         else cur.pending++;
+        if (bet.verified) cur.entrada += bet.stake;
+        if (bet.verified && bet.status==="won") cur.saida += bet.potentialWin;
+        if (bet.verified && bet.status==="lost") cur.lucroEntrada += bet.stake;
         map.set(key, cur);
       });
     });
     return Array.from(map.entries())
-      .map(([key,v])=>({ key, label: key==="__multi__"?"Múltiplas":getMarketLabel(key), ...v, lucro: v.entrada-v.saida }))
+      .map(([key,v])=>({ key, label: key==="__multi__"?"Múltiplas":getMarketLabel(key), ...v, lucro: v.lucroEntrada-v.saida }))
       .sort((a,b)=>b.total-a.total);
   }, [periodBets]);
 
@@ -971,8 +974,9 @@ export default function Admin() {
             {(() => {
 
               const entrada   = periodBets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
-              const saida     = periodBets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
-              const lucro     = entrada - saida;
+              const saida     = periodBets.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+              const lucroEntrada = periodBets.filter(b=>b.verified && b.status==="lost").reduce((s,b)=>s+b.stake,0);
+              const lucro     = lucroEntrada - saida;
               const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
               const totalBets = periodBets.length;
               const wonBets   = periodBets.filter(b=>b.status==="won").length;
