@@ -903,13 +903,13 @@ export default function Admin() {
                             <div>
                               <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                 <span>Lucro operacional</span>
-                                <span className={`font-semibold ${lucroPositivo ? "text-amber-400" : "text-red-400"}`}>
+                                <span className={`font-semibold ${lucroPositivo ? "text-violet-400" : "text-red-400"}`}>
                                   {lucroPositivo ? "+" : "-"}R${Math.abs(lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                               <div className="w-full h-3 bg-muted rounded-b-full overflow-hidden">
                                 <div
-                                  className={`h-full transition-all duration-500 ${lucroPositivo ? "bg-amber-400" : "bg-red-500"}`}
+                                  className={`h-full transition-all duration-500 ${lucroPositivo ? "bg-gradient-to-r from-purple-600 to-violet-400" : "bg-red-500"}`}
                                   style={{ width: `${lucroPct}%` }}
                                 />
                               </div>
