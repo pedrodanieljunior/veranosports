@@ -55,7 +55,7 @@ export function MobileBannerCarousel() {
         {activeBanners.map((banner, idx) => (
           <img
             key={banner.id}
-            src={banner.url}
+            src={`${banner.url}?t=${new Date(banner.updatedAt).getTime()}`}
             alt={`Banner ${banner.slotNumber}`}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               idx === current ? "opacity-100" : "opacity-0"
