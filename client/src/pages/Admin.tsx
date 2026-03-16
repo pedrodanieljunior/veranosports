@@ -866,13 +866,39 @@ export default function Admin() {
                       </div>
 
                       {/* Saldo principal */}
-                      <div className="text-center mb-6">
+                      <div className="text-center mb-4">
                         <p className="text-xs text-muted-foreground mb-1">Saldo atual do Caixa</p>
                         <p className={`text-4xl font-bold ${isPositive ? "text-green-500" : "text-red-400"}`}
                           data-testid="text-caixa-saldo">
                           {isPositive ? "+" : ""}R${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
+
+                      {/* Barra de disponível */}
+                      {(() => {
+                        const pct = Math.max(0, Math.min(100, (saldo / APORTE_INICIAL) * 100));
+                        const barColor = pct > 50 ? "bg-green-500" : pct > 20 ? "bg-yellow-500" : "bg-red-500";
+                        return (
+                          <div className="mb-6">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                              <span>Disponível no caixa</span>
+                              <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                                {pct.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                              <span>R$0</span>
+                              <span>R$50.000</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Breakdown */}
                       <div className="grid grid-cols-3 gap-3">
