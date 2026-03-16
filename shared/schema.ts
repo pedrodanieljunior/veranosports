@@ -135,3 +135,9 @@ export const marketSettingSchema = z.object({
 });
 
 export type MarketSetting = z.infer<typeof marketSettingSchema>;
+
+export const siteContentTable = pgTable("site_content", {
+  key: text("key").primaryKey(),
+  content: text("content").notNull().default(""),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

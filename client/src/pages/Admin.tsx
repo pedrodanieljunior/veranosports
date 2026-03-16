@@ -36,7 +36,28 @@ import {
   CalendarDays,
   Image,
   Upload,
+  BookOpen,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  List,
+  ListOrdered,
+  Heading1,
+  Heading2,
+  Heading3,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Save,
+  Undo,
+  Redo,
 } from "lucide-react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import UnderlineExt from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
 import {
   BarChart,
   Bar,
@@ -527,6 +548,10 @@ export default function Admin() {
             <TabsTrigger value="banners" data-testid="tab-banners">
               <Image className="w-4 h-4 mr-2" />
               Banners
+            </TabsTrigger>
+            <TabsTrigger value="regras" data-testid="tab-regras">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Regras
             </TabsTrigger>
           </TabsList>
 
@@ -1478,6 +1503,10 @@ export default function Admin() {
           <TabsContent value="banners">
             <BannersTab />
           </TabsContent>
+
+          <TabsContent value="regras">
+            <RulesEditorTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -1620,6 +1649,199 @@ function BannersTab() {
             })}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RulesEditorTab() {
+  const { toast } = useToast();
+  const { data: rulesData, isLoading: rulesLoading } = useQuery<{ content: string }>({
+    queryKey: ["/api/rules"],
+  });
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      UnderlineExt,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextStyle,
+      Color,
+    ],
+    content: "",
+    editorProps: {
+      attributes: {
+        class: "min-h-[400px] outline-none px-4 py-3 prose prose-sm dark:prose-invert max-w-none",
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (editor && rulesData?.content !== undefined && !editor.isFocused) {
+      editor.commands.setContent(rulesData.content);
+    }
+  }, [rulesData?.content, editor]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch("/api/admin/rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Falha ao salvar");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rules"] });
+      toast({ title: "Regras salvas com sucesso!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao salvar regras", variant: "destructive" });
+    },
+  });
+
+  const ToolbarBtn = ({
+    onClick, active, children, title: btnTitle,
+  }: { onClick: () => void; active?: boolean; children: React.ReactNode; title?: string }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      title={btnTitle}
+      className={`p-1.5 rounded transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+    >
+      {children}
+    </button>
+  );
+
+  if (rulesLoading) return <div className="flex items-center justify-center h-40"><RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BookOpen className="w-5 h-5 text-primary" />
+            Editor de Regras do Site
+          </CardTitle>
+          <Button
+            size="sm"
+            onClick={() => saveMutation.mutate(editor?.getHTML() ?? "")}
+            disabled={saveMutation.isPending}
+            data-testid="button-save-rules"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saveMutation.isPending ? "Salvando..." : "Salvar Regras"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b bg-muted/30">
+          <ToolbarBtn onClick={() => editor?.chain().focus().undo().run()} title="Desfazer">
+            <Undo className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor?.chain().focus().redo().run()} title="Refazer">
+            <Redo className="w-4 h-4" />
+          </ToolbarBtn>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+            active={editor?.isActive("heading", { level: 1 })}
+            title="Título 1"
+          >
+            <Heading1 className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+            active={editor?.isActive("heading", { level: 2 })}
+            title="Título 2"
+          >
+            <Heading2 className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+            active={editor?.isActive("heading", { level: 3 })}
+            title="Título 3"
+          >
+            <Heading3 className="w-4 h-4" />
+          </ToolbarBtn>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            active={editor?.isActive("bold")}
+            title="Negrito"
+          >
+            <Bold className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            active={editor?.isActive("italic")}
+            title="Itálico"
+          >
+            <Italic className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            active={editor?.isActive("underline")}
+            title="Sublinhado"
+          >
+            <UnderlineIcon className="w-4 h-4" />
+          </ToolbarBtn>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            active={editor?.isActive("bulletList")}
+            title="Lista com marcadores"
+          >
+            <List className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+            active={editor?.isActive("orderedList")}
+            title="Lista numerada"
+          >
+            <ListOrdered className="w-4 h-4" />
+          </ToolbarBtn>
+          <div className="w-px h-5 bg-border mx-1" />
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().setTextAlign("left").run()}
+            active={editor?.isActive({ textAlign: "left" })}
+            title="Alinhar à esquerda"
+          >
+            <AlignLeft className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().setTextAlign("center").run()}
+            active={editor?.isActive({ textAlign: "center" })}
+            title="Centralizar"
+          >
+            <AlignCenter className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => editor?.chain().focus().setTextAlign("right").run()}
+            active={editor?.isActive({ textAlign: "right" })}
+            title="Alinhar à direita"
+          >
+            <AlignRight className="w-4 h-4" />
+          </ToolbarBtn>
+          <div className="w-px h-5 bg-border mx-1" />
+          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer" title="Cor do texto">
+            <span
+              className="w-5 h-5 rounded border border-border inline-block"
+              style={{ background: editor?.getAttributes("textStyle").color || "#000000" }}
+            />
+            <input
+              type="color"
+              className="sr-only"
+              onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
+            />
+          </label>
+        </div>
+        {/* Editor area */}
+        <div className="min-h-[400px] cursor-text" onClick={() => editor?.commands.focus()}>
+          <EditorContent editor={editor} />
+        </div>
       </CardContent>
     </Card>
   );

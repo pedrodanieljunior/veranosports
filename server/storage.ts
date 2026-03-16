@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, betSlipsTable, marketSettingsTable, bannersTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -34,6 +34,8 @@ export interface IStorage {
   getBannersRaw(): Promise<any[]>;
   upsertBanner(slotNumber: number, filename: string, url: string, imageData?: string, mimeType?: string): Promise<Banner>;
   deleteBanner(slotNumber: number): Promise<boolean>;
+  getRules(): Promise<string>;
+  saveRules(content: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -358,6 +360,20 @@ export class DatabaseStorage implements IStorage {
   async deleteBanner(slotNumber: number): Promise<boolean> {
     const result = await db.delete(bannersTable).where(eq(bannersTable.slotNumber, slotNumber)).returning();
     return result.length > 0;
+  }
+
+  async getRules(): Promise<string> {
+    const rows = await db.select().from(siteContentTable).where(eq(siteContentTable.key, "rules"));
+    return rows[0]?.content ?? "";
+  }
+
+  async saveRules(content: string): Promise<void> {
+    const existing = await db.select().from(siteContentTable).where(eq(siteContentTable.key, "rules"));
+    if (existing.length > 0) {
+      await db.update(siteContentTable).set({ content, updatedAt: new Date() }).where(eq(siteContentTable.key, "rules"));
+    } else {
+      await db.insert(siteContentTable).values({ key: "rules", content });
+    }
   }
 }
 

@@ -1535,6 +1535,29 @@ export async function registerRoutes(
     }
   });
 
+  // Rules routes
+  app.get("/api/rules", async (req, res) => {
+    try {
+      const content = await storage.getRules();
+      res.json({ content });
+    } catch (error) {
+      console.error("Error fetching rules:", error);
+      res.status(500).json({ error: "Failed to fetch rules" });
+    }
+  });
+
+  app.post("/api/admin/rules", async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ error: "content must be a string" });
+      await storage.saveRules(content);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving rules:", error);
+      res.status(500).json({ error: "Failed to save rules" });
+    }
+  });
+
   // Todos os bilhetes para o painel admin (histórico completo)
   app.get("/api/admin/bets", async (req, res) => {
     try {

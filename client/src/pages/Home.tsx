@@ -7,9 +7,10 @@ import { BetHistory } from "@/components/BetHistory";
 import { MobileNav } from "@/components/MobileNav";
 import { GameDetailModal } from "@/components/GameDetailModal";
 import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
+import { RulesModal } from "@/components/RulesModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { History, Receipt, Search, X } from "lucide-react";
+import { History, Receipt, Search, X, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +29,7 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
+  const [showRules, setShowRules] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
@@ -225,6 +227,17 @@ export default function Home() {
         <div className="flex-1">
           <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
         </div>
+        {/* Mobile footer — Regras */}
+        <div className="flex-shrink-0 py-4 px-4 text-center border-t border-white/10">
+          <button
+            onClick={() => setShowRules(true)}
+            className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm font-medium transition-colors"
+            data-testid="button-rules-mobile"
+          >
+            <BookOpen className="w-4 h-4" />
+            Regras do Site
+          </button>
+        </div>
       </div>
 
       {/* ===== DESKTOP LAYOUT - Frame image as fixed background ===== */}
@@ -324,8 +337,20 @@ export default function Home() {
             </div>
 
             {/* Games content */}
-            <div className="pb-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+            <div className="pb-4" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
               <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
+            </div>
+
+            {/* Desktop footer — Regras */}
+            <div className="pb-6 text-center" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+              <button
+                onClick={() => setShowRules(true)}
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
+                data-testid="button-rules-desktop"
+              >
+                <BookOpen className="w-4 h-4" />
+                Regras do Site
+              </button>
             </div>
           </div>
         </div>
@@ -335,6 +360,7 @@ export default function Home() {
       <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} />
       {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
       {showHistory && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
+      <RulesModal open={showRules} onClose={() => setShowRules(false)} />
     </div>
   );
 }
