@@ -877,7 +877,7 @@ export default function Admin() {
                       {/* Barras de disponível + lucro */}
                       {(() => {
                         const saldoPct = Math.max(0, Math.min(100, (saldo / APORTE_INICIAL) * 100));
-                        const saldoColor = saldoPct > 50 ? "bg-gradient-to-r from-green-600 to-emerald-400" : saldoPct > 20 ? "bg-yellow-500" : "bg-red-500";
+                        const saldoColor = saldoPct > 50 ? "bg-gradient-to-r from-green-600 to-emerald-400" : saldoPct > 20 ? "bg-gradient-to-r from-yellow-600 to-amber-400" : "bg-gradient-to-r from-red-600 to-rose-400";
                         const lucroOp = ganhos - perdas;
                         const lucroPct = Math.max(0, Math.min(100, (Math.abs(lucroOp) / APORTE_INICIAL) * 100));
                         const lucroPositivo = lucroOp >= 0;
