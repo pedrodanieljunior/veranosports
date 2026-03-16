@@ -410,7 +410,10 @@ export default function Admin() {
     totalPotential: bets.reduce((sum, b) => sum + b.potentialWin, 0),
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, verified?: boolean) => {
+    if (status === "won" && verified) {
+      return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Pago</Badge>;
+    }
     switch (status) {
       case "won":
         return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Ganhou</Badge>;
@@ -1217,7 +1220,7 @@ export default function Admin() {
                                 #{bet.id.slice(0, 8).toUpperCase()}
                                 <Copy className="w-3 h-3" />
                               </button>
-                              {getStatusBadge(bet.status)}
+                              {getStatusBadge(bet.status, bet.verified)}
                               <div 
                                 className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs cursor-pointer transition-colors ${
                                   bet.verified 
