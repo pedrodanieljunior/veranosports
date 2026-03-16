@@ -966,8 +966,8 @@ export default function Admin() {
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-                    <p className="text-xl font-bold text-blue-500">
+                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
+                    <p className="text-xl font-bold text-yellow-400">
                       R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Exposição pendente</p>
@@ -975,9 +975,9 @@ export default function Admin() {
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <Banknote className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
-                    <p className="text-xl font-bold text-yellow-500">
-                      R${bets.length.toString()}
+                    <Banknote className="w-5 h-5 mx-auto mb-1 text-white" />
+                    <p className="text-xl font-bold text-white">
+                      {bets.length.toString()}
                     </p>
                     <p className="text-xs text-muted-foreground">Total de apostas</p>
                   </CardContent>
