@@ -802,73 +802,70 @@ export default function Admin() {
           <TabsContent value="caixa">
             <div className="space-y-4">
 
-              {/* Painel central — Caixa Diário R$50.000 */}
-              <Card className={`border-2 ${
-                limitsData?.isDailyLimitReached ? "border-red-500 bg-red-500/5" :
-                (limitsData?.dailyTotal ?? 0) / 50000 >= 0.8 ? "border-yellow-500 bg-yellow-500/5" :
-                "border-green-500/40 bg-green-500/5"
-              }`}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <Wallet className="w-7 h-7 text-primary" />
-                      <div>
-                        <p className="text-lg font-bold">Caixa Diário</p>
-                        <p className="text-xs text-muted-foreground">Limite máximo de exposição: R$50.000,00</p>
+              {/* Painel central — Caixa acumulado */}
+              {(() => {
+                const ganhos = bets.filter(b => b.status === "lost").reduce((s, b) => s + b.stake, 0);
+                const perdas = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
+                const saldo = ganhos - perdas;
+                const isPositive = saldo >= 0;
+                return (
+                  <Card className={`border-2 ${isPositive ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          <Wallet className="w-7 h-7 text-primary" />
+                          <div>
+                            <p className="text-lg font-bold">Caixa</p>
+                            <p className="text-xs text-muted-foreground">Saldo acumulado da casa (sem reinício diário)</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={isPositive
+                            ? "bg-green-500/20 text-green-400 border-green-500/30 text-sm px-3 py-1"
+                            : "bg-red-500/20 text-red-400 border-red-500/30 text-sm px-3 py-1"
+                          }>
+                            {isPositive ? <CheckCircle className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
+                            {isPositive ? "POSITIVO" : "NEGATIVO"}
+                          </Badge>
+                          <Button variant="outline" size="sm" onClick={() => refetchLimits()} data-testid="button-refresh-caixa">
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {limitsData?.isDailyLimitReached ? (
-                        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-sm px-3 py-1">
-                          <XCircle className="w-4 h-4 mr-1" /> LIMITE ATINGIDO
-                        </Badge>
-                      ) : (limitsData?.dailyTotal ?? 0) / 50000 >= 0.8 ? (
-                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-sm px-3 py-1">
-                          <AlertCircle className="w-4 h-4 mr-1" /> ATENÇÃO
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-sm px-3 py-1">
-                          <CheckCircle className="w-4 h-4 mr-1" /> OPERANDO
-                        </Badge>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => refetchLimits()} data-testid="button-refresh-caixa">
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Barra de progresso principal */}
-                  <div className="mb-3">
-                    <Progress
-                      value={Math.min(100, ((limitsData?.dailyTotal ?? 0) / 50000) * 100)}
-                      className={`h-6 ${
-                        limitsData?.isDailyLimitReached ? "[&>div]:bg-red-500" :
-                        (limitsData?.dailyTotal ?? 0) / 50000 >= 0.8 ? "[&>div]:bg-yellow-500" :
-                        "[&>div]:bg-green-500"
-                      }`}
-                      data-testid="progress-caixa-diario"
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-muted-foreground">
-                      Usado: <span className="text-foreground font-bold">
-                        R${(limitsData?.dailyTotal ?? 0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
-                      </span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      {(((limitsData?.dailyTotal ?? 0) / 50000) * 100).toFixed(1)}% de R$50.000,00
-                    </span>
-                    <span className="text-muted-foreground">
-                      Disponível: <span className={`font-bold ${limitsData?.isDailyLimitReached ? "text-red-400" : "text-green-500"}`}>
-                        R${(limitsData?.dailyRemaining ?? 50000).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
-                      </span>
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                      {/* Saldo principal */}
+                      <div className="text-center mb-6">
+                        <p className="text-xs text-muted-foreground mb-1">Saldo da Casa</p>
+                        <p className={`text-4xl font-bold ${isPositive ? "text-green-500" : "text-red-400"}`}
+                          data-testid="text-caixa-saldo">
+                          {isPositive ? "+" : ""}R${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+
+                      {/* Breakdown */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-green-500/10 rounded-lg p-4 text-center">
+                          <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
+                          <p className="text-lg font-bold text-green-500">
+                            R${ganhos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Ganhos (apostas perdidas)</p>
+                        </div>
+                        <div className="bg-red-500/10 rounded-lg p-4 text-center">
+                          <ArrowDownCircle className="w-5 h-5 mx-auto mb-1 text-red-400" />
+                          <p className="text-lg font-bold text-red-400">
+                            R${perdas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Perdas (prêmios pagos)</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* Cards secundários */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-4 text-center">
                     <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
@@ -876,15 +873,6 @@ export default function Admin() {
                       R${bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Entradas (PIX confirmados)</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <ArrowDownCircle className="w-5 h-5 mx-auto mb-1 text-red-400" />
-                    <p className="text-xl font-bold text-red-400">
-                      R${bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Prêmios pagos</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -899,13 +887,10 @@ export default function Admin() {
                 <Card>
                   <CardContent className="p-4 text-center">
                     <Banknote className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
-                    <p className={`text-xl font-bold ${
-                      (bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)) >= 0
-                        ? "text-green-500" : "text-red-400"
-                    }`}>
-                      R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) - bets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                    <p className="text-xl font-bold text-yellow-500">
+                      R${bets.length.toString()}
                     </p>
-                    <p className="text-xs text-muted-foreground">Saldo líquido</p>
+                    <p className="text-xs text-muted-foreground">Total de apostas</p>
                   </CardContent>
                 </Card>
               </div>
