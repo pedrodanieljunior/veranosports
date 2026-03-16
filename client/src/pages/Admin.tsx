@@ -836,8 +836,8 @@ export default function Admin() {
               {/* Painel central — Caixa acumulado */}
               {(() => {
                 const APORTE_INICIAL = 50000;
-                const ganhos = bets.filter(b => b.status === "lost").reduce((s, b) => s + b.stake, 0);
-                const perdas = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
+                const ganhos = bets.filter(b => b.verified && b.status === "lost").reduce((s, b) => s + b.stake, 0);
+                const perdas = bets.filter(b => b.verified && b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
                 const saldo = APORTE_INICIAL + ganhos - perdas;
                 const isPositive = saldo >= 0;
                 return (
