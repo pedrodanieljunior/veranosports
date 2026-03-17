@@ -660,7 +660,7 @@ export default function Admin() {
                           <Progress
                             value={barPct}
                             className={`h-3 ${
-                              entry.isBlocked || entry.total >= 14000
+                              entry.isBlocked
                                 ? "[&>div]:bg-red-500"
                                 : entry.total > 5000
                                 ? "[&>div]:bg-yellow-500"

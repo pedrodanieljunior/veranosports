@@ -266,9 +266,10 @@ export class DatabaseStorage implements IStorage {
       totals[gameId].count += 1;
     }
 
+    const DISPLAY_BLOCK_THRESHOLD = 14000;
     return Object.values(totals).map(t => ({
       ...t,
-      isBlocked: t.total >= SIMPLE_BET_GAME_LIMIT,
+      isBlocked: t.total >= DISPLAY_BLOCK_THRESHOLD,
     })).sort((a, b) => b.total - a.total);
   }
 
