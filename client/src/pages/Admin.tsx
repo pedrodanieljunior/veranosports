@@ -591,8 +591,10 @@ export default function Admin() {
                 ) : (
                   <div className="space-y-4">
                     {gameLimitsData.totals.map((entry) => {
-                      const pct = Math.min(100, (entry.total / SIMPLE_BET_GAME_LIMIT) * 100);
+                      const rawPct = (entry.total / SIMPLE_BET_GAME_LIMIT) * 100;
+                      const barPct = Math.min(100, rawPct);
                       const remaining = Math.max(0, SIMPLE_BET_GAME_LIMIT - entry.total);
+                      const displayPct = rawPct >= 100 ? "100%" : rawPct.toFixed(2) + "%";
                       return (
                         <div key={entry.gameId} className={`rounded-lg border p-4 ${entry.isBlocked ? "border-red-500/50 bg-red-500/5" : "border-border"}`}>
                           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -602,21 +604,20 @@ export default function Admin() {
                               </p>
                               <p className="text-xs text-muted-foreground">{entry.sportTitle} · {entry.count} aposta{entry.count !== 1 ? "s" : ""} simples</p>
                             </div>
-                            <div className="text-right">
-                              {entry.isBlocked ? (
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {entry.isBlocked && (
                                 <Badge className="bg-red-500/20 text-red-400 border-red-500/30 flex items-center gap-1">
                                   <ShieldAlert className="w-3 h-3" />
-                                  Jogo Bloqueado
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-yellow-500 border-yellow-500/30">
-                                  Disponível: R${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  Bloqueado
                                 </Badge>
                               )}
+                              <Badge variant="outline" className={remaining <= 0 ? "text-red-400 border-red-500/30" : "text-yellow-500 border-yellow-500/30"}>
+                                Disponível: R${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </Badge>
                             </div>
                           </div>
                           <Progress
-                            value={pct}
+                            value={barPct}
                             className={`h-3 ${
                               entry.isBlocked || entry.total >= 14000
                                 ? "[&>div]:bg-red-500"
@@ -628,7 +629,7 @@ export default function Admin() {
                           />
                           <div className="flex justify-between mt-1 text-xs text-muted-foreground">
                             <span>R${entry.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            <span>{pct.toFixed(1)}% de R$15.000</span>
+                            <span>{displayPct} de R$15.000</span>
                           </div>
                         </div>
                       );
