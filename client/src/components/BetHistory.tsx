@@ -44,6 +44,8 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     lines.push(`🏆 Retorno: R$ ${bet.potentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
     lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
+    lines.push(`\n📱 FW SPORTS`);
+    lines.push(`Caso sua aposta seja vencedora, entraremos em contato para informar o pagamento. Boa sorte!`);
     const shareText = lines.join("\n");
     if (navigator.share) {
       try {

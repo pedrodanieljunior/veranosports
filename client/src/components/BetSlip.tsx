@@ -105,6 +105,40 @@ export function BetSlip({
       toast({ title: "Bilhete copiado!", description: "Cole onde quiser para compartilhar." });
     }
   };
+
+  const shareBetSlip = async () => {
+    if (!placedBet) return;
+    const grouped: Record<string, Selection[]> = {};
+    for (const sel of placedBet.selections) {
+      const gameLabel = `${sel.homeTeam} vs ${sel.awayTeam}`;
+      if (!grouped[gameLabel]) grouped[gameLabel] = [];
+      grouped[gameLabel].push(sel);
+    }
+    let lines = [`🎯 Bilhete FW Sports\n`];
+    for (const [game, sels] of Object.entries(grouped)) {
+      lines.push(`⚽ ${game}`);
+      for (const s of sels) {
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${s.odds.toFixed(2)}`);
+      }
+      lines.push("");
+    }
+    lines.push(`📊 Odds Total: ${placedBet.totalOdds.toFixed(2)}`);
+    lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
+    lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
+    lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
+    lines.push(`📅 Data: ${format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
+    lines.push(`\n📱 FW SPORTS`);
+    lines.push(`Caso sua aposta seja vencedora, entraremos em contato para informar o pagamento. Boa sorte!`);
+    const shareText = lines.join("\n");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Bilhete FW Sports", text: shareText });
+      } catch (err) {}
+    } else {
+      navigator.clipboard.writeText(shareText);
+      toast({ title: "Bilhete copiado!", description: "Cole onde quiser para compartilhar." });
+    }
+  };
   
   const totalOdds = selections.reduce((acc, sel) => acc * sel.odds, 1);
   const rawPotentialWin = parseFloat(stake || "0") * totalOdds;
@@ -307,7 +341,7 @@ export function BetSlip({
 
             <Button
               className="w-full mt-4 bg-green-600 text-white hover:bg-green-700"
-              onClick={shareBet}
+              onClick={shareBetSlip}
               data-testid="button-share-bet"
             >
               <Share2 className="w-4 h-4 mr-2" />
