@@ -235,7 +235,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGameSimpleBetTotals(): Promise<GameSimpleBetTotal[]> {
-    const SIMPLE_BET_GAME_LIMIT = 14000;
+    const SIMPLE_BET_GAME_LIMIT = 15000;
     const allBets = await db.select().from(betSlipsTable);
 
     const totals: Record<string, GameSimpleBetTotal> = {};
