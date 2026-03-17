@@ -960,18 +960,20 @@ export default function Admin() {
                             <div>
                               <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                 <span>Lucro operacional</span>
-                                <span className={`font-semibold ${lucroOpNegativo ? "text-red-400" : lucroLivre > 0 ? "text-violet-400" : "text-yellow-400"}`}>
+                                <span className={`font-semibold ${lucroOpNegativo ? "text-red-400" : lucroLivre > 0 ? "text-violet-400" : lucroOp > 0 ? "text-yellow-400" : "text-muted-foreground"}`}>
                                   {lucroOpNegativo
                                     ? `-R$${Math.abs(lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                     : lucroLivre > 0
                                     ? `+R$${lucroLivre.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} livre`
-                                    : `R$0,00 (coberto pela exposição)`}
+                                    : lucroOp > 0
+                                    ? `+R$${lucroOp.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (reservado pela exposição)`
+                                    : `R$0,00`}
                                 </span>
                               </div>
                               <div className="w-full h-3 bg-muted rounded-b-full overflow-hidden">
                                 <div
-                                  className={`h-full transition-all duration-500 ${lucroOpNegativo ? "bg-red-500" : "bg-gradient-to-r from-purple-600 to-violet-400"}`}
-                                  style={{ width: `${lucroOpNegativo ? lucroOpPct : lucroLivrePct}%` }}
+                                  className={`h-full transition-all duration-500 ${lucroOpNegativo ? "bg-red-500" : lucroLivre > 0 ? "bg-gradient-to-r from-purple-600 to-violet-400" : "bg-gradient-to-r from-yellow-600 to-amber-400"}`}
+                                  style={{ width: `${lucroOpNegativo ? lucroOpPct : lucroLivre > 0 ? lucroLivrePct : lucroOpPct}%` }}
                                 />
                               </div>
                             </div>
