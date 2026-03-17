@@ -545,7 +545,8 @@ export async function registerRoutes(
       const cacheKey = "games_today";
       const cached = cache.get<any[]>(cacheKey);
       if (cached) {
-        return res.json(cached);
+        const blockedIds = await storage.getBlockedGameIds();
+        return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
       
       let allGames: any[] = [];
@@ -845,7 +846,8 @@ export async function registerRoutes(
       const cacheKey = "games_brasileirao";
       const cached = cache.get<any[]>(cacheKey);
       if (cached) {
-        return res.json(cached);
+        const blockedIds = await storage.getBlockedGameIds();
+        return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
 
       let games: any[] = [];
@@ -1026,7 +1028,10 @@ export async function registerRoutes(
 
       const cacheKey = `search_team_${team}`;
       const cached = cache.get<any[]>(cacheKey);
-      if (cached) return res.json(cached);
+      if (cached) {
+        const blockedIds = await storage.getBlockedGameIds();
+        return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
+      }
 
       const leagues = ALLOWED_LEAGUES_ORDERED;
 
@@ -1080,12 +1085,16 @@ export async function registerRoutes(
       // Para o Brasileirão, reusar o cache unificado para evitar odds inconsistentes
       if (sportKey === "soccer_brazil_campeonato") {
         const brCache = cache.get<any[]>("games_brasileirao");
-        if (brCache) return res.json(brCache);
+        if (brCache) {
+          const blockedIds = await storage.getBlockedGameIds();
+          return res.json(blockedIds.size > 0 ? brCache.filter((g: any) => !blockedIds.has(g.id)) : brCache);
+        }
       }
       
       const cached = cache.get<any[]>(cacheKey);
       if (cached) {
-        return res.json(cached);
+        const blockedIds = await storage.getBlockedGameIds();
+        return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
       
       let games: any[] = [];
@@ -1320,7 +1329,7 @@ export async function registerRoutes(
         }
       }
 
-      // Verificar limite de R$15.000 em apostas simples por jogo
+      // Verificar limite de apostas simples por jogo (bloqueio a partir de R$14.000)
       if (validatedData.selections.length === 1) {
         const sel = validatedData.selections[0];
         const gameTotals = await storage.getGameSimpleBetTotals();
@@ -1328,6 +1337,15 @@ export async function registerRoutes(
         const totalOddsPreview = sel.odds;
         const potentialWinPreview = validatedData.stake * totalOddsPreview;
 
+        // Jogo já atingiu o limiar de bloqueio (>= R$14.000)
+        if (gameTotal && gameTotal.isBlocked) {
+          return res.status(400).json({
+            error: `Este jogo atingiu o limite de apostas simples e está temporariamente bloqueado. Experimente uma aposta múltipla ou escolha outro jogo.`,
+            isGameLimitReached: true,
+          });
+        }
+
+        // Nova aposta ultrapassaria o limite de R$15.000
         if (gameTotal && (gameTotal.total + potentialWinPreview) > MAX_BET_PAYOUT) {
           const remaining = Math.max(0, MAX_BET_PAYOUT - gameTotal.total);
           if (remaining <= 0) {
