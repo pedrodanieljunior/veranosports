@@ -32,11 +32,28 @@ export default function Home() {
   const [showRules, setShowRules] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  const { toast } = useToast();
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(t);
   }, [searchQuery]);
-  const { toast } = useToast();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newNow = Date.now();
+      setNow(newNow);
+      setSelections(prev => {
+        const filtered = prev.filter(s => new Date(s.commenceTime).getTime() > newNow);
+        if (filtered.length < prev.length) {
+          toast({ title: "Jogo iniciado", description: "Uma ou mais seleções foram removidas pois o jogo já começou.", variant: "destructive" });
+        }
+        return filtered;
+      });
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
   const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 15 * 60 * 1000, refetchOnWindowFocus: false });
@@ -95,7 +112,9 @@ export default function Home() {
   });
 
   const isTyping = searchQuery.trim().length >= 2 && !isSearching;
-  const filteredGames = isSearching ? searchResults : games;
+  const filteredGames = (isSearching ? searchResults : games).filter(
+    g => new Date(g.commenceTime).getTime() > now
+  );
   const isLoadingGames = isTyping || (isSearching ? searchLoading : gamesLoading);
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({ queryKey: ["/api/bets"] });

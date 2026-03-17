@@ -1295,6 +1295,20 @@ export async function registerRoutes(
     try {
       const validatedData = insertBetSlipSchema.parse(req.body);
 
+      // Verificar se algum jogo já iniciou
+      const now = new Date();
+      for (const sel of validatedData.selections) {
+        if (sel.commenceTime) {
+          const gameStart = new Date(sel.commenceTime);
+          if (gameStart <= now) {
+            return res.status(400).json({
+              error: `O jogo ${sel.homeTeam} x ${sel.awayTeam} já foi iniciado e não aceita mais apostas.`,
+              isGameStarted: true,
+            });
+          }
+        }
+      }
+
       // Verificar máximo de 3 mercados por jogo
       const selectionsByGame: Record<string, number> = {};
       for (const sel of validatedData.selections) {
