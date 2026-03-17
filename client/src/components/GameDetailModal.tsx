@@ -145,8 +145,17 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-200">{market.label}</span>
         </div>
-        <div className={`grid gap-2 ${market.values.length <= 2 ? 'grid-cols-2' : market.values.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
-          {market.values.map((value) => {
+        {(() => {
+          const filteredValues = market.values.filter((value) => {
+            if (market.name === "Team To Score First") {
+              return !["Draw", "No Goal", "Nenhum Gol", "Nenhum"].includes(value.value);
+            }
+            return true;
+          });
+          const colClass = filteredValues.length <= 2 ? 'grid-cols-2' : filteredValues.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3';
+          return (
+        <div className={`grid gap-2 ${colClass}`}>
+          {filteredValues.map((value) => {
             const outcomeKey = `${market.name}-${value.value}`;
             const selected = isSelected(outcomeKey, marketKey);
             const displayOdd = isBoosted ? value.odd * getBoostMultiplier(boostKey) : value.odd;
@@ -208,6 +217,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             );
           })}
         </div>
+          );
+        })()}
       </div>
     );
   };
