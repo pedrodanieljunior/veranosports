@@ -150,6 +150,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             if (market.name === "Team To Score First") {
               return !["Draw", "No Goal", "Nenhum Gol", "Nenhum"].includes(value.value);
             }
+            if (market.name === "Corners Over Under") {
+              return ["Over 8.5", "Under 8.5", "Over 9.5", "Under 9.5", "Over 10.5", "Under 10.5"].includes(value.value);
+            }
             return true;
           });
           const colClass = filteredValues.length <= 2 ? 'grid-cols-2' : filteredValues.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3';
