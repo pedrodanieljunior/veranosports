@@ -1572,6 +1572,41 @@ export async function registerRoutes(
     }
   });
 
+  // Saques
+  app.get("/api/admin/withdrawals", async (req, res) => {
+    try {
+      const withdrawals = await storage.getWithdrawals();
+      res.json(withdrawals);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar saques" });
+    }
+  });
+
+  app.post("/api/admin/withdrawals", async (req, res) => {
+    try {
+      const { amount, description } = req.body;
+      if (!amount || typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({ error: "Valor inválido" });
+      }
+      const withdrawal = await storage.createWithdrawal(amount, description ?? "");
+      res.json(withdrawal);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao registrar saque" });
+    }
+  });
+
+  app.delete("/api/admin/withdrawals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID inválido" });
+      const deleted = await storage.deleteWithdrawal(id);
+      if (!deleted) return res.status(404).json({ error: "Saque não encontrado" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao excluir saque" });
+    }
+  });
+
   // Todos os bilhetes para o painel admin (histórico completo)
   app.get("/api/admin/bets", async (req, res) => {
     try {

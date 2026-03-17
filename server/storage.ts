@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -36,6 +36,9 @@ export interface IStorage {
   deleteBanner(slotNumber: number): Promise<boolean>;
   getRules(): Promise<string>;
   saveRules(content: string): Promise<void>;
+  getWithdrawals(): Promise<Withdrawal[]>;
+  createWithdrawal(amount: number, description: string): Promise<Withdrawal>;
+  deleteWithdrawal(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -374,6 +377,21 @@ export class DatabaseStorage implements IStorage {
     } else {
       await db.insert(siteContentTable).values({ key: "rules", content });
     }
+  }
+
+  async getWithdrawals(): Promise<Withdrawal[]> {
+    const rows = await db.select().from(withdrawalsTable).orderBy(desc(withdrawalsTable.createdAt));
+    return rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() }));
+  }
+
+  async createWithdrawal(amount: number, description: string): Promise<Withdrawal> {
+    const [row] = await db.insert(withdrawalsTable).values({ amount, description }).returning();
+    return { ...row, createdAt: row.createdAt.toISOString() };
+  }
+
+  async deleteWithdrawal(id: number): Promise<boolean> {
+    const result = await db.delete(withdrawalsTable).where(eq(withdrawalsTable.id, id)).returning();
+    return result.length > 0;
   }
 }
 

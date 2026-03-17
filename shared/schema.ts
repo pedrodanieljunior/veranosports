@@ -141,3 +141,24 @@ export const siteContentTable = pgTable("site_content", {
   content: text("content").notNull().default(""),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const withdrawalsTable = pgTable("withdrawals", {
+  id: serial("id").primaryKey(),
+  amount: real("amount").notNull(),
+  description: text("description").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const withdrawalSchema = z.object({
+  id: z.number(),
+  amount: z.number(),
+  description: z.string(),
+  createdAt: z.string(),
+});
+
+export type Withdrawal = z.infer<typeof withdrawalSchema>;
+
+export const insertWithdrawalSchema = z.object({
+  amount: z.number().positive("Valor deve ser positivo"),
+  description: z.string().optional().default(""),
+});

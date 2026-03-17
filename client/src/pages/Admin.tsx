@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, Banner } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,9 @@ import {
   Save,
   Undo,
   Redo,
+  MinusCircle,
+  FileText,
+  Plus,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -124,9 +127,43 @@ export default function Admin() {
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
   const [finPeriod, setFinPeriod] = useState<"all" | "month" | "week" | "today">("month");
   const [marketBoosts, setMarketBoosts] = useState<Record<string, number>>({});
+  const [withdrawalAmount, setWithdrawalAmount] = useState<string>("");
+  const [withdrawalDesc, setWithdrawalDesc] = useState<string>("");
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
+  });
+
+  const { data: withdrawals = [], refetch: refetchWithdrawals } = useQuery<Withdrawal[]>({
+    queryKey: ["/api/admin/withdrawals"],
+  });
+
+  const createWithdrawalMutation = useMutation({
+    mutationFn: async ({ amount, description }: { amount: number; description: string }) => {
+      return apiRequest("POST", "/api/admin/withdrawals", { amount, description });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      setWithdrawalAmount("");
+      setWithdrawalDesc("");
+      toast({ title: "Saque registrado", description: "Saque lançado com sucesso." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível registrar o saque.", variant: "destructive" });
+    },
+  });
+
+  const deleteWithdrawalMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/admin/withdrawals/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      toast({ title: "Saque removido", description: "Saque excluído com sucesso." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível remover o saque.", variant: "destructive" });
+    },
   });
 
   // ── Financeiro: dados calculados no nível do componente ──────────────────
@@ -543,6 +580,10 @@ export default function Admin() {
               <Wallet className="w-4 h-4 mr-2" />
               Caixa
             </TabsTrigger>
+            <TabsTrigger value="saques" data-testid="tab-saques">
+              <MinusCircle className="w-4 h-4 mr-2" />
+              Saques
+            </TabsTrigger>
             <TabsTrigger value="financeiro" data-testid="tab-financeiro">
               <PieChart className="w-4 h-4 mr-2" />
               Financeiro
@@ -846,7 +887,8 @@ export default function Admin() {
                 const ganhos = bets.filter(b => b.verified && b.status === "lost").reduce((s, b) => s + b.stake, 0);
                 const perdas = bets.filter(b => b.verified && b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
-                const lucroOp = ganhos - perdas;
+                const totalSaques = withdrawals.reduce((s, w) => s + w.amount, 0);
+                const lucroOp = ganhos - perdas - totalSaques;
                 // Prioridade: exposição drena do lucro primeiro, depois do capital
                 const lucroLivre = Math.max(0, lucroOp - exposicao);
                 const capitalReservado = Math.max(0, exposicao - Math.max(0, lucroOp));
@@ -944,7 +986,7 @@ export default function Admin() {
                       })()}
 
                       {/* Breakdown */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         <div className="bg-muted/50 rounded-lg p-3 text-center">
                           <Wallet className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                           <p className="text-base font-bold">
@@ -965,6 +1007,13 @@ export default function Admin() {
                             -R${perdas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-muted-foreground">Prêmios pagos</p>
+                        </div>
+                        <div className="bg-orange-500/10 rounded-lg p-3 text-center">
+                          <MinusCircle className="w-4 h-4 mx-auto mb-1 text-orange-400" />
+                          <p className="text-base font-bold text-orange-400">
+                            -R${totalSaques.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Saques</p>
                         </div>
                         <div className="bg-yellow-500/10 rounded-lg p-3 text-center">
                           <ShieldAlert className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
@@ -1036,6 +1085,144 @@ export default function Admin() {
                             <p className="font-bold text-blue-400">R${bet.potentialWin.toFixed(2)}</p>
                           </div>
                           <Badge variant="secondary" className="text-yellow-500 border-yellow-500/30">Aguardando PIX</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── SAQUES ────────────────────────────────────── */}
+          <TabsContent value="saques">
+            <div className="space-y-4">
+              {/* Formulário de novo saque */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <MinusCircle className="w-5 h-5 text-red-400" />
+                    Registrar Saque
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground block mb-1">Valor (R$)</label>
+                      <Input
+                        data-testid="input-withdrawal-amount"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={withdrawalAmount}
+                        onChange={e => setWithdrawalAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-[2]">
+                      <label className="text-xs text-muted-foreground block mb-1">Descrição (opcional)</label>
+                      <Input
+                        data-testid="input-withdrawal-desc"
+                        type="text"
+                        placeholder="Ex: Retirada semanal"
+                        value={withdrawalDesc}
+                        onChange={e => setWithdrawalDesc(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        data-testid="button-add-withdrawal"
+                        variant="destructive"
+                        disabled={createWithdrawalMutation.isPending || !withdrawalAmount || parseFloat(withdrawalAmount) <= 0}
+                        onClick={() => {
+                          const amt = parseFloat(withdrawalAmount);
+                          if (isNaN(amt) || amt <= 0) return;
+                          createWithdrawalMutation.mutate({ amount: amt, description: withdrawalDesc.trim() });
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Lançar
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Resumo total */}
+              {withdrawals.length > 0 && (
+                <Card className="border-red-500/30 bg-red-500/5">
+                  <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="w-5 h-5 text-red-400" />
+                      <span className="text-sm font-semibold">Total sacado</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-2xl font-bold text-red-400" data-testid="text-total-withdrawals">
+                        -R${withdrawals.reduce((s, w) => s + w.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const totalSacado = withdrawals.reduce((s, w) => s + w.amount, 0);
+                          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Saques - FW Sports</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#111}h1{color:#c53030;border-bottom:2px solid #c53030;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#c53030;color:white;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}.total{font-size:1.2em;font-weight:bold;margin-top:20px;text-align:right;color:#c53030}.footer{margin-top:40px;font-size:0.8em;color:#888;text-align:center}</style></head><body><h1>Relatório de Saques — FW Sports</h1><p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p><table><thead><tr><th>#</th><th>Data/Hora</th><th>Valor</th><th>Descrição</th></tr></thead><tbody>${withdrawals.map((w, i) => `<tr><td>${i + 1}</td><td>${new Date(w.createdAt).toLocaleString('pt-BR')}</td><td>R$${w.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${w.description || '—'}</td></tr>`).join('')}</tbody></table><p class="total">Total: R$${totalSacado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p><p class="footer">FW Sports — Documento gerado automaticamente</p></body></html>`;
+                          const w = window.open('', '_blank');
+                          if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
+                        }}
+                        data-testid="button-export-withdrawals-pdf"
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        PDF
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => refetchWithdrawals()} data-testid="button-refresh-withdrawals">
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Lista de saques */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-base">
+                    <span className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      Histórico de Saques ({withdrawals.length})
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {withdrawals.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground text-sm">Nenhum saque registrado.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {withdrawals.map((w, idx) => (
+                        <div
+                          key={w.id}
+                          data-testid={`row-withdrawal-${w.id}`}
+                          className="flex items-center justify-between gap-3 border rounded-lg p-3 flex-wrap"
+                        >
+                          <span className="text-xs text-muted-foreground w-6 text-center">{idx + 1}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(w.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="font-bold text-red-400" data-testid={`text-withdrawal-amount-${w.id}`}>
+                            -R${w.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="flex-1 text-sm text-muted-foreground text-right sm:text-left">
+                            {w.description || <span className="italic">sem descrição</span>}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300"
+                            data-testid={`button-delete-withdrawal-${w.id}`}
+                            disabled={deleteWithdrawalMutation.isPending}
+                            onClick={() => deleteWithdrawalMutation.mutate(w.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
