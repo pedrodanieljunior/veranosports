@@ -1318,6 +1318,21 @@ export async function registerRoutes(
         }
       }
 
+      // Verificar se algum jogo do bilhete está bloqueado (limite de apostas simples atingido)
+      {
+        const blockedIds = await storage.getBlockedGameIds();
+        if (blockedIds.size > 0) {
+          for (const sel of validatedData.selections) {
+            if (blockedIds.has(sel.gameId)) {
+              return res.status(400).json({
+                error: `O jogo ${sel.homeTeam} x ${sel.awayTeam} está temporariamente bloqueado para novas apostas. Escolha outro jogo.`,
+                isGameLimitReached: true,
+              });
+            }
+          }
+        }
+      }
+
       // Verificar máximo de 3 mercados por jogo
       const selectionsByGame: Record<string, number> = {};
       for (const sel of validatedData.selections) {
