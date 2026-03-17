@@ -8,6 +8,7 @@ export interface GameSimpleBetTotal {
   homeTeam: string;
   awayTeam: string;
   sportTitle: string;
+  commenceTime: string | null;
   total: number;
   count: number;
   isBlocked: boolean;
@@ -256,6 +257,7 @@ export class DatabaseStorage implements IStorage {
           homeTeam: sel.homeTeam,
           awayTeam: sel.awayTeam,
           sportTitle: sel.sportTitle,
+          commenceTime: sel.commenceTime ?? null,
           total: 0,
           count: 0,
           isBlocked: false,
@@ -267,10 +269,16 @@ export class DatabaseStorage implements IStorage {
     }
 
     const DISPLAY_BLOCK_THRESHOLD = 14000;
-    return Object.values(totals).map(t => ({
-      ...t,
-      isBlocked: t.total >= DISPLAY_BLOCK_THRESHOLD,
-    })).sort((a, b) => b.total - a.total);
+    const now = new Date();
+    return Object.values(totals)
+      .filter(t => {
+        if (!t.commenceTime) return true;
+        return new Date(t.commenceTime) > now;
+      })
+      .map(t => ({
+        ...t,
+        isBlocked: t.total >= DISPLAY_BLOCK_THRESHOLD,
+      })).sort((a, b) => b.total - a.total);
   }
 
   async getBlockedGameIds(): Promise<Set<string>> {
