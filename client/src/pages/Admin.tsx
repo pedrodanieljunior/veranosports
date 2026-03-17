@@ -845,7 +845,13 @@ export default function Admin() {
                 const APORTE_INICIAL = 50000;
                 const ganhos = bets.filter(b => b.verified && b.status === "lost").reduce((s, b) => s + b.stake, 0);
                 const perdas = bets.filter(b => b.verified && b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
-                const saldo = APORTE_INICIAL + ganhos - perdas;
+                const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
+                const lucroOp = ganhos - perdas;
+                // Prioridade: exposição drena do lucro primeiro, depois do capital
+                const lucroLivre = Math.max(0, lucroOp - exposicao);
+                const capitalReservado = Math.max(0, exposicao - Math.max(0, lucroOp));
+                const capitalDisponivel = APORTE_INICIAL - capitalReservado;
+                const saldo = capitalDisponivel + lucroLivre; // = APORTE_INICIAL + lucroOp - exposicao
                 const isPositive = saldo >= 0;
                 return (
                   <Card className={`border-2 ${isPositive ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}>
@@ -883,41 +889,47 @@ export default function Admin() {
 
                       {/* Barras de disponível + lucro */}
                       {(() => {
-                        const saldoPct = Math.max(0, Math.min(100, (saldo / APORTE_INICIAL) * 100));
-                        const saldoColor = saldoPct > 50 ? "bg-gradient-to-r from-green-600 to-emerald-400" : saldoPct > 20 ? "bg-gradient-to-r from-yellow-600 to-amber-400" : "bg-gradient-to-r from-red-600 to-rose-400";
-                        const lucroOp = ganhos - perdas;
-                        const lucroPct = Math.max(0, Math.min(100, (Math.abs(lucroOp) / APORTE_INICIAL) * 100));
-                        const lucroPositivo = lucroOp >= 0;
+                        // Barra 1 — capital disponível (após reservar exposição que excede o lucro)
+                        const capitalPct = Math.max(0, Math.min(100, (capitalDisponivel / APORTE_INICIAL) * 100));
+                        const capitalColor = capitalPct > 50 ? "bg-gradient-to-r from-green-600 to-emerald-400" : capitalPct > 20 ? "bg-gradient-to-r from-yellow-600 to-amber-400" : "bg-gradient-to-r from-red-600 to-rose-400";
+                        // Barra 2 — lucro livre (depois de cobrir a exposição com o lucro)
+                        const lucroLivrePct = Math.max(0, Math.min(100, (lucroLivre / APORTE_INICIAL) * 100));
+                        const lucroOpNegativo = lucroOp < 0;
+                        const lucroOpPct = Math.max(0, Math.min(100, (Math.abs(lucroOp) / APORTE_INICIAL) * 100));
                         return (
                           <div className="mb-6 space-y-2">
-                            {/* Barra 1 — Disponível */}
+                            {/* Barra 1 — Capital disponível */}
                             <div>
                               <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                <span>Disponível no caixa</span>
-                                <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
-                                  {saldoPct.toFixed(1)}%
+                                <span>Capital disponível</span>
+                                <span className={`font-semibold ${capitalPct > 50 ? "text-green-400" : capitalPct > 20 ? "text-yellow-400" : "text-red-400"}`}>
+                                  {capitalPct.toFixed(1)}% · R${capitalDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                               <div className="w-full h-3 bg-muted rounded-t-full overflow-hidden">
                                 <div
-                                  className={`h-full transition-all duration-500 ${saldoColor}`}
-                                  style={{ width: `${saldoPct}%` }}
+                                  className={`h-full transition-all duration-500 ${capitalColor}`}
+                                  style={{ width: `${capitalPct}%` }}
                                 />
                               </div>
                             </div>
 
-                            {/* Barra 2 — Lucro operacional */}
+                            {/* Barra 2 — Lucro operacional (livre de exposição) */}
                             <div>
                               <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                 <span>Lucro operacional</span>
-                                <span className={`font-semibold ${lucroPositivo ? "text-violet-400" : "text-red-400"}`}>
-                                  {lucroPositivo ? "+" : "-"}R${Math.abs(lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <span className={`font-semibold ${lucroOpNegativo ? "text-red-400" : lucroLivre > 0 ? "text-violet-400" : "text-yellow-400"}`}>
+                                  {lucroOpNegativo
+                                    ? `-R$${Math.abs(lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : lucroLivre > 0
+                                    ? `+R$${lucroLivre.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} livre`
+                                    : `R$0,00 (coberto pela exposição)`}
                                 </span>
                               </div>
                               <div className="w-full h-3 bg-muted rounded-b-full overflow-hidden">
                                 <div
-                                  className={`h-full transition-all duration-500 ${lucroPositivo ? "bg-gradient-to-r from-purple-600 to-violet-400" : "bg-red-500"}`}
-                                  style={{ width: `${lucroPct}%` }}
+                                  className={`h-full transition-all duration-500 ${lucroOpNegativo ? "bg-red-500" : "bg-gradient-to-r from-purple-600 to-violet-400"}`}
+                                  style={{ width: `${lucroOpNegativo ? lucroOpPct : lucroLivrePct}%` }}
                                 />
                               </div>
                             </div>
@@ -932,7 +944,7 @@ export default function Admin() {
                       })()}
 
                       {/* Breakdown */}
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-muted/50 rounded-lg p-3 text-center">
                           <Wallet className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                           <p className="text-base font-bold">
@@ -953,6 +965,13 @@ export default function Admin() {
                             -R${perdas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-muted-foreground">Prêmios pagos</p>
+                        </div>
+                        <div className="bg-yellow-500/10 rounded-lg p-3 text-center">
+                          <ShieldAlert className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
+                          <p className="text-base font-bold text-yellow-400">
+                            -R${exposicao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Exposição reservada</p>
                         </div>
                       </div>
                     </CardContent>
