@@ -580,13 +580,13 @@ export default function Admin() {
               <Wallet className="w-4 h-4 mr-2" />
               Caixa
             </TabsTrigger>
-            <TabsTrigger value="saques" data-testid="tab-saques">
-              <MinusCircle className="w-4 h-4 mr-2" />
-              Saques
-            </TabsTrigger>
             <TabsTrigger value="financeiro" data-testid="tab-financeiro">
               <PieChart className="w-4 h-4 mr-2" />
               Financeiro
+            </TabsTrigger>
+            <TabsTrigger value="saques" data-testid="tab-saques">
+              <MinusCircle className="w-4 h-4 mr-2" />
+              Saques
             </TabsTrigger>
             <TabsTrigger value="mercados" data-testid="tab-mercados">
               <Target className="w-4 h-4 mr-2" />
