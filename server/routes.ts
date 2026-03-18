@@ -155,6 +155,19 @@ const ALLOWED_LEAGUES_ORDERED = [
 ];
 const ALLOWED_LEAGUES_SET = new Set(ALLOWED_LEAGUES_ORDERED);
 
+// Ordem de prioridade de bookmakers — respeitada em TODOS os pontos de seleção
+const PREFERRED_BOOKMAKERS = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
+
+// Seleciona o bookmaker de maior prioridade disponível na lista
+// Itera pela lista de preferência na ordem correta, não pela lista de bookmakers retornados
+function pickBestBookmaker(allBks: any[]): any {
+  for (const name of PREFERRED_BOOKMAKERS) {
+    const found = allBks.find((b: any) => b.name === name);
+    if (found) return found;
+  }
+  return allBks[0] || null;
+}
+
 // Helper para converter dados de múltiplos bookmakers da API-Football em formato de mercados
 // Agrega valores de todos os bookmakers para ter mais linhas (ex: escanteios)
 function buildMarketsFromBookmaker(bookmakerOrBookmakers: any, homeTeam: string, awayTeam: string) {
@@ -669,7 +682,6 @@ export async function registerRoutes(
 
         // Buscar odds sequencialmente por liga (evita throttling da API)
         const todayOddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
-        const bkPreferred = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
 
         const extractH2hFromBk = (bk: any, title?: string) => {
           if (!bk) return null;
@@ -734,7 +746,7 @@ export async function registerRoutes(
               if (r.ok) {
                 const d = await r.json();
                 const allBks: any[] = d.response?.[0]?.bookmakers || [];
-                const bk = allBks.find((b: any) => bkPreferred.includes(b.name)) || allBks[0];
+                const bk = pickBestBookmaker(allBks);
                 const result = extractH2hFromBk(bk);
                 if (result) todayOddsMap.set(fid, result);
               }
@@ -836,7 +848,6 @@ export async function registerRoutes(
         }
 
         // Buscar todas as odds do Brasileirão de uma vez (hoje + amanhã, pois jogos como 00:30 ficam no dia seguinte)
-        const preferredNames = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
         const oddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
         const tomorrow = toManausDateStr(nowMs + 24 * 60 * 60 * 1000);
         const processOddsEntries = (entries: any[]) => {
@@ -844,7 +855,7 @@ export async function registerRoutes(
             const fid = entry.fixture?.id;
             if (!fid || oddsMap.has(fid)) continue;
             const allBks: any[] = entry.bookmakers || [];
-            const chosenBk = allBks.find((bk: any) => preferredNames.includes(bk.name)) || allBks[0];
+            const chosenBk = pickBestBookmaker(allBks);
             const bets = chosenBk?.bets || [];
             const h2h = bets.find((b: any) => b.name === "Match Winner");
             if (h2h && h2h.values?.length >= 2) {
@@ -886,7 +897,7 @@ export async function registerRoutes(
               if (r.ok) {
                 const d = await r.json();
                 const allBks: any[] = d.response?.[0]?.bookmakers || [];
-                const chosenBk = allBks.find((bk: any) => preferredNames.includes(bk.name)) || allBks[0];
+                const chosenBk = pickBestBookmaker(allBks);
                 const bets = chosenBk?.bets || [];
                 const h2h = bets.find((b: any) => b.name === "Match Winner");
                 if (h2h && h2h.values?.length >= 2) {
@@ -1043,7 +1054,6 @@ export async function registerRoutes(
         }
 
         // Para cada fixture encontrado, tentar obter odds do cache ou buscar
-        const bkPreferred = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
 
         for (const f of allFixtures) {
           const fid: number = f.fixture.id;
@@ -1071,7 +1081,7 @@ export async function registerRoutes(
                 const entry = (oddsData.response || [])[0];
                 if (entry) {
                   const allBks: any[] = entry.bookmakers || [];
-                  const bk = allBks.find((b: any) => bkPreferred.includes(b.name)) || allBks[0];
+                  const bk = pickBestBookmaker(allBks);
                   if (bk) {
                     const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
                     if (h2h) {
@@ -1225,8 +1235,7 @@ export async function registerRoutes(
                     if (oddsResponse.ok) {
                       const oddsData = await oddsResponse.json();
                       const allBookmakers2: any[] = oddsData.response?.[0]?.bookmakers || [];
-                      const preferredNames2 = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
-                      let chosenBk2 = allBookmakers2.find(bk => preferredNames2.includes(bk.name)) || allBookmakers2[0];
+                      let chosenBk2 = pickBestBookmaker(allBookmakers2);
                       const bets = chosenBk2?.bets || [];
                       const h2h = bets.find((b: any) => b.name === "Match Winner");
                       if (h2h && h2h.values?.length >= 2) {
