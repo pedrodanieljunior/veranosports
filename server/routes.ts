@@ -335,7 +335,8 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       values = values.filter((v) => isStandardGoalLine(v.value));
       if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
-      // Sempre garantir as 3 linhas obrigatórias: 8.5, 9.5, 10.5
+      // Para cada linha obrigatória (8.5, 9.5, 10.5), usar o bookmaker de maior prioridade que a tenha.
+      // Se o bookmaker principal (ex: Bet365) não tiver a linha, busca no próximo da lista.
       const REQUIRED_CORNER_LINES = ["8.5", "9.5", "10.5"];
       const CORNER_DEFAULTS: Record<string, { over: number; under: number }> = {
         "8.5":  { over: 1.72, under: 1.98 },
@@ -345,8 +346,31 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       const filled: { value: string; odd: number }[] = [];
       for (const line of REQUIRED_CORNER_LINES) {
         const escaped = line.replace(".", "\\.");
-        const over  = values.find(v => new RegExp(`^Over\\s+${escaped}$`,  "i").test(v.value));
-        const under = values.find(v => new RegExp(`^Under\\s+${escaped}$`, "i").test(v.value));
+        const lineRe  = (dir: string) => new RegExp(`^${dir}\\s+${escaped}$`, "i");
+        let over  = values.find(v => lineRe("Over").test(v.value));
+        let under = values.find(v => lineRe("Under").test(v.value));
+        // Linha ausente no bookmaker principal → percorrer os demais em prioridade
+        if (!over || !under) {
+          for (const bk of bookmakers) {
+            const cornerBet = bk.bets?.find((b: any) =>
+              b.name === "Corners Over Under" || b.name === "Total Corners"
+            );
+            if (!cornerBet) continue;
+            const bkVals: { value: string; odd: number }[] = (cornerBet.values || []).map((v: any) => ({
+              value: String(v.value),
+              odd: parseFloat(v.odd)
+            }));
+            if (!over) {
+              const found = bkVals.find(v => lineRe("Over").test(v.value));
+              if (found) over = found;
+            }
+            if (!under) {
+              const found = bkVals.find(v => lineRe("Under").test(v.value));
+              if (found) under = found;
+            }
+            if (over && under) break;
+          }
+        }
         filled.push({ value: `Over ${line}`,  odd: over?.odd  ?? CORNER_DEFAULTS[line].over  });
         filled.push({ value: `Under ${line}`, odd: under?.odd ?? CORNER_DEFAULTS[line].under });
       }
