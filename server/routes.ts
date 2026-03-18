@@ -1134,6 +1134,17 @@ export async function registerRoutes(
       const { sportKey } = req.params;
       const cacheKey = `odds_${sportKey}`;
 
+      // Sempre tentar reutilizar o cache do games/today primeiro (odds reais, sem random fallback)
+      // Isso evita chamadas individuais por fixture que geram odds aleatórias como fallback
+      const todayCache = cache.get<any[]>("games_today");
+      if (todayCache) {
+        const leagueGames = todayCache.filter((g: any) => g.sportKey === sportKey);
+        if (leagueGames.length > 0) {
+          const blockedIds = await storage.getBlockedGameIds();
+          return res.json(blockedIds.size > 0 ? leagueGames.filter((g: any) => !blockedIds.has(g.id)) : leagueGames);
+        }
+      }
+
       // Para o Brasileirão, reusar o cache unificado para evitar odds inconsistentes
       if (sportKey === "soccer_brazil_campeonato") {
         const brCache = cache.get<any[]>("games_brasileirao");
