@@ -248,8 +248,9 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
   ]);
 
   // Agrupar bets do mesmo mercado de TODOS os bookmakers, deduplicando por valor
+  // Usa a média das odds quando múltiplos bookmakers cobrem o mesmo outcome
   // Isso maximiza as linhas disponíveis (ex: escanteios Over 8.5, 9.5, 10.5, 11.5...)
-  const grouped: Record<string, { id: number; name: string; label: string; seenKeys: Record<string, boolean>; values: { value: string; odd: number }[] }> = {};
+  const grouped: Record<string, { id: number; name: string; label: string; accumulator: Record<string, { sum: number; count: number }>; values: { value: string; odd: number }[] }> = {};
 
   for (const bk of bookmakers) {
     const bets: any[] = bk.bets || [];
@@ -262,7 +263,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
             id: bet.id,
             name: bet.name,
             label: marketLabels[bet.name] || bet.name,
-            seenKeys: {},
+            accumulator: {},
             values: []
           };
         }
@@ -271,12 +272,21 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
           odd: parseFloat(v.odd)
         }));
         for (const v of vals) {
-          if (!grouped[key].seenKeys[v.value]) {
-            grouped[key].seenKeys[v.value] = true;
-            grouped[key].values.push(v);
+          if (!grouped[key].accumulator[v.value]) {
+            grouped[key].accumulator[v.value] = { sum: 0, count: 0 };
           }
+          grouped[key].accumulator[v.value].sum += v.odd;
+          grouped[key].accumulator[v.value].count += 1;
         }
       });
+  }
+
+  // Converter acumuladores em valores médios
+  for (const key of Object.keys(grouped)) {
+    grouped[key].values = Object.entries(grouped[key].accumulator).map(([value, acc]) => ({
+      value,
+      odd: parseFloat((acc.sum / acc.count).toFixed(2))
+    }));
   }
 
   // Filtrar linhas não-padrão (Asian quarter lines como 2.75, 3.25, etc.)
@@ -602,43 +612,8 @@ export async function registerRoutes(
         "soccer_japan_j_league",
       ];
 
-      // Tentar The Odds API — buscar todas as ligas em paralelo
-      if (ODDS_API_KEY) {
-        const now = new Date();
-        const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-        const results = await Promise.all(
-          todayLeagues.map(league =>
-            fetch(`${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`)
-              .then(r => {
-                if (r.status === 401) { quotaExceeded = true; return []; }
-                return r.ok ? r.json() : [];
-              })
-              .catch(() => [])
-          )
-        );
-
-        for (const rawGames of results) {
-          if (!Array.isArray(rawGames)) continue;
-          for (const game of rawGames) {
-            const gameDate = new Date(game.commence_time);
-            if (gameDate > now && gameDate <= next24h) {
-              allGames.push({
-                id: game.id,
-                sportKey: game.sport_key,
-                sportTitle: game.sport_title,
-                commenceTime: game.commence_time,
-                homeTeam: formatTeamName(game.home_team),
-                awayTeam: formatTeamName(game.away_team),
-                bookmakers: game.bookmakers || [],
-                _priority: LEAGUE_PRIORITY[game.sport_key] ?? 3,
-              });
-            }
-          }
-        }
-      } else {
-        quotaExceeded = true;
-      }
+      // Usar API-Football como fonte principal (assinatura ativa)
+      quotaExceeded = true;
 
       const coveredSportKeys = new Set(allGames.map(g => g.sportKey));
 
@@ -985,32 +960,6 @@ export async function registerRoutes(
         });
       }
 
-      // Fallback para The Odds API se API-Football não retornou dados
-      if (games.length === 0 && ODDS_API_KEY) {
-        const oddsUrl = `${ODDS_API_BASE}/sports/soccer_brazil_campeonato/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
-        const response = await fetch(oddsUrl);
-        if (response.ok) {
-          const rawGames = await response.json();
-          const nowTs = Date.now();
-          const next24hTs = nowTs + 24 * 60 * 60 * 1000;
-          games = rawGames
-            .filter((game: any) => {
-              const t = new Date(game.commence_time).getTime();
-              return t > nowTs && t <= next24hTs;
-            })
-            .map((game: any) => ({
-              id: game.id,
-              sportKey: game.sport_key,
-              sportTitle: game.sport_title,
-              commenceTime: game.commence_time,
-              homeTeam: formatTeamName(game.home_team),
-              awayTeam: formatTeamName(game.away_team),
-              bookmakers: game.bookmakers || []
-            }))
-            .sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime())
-            .slice(0, 10);
-        }
-      }
 
       cache.set(cacheKey, games, CACHE_TTL_ODDS);
       const blockedIds = await storage.getBlockedGameIds();
@@ -1098,43 +1047,8 @@ export async function registerRoutes(
       }
       
       let games: any[] = [];
-      let useApiFootball = false;
-      
-      // Tentar The Odds API primeiro
-      if (ODDS_API_KEY) {
-        const oddsUrl = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu,uk&markets=h2h,spreads,totals&oddsFormat=decimal`;
-        const response = await fetch(oddsUrl);
-        
-        if (response.status === 401) {
-          console.log("The Odds API quota exceeded for sport, switching to API-Football");
-          useApiFootball = true;
-        } else if (response.ok) {
-          const rawGames = await response.json();
-          const remaining = response.headers.get('x-requests-remaining');
-          console.log(`The Odds API - Requests remaining: ${remaining}`);
-          
-          const nowTs2 = Date.now();
-          const next24hTs2 = nowTs2 + 24 * 60 * 60 * 1000;
-          games = rawGames
-            .filter((game: any) => {
-              const t = new Date(game.commence_time).getTime();
-              return t > nowTs2 && t <= next24hTs2;
-            })
-            .map((game: any) => ({
-              id: game.id,
-              sportKey: game.sport_key,
-              sportTitle: game.sport_title,
-              commenceTime: game.commence_time,
-              homeTeam: formatTeamName(game.home_team),
-              awayTeam: formatTeamName(game.away_team),
-              bookmakers: game.bookmakers || []
-            }));
-        } else {
-          useApiFootball = true;
-        }
-      } else {
-        useApiFootball = true;
-      }
+      // Sempre usar API-Football como fonte principal de odds (assinatura ativa)
+      let useApiFootball = true;
       
       // Usar API-Football como fallback
       if ((useApiFootball || games.length === 0) && API_FOOTBALL_KEY) {
