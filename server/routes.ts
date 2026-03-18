@@ -982,38 +982,128 @@ export async function registerRoutes(
         return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
 
-      const leagues = ALLOWED_LEAGUES_ORDERED;
-
       let results: any[] = [];
 
-      if (ODDS_API_KEY) {
-        const fetches = leagues.map(league =>
-          fetch(`${ODDS_API_BASE}/sports/${league}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`)
-            .then(r => r.ok ? r.json() : [])
-            .catch(() => [])
-        );
-        const responses = await Promise.all(fetches);
+      if (API_FOOTBALL_KEY) {
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-        for (const games of responses) {
-          if (!Array.isArray(games)) continue;
-          for (const game of games) {
-            const home = (game.home_team || "").toLowerCase();
-            const away = (game.away_team || "").toLowerCase();
-            const t = new Date(game.commence_time).getTime();
-            if ((home.includes(team) || away.includes(team)) && t > nowMs && t <= next24hMs) {
-              results.push({
-                id: game.id,
-                sportKey: game.sport_key,
-                sportTitle: game.sport_title,
-                commenceTime: game.commence_time,
-                homeTeam: formatTeamName(game.home_team),
-                awayTeam: formatTeamName(game.away_team),
-                bookmakers: game.bookmakers || []
-              });
-            }
+        const todayStr = toManausDateStr(nowMs);
+        const next24hStr = toManausDateStr(next24hMs);
+
+        // Mapeamento de league id -> sportKey para todas as ligas suportadas
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth();
+        const europeanSeason = currentMonth >= 7 ? currentYear : currentYear - 1;
+        const brazilianSeason = currentYear;
+        const leagueIdToKey: Record<number, { key: string; name: string; season: number }> = {
+          71:  { key: "soccer_brazil_campeonato", name: "Campeonato Brasileiro Série A", season: brazilianSeason },
+          72:  { key: "soccer_brazil_serie_b", name: "Brasileirão Série B", season: brazilianSeason },
+          73:  { key: "soccer_brazil_copa_do_brasil", name: "Copa do Brasil", season: brazilianSeason },
+          13:  { key: "soccer_conmebol_copa_libertadores", name: "Copa Libertadores", season: brazilianSeason },
+          11:  { key: "soccer_conmebol_copa_sudamericana", name: "Copa Sul-Americana", season: brazilianSeason },
+          2:   { key: "soccer_uefa_champs_league", name: "UEFA Champions League", season: europeanSeason },
+          39:  { key: "soccer_epl", name: "Premier League", season: europeanSeason },
+          45:  { key: "soccer_fa_cup", name: "FA Cup", season: europeanSeason },
+          140: { key: "soccer_spain_la_liga", name: "La Liga – Espanha", season: europeanSeason },
+          78:  { key: "soccer_germany_bundesliga", name: "Bundesliga – Alemanha", season: europeanSeason },
+          135: { key: "soccer_italy_serie_a", name: "Serie A – Itália", season: europeanSeason },
+          61:  { key: "soccer_france_ligue_one", name: "Ligue 1 – França", season: europeanSeason },
+          3:   { key: "soccer_uefa_europa_league", name: "UEFA Europa League", season: europeanSeason },
+          848: { key: "soccer_uefa_europa_conference_league", name: "Conference League", season: europeanSeason },
+          94:  { key: "soccer_portugal_primeira_liga", name: "Primeira Liga – Portugal", season: europeanSeason },
+          88:  { key: "soccer_netherlands_eredivisie", name: "Eredivisie – Holanda", season: europeanSeason },
+          203: { key: "soccer_turkey_super_league", name: "Süper Lig – Turquia", season: europeanSeason },
+          128: { key: "soccer_argentina_primera_division", name: "Primera División – Argentina", season: brazilianSeason },
+          262: { key: "soccer_mexico_ligamx", name: "Liga MX – México", season: brazilianSeason },
+          253: { key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
+          98:  { key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
+        };
+
+        // Buscar fixtures pelo nome do time via API-Football (busca nos dois dias)
+        const [res1, res2] = await Promise.all([
+          fetch(`${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(team)}&from=${todayStr}&to=${next24hStr}`,
+            { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+            .then(r => r.ok ? r.json() : { response: [] })
+            .catch(() => ({ response: [] })),
+          // API-Football search pode não funcionar com from/to, tentar sem filtro de data
+          fetch(`${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(team)}`,
+            { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+            .then(r => r.ok ? r.json() : { response: [] })
+            .catch(() => ({ response: [] }))
+        ]);
+
+        const allFixtures: any[] = [];
+        const seenIds = new Set<number>();
+        for (const f of [...(res1.response || []), ...(res2.response || [])]) {
+          const fid = f.fixture?.id;
+          if (!fid || seenIds.has(fid)) continue;
+          seenIds.add(fid);
+          const gameDate = new Date(f.fixture?.date).getTime();
+          const status = f.fixture?.status?.short;
+          if (status === "NS" && gameDate > nowMs && gameDate <= next24hMs) {
+            allFixtures.push(f);
           }
         }
+
+        // Para cada fixture encontrado, tentar obter odds do cache ou buscar
+        const bkPreferred = ["Bet365", "Betano", "William Hill", "Betfair", "Unibet", "10Bet", "Pinnacle", "1xBet"];
+
+        for (const f of allFixtures) {
+          const fid: number = f.fixture.id;
+          const leagueId: number = f.league?.id;
+          const leagueInfo = leagueIdToKey[leagueId];
+          if (!leagueInfo) continue; // liga não suportada
+
+          // Verificar cache de odds da liga
+          let bookmakers: any[] = [];
+          const leagueCache = cache.get<any[]>(`odds_${leagueInfo.key}`);
+          if (leagueCache) {
+            const cached = leagueCache.find((g: any) => g.id === `api-football-${fid}`);
+            if (cached) bookmakers = cached.bookmakers || [];
+          }
+
+          // Se não tem no cache, buscar odds direto para este fixture
+          if (bookmakers.length === 0) {
+            try {
+              const oddsRes = await fetch(
+                `${API_FOOTBALL_BASE}/odds?fixture=${fid}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+              );
+              if (oddsRes.ok) {
+                const oddsData = await oddsRes.json();
+                const entry = (oddsData.response || [])[0];
+                if (entry) {
+                  const allBks: any[] = entry.bookmakers || [];
+                  const bk = allBks.find((b: any) => bkPreferred.includes(b.name)) || allBks[0];
+                  if (bk) {
+                    const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+                    if (h2h) {
+                      bookmakers = [{
+                        key: "api-football",
+                        title: bk.name,
+                        markets: [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
+                          name: v.value === "Home" ? f.teams?.home?.name : v.value === "Away" ? f.teams?.away?.name : "Empate",
+                          price: parseFloat(v.odd)
+                        }))}]
+                      }];
+                    }
+                  }
+                }
+              }
+            } catch (e) { /* sem odds, continua */ }
+          }
+
+          results.push({
+            id: `api-football-${fid}`,
+            sportKey: leagueInfo.key,
+            sportTitle: leagueInfo.name,
+            commenceTime: f.fixture.date,
+            homeTeam: formatTeamName(f.teams?.home?.name || ""),
+            awayTeam: formatTeamName(f.teams?.away?.name || ""),
+            bookmakers
+          });
+        }
+
         results.sort((a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
       }
 
