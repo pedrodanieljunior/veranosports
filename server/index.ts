@@ -112,6 +112,22 @@ app.use((req, res, next) => {
       
       // Iniciar bot do Telegram
       initTelegramBot();
+
+      // Aquecer o cache imediatamente após o servidor iniciar
+      // Isso garante que os dados estejam prontos antes dos usuários acessarem
+      setTimeout(async () => {
+        try {
+          log("[Warmup] Aquecendo cache de jogos...", "cache");
+          const res = await fetch(`http://localhost:${port}/api/games/today`);
+          if (res.ok) {
+            log("[Warmup] Cache de jogos/today carregado com sucesso", "cache");
+          } else {
+            log(`[Warmup] games/today retornou ${res.status}`, "cache");
+          }
+        } catch (err) {
+          log(`[Warmup] Falha ao aquecer cache: ${err}`, "cache");
+        }
+      }, 500); // 500ms para o servidor estar pronto para receber requisições
     },
   );
 })();

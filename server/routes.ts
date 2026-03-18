@@ -597,6 +597,10 @@ export async function registerRoutes(
         const blockedIds = await storage.getBlockedGameIds();
         return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
+
+      // Registrar como em andamento — outros endpoints (ex: odds/:sportKey) vão aguardar
+      // este resultado em vez de disparar chamadas simultâneas à API
+      const { resolve: resolvePending, reject: rejectPending } = cache.registerPending<any[]>(cacheKey);
       
       let allGames: any[] = [];
       let quotaExceeded = false;
@@ -845,9 +849,11 @@ export async function registerRoutes(
 
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
       cache.set(cacheKey, finalGames, 5 * 60 * 1000); // cache 5 minutos
+      resolvePending(finalGames); // Notificar endpoints que aguardavam este resultado
       const blockedIds = await storage.getBlockedGameIds();
       res.json(blockedIds.size > 0 ? finalGames.filter((g: any) => !blockedIds.has(g.id)) : finalGames);
     } catch (error) {
+      rejectPending(error); // Liberar endpoints que aguardavam
       console.error("Error fetching today's games:", error);
       res.status(500).json({ error: "Failed to fetch today's games" });
     }
@@ -1188,7 +1194,15 @@ export async function registerRoutes(
 
       // Sempre tentar reutilizar o cache do games/today primeiro (odds reais, sem random fallback)
       // Isso evita chamadas individuais por fixture que geram odds aleatórias como fallback
-      const todayCache = cache.get<any[]>("games_today");
+      let todayCache = cache.get<any[]>("games_today");
+
+      // Se games_today está sendo carregado em paralelo (ex: warmup no cold start),
+      // aguardar em vez de fazer chamadas simultâneas que causam throttling na API
+      if (!todayCache) {
+        const pending = await cache.waitForPending<any[]>("games_today");
+        if (pending) todayCache = pending;
+      }
+
       if (todayCache) {
         const leagueGames = todayCache.filter((g: any) => g.sportKey === sportKey);
         if (leagueGames.length > 0) {
