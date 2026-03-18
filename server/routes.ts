@@ -863,6 +863,17 @@ export async function registerRoutes(
         return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
 
+      // Aproveitar cache do games_today se já estiver populado — evita corrida de API
+      const todayCacheForBr = cache.get<any[]>("games_today");
+      if (todayCacheForBr) {
+        const brGames = todayCacheForBr.filter((g: any) => g.sportKey === "soccer_brazil_campeonato");
+        if (brGames.length > 0) {
+          cache.set(cacheKey, brGames, 5 * 60 * 1000);
+          const blockedIds = await storage.getBlockedGameIds();
+          return res.json(blockedIds.size > 0 ? brGames.filter((g: any) => !blockedIds.has(g.id)) : brGames);
+        }
+      }
+
       let games: any[] = [];
 
       // API-Football PRIMEIRO — odds reais da bookmaker correta (ex: 3.90 para Remo)
@@ -935,7 +946,8 @@ export async function registerRoutes(
         // Para fixtures que não estavam no bulk, buscar individualmente
         const missedFixtures = fixtures.filter((f: any) => !oddsMap.has(f.fixture.id));
         if (missedFixtures.length > 0) {
-          await Promise.all(missedFixtures.map(async (fixture: any) => {
+          // Buscar sequencialmente com pausa para evitar throttling da API
+          for (const fixture of missedFixtures) {
             const fid = fixture.fixture.id;
             try {
               const r = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${fid}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } });
@@ -960,7 +972,8 @@ export async function registerRoutes(
                 }
               }
             } catch (e) { console.error(`[BR-indiv] erro fixture ${fid}:`, e); }
-          }));
+            await new Promise(r => setTimeout(r, 200)); // pausa entre chamadas
+          }
         }
 
         games = fixtures.map((fixture: any) => {
