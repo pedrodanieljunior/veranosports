@@ -120,9 +120,9 @@ function calculateCRC16(payload: string): string {
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
 
-const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
-const CACHE_TTL_ODDS = 30 * 60 * 1000; // 30 minutos
-const CACHE_TTL_FOOTBALL = 15 * 60 * 1000; // 15 minutos
+const CACHE_TTL_SPORTS = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL_ODDS = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL_FOOTBALL = 5 * 60 * 1000; // 5 minutos
 
 const MANAUS_OFFSET_MS = -4 * 60 * 60 * 1000;
 function toManausDateStr(ms: number): string {
