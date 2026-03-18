@@ -789,7 +789,7 @@ export async function registerRoutes(
       const finalGames = allGames.map(({ _priority, ...g }) => g);
 
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
-      cache.set(cacheKey, finalGames, 30 * 60 * 1000); // cache 30 minutos
+      cache.set(cacheKey, finalGames, 5 * 60 * 1000); // cache 5 minutos
       const blockedIds = await storage.getBlockedGameIds();
       res.json(blockedIds.size > 0 ? finalGames.filter((g: any) => !blockedIds.has(g.id)) : finalGames);
     } catch (error) {
