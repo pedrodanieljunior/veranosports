@@ -55,6 +55,19 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  // A cada 5 minutos, resetar interface para o estado inicial (junto com a atualização dos dados)
+  useEffect(() => {
+    const resetInterval = setInterval(() => {
+      setSelectedSport(null);
+      setSelectedGame(null);
+      setSearchQuery("");
+      setDebouncedSearch("");
+      setShowHistory(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 5 * 60 * 1000);
+    return () => clearInterval(resetInterval);
+  }, []);
+
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
   const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
   const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
