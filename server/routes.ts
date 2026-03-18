@@ -119,8 +119,6 @@ function calculateCRC16(payload: string): string {
 
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 const API_FOOTBALL_BASE = "https://v3.football.api-sports.io";
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
-const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const CACHE_TTL_SPORTS = 60 * 60 * 1000; // 1 hora
 const CACHE_TTL_ODDS = 30 * 60 * 1000; // 30 minutos
