@@ -32,6 +32,7 @@ export const marketSettingsTable = pgTable("market_settings", {
 
 export const betSlipsTable = pgTable("bet_slips", {
   id: text("id").primaryKey(),
+  sessionId: text("session_id"),
   selections: jsonb("selections").notNull(),
   stake: real("stake").notNull(),
   totalOdds: real("total_odds").notNull(),
@@ -109,6 +110,7 @@ export type Selection = z.infer<typeof selectionSchema>;
 
 export const betSlipSchema = z.object({
   id: z.string(),
+  sessionId: z.string().optional().nullable(),
   selections: z.array(selectionSchema),
   stake: z.number(),
   totalOdds: z.number(),
@@ -121,6 +123,7 @@ export const betSlipSchema = z.object({
 export type BetSlip = z.infer<typeof betSlipSchema>;
 
 export const insertBetSlipSchema = z.object({
+  sessionId: z.string().optional(),
   selections: z.array(selectionSchema).min(1, "Selecione pelo menos uma aposta"),
   stake: z.number().min(1, "Valor mínimo de R$1,00"),
 });

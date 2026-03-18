@@ -19,6 +19,7 @@ export interface IStorage {
   getBetSlip(id: string): Promise<BetSlip | undefined>;
   getAllBetSlips(): Promise<BetSlip[]>;
   getRecentBetSlips(hours: number): Promise<BetSlip[]>;
+  getBetSlipsBySession(sessionId: string): Promise<BetSlip[]>;
   deleteBetSlip(id: string): Promise<boolean>;
   deleteAllBetSlips(): Promise<void>;
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
@@ -50,6 +51,7 @@ export class DatabaseStorage implements IStorage {
     
     const [result] = await db.insert(betSlipsTable).values({
       id,
+      sessionId: data.sessionId ?? null,
       selections: data.selections,
       stake: data.stake,
       totalOdds,
@@ -59,6 +61,7 @@ export class DatabaseStorage implements IStorage {
     
     return {
       id: result.id,
+      sessionId: result.sessionId,
       selections: result.selections as BetSlip["selections"],
       stake: result.stake,
       totalOdds: result.totalOdds,
@@ -108,6 +111,7 @@ export class DatabaseStorage implements IStorage {
       .filter(result => new Date(result.createdAt) >= cutoffTime)
       .map(result => ({
         id: result.id,
+        sessionId: result.sessionId,
         selections: result.selections as BetSlip["selections"],
         stake: result.stake,
         totalOdds: result.totalOdds,
@@ -116,6 +120,24 @@ export class DatabaseStorage implements IStorage {
         verified: result.verified,
         createdAt: result.createdAt.toISOString(),
       }));
+  }
+
+  async getBetSlipsBySession(sessionId: string): Promise<BetSlip[]> {
+    const results = await db.select().from(betSlipsTable)
+      .where(eq(betSlipsTable.sessionId, sessionId))
+      .orderBy(desc(betSlipsTable.createdAt));
+
+    return results.map(result => ({
+      id: result.id,
+      sessionId: result.sessionId,
+      selections: result.selections as BetSlip["selections"],
+      stake: result.stake,
+      totalOdds: result.totalOdds,
+      potentialWin: result.potentialWin,
+      status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
+      createdAt: result.createdAt.toISOString(),
+    }));
   }
 
   async deleteBetSlip(id: string): Promise<boolean> {

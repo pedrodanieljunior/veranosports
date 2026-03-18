@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { translateLeagueName } from "@/lib/leagueTranslations";
+import { getSessionId } from "@/lib/session";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
@@ -132,18 +133,27 @@ export default function Home() {
   );
   const isLoadingGames = isTyping || (isSearching ? searchLoading : gamesLoading);
 
-  const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({ queryKey: ["/api/bets"] });
+  const sessionId = getSessionId();
+
+  const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/bets", sessionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/bets?sessionId=${encodeURIComponent(sessionId)}`);
+      if (!res.ok) throw new Error("Erro ao buscar histórico");
+      return res.json();
+    },
+  });
 
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number }) => {
-      const response = await apiRequest("POST", "/api/bets", data);
+      const response = await apiRequest("POST", "/api/bets", { ...data, sessionId });
       return response.json();
     },
     onSuccess: (data: BetSlipType) => {
       setPlacedBet(data);
       setSelections([]);
       setGameLimitRemaining(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bets", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
       toast({ title: "Bilhete gerado com sucesso!", description: `Código: #${data.id.slice(0, 8).toUpperCase()}` });
     },

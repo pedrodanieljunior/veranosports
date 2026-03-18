@@ -1554,6 +1554,14 @@ export async function registerRoutes(
   // Bilhetes recentes para o site principal (últimos 10 minutos)
   app.get("/api/bets", async (req, res) => {
     try {
+      const { sessionId } = req.query;
+      // Se sessionId fornecido, retorna apenas apostas dessa sessão
+      // Garante isolamento entre usuários: cada um vê só seus próprios bilhetes
+      if (sessionId && typeof sessionId === "string") {
+        const betSlips = await storage.getBetSlipsBySession(sessionId);
+        return res.json(betSlips);
+      }
+      // Fallback sem sessionId: retorna apostas recentes (não deve ser usado em produção)
       const betSlips = await storage.getRecentBetSlips(10 / 60);
       res.json(betSlips);
     } catch (error) {
