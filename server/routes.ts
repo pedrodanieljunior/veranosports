@@ -169,11 +169,18 @@ function pickBestBookmaker(allBks: any[]): any {
 }
 
 // Helper para converter dados de múltiplos bookmakers da API-Football em formato de mercados
-// Agrega valores de todos os bookmakers para ter mais linhas (ex: escanteios)
+// Estratégia: usar odds do melhor bookmaker disponível (Bet365 > Betano > ...).
+// Para cada mercado, usa o bookmaker de maior prioridade que tenha aquele mercado.
+// Nunca mistura nem faz média de odds entre bookmakers.
 function buildMarketsFromBookmaker(bookmakerOrBookmakers: any, homeTeam: string, awayTeam: string) {
   const bookmakers: any[] = Array.isArray(bookmakerOrBookmakers) ? bookmakerOrBookmakers : [bookmakerOrBookmakers];
-  const primaryBookmaker = bookmakers[0];
-  return buildMarketsFromBookmakers(bookmakers, primaryBookmaker?.name || "API-Football", homeTeam, awayTeam);
+  // Reordenar bookmakers pela lista de preferência
+  const sorted = [...PREFERRED_BOOKMAKERS]
+    .map(name => bookmakers.find((b: any) => b.name === name))
+    .filter(Boolean)
+    .concat(bookmakers.filter((b: any) => !PREFERRED_BOOKMAKERS.includes(b.name)));
+  const primaryBookmaker = sorted[0] || bookmakers[0];
+  return buildMarketsFromBookmakers(sorted, primaryBookmaker?.name || "API-Football", homeTeam, awayTeam);
 }
 
 function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, homeTeam: string, awayTeam: string) {
@@ -241,46 +248,29 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Total Corners",
   ]);
 
-  // Agrupar bets do mesmo mercado de TODOS os bookmakers, deduplicando por valor
-  // Usa a média das odds quando múltiplos bookmakers cobrem o mesmo outcome
-  // Isso maximiza as linhas disponíveis (ex: escanteios Over 8.5, 9.5, 10.5, 11.5...)
-  const grouped: Record<string, { id: number; name: string; label: string; accumulator: Record<string, { sum: number; count: number }>; values: { value: string; odd: number }[] }> = {};
+  // Para cada mercado permitido, usar o bookmaker de MAIOR PRIORIDADE que o tenha.
+  // Os bookmakers já chegam ordenados por prioridade (Bet365 primeiro).
+  // Nunca mistura nem faz média — usa as odds exatas do melhor bookmaker disponível.
+  const grouped: Record<string, { id: number; name: string; label: string; values: { value: string; odd: number }[] }> = {};
 
   for (const bk of bookmakers) {
     const bets: any[] = bk.bets || [];
     bets
-      .filter((bet: any) => allowedMarkets.has(bet.name))
+      .filter((bet: any) => allowedMarkets.has(bet.name) && !grouped[bet.name])
       .forEach((bet: any) => {
-        const key: string = bet.name;
-        if (!grouped[key]) {
-          grouped[key] = {
-            id: bet.id,
-            name: bet.name,
-            label: marketLabels[bet.name] || bet.name,
-            accumulator: {},
-            values: []
-          };
-        }
         const vals: { value: string; odd: number }[] = (bet.values || []).map((v: any) => ({
           value: String(v.value),
           odd: parseFloat(v.odd)
         }));
-        for (const v of vals) {
-          if (!grouped[key].accumulator[v.value]) {
-            grouped[key].accumulator[v.value] = { sum: 0, count: 0 };
-          }
-          grouped[key].accumulator[v.value].sum += v.odd;
-          grouped[key].accumulator[v.value].count += 1;
+        if (vals.length > 0) {
+          grouped[bet.name] = {
+            id: bet.id,
+            name: bet.name,
+            label: marketLabels[bet.name] || bet.name,
+            values: vals
+          };
         }
       });
-  }
-
-  // Converter acumuladores em valores médios
-  for (const key of Object.keys(grouped)) {
-    grouped[key].values = Object.entries(grouped[key].accumulator).map(([value, acc]) => ({
-      value,
-      odd: parseFloat((acc.sum / acc.count).toFixed(2))
-    }));
   }
 
   // Filtrar linhas não-padrão (Asian quarter lines como 2.75, 3.25, etc.)
