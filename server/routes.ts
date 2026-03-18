@@ -783,8 +783,10 @@ export async function registerRoutes(
         return new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime();
       });
 
-      // Remover campo interno _priority
-      const finalGames = allGames.map(({ _priority, ...g }) => g);
+      // Remover campo interno _priority e filtrar jogos sem odds reais
+      const finalGames = allGames
+        .map(({ _priority, ...g }) => g)
+        .filter((g: any) => g.bookmakers?.length > 0 && g.bookmakers[0]?.markets?.length > 0);
 
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
       cache.set(cacheKey, finalGames, 30 * 60 * 1000); // cache 30 minutos
@@ -942,9 +944,10 @@ export async function registerRoutes(
       }
 
 
-      cache.set(cacheKey, games, CACHE_TTL_ODDS);
+      const gamesWithOdds = games.filter((g: any) => g.bookmakers?.length > 0 && g.bookmakers[0]?.markets?.length > 0);
+      cache.set(cacheKey, gamesWithOdds, CACHE_TTL_ODDS);
       const blockedIds = await storage.getBlockedGameIds();
-      res.json(blockedIds.size > 0 ? games.filter((g: any) => !blockedIds.has(g.id)) : games);
+      res.json(blockedIds.size > 0 ? gamesWithOdds.filter((g: any) => !blockedIds.has(g.id)) : gamesWithOdds);
     } catch (error) {
       console.error("Error fetching Brasileirão games:", error);
       res.status(500).json({ error: "Failed to fetch Brasileirão games" });
