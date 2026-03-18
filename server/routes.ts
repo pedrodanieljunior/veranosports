@@ -972,7 +972,8 @@ export async function registerRoutes(
 
   app.get("/api/search/games", async (req, res) => {
     try {
-      const team = (req.query.team as string || "").trim().toLowerCase();
+      const teamRaw = (req.query.team as string || "").trim();
+      const team = teamRaw.toLowerCase();
       if (!team || team.length < 2) return res.json([]);
 
       const cacheKey = `search_team_${team}`;
@@ -987,8 +988,6 @@ export async function registerRoutes(
       if (API_FOOTBALL_KEY) {
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-        const todayStr = toManausDateStr(nowMs);
-        const next24hStr = toManausDateStr(next24hMs);
 
         // Mapeamento de league id -> sportKey para todas as ligas suportadas
         const currentYear = new Date().getFullYear();
@@ -1019,29 +1018,45 @@ export async function registerRoutes(
           98:  { key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
         };
 
-        // Buscar fixtures pelo nome do time via API-Football (busca nos dois dias)
-        const [res1, res2] = await Promise.all([
-          fetch(`${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(team)}&from=${todayStr}&to=${next24hStr}`,
-            { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
-            .then(r => r.ok ? r.json() : { response: [] })
-            .catch(() => ({ response: [] })),
-          // API-Football search pode não funcionar com from/to, tentar sem filtro de data
-          fetch(`${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(team)}`,
-            { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
-            .then(r => r.ok ? r.json() : { response: [] })
-            .catch(() => ({ response: [] }))
-        ]);
+        // Passo 1: buscar IDs dos times que correspondem ao termo de pesquisa
+        // Usar o termo original (sem forçar lowercase) pois API-Football faz busca case-insensitive internamente
+        const teamsRes = await fetch(
+          `${API_FOOTBALL_BASE}/teams?search=${encodeURIComponent(teamRaw)}`,
+          { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+        ).then(r => r.ok ? r.json() : { response: [] }).catch(() => ({ response: [] }));
+
+        const teamIds: number[] = (teamsRes.response || [])
+          .slice(0, 5) // Limitar a 5 times para evitar muitas chamadas
+          .map((t: any) => t.team?.id)
+          .filter(Boolean);
+
+        if (teamIds.length === 0) {
+          cache.set(cacheKey, [], 2 * 60 * 1000);
+          return res.json([]);
+        }
+
+        // Passo 2: buscar os próximos fixtures de cada time (next=3 pega partidas futuras sem precisar de season)
+        const fixtureResponses = await Promise.all(
+          teamIds.map(tid =>
+            fetch(`${API_FOOTBALL_BASE}/fixtures?team=${tid}&next=3`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+              .then(r => r.ok ? r.json() : { response: [] })
+              .catch(() => ({ response: [] }))
+          )
+        );
 
         const allFixtures: any[] = [];
         const seenIds = new Set<number>();
-        for (const f of [...(res1.response || []), ...(res2.response || [])]) {
-          const fid = f.fixture?.id;
-          if (!fid || seenIds.has(fid)) continue;
-          seenIds.add(fid);
-          const gameDate = new Date(f.fixture?.date).getTime();
-          const status = f.fixture?.status?.short;
-          if (status === "NS" && gameDate > nowMs && gameDate <= next24hMs) {
-            allFixtures.push(f);
+        for (const res of fixtureResponses) {
+          for (const f of (res.response || [])) {
+            const fid = f.fixture?.id;
+            if (!fid || seenIds.has(fid)) continue;
+            seenIds.add(fid);
+            const gameDate = new Date(f.fixture?.date).getTime();
+            const status = f.fixture?.status?.short;
+            if (status === "NS" && gameDate > nowMs && gameDate <= next24hMs) {
+              allFixtures.push(f);
+            }
           }
         }
 
