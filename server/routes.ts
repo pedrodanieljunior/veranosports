@@ -335,8 +335,22 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       values = values.filter((v) => isStandardGoalLine(v.value));
       if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
-      values = values.filter((v) => isStandardCornerLine(v.value));
-      if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
+      // Sempre garantir as 3 linhas obrigatórias: 8.5, 9.5, 10.5
+      const REQUIRED_CORNER_LINES = ["8.5", "9.5", "10.5"];
+      const CORNER_DEFAULTS: Record<string, { over: number; under: number }> = {
+        "8.5":  { over: 1.72, under: 1.98 },
+        "9.5":  { over: 2.00, under: 1.73 },
+        "10.5": { over: 2.45, under: 1.52 },
+      };
+      const filled: { value: string; odd: number }[] = [];
+      for (const line of REQUIRED_CORNER_LINES) {
+        const escaped = line.replace(".", "\\.");
+        const over  = values.find(v => new RegExp(`^Over\\s+${escaped}$`,  "i").test(v.value));
+        const under = values.find(v => new RegExp(`^Under\\s+${escaped}$`, "i").test(v.value));
+        filled.push({ value: `Over ${line}`,  odd: over?.odd  ?? CORNER_DEFAULTS[line].over  });
+        filled.push({ value: `Under ${line}`, odd: under?.odd ?? CORNER_DEFAULTS[line].under });
+      }
+      values = filled;
     } else if (overUnderMarkets.has(g.name)) {
       values = sortOverUnder(values);
     }
@@ -348,6 +362,25 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       values,
     };
   }).sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
+
+  // Garantir mercado de Escanteios sempre presente com as 3 linhas obrigatórias
+  const hasCorners = markets.some(m => m.name === "Corners Over Under" || m.name === "Total Corners");
+  if (!hasCorners) {
+    markets.push({
+      id: 45,
+      name: "Corners Over Under",
+      label: "Total de Escanteios",
+      values: [
+        { value: "Over 8.5",  odd: 1.72 },
+        { value: "Under 8.5", odd: 1.98 },
+        { value: "Over 9.5",  odd: 2.00 },
+        { value: "Under 9.5", odd: 1.73 },
+        { value: "Over 10.5", odd: 2.45 },
+        { value: "Under 10.5",odd: 1.52 },
+      ]
+    });
+    markets.sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
+  }
 
   // Adicionar mercado de Cartão Vermelho sinteticamente se a API não retornou
   const hasRedCard = markets.some(m => m.name === "Red Card");
@@ -441,18 +474,16 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       ]
     },
     {
-      id: 11,
-      name: "Total Corners",
+      id: 45,
+      name: "Corners Over Under",
       label: "Total de Escanteios",
       values: [
-        { value: "Mais de 7.5", odd: r(1.50, 1.65) },
-        { value: "Menos de 7.5", odd: r(1.90, 2.10) },
-        { value: "Mais de 8.5", odd: r(1.65, 1.80) },
-        { value: "Menos de 8.5", odd: r(1.75, 1.95) },
-        { value: "Mais de 9.5", odd: r(1.85, 2.05) },
-        { value: "Menos de 9.5", odd: r(1.55, 1.72) },
-        { value: "Mais de 10.5", odd: r(2.10, 2.35) },
-        { value: "Menos de 10.5", odd: r(1.42, 1.55) }
+        { value: "Over 8.5",  odd: 1.72 },
+        { value: "Under 8.5", odd: 1.98 },
+        { value: "Over 9.5",  odd: 2.00 },
+        { value: "Under 9.5", odd: 1.73 },
+        { value: "Over 10.5", odd: 2.45 },
+        { value: "Under 10.5",odd: 1.52 },
       ]
     },
     {

@@ -150,7 +150,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             if (market.name === "Team To Score First") {
               return !["Draw", "No Goal", "Nenhum Gol", "Nenhum"].includes(value.value);
             }
-            if (market.name === "Corners Over Under") {
+            if (market.name === "Corners Over Under" || market.name === "Total Corners") {
               return ["Over 8.5", "Under 8.5", "Over 9.5", "Under 9.5", "Over 10.5", "Under 10.5"].includes(value.value);
             }
             return true;
