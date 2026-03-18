@@ -155,23 +155,6 @@ const ALLOWED_LEAGUES_ORDERED = [
 ];
 const ALLOWED_LEAGUES_SET = new Set(ALLOWED_LEAGUES_ORDERED);
 
-// Gera odds h2h sintéticas (valores base antes do boost de 15% no frontend)
-function generateH2hBookmakers(homeTeam: string, awayTeam: string) {
-  const r = (min: number, max: number) => parseFloat((min + Math.random() * (max - min)).toFixed(2));
-  return [{
-    key: "api-football",
-    title: "API-Football",
-    markets: [{
-      key: "h2h",
-      outcomes: [
-        { name: homeTeam, price: r(1.70, 3.50) },
-        { name: "Empate",  price: r(2.80, 3.60) },
-        { name: awayTeam,  price: r(1.70, 3.50) },
-      ]
-    }]
-  }];
-}
-
 // Helper para converter dados de múltiplos bookmakers da API-Football em formato de mercados
 // Agrega valores de todos os bookmakers para ter mais linhas (ex: escanteios)
 function buildMarketsFromBookmaker(bookmakerOrBookmakers: any, homeTeam: string, awayTeam: string) {
@@ -941,8 +924,8 @@ export async function registerRoutes(
               }))
             }));
           } else {
-            console.warn(`[BR] Sem odds da API para fixture ${fid}, usando gerado`);
-            bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
+            console.warn(`[BR] Sem odds da API para fixture ${fid}, ignorando`);
+            bookmakers = [];
           }
           return {
             id: `api-football-${fid}`,
@@ -1259,12 +1242,12 @@ export async function registerRoutes(
                           }]
                         }];
                       } else {
-                        bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
+                        bookmakers = [];
                       }
                     }
                   } catch (err) {
                     console.error("Error fetching fixture odds:", err);
-                    bookmakers = generateH2hBookmakers(formatTeamName(fixture.teams.home.name), formatTeamName(fixture.teams.away.name));
+                    bookmakers = [];
                   }
                   
                   return {
