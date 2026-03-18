@@ -1657,6 +1657,17 @@ export async function registerRoutes(
     }
   });
 
+  // Limpar cache do servidor (força recarga das odds do API-Football)
+  app.post("/api/admin/clear-cache", async (req, res) => {
+    try {
+      cache.clear();
+      console.log("[Admin] Cache limpo manualmente");
+      res.json({ success: true, message: "Cache limpo com sucesso" });
+    } catch (error) {
+      res.status(500).json({ error: "Falha ao limpar cache" });
+    }
+  });
+
   // Todos os bilhetes para o painel admin (histórico completo)
   app.get("/api/admin/bets", async (req, res) => {
     try {

@@ -327,6 +327,22 @@ export default function Admin() {
     },
   });
 
+  const clearCacheMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/clear-cache");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cache limpo",
+        description: "As odds serão recarregadas do API-Football na próxima consulta.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível limpar o cache.", variant: "destructive" });
+    },
+  });
+
   const recheckBetMutation = useMutation({
     mutationFn: async (betId: string) => {
       const response = await apiRequest("POST", `/api/admin/bets/${betId}/recheck`);
@@ -482,6 +498,16 @@ export default function Admin() {
             >
               <Zap className="w-4 h-4 mr-2" />
               {checkResultsMutation.isPending ? "Verificando..." : "Verificar Resultados"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => clearCacheMutation.mutate()}
+              disabled={clearCacheMutation.isPending}
+              data-testid="button-clear-cache"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${clearCacheMutation.isPending ? "animate-spin" : ""}`} />
+              {clearCacheMutation.isPending ? "Limpando..." : "Limpar Cache"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-admin">
               <RefreshCw className="w-4 h-4 mr-2" />
