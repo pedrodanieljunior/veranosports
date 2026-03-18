@@ -56,9 +56,9 @@ export default function Home() {
   }, []);
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
-  const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchOnWindowFocus: false });
-  const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchOnWindowFocus: false });
-  const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchOnWindowFocus: false });
+  const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
+  const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
+  const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
 
   // Merge: Brasileirão sempre primeiro, deduplicando com os jogos de hoje
   const mergedTodayGames: Game[] = useMemo(() => {
@@ -80,6 +80,7 @@ export default function Home() {
       enabled: !selectedSport && uniqueSportKeys.length > 0,
       staleTime: 5 * 60 * 1000,
       refetchInterval: 5 * 60 * 1000,
+      refetchIntervalInBackground: true,
       refetchOnWindowFocus: false,
     })),
   });
