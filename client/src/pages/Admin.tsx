@@ -84,6 +84,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 
 const MARKET_LABELS: Record<string, string> = {
   "h2h": "Resultado Final",
@@ -1540,48 +1541,101 @@ export default function Admin() {
                               </span>
                             </div>
                             
-                            <div className="space-y-2">
-                              {bet.selections.map((sel, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
-                                  <div className="flex-1">
-                                    <span className="text-muted-foreground">{sel.homeTeam} vs {sel.awayTeam}</span>
-                                    <span className="mx-2">-</span>
-                                    <span className="font-medium">{sel.outcome}</span>
-                                    <span className="text-primary ml-2">@{sel.odds.toFixed(2)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      size="icon"
-                                      variant={sel.result === "won" ? "default" : "ghost"}
-                                      className={`h-7 w-7 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
-                                      onClick={() => updateSelectionMutation.mutate({ 
-                                        betId: bet.id, 
-                                        selectionId: sel.id, 
-                                        result: sel.result === "won" ? "pending" : "won" 
-                                      })}
-                                      disabled={!bet.verified}
-                                      data-testid={`button-sel-won-${sel.id}`}
-                                    >
-                                      <CheckCircle className={`w-4 h-4 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant={sel.result === "lost" ? "default" : "ghost"}
-                                      className={`h-7 w-7 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
-                                      onClick={() => updateSelectionMutation.mutate({ 
-                                        betId: bet.id, 
-                                        selectionId: sel.id, 
-                                        result: sel.result === "lost" ? "pending" : "lost" 
-                                      })}
-                                      disabled={!bet.verified}
-                                      data-testid={`button-sel-lost-${sel.id}`}
-                                    >
-                                      <XCircle className={`w-4 h-4 ${sel.result === "lost" ? "text-white" : "text-red-500"}`} />
-                                    </Button>
-                                  </div>
+                            {/* Bilhete visual — agrupado por jogo */}
+                            {(() => {
+                              const grouped: Record<string, typeof bet.selections> = {};
+                              for (const sel of bet.selections) {
+                                if (!grouped[sel.gameId]) grouped[sel.gameId] = [];
+                                grouped[sel.gameId].push(sel);
+                              }
+                              return (
+                                <div className="space-y-2">
+                                  {Object.entries(grouped).map(([gameId, sels]) => {
+                                    const first = sels[0];
+                                    const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+                                    return (
+                                      <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden">
+                                        {/* Cabeçalho do jogo */}
+                                        <div className="flex items-center justify-between px-3 py-2 bg-muted/60 border-b border-border">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <span className="text-sm">⚽</span>
+                                            <span className="font-semibold text-foreground text-xs truncate">
+                                              {first.homeTeam} vs {first.awayTeam}
+                                            </span>
+                                          </div>
+                                          <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">
+                                            {gameOdds.toFixed(2)}
+                                          </span>
+                                        </div>
+
+                                        {/* Seleções */}
+                                        <div className="px-3 py-2.5">
+                                          <div className="relative pl-5">
+                                            {/* Linha vertical amarela */}
+                                            <div
+                                              className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                                              style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
+                                            />
+                                            {sels.map((sel, idx) => (
+                                              <div key={sel.id} className={`flex items-start justify-between gap-2 ${idx > 0 ? "mt-3" : ""}`}>
+                                                {/* Mercado + outcome */}
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center relative">
+                                                    <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10 flex-shrink-0" />
+                                                    <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className={`font-semibold text-xs ${
+                                                      sel.result === "won" ? "text-green-400" :
+                                                      sel.result === "lost" ? "text-red-400 line-through" :
+                                                      "text-foreground"
+                                                    }`}>
+                                                      {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
+                                                    </p>
+                                                    <span className="text-yellow-400 font-bold text-xs flex-shrink-0">@{sel.odds.toFixed(2)}</span>
+                                                  </div>
+                                                </div>
+                                                {/* Botões ganhou/perdeu */}
+                                                <div className="flex items-center gap-1 flex-shrink-0 mt-1">
+                                                  <Button
+                                                    size="icon"
+                                                    variant={sel.result === "won" ? "default" : "ghost"}
+                                                    className={`h-6 w-6 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                    onClick={() => updateSelectionMutation.mutate({ 
+                                                      betId: bet.id, 
+                                                      selectionId: sel.id, 
+                                                      result: sel.result === "won" ? "pending" : "won" 
+                                                    })}
+                                                    disabled={!bet.verified}
+                                                    data-testid={`button-sel-won-${sel.id}`}
+                                                  >
+                                                    <CheckCircle className={`w-3.5 h-3.5 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
+                                                  </Button>
+                                                  <Button
+                                                    size="icon"
+                                                    variant={sel.result === "lost" ? "default" : "ghost"}
+                                                    className={`h-6 w-6 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                    onClick={() => updateSelectionMutation.mutate({ 
+                                                      betId: bet.id, 
+                                                      selectionId: sel.id, 
+                                                      result: sel.result === "lost" ? "pending" : "lost" 
+                                                    })}
+                                                    disabled={!bet.verified}
+                                                    data-testid={`button-sel-lost-${sel.id}`}
+                                                  >
+                                                    <XCircle className={`w-3.5 h-3.5 ${sel.result === "lost" ? "text-white" : "text-red-500"}`} />
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              ))}
-                            </div>
+                              );
+                            })()}
 
                             <div className="flex items-center gap-4 text-sm">
                               <span className="flex items-center gap-1">
