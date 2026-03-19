@@ -1506,7 +1506,7 @@ export default function Admin() {
               <ScrollArea className="h-auto max-h-none">
                 <div className="space-y-4">
                   {filteredBets.map((bet) => (
-                    <Card key={bet.id} className="border border-purple-500/50">
+                    <Card key={bet.id} className="border border-gray-500/30">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
                           <div className="space-y-2 flex-1 min-w-0">
@@ -1549,7 +1549,7 @@ export default function Admin() {
                                 grouped[sel.gameId].push(sel);
                               }
                               return (
-                                <div className="rounded-xl border border-gray-500/30 bg-muted/20 p-2 space-y-2">
+                                <div className="rounded-xl border border-purple-500/50 bg-muted/20 p-2 space-y-2">
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
                                     const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
