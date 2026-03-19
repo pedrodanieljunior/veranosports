@@ -1549,7 +1549,7 @@ export default function Admin() {
                                 grouped[sel.gameId].push(sel);
                               }
                               return (
-                                <div className="rounded-xl border border-purple-500/50 bg-muted/20 p-2 space-y-2">
+                                <div className="rounded-xl border border-purple-500/50 border-t-gray-400/40 bg-muted/20 p-2 space-y-2">
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
                                     const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
