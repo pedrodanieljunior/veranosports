@@ -1506,7 +1506,7 @@ export default function Admin() {
               <ScrollArea className="h-auto max-h-none">
                 <div className="space-y-4">
                   {filteredBets.map((bet) => (
-                    <Card key={bet.id} className="border border-border">
+                    <Card key={bet.id} className="border border-gray-500/30">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
                           <div className="space-y-2 flex-1 min-w-0">
