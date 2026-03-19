@@ -924,7 +924,7 @@ export default function Admin() {
                 // (cobre o prejuízo operacional + a exposição pendente que excede o lucro)
                 const capitalReservado = Math.min(APORTE_INICIAL, Math.max(0, exposicao - lucroOp));
                 const capitalDisponivel = APORTE_INICIAL - capitalReservado;
-                const isPositive = saldo >= 0;
+                const isPositive = saldo >= APORTE_INICIAL;
                 return (
                   <Card className={`border-2 ${isPositive ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}>
                     <CardContent className="p-6">
@@ -963,7 +963,7 @@ export default function Admin() {
                       {(() => {
                         // Barra 1 — capital disponível (após reservar exposição que excede o lucro)
                         const capitalPct = Math.max(0, Math.min(100, (capitalDisponivel / APORTE_INICIAL) * 100));
-                        const capitalColor = capitalPct > 50 ? "bg-gradient-to-r from-green-600 to-emerald-400" : capitalPct > 20 ? "bg-gradient-to-r from-yellow-600 to-amber-400" : "bg-gradient-to-r from-red-600 to-rose-400";
+                        const capitalColor = capitalDisponivel > 40000 ? "bg-gradient-to-r from-green-600 to-emerald-400" : capitalDisponivel > 20000 ? "bg-gradient-to-r from-yellow-600 to-amber-400" : "bg-gradient-to-r from-red-600 to-rose-400";
                         // Barra 2 — lucro livre (depois de cobrir a exposição com o lucro)
                         const lucroLivrePct = Math.max(0, Math.min(100, (lucroLivre / APORTE_INICIAL) * 100));
                         const lucroOpNegativo = lucroOp < 0;
@@ -974,7 +974,7 @@ export default function Admin() {
                             <div>
                               <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                 <span>Capital disponível</span>
-                                <span className={`font-semibold ${capitalPct > 50 ? "text-green-400" : capitalPct > 20 ? "text-yellow-400" : "text-red-400"}`}>
+                                <span className={`font-semibold ${capitalDisponivel > 40000 ? "text-green-400" : capitalDisponivel > 20000 ? "text-yellow-400" : "text-red-400"}`}>
                                   {capitalPct.toFixed(1)}% · R${capitalDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
