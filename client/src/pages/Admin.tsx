@@ -1549,14 +1549,14 @@ export default function Admin() {
                                 grouped[sel.gameId].push(sel);
                               }
                               return (
-                                <div className="space-y-2">
+                                <div className="rounded-xl border border-border/60 bg-muted/20 p-2 space-y-2">
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
                                     const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
                                     return (
-                                      <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden">
+                                      <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
-                                        <div className="flex items-center justify-between px-3 py-2 bg-muted/60 border-b border-border">
+                                        <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
                                           <div className="flex items-center gap-2 min-w-0">
                                             <span className="text-sm">⚽</span>
                                             <span className="font-semibold text-foreground text-xs truncate">
