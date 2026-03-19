@@ -1558,7 +1558,6 @@ export default function Admin() {
                                         {/* Cabeçalho do jogo */}
                                         <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
                                           <div className="flex items-center gap-2 min-w-0">
-                                            <span className="text-sm">⚽</span>
                                             <span className="font-semibold text-foreground text-xs truncate">
                                               {first.homeTeam} vs {first.awayTeam}
                                             </span>
