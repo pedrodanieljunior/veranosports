@@ -915,11 +915,14 @@ export default function Admin() {
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
                 const totalSaques = withdrawals.reduce((s, w) => s + w.amount, 0);
                 const lucroOp = ganhos - perdas - totalSaques;
-                // Prioridade: exposição drena do lucro primeiro, depois do capital
+                // Saldo = capital inicial + resultado operacional − exposição pendente
+                // Quando lucroOp é negativo, o prejuízo já consumiu parte do capital inicial
+                const saldo = APORTE_INICIAL + lucroOp - exposicao;
                 const lucroLivre = Math.max(0, lucroOp - exposicao);
-                const capitalReservado = Math.max(0, exposicao - Math.max(0, lucroOp));
+                // Capital reservado = quanto do aporte inicial está comprometido
+                // (cobre o prejuízo operacional + a exposição pendente que excede o lucro)
+                const capitalReservado = Math.min(APORTE_INICIAL, Math.max(0, exposicao - lucroOp));
                 const capitalDisponivel = APORTE_INICIAL - capitalReservado;
-                const saldo = capitalDisponivel + lucroLivre; // = APORTE_INICIAL + lucroOp - exposicao
                 const isPositive = saldo >= 0;
                 return (
                   <Card className={`border-2 ${isPositive ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}>
