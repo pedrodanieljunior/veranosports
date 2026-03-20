@@ -2150,8 +2150,9 @@ export async function registerRoutes(
 
   // Admin: Verificar resultados e atualizar bilhetes automaticamente
   app.post("/api/admin/check-results", async (req, res) => {
-    const cornerStatsCache = new Map<number, number>();    // fixtureId → totalCorners
-    const firstGoalCache = new Map<number, string | null>(); // fixtureId → team name that scored first (null = no goal)
+    const cornerStatsCache = new Map<number, number>();       // fixtureId → totalCorners
+    const firstGoalCache   = new Map<number, string | null>(); // fixtureId → team que marcou primeiro (null = sem gol)
+    const redCardCache     = new Map<number, boolean>();       // fixtureId → houve cartão vermelho
     try {
       if (!API_FOOTBALL_KEY) {
         return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
@@ -2343,10 +2344,14 @@ export async function registerRoutes(
             totalCorners = cornerStatsCache.get(fixtureId) ?? null;
           }
 
-          // Buscar primeiro marcador se necessário (Team To Score First)
+          // Buscar eventos (primeiro gol + cartão vermelho) se necessário
           const isFirstScorerSelection = mk.includes("team to score first") || mk.includes("score first");
+          const isRedCardSelection = mk.includes("red card");
+          const needsEvents = isFirstScorerSelection || isRedCardSelection;
           let firstScorerTeam: string | null = null;
-          if (isFirstScorerSelection) {
+          let hasRedCard: boolean | null = null;
+
+          if (needsEvents) {
             const fixtureId = matchingFixture.fixture.id;
             if (!firstGoalCache.has(fixtureId)) {
               try {
@@ -2356,19 +2361,25 @@ export async function registerRoutes(
                 );
                 if (evRes.ok) {
                   const evData = await evRes.json();
-                  const goalEvents = (evData.response || [])
+                  const events = evData.response || [];
+                  // Primeiro gol
+                  const goalEvents = events
                     .filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty")
                     .sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
-                  const firstGoal = goalEvents[0]?.team?.name ?? null;
-                  firstGoalCache.set(fixtureId, firstGoal);
-                  console.log(`    Primeiro gol fixture ${fixtureId}: ${firstGoal}`);
+                  firstGoalCache.set(fixtureId, goalEvents[0]?.team?.name ?? null);
+                  // Cartão vermelho
+                  const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
+                  redCardCache.set(fixtureId, redCards.length > 0);
+                  console.log(`    Eventos fixture ${fixtureId}: 1ºgol=${firstGoalCache.get(fixtureId)}, redCard=${redCardCache.get(fixtureId)}`);
                 }
               } catch (err) {
                 console.log(`    Erro ao buscar eventos fixture ${matchingFixture.fixture.id}:`, err);
                 firstGoalCache.set(matchingFixture.fixture.id, null);
+                redCardCache.set(matchingFixture.fixture.id, false);
               }
             }
             firstScorerTeam = firstGoalCache.get(matchingFixture.fixture.id) ?? null;
+            hasRedCard = redCardCache.get(matchingFixture.fixture.id) ?? null;
           }
 
           // Verificar se a seleção ganhou baseado no tipo de mercado
@@ -2382,7 +2393,8 @@ export async function registerRoutes(
             htHomeGoals,
             htAwayGoals,
             totalCorners,
-            firstScorerTeam
+            firstScorerTeam,
+            hasRedCard
           );
 
           // Atualizar o resultado da seleção individual
@@ -2565,6 +2577,7 @@ export async function registerRoutes(
       // Resolver cada seleção (loop async para suportar busca de escanteios e eventos)
       const arCornerCache   = new Map<string, number>();         // fid → totalCorners
       const arFirstGoalCache = new Map<string, string | null>(); // fid → team name que marcou primeiro
+      const arRedCardCache   = new Map<string, boolean>();       // fid → houve cartão vermelho
       const resolvedSelections: any[] = [];
 
       for (const sel of bet.selections) {
@@ -2681,8 +2694,8 @@ export async function registerRoutes(
             resolved = false;
           }
 
-        } else if (mk.includes("team to score first") || mk.includes("score first")) {
-          // Primeira equipe a marcar — busca eventos da partida
+        } else if (mk.includes("team to score first") || mk.includes("score first") || mk.includes("red card")) {
+          // Primeiro marcador ou Cartão Vermelho — busca eventos da partida (cache unificado)
           if (!arFirstGoalCache.has(fid)) {
             try {
               const evRes = await fetch(
@@ -2691,26 +2704,46 @@ export async function registerRoutes(
               );
               if (evRes.ok) {
                 const evData = await evRes.json();
-                const goalEvents = (evData.response || [])
+                const events = evData.response || [];
+                const goalEvents = events
                   .filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty")
                   .sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
                 arFirstGoalCache.set(fid, goalEvents[0]?.team?.name ?? null);
+                const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
+                arRedCardCache.set(fid, redCards.length > 0);
+                console.log(`    [auto-resolve] eventos fixture ${fid}: 1ºgol=${arFirstGoalCache.get(fid)}, redCard=${arRedCardCache.get(fid)}`);
+              } else {
+                arFirstGoalCache.set(fid, null);
+                arRedCardCache.set(fid, false);
               }
             } catch (e) {
               arFirstGoalCache.set(fid, null);
+              arRedCardCache.set(fid, false);
             }
           }
-          const firstScorer = arFirstGoalCache.get(fid) ?? null;
-          if (firstScorer !== null) {
-            const pickedHome = teamsMatch(sel.outcome, homeTeam);
-            const pickedAway = teamsMatch(sel.outcome, awayTeam);
-            const scoredHome = teamsMatch(firstScorer, homeTeam);
-            const scoredAway = teamsMatch(firstScorer, awayTeam);
-            if (pickedHome)      selResult = scoredHome ? "won" : "lost";
-            else if (pickedAway) selResult = scoredAway ? "won" : "lost";
-            else                 resolved = false;
+
+          if (mk.includes("team to score first") || mk.includes("score first")) {
+            const firstScorer = arFirstGoalCache.get(fid) ?? null;
+            if (firstScorer !== null) {
+              const pickedHome = teamsMatch(sel.outcome, homeTeam);
+              const pickedAway = teamsMatch(sel.outcome, awayTeam);
+              const scoredHome = teamsMatch(firstScorer, homeTeam);
+              const scoredAway = teamsMatch(firstScorer, awayTeam);
+              if (pickedHome)      selResult = scoredHome ? "won" : "lost";
+              else if (pickedAway) selResult = scoredAway ? "won" : "lost";
+              else                 resolved = false;
+            } else {
+              resolved = false;
+            }
           } else {
-            resolved = false;
+            // Red Card
+            const hadRedCard = arRedCardCache.get(fid) ?? false;
+            const outcomeLC = sel.outcome?.toLowerCase() ?? "";
+            const pickedSim = outcomeLC.includes("sim") || outcomeLC.includes("yes");
+            const pickedNao = outcomeLC.includes("não") || outcomeLC.includes("nao") || outcomeLC.includes("no");
+            if (pickedSim)      selResult = hadRedCard ? "won" : "lost";
+            else if (pickedNao) selResult = hadRedCard ? "lost" : "won";
+            else                resolved = false;
           }
 
         } else {
@@ -2847,7 +2880,8 @@ function checkSelectionResult(
   htHomeGoals: number | null = null,
   htAwayGoals: number | null = null,
   totalCorners: number | null = null,
-  firstScorerTeam: string | null = null
+  firstScorerTeam: string | null = null,
+  hasRedCard: boolean | null = null
 ): boolean {
   const outcome   = selection.outcome?.toLowerCase() ?? "";
   const marketKey = selection.marketKey?.toLowerCase() ?? "";
@@ -2950,6 +2984,19 @@ function checkSelectionResult(
       console.log(`    Placar exato: ${m[1]}-${m[2]} vs ${homeGoals}-${awayGoals} = ${ok}`);
       return ok;
     }
+    return false;
+  }
+
+  // ── Cartão Vermelho no Jogo ───────────────────────────────────────────────
+  if (marketKey.includes("red card")) {
+    if (hasRedCard === null) {
+      console.log(`    Red Card: dados de eventos não disponíveis`);
+      return false;
+    }
+    const pickedSim = outcome.includes("sim") || outcome.includes("yes");
+    const pickedNao = outcome.includes("não") || outcome.includes("nao") || outcome.includes("no");
+    if (pickedSim) { console.log(`    Red Card: apostou Sim, houve cartão: ${hasRedCard}`); return hasRedCard; }
+    if (pickedNao) { console.log(`    Red Card: apostou Não, houve cartão: ${hasRedCard}`); return !hasRedCard; }
     return false;
   }
 

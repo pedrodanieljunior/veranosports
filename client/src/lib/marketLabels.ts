@@ -108,6 +108,12 @@ export function formatOutcome(
     if (value === "Não" || value === "No")  return "Menos de 2,5";
   }
 
+  // Red Card usa "Sim" = Houve Cartão Vermelho e "Não" = Sem Cartão Vermelho
+  if (marketKey === "Red Card") {
+    if (value === "Sim" || value === "Yes") return "Com Cartão Vermelho";
+    if (value === "Não" || value === "No")  return "Sem Cartão Vermelho";
+  }
+
   if (VALUE_TRANSLATIONS[value]) return VALUE_TRANSLATIONS[value];
 
   if (value === "Home") return homeTeam || "Casa";
