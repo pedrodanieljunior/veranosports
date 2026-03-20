@@ -2362,15 +2362,15 @@ export async function registerRoutes(
                 if (evRes.ok) {
                   const evData = await evRes.json();
                   const events = evData.response || [];
-                  // Primeiro gol
+                  // Primeiro gol — "" = buscou mas não houve gol (0x0), null = falha de fetch
                   const goalEvents = events
                     .filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty")
                     .sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
-                  firstGoalCache.set(fixtureId, goalEvents[0]?.team?.name ?? null);
+                  firstGoalCache.set(fixtureId, goalEvents[0]?.team?.name ?? "");
                   // Cartão vermelho
                   const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
                   redCardCache.set(fixtureId, redCards.length > 0);
-                  console.log(`    Eventos fixture ${fixtureId}: 1ºgol=${firstGoalCache.get(fixtureId)}, redCard=${redCardCache.get(fixtureId)}`);
+                  console.log(`    Eventos fixture ${fixtureId}: 1ºgol=${firstGoalCache.get(fixtureId) || "nenhum"}, redCard=${redCardCache.get(fixtureId)}`);
                 }
               } catch (err) {
                 console.log(`    Erro ao buscar eventos fixture ${matchingFixture.fixture.id}:`, err);
@@ -2383,6 +2383,7 @@ export async function registerRoutes(
           }
 
           // Verificar se a seleção ganhou baseado no tipo de mercado
+          // null = indeterminado (dados insuficientes) — não marcar, mantém pendente
           const selectionWon = checkSelectionResult(
             selection,
             homeGoals,
@@ -2397,15 +2398,17 @@ export async function registerRoutes(
             hasRedCard
           );
 
-          // Atualizar o resultado da seleção individual
-          const selectionResult = selectionWon ? "won" : "lost";
-          await storage.updateSelectionResult(bet.id, selection.id, selectionResult);
-          selectionsUpdated = true;
-          
-          console.log(`Seleção ${selection.homeTeam} vs ${selection.awayTeam}: ${selectionResult} (${homeGoals}-${awayGoals})`);
-
-          if (!selectionWon) {
+          if (selectionWon === null) {
+            console.log(`Seleção ${selection.homeTeam} vs ${selection.awayTeam}: indeterminada (dados insuficientes), permanece pendente`);
             allSelectionsWon = false;
+          } else {
+            const selectionResult = selectionWon ? "won" : "lost";
+            await storage.updateSelectionResult(bet.id, selection.id, selectionResult);
+            selectionsUpdated = true;
+            console.log(`Seleção ${selection.homeTeam} vs ${selection.awayTeam}: ${selectionResult} (${homeGoals}-${awayGoals})`);
+            if (!selectionWon) {
+              allSelectionsWon = false;
+            }
           }
         }
 
@@ -2708,10 +2711,11 @@ export async function registerRoutes(
                 const goalEvents = events
                   .filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty")
                   .sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
-                arFirstGoalCache.set(fid, goalEvents[0]?.team?.name ?? null);
+                // "" = buscou mas não houve gol (0x0), null = falha de fetch
+                arFirstGoalCache.set(fid, goalEvents[0]?.team?.name ?? "");
                 const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
                 arRedCardCache.set(fid, redCards.length > 0);
-                console.log(`    [auto-resolve] eventos fixture ${fid}: 1ºgol=${arFirstGoalCache.get(fid)}, redCard=${arRedCardCache.get(fid)}`);
+                console.log(`    [auto-resolve] eventos fixture ${fid}: 1ºgol=${arFirstGoalCache.get(fid) || "nenhum"}, redCard=${arRedCardCache.get(fid)}`);
               } else {
                 arFirstGoalCache.set(fid, null);
                 arRedCardCache.set(fid, false);
@@ -2724,7 +2728,13 @@ export async function registerRoutes(
 
           if (mk.includes("team to score first") || mk.includes("score first")) {
             const firstScorer = arFirstGoalCache.get(fid) ?? null;
-            if (firstScorer !== null) {
+            if (firstScorer === null) {
+              // null = falha ao buscar → mantém pendente
+              resolved = false;
+            } else if (firstScorer === "") {
+              // "" = jogo sem gols (0x0) → perdido
+              selResult = "lost";
+            } else {
               const pickedHome = teamsMatch(sel.outcome, homeTeam);
               const pickedAway = teamsMatch(sel.outcome, awayTeam);
               const scoredHome = teamsMatch(firstScorer, homeTeam);
@@ -2732,8 +2742,6 @@ export async function registerRoutes(
               if (pickedHome)      selResult = scoredHome ? "won" : "lost";
               else if (pickedAway) selResult = scoredAway ? "won" : "lost";
               else                 resolved = false;
-            } else {
-              resolved = false;
             }
           } else {
             // Red Card
@@ -2870,6 +2878,7 @@ function teamsMatch(name1: string, name2: string): boolean {
 }
 
 // Verificar se uma seleção ganhou
+// Retorna: true = ganhou | false = perdeu | null = indeterminado (mantém pendente)
 function checkSelectionResult(
   selection: any,
   homeGoals: number,
@@ -2882,7 +2891,7 @@ function checkSelectionResult(
   totalCorners: number | null = null,
   firstScorerTeam: string | null = null,
   hasRedCard: boolean | null = null
-): boolean {
+): boolean | null {
   const outcome   = selection.outcome?.toLowerCase() ?? "";
   const marketKey = selection.marketKey?.toLowerCase() ?? "";
 
@@ -2909,7 +2918,7 @@ function checkSelectionResult(
   if (marketKey.includes("ht/ft") || marketKey.includes("halftime") || marketKey === "ht/ft double") {
     if (htHomeGoals === null || htAwayGoals === null) {
       console.log(`    HT/FT: dados de intervalo não disponíveis`);
-      return false;
+      return null;
     }
     const htActual = htHomeGoals > htAwayGoals ? "home" : htAwayGoals > htHomeGoals ? "away" : "draw";
     const ftActual = homeGoals   > awayGoals   ? "home" : awayGoals   > homeGoals   ? "away" : "draw";
@@ -2946,7 +2955,7 @@ function checkSelectionResult(
   if (isCornerMkt) {
     if (totalCorners === null) {
       console.log(`    Corners: estatísticas não disponíveis`);
-      return false;
+      return null;
     }
     const overMatch  = outcome.match(/over\s*([\d.]+)/i);
     const underMatch = outcome.match(/under\s*([\d.]+)/i);
@@ -2991,7 +3000,7 @@ function checkSelectionResult(
   if (marketKey.includes("red card")) {
     if (hasRedCard === null) {
       console.log(`    Red Card: dados de eventos não disponíveis`);
-      return false;
+      return null;
     }
     const pickedSim = outcome.includes("sim") || outcome.includes("yes");
     const pickedNao = outcome.includes("não") || outcome.includes("nao") || outcome.includes("no");
@@ -3003,7 +3012,13 @@ function checkSelectionResult(
   // ── Primeira Equipe a Marcar ──────────────────────────────────────────────
   if (marketKey.includes("team to score first") || marketKey.includes("score first")) {
     if (firstScorerTeam === null) {
+      // null = falha ao buscar eventos → mantém pendente
       console.log(`    Team To Score First: dados de eventos não disponíveis`);
+      return null;
+    }
+    if (firstScorerTeam === "") {
+      // "" = jogo terminado sem gols (0x0) → todas as apostas perdidas
+      console.log(`    Team To Score First: jogo terminou sem gols (0x0) → perdido`);
       return false;
     }
     const pickedHome = teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
