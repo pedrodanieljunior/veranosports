@@ -2597,15 +2597,28 @@ export async function registerRoutes(
         let resolved = true;
 
         if (sel.marketKey === "h2h") {
-          // Resultado 1X2
-          const actual = homeGoals > awayGoals ? homeTeam
-                       : awayGoals > homeGoals ? awayTeam
-                       : "Empate";
-          selResult = sel.outcome.trim().toLowerCase() === actual.trim().toLowerCase() ? "won" : "lost";
+          // Resultado 1X2 — usa fuzzy match para nomes de times
+          if (oc.includes("empate") || oc.includes("draw") || oc === "x") {
+            selResult = homeGoals === awayGoals ? "won" : "lost";
+          } else if (teamsMatch(sel.outcome, homeTeam)) {
+            selResult = homeGoals > awayGoals ? "won" : "lost";
+          } else if (teamsMatch(sel.outcome, awayTeam)) {
+            selResult = awayGoals > homeGoals ? "won" : "lost";
+          } else {
+            resolved = false;
+          }
 
         } else if (mk.includes("both") || mk.includes("btts") || sel.marketKey === "Both Teams Score") {
-          // Ambas as equipes marcam (BTTS)
-          const btts = homeGoals > 0 && awayGoals > 0;
+          // Ambas as equipes marcam (BTTS) — diferencia 1º e 2º tempo
+          let hG: number, aG: number;
+          if (mk.includes("first half")) {
+            hG = htHome; aG = htAway;
+          } else if (mk.includes("second half")) {
+            hG = homeGoals - htHome; aG = awayGoals - htAway;
+          } else {
+            hG = homeGoals; aG = awayGoals;
+          }
+          const btts = hG > 0 && aG > 0;
           const betYes = oc.includes("sim") || oc.includes("yes");
           selResult = (btts === betYes) ? "won" : "lost";
 
@@ -2631,8 +2644,15 @@ export async function registerRoutes(
           }
 
         } else if (mk.includes("goals over") || mk.includes("goals under") || sel.marketKey === "Goals Over/Under") {
-          // Total de gols — extrai a linha real do outcome
-          const total = homeGoals + awayGoals;
+          // Total de gols — diferencia período (inteiro, 1º tempo, 2º tempo)
+          let total: number;
+          if (mk.includes("first half")) {
+            total = htHome + htAway;
+          } else if (mk.includes("second half")) {
+            total = (homeGoals - htHome) + (awayGoals - htAway);
+          } else {
+            total = homeGoals + awayGoals;
+          }
           // API-Football armazena Goals Over/Under como "Sim" (Over 2.5) ou "Não" (Under 2.5)
           if (oc.includes("sim")) {
             selResult = total > 2.5 ? "won" : "lost";
@@ -2965,23 +2985,46 @@ function checkSelectionResult(
     return false;
   }
 
-  // ── Total de Gols Over/Under ───────────────────────────────────────────────
+  // ── Total de Gols Over/Under (inteiro, 1º tempo, 2º tempo) ────────────────
   if (marketKey.includes("goals over") || marketKey.includes("goals under") || marketKey === "goals over/under") {
+    // Determinar período correto
+    let goalsToCheck: number;
+    if (marketKey.includes("first half")) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    Gols 1ºT: dados HT indisponíveis`); return null; }
+      goalsToCheck = htHomeGoals + htAwayGoals;
+    } else if (marketKey.includes("second half")) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    Gols 2ºT: dados HT indisponíveis`); return null; }
+      goalsToCheck = (homeGoals - htHomeGoals) + (awayGoals - htAwayGoals);
+    } else {
+      goalsToCheck = totalGoals;
+    }
+    console.log(`    Gols Over/Under: período="${marketKey}", gols=${goalsToCheck}`);
     // API-Football usa "Sim" = Over 2.5 e "Não" = Under 2.5
-    if (outcome.includes("sim")) return totalGoals > 2.5;
-    if (outcome.includes("não") || outcome.includes("nao")) return totalGoals <= 2.5;
+    if (outcome.includes("sim")) return goalsToCheck > 2.5;
+    if (outcome.includes("não") || outcome.includes("nao")) return goalsToCheck <= 2.5;
     // Formato explícito "Over X" / "Under X"
     const overMatch  = outcome.match(/over\s*([\d.]+)/i);
     const underMatch = outcome.match(/under\s*([\d.]+)/i);
-    if (overMatch)  { const l = parseFloat(overMatch[1]);  return totalGoals > l; }
-    if (underMatch) { const l = parseFloat(underMatch[1]); return totalGoals < l; }
+    if (overMatch)  { const l = parseFloat(overMatch[1]);  return goalsToCheck > l; }
+    if (underMatch) { const l = parseFloat(underMatch[1]); return goalsToCheck < l; }
     return false;
   }
 
-  // ── Ambas Marcam (BTTS) ───────────────────────────────────────────────────
-  if (marketKey.includes("both teams score") || marketKey.includes("btts")) {
-    if (outcome.includes("yes") || outcome.includes("sim")) return homeGoals > 0 && awayGoals > 0;
-    if (outcome.includes("no")  || outcome.includes("não") || outcome.includes("nao")) return homeGoals === 0 || awayGoals === 0;
+  // ── Ambas Marcam (BTTS, 1º tempo, 2º tempo) ──────────────────────────────
+  if (marketKey.includes("both teams score") || marketKey.includes("both teams to score") || marketKey.includes("btts")) {
+    let hG: number, aG: number;
+    if (marketKey.includes("first half")) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    BTTS 1ºT: dados HT indisponíveis`); return null; }
+      hG = htHomeGoals; aG = htAwayGoals;
+    } else if (marketKey.includes("second half")) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    BTTS 2ºT: dados HT indisponíveis`); return null; }
+      hG = homeGoals - htHomeGoals; aG = awayGoals - htAwayGoals;
+    } else {
+      hG = homeGoals; aG = awayGoals;
+    }
+    console.log(`    BTTS: período="${marketKey}", gols ${hG}-${aG}`);
+    if (outcome.includes("yes") || outcome.includes("sim")) return hG > 0 && aG > 0;
+    if (outcome.includes("no")  || outcome.includes("não") || outcome.includes("nao")) return hG === 0 || aG === 0;
     return false;
   }
 
