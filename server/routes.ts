@@ -2617,16 +2617,21 @@ export async function registerRoutes(
         } else if (mk.includes("goals over") || mk.includes("goals under") || sel.marketKey === "Goals Over/Under") {
           // Total de gols — extrai a linha real do outcome
           const total = homeGoals + awayGoals;
-          const overMatch = oc.match(/over\s*(\d+\.?\d*)/i);
-          const underMatch = oc.match(/under\s*(\d+\.?\d*)/i);
-          if (overMatch) {
-            selResult = total > parseFloat(overMatch[1]) ? "won" : "lost";
-          } else if (underMatch) {
-            selResult = total < parseFloat(underMatch[1]) ? "won" : "lost";
+          // API-Football armazena Goals Over/Under como "Sim" (Over 2.5) ou "Não" (Under 2.5)
+          if (oc.includes("sim")) {
+            selResult = total > 2.5 ? "won" : "lost";
+          } else if (oc.includes("não") || oc.includes("nao")) {
+            selResult = total <= 2.5 ? "won" : "lost";
           } else {
-            // fallback genérico
-            const isOver = oc.includes("over") || oc.includes("acima") || oc.includes("mais");
-            selResult = (isOver ? total > 2.5 : total <= 2.5) ? "won" : "lost";
+            const overMatch = oc.match(/over\s*(\d+\.?\d*)/i);
+            const underMatch = oc.match(/under\s*(\d+\.?\d*)/i);
+            if (overMatch) {
+              selResult = total > parseFloat(overMatch[1]) ? "won" : "lost";
+            } else if (underMatch) {
+              selResult = total < parseFloat(underMatch[1]) ? "won" : "lost";
+            } else {
+              resolved = false;
+            }
           }
 
         } else if (mk.includes("corner") || sel.marketKey === "Corners Over Under" || sel.marketKey === "Total Corners") {
@@ -2919,6 +2924,10 @@ function checkSelectionResult(
 
   // ── Total de Gols Over/Under ───────────────────────────────────────────────
   if (marketKey.includes("goals over") || marketKey.includes("goals under") || marketKey === "goals over/under") {
+    // API-Football usa "Sim" = Over 2.5 e "Não" = Under 2.5
+    if (outcome.includes("sim")) return totalGoals > 2.5;
+    if (outcome.includes("não") || outcome.includes("nao")) return totalGoals <= 2.5;
+    // Formato explícito "Over X" / "Under X"
     const overMatch  = outcome.match(/over\s*([\d.]+)/i);
     const underMatch = outcome.match(/under\s*([\d.]+)/i);
     if (overMatch)  { const l = parseFloat(overMatch[1]);  return totalGoals > l; }

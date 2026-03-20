@@ -11,7 +11,7 @@ const MARKET_LABELS: Record<string, string> = {
   "Both Teams Score": "Ambas Marcam",
   "HT/FT Double": "Intervalo/Final",
   "Exact Score": "Placar Exato",
-  "Goals Over/Under": "Total de Gols mais de 2,5",
+  "Goals Over/Under": "Total de Gols",
   "Goals Over/Under First Half": "Total de Gols 1º Tempo",
   "Goals Over/Under - Second Half": "Total de Gols 2º Tempo",
   "Team To Score First": "Primeira Equipe a Marcar",
@@ -100,6 +100,12 @@ export function formatOutcome(
 
   if (value === outcome && marketKey && outcome.startsWith(marketKey + "-")) {
     value = outcome.slice(marketKey.length + 1);
+  }
+
+  // Goals Over/Under usa "Sim" = Mais de 2,5 e "Não" = Menos de 2,5
+  if (marketKey === "Goals Over/Under") {
+    if (value === "Sim" || value === "Yes") return "Mais de 2,5";
+    if (value === "Não" || value === "No")  return "Menos de 2,5";
   }
 
   if (VALUE_TRANSLATIONS[value]) return VALUE_TRANSLATIONS[value];
