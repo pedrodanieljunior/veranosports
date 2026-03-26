@@ -8,14 +8,20 @@ let adminChatId: number | null = null;
 
 export function initTelegramBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  
+
   if (!token) {
     console.log("TELEGRAM_BOT_TOKEN não configurado. Bot do Telegram desativado.");
     return null;
   }
 
+  // Só inicializa polling em produção para evitar conflito de instâncias
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Ambiente de desenvolvimento — Bot do Telegram desativado (evitando conflito com produção).");
+    return null;
+  }
+
   bot = new TelegramBot(token, { polling: true });
-  
+
   console.log("Bot do Telegram iniciado!");
 
   // Sessões dos usuários
