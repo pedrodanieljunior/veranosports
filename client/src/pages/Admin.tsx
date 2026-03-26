@@ -133,6 +133,7 @@ export default function Admin() {
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
+    refetchInterval: 5 * 1000,
   });
 
   const { data: withdrawals = [], refetch: refetchWithdrawals } = useQuery<Withdrawal[]>({
