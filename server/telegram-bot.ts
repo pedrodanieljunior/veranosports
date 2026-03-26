@@ -28,12 +28,31 @@ export function initTelegramBot() {
 
   console.log("Bot do Telegram iniciado!");
 
-  // Se outra instância já está fazendo polling (409), parar esta instância
+  // Carregar adminChatId persistido do banco de dados
+  storage.getSetting("admin_chat_id").then((saved) => {
+    if (saved) {
+      adminChatId = parseInt(saved, 10);
+      console.log("[Bot] adminChatId carregado do banco:", adminChatId);
+    }
+  }).catch((err) => {
+    console.error("[Bot] Erro ao carregar adminChatId do banco:", err);
+  });
+
+  // Se outra instância já está fazendo polling (409), esperar e tentar novamente
   bot.on("polling_error", (error: any) => {
-    if (error.message?.includes("409 Conflict") || error.code === "ETELEGRAM" && error.message?.includes("409")) {
-      console.log("[Bot] 409 Conflict: outra instância já está executando o polling. Esta instância vai parar.");
+    if (error.message?.includes("409 Conflict") || (error.code === "ETELEGRAM" && error.message?.includes("409"))) {
+      console.log("[Bot] 409 Conflict: outra instância ativa. Aguardando 60s para tentar assumir o polling...");
       bot?.stopPolling();
-      bot = null;
+      setTimeout(async () => {
+        if (bot) {
+          try {
+            await bot.startPolling();
+            console.log("[Bot] Polling retomado com sucesso.");
+          } catch (e: any) {
+            console.log("[Bot] Falha ao retomar polling:", e.message);
+          }
+        }
+      }, 60000);
     } else {
       console.error("Erro de polling do Telegram:", error.message);
     }
@@ -50,6 +69,10 @@ export function initTelegramBot() {
     
     if (isAdmin(username)) {
       adminChatId = chatId;
+      // Persistir adminChatId no banco para sobreviver a restarts
+      storage.setSetting("admin_chat_id", chatId.toString()).catch((err) => {
+        console.error("[Bot] Erro ao salvar adminChatId no banco:", err);
+      });
       await bot!.sendMessage(chatId, 
         `🔐 *Olá Admin!*\n\n` +
         `Você está configurado como administrador.\n\n` +

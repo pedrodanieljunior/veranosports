@@ -41,6 +41,8 @@ export interface IStorage {
   getWithdrawals(): Promise<Withdrawal[]>;
   createWithdrawal(amount: number, description: string): Promise<Withdrawal>;
   deleteWithdrawal(id: number): Promise<boolean>;
+  getSetting(key: string): Promise<string | null>;
+  setSetting(key: string, value: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -423,6 +425,21 @@ export class DatabaseStorage implements IStorage {
   async deleteWithdrawal(id: number): Promise<boolean> {
     const result = await db.delete(withdrawalsTable).where(eq(withdrawalsTable.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getSetting(key: string): Promise<string | null> {
+    const rows = await db.select().from(siteContentTable).where(eq(siteContentTable.key, `_setting_${key}`));
+    return rows[0]?.content ?? null;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    const dbKey = `_setting_${key}`;
+    const existing = await db.select().from(siteContentTable).where(eq(siteContentTable.key, dbKey));
+    if (existing.length > 0) {
+      await db.update(siteContentTable).set({ content: value, updatedAt: new Date() }).where(eq(siteContentTable.key, dbKey));
+    } else {
+      await db.insert(siteContentTable).values({ key: dbKey, content: value });
+    }
   }
 }
 
