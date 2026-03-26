@@ -3,6 +3,10 @@ import { storage } from "./storage";
 
 const ADMIN_USERNAME = "fwsports0";
 
+function isAdmin(username?: string): boolean {
+  return !!username && username.toLowerCase() === ADMIN_USERNAME.toLowerCase();
+}
+
 let bot: TelegramBot | null = null;
 let adminChatId: number | null = null;
 
@@ -33,7 +37,7 @@ export function initTelegramBot() {
     const username = msg.from?.username;
     const betCodeParam = match?.[1]?.trim().toLowerCase();
     
-    if (username === ADMIN_USERNAME) {
+    if (isAdmin(username)) {
       adminChatId = chatId;
       await bot!.sendMessage(chatId, 
         `🔐 *Olá Admin!*\n\n` +
@@ -109,7 +113,7 @@ export function initTelegramBot() {
     const chatId = msg.chat.id;
     const username = msg.from?.username;
     
-    if (username !== ADMIN_USERNAME) {
+    if (!isAdmin(username)) {
       await bot!.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
       return;
     }
@@ -150,8 +154,8 @@ export function initTelegramBot() {
   bot.onText(/\/verificar (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const username = msg.from?.username;
-    
-    if (username !== ADMIN_USERNAME) {
+
+    if (!isAdmin(username)) {
       await bot!.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
       return;
     }
@@ -165,7 +169,7 @@ export function initTelegramBot() {
     try {
       const allBets = await storage.getAllBetSlips();
       const bet = allBets.find(b => b.id.toLowerCase().startsWith(code));
-      
+
       if (!bet) {
         await bot!.sendMessage(chatId, `❌ Bilhete com código \`${code.toUpperCase()}\` não encontrado.`, { parse_mode: "Markdown" });
         return;
@@ -176,9 +180,17 @@ export function initTelegramBot() {
         return;
       }
 
-      await storage.updateBetSlipVerified(bet.id, true);
-      
-      await bot!.sendMessage(chatId, 
+      console.log(`[Bot] Verificando bilhete ${bet.id} (admin: ${username})`);
+      const updated = await storage.updateBetSlipVerified(bet.id, true);
+
+      if (!updated) {
+        console.error(`[Bot] Falha ao atualizar bilhete ${bet.id} no banco de dados`);
+        await bot!.sendMessage(chatId, `❌ Erro ao atualizar bilhete no banco de dados. Tente novamente.`);
+        return;
+      }
+
+      console.log(`[Bot] Bilhete ${bet.id} verificado com sucesso`);
+      await bot!.sendMessage(chatId,
         `✅ *Bilhete Verificado!*\n\n` +
         `🎫 Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
         `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
@@ -196,8 +208,8 @@ export function initTelegramBot() {
   bot.onText(/\/status/, async (msg) => {
     const chatId = msg.chat.id;
     const username = msg.from?.username;
-    
-    if (username !== ADMIN_USERNAME) {
+
+    if (!isAdmin(username)) {
       await bot!.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
       return;
     }
@@ -237,7 +249,7 @@ export function initTelegramBot() {
     const username = msg.from?.username;
     
     // Se for admin, ignorar mensagens de texto normais
-    if (username === ADMIN_USERNAME) return;
+    if (isAdmin(username)) return;
 
     // Se for texto, tratar como código de bilhete
     if (msg.text && !msg.photo) {
@@ -292,7 +304,7 @@ export function initTelegramBot() {
     const username = msg.from?.username || "Usuário";
     
     // Se for admin recebendo foto, ignorar
-    if (msg.from?.username === ADMIN_USERNAME) return;
+    if (isAdmin(msg.from?.username)) return;
 
     const session = userSessions.get(chatId);
     
