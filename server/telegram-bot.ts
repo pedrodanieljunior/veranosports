@@ -305,15 +305,23 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
 
     if (adminChatId && msg.photo) {
       const photo = msg.photo[msg.photo.length - 1];
+      const betCode = bet.id.slice(0, 8).toLowerCase();
       await bot.sendPhoto(adminChatId, photo.file_id, {
         caption:
           `🆕 *NOVO COMPROVANTE RECEBIDO*\n\n` +
           `👤 Usuário: @${username}\n` +
           `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
           `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
-          `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-          `/verificar ${bet.id.slice(0, 8).toLowerCase()}`,
-        parse_mode: "Markdown"
+          `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}`,
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [[
+            {
+              text: "✅ Verificar Bilhete",
+              callback_data: `verificar:${betCode}`
+            }
+          ]]
+        }
       });
       console.log(`[Bot] Admin ${adminChatId} notificado sobre comprovante do bilhete ${bet.id}`);
     } else {
@@ -325,9 +333,124 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
   }
 }
 
+async function handleCallbackQuery(update: TelegramBot.Update): Promise<void> {
+  if (!bot) return;
+  const cb = update.callback_query;
+  if (!cb) return;
+
+  const chatId = cb.message?.chat.id;
+  const messageId = cb.message?.message_id;
+  const username = cb.from?.username;
+  const data = cb.data || "";
+
+  // Sempre responder o callback para remover o "carregando" no Telegram
+  const token = process.env.TELEGRAM_BOT_TOKEN!;
+  const answerCallback = (text: string, showAlert = false) =>
+    fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callback_query_id: cb.id, text, show_alert: showAlert }),
+    });
+
+  if (!data.startsWith("verificar:")) {
+    await answerCallback("Ação desconhecida.");
+    return;
+  }
+
+  if (!isAdmin(username)) {
+    await answerCallback("❌ Apenas o administrador pode verificar bilhetes.", true);
+    return;
+  }
+
+  const code = data.replace("verificar:", "").trim().toLowerCase();
+  console.log(`[Bot] Admin @${username} clicou em Verificar para código: "${code}"`);
+
+  try {
+    const allBets = await storage.getAllBetSlips();
+    const bet = allBets.find(b => b.id.toLowerCase().startsWith(code));
+
+    if (!bet) {
+      await answerCallback(`❌ Bilhete ${code.toUpperCase()} não encontrado.`, true);
+      return;
+    }
+
+    if (bet.verified) {
+      await answerCallback(`⚠️ Bilhete já estava verificado!`, true);
+      // Remover botão da mensagem
+      if (chatId && messageId) {
+        await fetch(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
+        });
+      }
+      return;
+    }
+
+    const updated = await storage.updateBetSlipVerified(bet.id, true);
+    if (!updated) {
+      await answerCallback("❌ Erro ao atualizar no banco. Tente novamente.", true);
+      return;
+    }
+
+    console.log(`[Bot] Bilhete ${bet.id} verificado via botão pelo admin @${username}`);
+
+    // Responder callback com sucesso
+    await answerCallback(`✅ Bilhete ${bet.id.slice(0, 8).toUpperCase()} verificado!`);
+
+    // Editar legenda da foto para mostrar que foi verificado e remover o botão
+    if (chatId && messageId) {
+      await fetch(`https://api.telegram.org/bot${token}/editMessageCaption`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          message_id: messageId,
+          caption:
+            `✅ *BILHETE VERIFICADO*\n\n` +
+            `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+            `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
+            `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+            `Verificado por @${username}`,
+          parse_mode: "Markdown",
+          reply_markup: { inline_keyboard: [] },
+        }),
+      });
+    }
+
+    // Notificar cliente via API direta do Telegram
+    if (bet.telegramChatId) {
+      try {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: parseInt(bet.telegramChatId, 10),
+            text:
+              `✅ *Pagamento Confirmado!*\n\n` +
+              `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+              `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
+              `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+              `Seu bilhete está ativo! Boa sorte! 🍀`,
+            parse_mode: "Markdown",
+          }),
+        });
+        console.log(`[Bot] Cliente ${bet.telegramChatId} notificado via botão`);
+      } catch (notifyErr) {
+        console.error(`[Bot] Erro ao notificar cliente:`, notifyErr);
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao processar callback de verificação:", error);
+    await answerCallback("❌ Erro interno. Tente novamente.", true);
+  }
+}
+
 export async function processUpdate(update: TelegramBot.Update): Promise<void> {
   try {
-    if (update.message?.photo) {
+    if (update.callback_query) {
+      await handleCallbackQuery(update);
+    } else if (update.message?.photo) {
       await handlePhotoUpdate(update);
     } else if (update.message) {
       await handleUpdate(update);
