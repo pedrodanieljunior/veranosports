@@ -25,6 +25,7 @@ export interface IStorage {
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
   updateSelectionResult(betId: string, selectionId: string, result: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
   updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined>;
+  updateBetSlipTelegramChatId(id: string, telegramChatId: string): Promise<BetSlip | undefined>;
   getDailyBetSlips(): Promise<BetSlip[]>;
   getDailyTotalPotentialWin(): Promise<number>;
   getGameSimpleBetTotals(): Promise<GameSimpleBetTotal[]>;
@@ -80,12 +81,14 @@ export class DatabaseStorage implements IStorage {
     
     return {
       id: result.id,
+      sessionId: result.sessionId,
       selections: result.selections as BetSlip["selections"],
       stake: result.stake,
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
       verified: result.verified,
+      telegramChatId: result.telegramChatId,
       createdAt: result.createdAt.toISOString(),
     };
   }
@@ -95,12 +98,14 @@ export class DatabaseStorage implements IStorage {
     
     return results.map(result => ({
       id: result.id,
+      sessionId: result.sessionId,
       selections: result.selections as BetSlip["selections"],
       stake: result.stake,
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
       verified: result.verified,
+      telegramChatId: result.telegramChatId,
       createdAt: result.createdAt.toISOString(),
     }));
   }
@@ -223,12 +228,36 @@ export class DatabaseStorage implements IStorage {
     
     return {
       id: result.id,
+      sessionId: result.sessionId,
       selections: result.selections as BetSlip["selections"],
       stake: result.stake,
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       status: result.status as "pending" | "won" | "lost",
       verified: result.verified,
+      telegramChatId: result.telegramChatId,
+      createdAt: result.createdAt.toISOString(),
+    };
+  }
+
+  async updateBetSlipTelegramChatId(id: string, telegramChatId: string): Promise<BetSlip | undefined> {
+    const [result] = await db.update(betSlipsTable)
+      .set({ telegramChatId })
+      .where(eq(betSlipsTable.id, id))
+      .returning();
+    
+    if (!result) return undefined;
+    
+    return {
+      id: result.id,
+      sessionId: result.sessionId,
+      selections: result.selections as BetSlip["selections"],
+      stake: result.stake,
+      totalOdds: result.totalOdds,
+      potentialWin: result.potentialWin,
+      status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
+      telegramChatId: result.telegramChatId,
       createdAt: result.createdAt.toISOString(),
     };
   }

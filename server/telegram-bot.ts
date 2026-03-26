@@ -10,6 +10,44 @@ function isAdmin(username?: string): boolean {
 let bot: TelegramBot | null = null;
 let adminChatId: number | null = null;
 
+async function linkBetToChat(chatId: number, code: string): Promise<void> {
+  const allBets = await storage.getAllBetSlips();
+  const bet = allBets.find(b => b.id.toLowerCase().startsWith(code));
+
+  if (!bet) {
+    await bot!.sendMessage(chatId,
+      `❌ Bilhete \`${code.toUpperCase()}\` não encontrado.\n\nVerifique o código e tente novamente.`,
+      { parse_mode: "Markdown" }
+    );
+    return;
+  }
+
+  if (bet.verified) {
+    await bot!.sendMessage(chatId,
+      `✅ *Bilhete já verificado!*\n\n` +
+      `🎫 Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+      `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
+      `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+      `Seu bilhete está ativo! Boa sorte! 🍀`,
+      { parse_mode: "Markdown" }
+    );
+    return;
+  }
+
+  // Salvar chatId do cliente no banco de dados
+  await storage.updateBetSlipTelegramChatId(bet.id, chatId.toString());
+  console.log(`[Bot] chatId ${chatId} vinculado ao bilhete ${bet.id}`);
+
+  await bot!.sendMessage(chatId,
+    `🎫 *Bilhete Encontrado!*\n\n` +
+    `Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+    `💰 Valor a pagar: *R$ ${bet.stake.toFixed(2)}*\n` +
+    `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+    `📸 *Agora envie uma foto do comprovante PIX* para confirmar o pagamento.`,
+    { parse_mode: "Markdown" }
+  );
+}
+
 export function initTelegramBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -18,7 +56,6 @@ export function initTelegramBot() {
     return null;
   }
 
-  // Só inicializa polling em produção para evitar conflito de instâncias
   if (process.env.NODE_ENV !== "production") {
     console.log("Ambiente de desenvolvimento — Bot do Telegram desativado (evitando conflito com produção).");
     return null;
@@ -58,22 +95,18 @@ export function initTelegramBot() {
     }
   });
 
-  // Sessões dos usuários
-  const userSessions: Map<number, { betCode?: string; waitingReceipt?: boolean }> = new Map();
-
   // Comando /start (com suporte a deep link)
   bot.onText(/\/start ?(.*)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const username = msg.from?.username;
     const betCodeParam = match?.[1]?.trim().toLowerCase();
-    
+
     if (isAdmin(username)) {
       adminChatId = chatId;
-      // Persistir adminChatId no banco para sobreviver a restarts
       storage.setSetting("admin_chat_id", chatId.toString()).catch((err) => {
         console.error("[Bot] Erro ao salvar adminChatId no banco:", err);
       });
-      await bot!.sendMessage(chatId, 
+      await bot!.sendMessage(chatId,
         `🔐 *Olá Admin!*\n\n` +
         `Você está configurado como administrador.\n\n` +
         `*Comandos disponíveis:*\n` +
@@ -85,55 +118,19 @@ export function initTelegramBot() {
       );
       return;
     }
-    
-    // Se veio com código do bilhete pelo deep link
+
     if (betCodeParam) {
       try {
-        const allBets = await storage.getAllBetSlips();
-        const bet = allBets.find(b => b.id.toLowerCase().startsWith(betCodeParam));
-        
-        if (!bet) {
-          await bot!.sendMessage(chatId, 
-            `❌ Bilhete \`${betCodeParam.toUpperCase()}\` não encontrado.\n\n` +
-            `Verifique o código e tente novamente.`,
-            { parse_mode: "Markdown" }
-          );
-          return;
-        }
-
-        if (bet.verified) {
-          await bot!.sendMessage(chatId,
-            `✅ *Bilhete já verificado!*\n\n` +
-            `🎫 Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-            `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
-            `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-            `Seu bilhete está ativo! Boa sorte! 🍀`,
-            { parse_mode: "Markdown" }
-          );
-          return;
-        }
-
-        // Salvar código e aguardar comprovante
-        userSessions.set(chatId, { betCode: bet.id, waitingReceipt: true });
-        
-        await bot!.sendMessage(chatId,
-          `🎫 *Bilhete Encontrado!*\n\n` +
-          `Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-          `💰 Valor a pagar: *R$ ${bet.stake.toFixed(2)}*\n` +
-          `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-          `📸 *Agora envie uma foto do comprovante PIX* para confirmar o pagamento.`,
-          { parse_mode: "Markdown" }
-        );
+        await linkBetToChat(chatId, betCodeParam);
       } catch (error) {
         console.error("Erro ao buscar bilhete:", error);
         await bot!.sendMessage(chatId, "❌ Erro ao buscar bilhete. Tente novamente.");
       }
       return;
     }
-    
-    // Start normal sem parâmetro
+
     await bot!.sendMessage(chatId,
-      `🎰 *GANHE MAIS AQUI - Verificação de Pagamento*\n\n` +
+      `🎰 *FW Sports - Verificação de Pagamento*\n\n` +
       `Para verificar seu pagamento:\n\n` +
       `1️⃣ Envie o *código do bilhete* (ex: ABC12345)\n` +
       `2️⃣ Envie uma *foto do comprovante PIX*\n\n` +
@@ -146,7 +143,7 @@ export function initTelegramBot() {
   bot.onText(/\/pendentes/, async (msg) => {
     const chatId = msg.chat.id;
     const username = msg.from?.username;
-    
+
     if (!isAdmin(username)) {
       await bot!.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
       return;
@@ -155,14 +152,14 @@ export function initTelegramBot() {
     try {
       const allBets = await storage.getAllBetSlips();
       const pendingVerification = allBets.filter(bet => !bet.verified);
-      
+
       if (pendingVerification.length === 0) {
         await bot!.sendMessage(chatId, "✅ Nenhum bilhete pendente de verificação!");
         return;
       }
 
       let message = `📋 *Bilhetes Pendentes de Verificação:*\n\n`;
-      
+
       for (const bet of pendingVerification.slice(0, 10)) {
         const code = bet.id.slice(0, 8).toUpperCase();
         const date = new Date(bet.createdAt).toLocaleString("pt-BR");
@@ -170,13 +167,13 @@ export function initTelegramBot() {
         message += `   💰 R$ ${bet.stake.toFixed(2)} → R$ ${bet.potentialWin.toFixed(2)}\n`;
         message += `   📅 ${date}\n\n`;
       }
-      
+
       if (pendingVerification.length > 10) {
         message += `\n... e mais ${pendingVerification.length - 10} bilhetes`;
       }
-      
+
       message += `\n\n✅ Use /verificar [código] para aprovar`;
-      
+
       await bot!.sendMessage(chatId, message, { parse_mode: "Markdown" });
     } catch (error) {
       console.error("Erro ao buscar bilhetes pendentes:", error);
@@ -224,6 +221,8 @@ export function initTelegramBot() {
       }
 
       console.log(`[Bot] Bilhete ${bet.id} verificado com sucesso`);
+
+      // Confirmar para o admin
       await bot!.sendMessage(chatId,
         `✅ *Bilhete Verificado!*\n\n` +
         `🎫 Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
@@ -232,6 +231,26 @@ export function initTelegramBot() {
         `O bilhete agora está ativo para apostas!`,
         { parse_mode: "Markdown" }
       );
+
+      // Notificar o cliente se tiver chatId salvo
+      if (bet.telegramChatId) {
+        const clientChatId = parseInt(bet.telegramChatId, 10);
+        try {
+          await bot!.sendMessage(clientChatId,
+            `✅ *Pagamento Confirmado!*\n\n` +
+            `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+            `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
+            `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+            `Seu bilhete está ativo! Boa sorte! 🍀`,
+            { parse_mode: "Markdown" }
+          );
+          console.log(`[Bot] Cliente ${clientChatId} notificado sobre verificação do bilhete ${bet.id}`);
+        } catch (notifyErr) {
+          console.error(`[Bot] Erro ao notificar cliente ${clientChatId}:`, notifyErr);
+        }
+      } else {
+        console.log(`[Bot] Bilhete ${bet.id} não tem telegramChatId — cliente não notificado.`);
+      }
     } catch (error) {
       console.error("Erro ao verificar bilhete:", error);
       await bot!.sendMessage(chatId, "❌ Erro ao verificar bilhete.");
@@ -254,10 +273,10 @@ export function initTelegramBot() {
       const pending = allBets.filter(b => !b.verified);
       const won = allBets.filter(b => b.status === "won");
       const lost = allBets.filter(b => b.status === "lost");
-      
+
       const totalStake = allBets.reduce((sum, b) => sum + b.stake, 0);
       const verifiedStake = verified.reduce((sum, b) => sum + b.stake, 0);
-      
+
       await bot!.sendMessage(chatId,
         `📊 *Estatísticas do Sistema*\n\n` +
         `📝 Total de bilhetes: ${allBets.length}\n` +
@@ -277,54 +296,17 @@ export function initTelegramBot() {
 
   // Receber mensagens de texto (códigos de bilhete)
   bot.on("message", async (msg) => {
-    if (msg.text?.startsWith("/")) return; // Ignorar comandos
-    
+    if (msg.text?.startsWith("/")) return;
+
     const chatId = msg.chat.id;
     const username = msg.from?.username;
-    
-    // Se for admin, ignorar mensagens de texto normais
+
     if (isAdmin(username)) return;
 
-    // Se for texto, tratar como código de bilhete
     if (msg.text && !msg.photo) {
       const code = msg.text.trim().toLowerCase();
-      
       try {
-        const allBets = await storage.getAllBetSlips();
-        const bet = allBets.find(b => b.id.toLowerCase().startsWith(code));
-        
-        if (!bet) {
-          await bot!.sendMessage(chatId, 
-            `❌ Bilhete \`${code.toUpperCase()}\` não encontrado.\n\n` +
-            `Verifique o código e tente novamente.`,
-            { parse_mode: "Markdown" }
-          );
-          return;
-        }
-
-        if (bet.verified) {
-          await bot!.sendMessage(chatId,
-            `✅ *Bilhete já verificado!*\n\n` +
-            `🎫 Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-            `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
-            `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-            `Seu bilhete está ativo! Boa sorte! 🍀`,
-            { parse_mode: "Markdown" }
-          );
-          return;
-        }
-
-        // Salvar código e aguardar comprovante
-        userSessions.set(chatId, { betCode: bet.id, waitingReceipt: true });
-        
-        await bot!.sendMessage(chatId,
-          `🎫 *Bilhete Encontrado!*\n\n` +
-          `Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-          `💰 Valor a pagar: *R$ ${bet.stake.toFixed(2)}*\n` +
-          `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-          `📸 *Agora envie uma foto do comprovante PIX* para confirmar o pagamento.`,
-          { parse_mode: "Markdown" }
-        );
+        await linkBetToChat(chatId, code);
       } catch (error) {
         console.error("Erro ao buscar bilhete:", error);
         await bot!.sendMessage(chatId, "❌ Erro ao buscar bilhete. Tente novamente.");
@@ -336,25 +318,19 @@ export function initTelegramBot() {
   bot.on("photo", async (msg) => {
     const chatId = msg.chat.id;
     const username = msg.from?.username || "Usuário";
-    
-    // Se for admin recebendo foto, ignorar
+
     if (isAdmin(msg.from?.username)) return;
 
-    const session = userSessions.get(chatId);
-    
-    if (!session?.waitingReceipt || !session.betCode) {
-      await bot!.sendMessage(chatId,
-        `⚠️ Primeiro envie o código do bilhete antes de enviar o comprovante.`
-      );
-      return;
-    }
-
     try {
-      const bet = await storage.getBetSlip(session.betCode);
-      
+      // Buscar bilhete vinculado ao chatId do cliente no banco de dados
+      const allBets = await storage.getAllBetSlips();
+      const bet = allBets.find(b => b.telegramChatId === chatId.toString() && !b.verified);
+
       if (!bet) {
-        await bot!.sendMessage(chatId, "❌ Erro: Bilhete não encontrado.");
-        userSessions.delete(chatId);
+        await bot!.sendMessage(chatId,
+          `⚠️ Primeiro envie o *código do bilhete* antes de enviar o comprovante.`,
+          { parse_mode: "Markdown" }
+        );
         return;
       }
 
@@ -368,12 +344,12 @@ export function initTelegramBot() {
         { parse_mode: "Markdown" }
       );
 
-      // Notificar admin
+      // Notificar admin com a foto
       if (adminChatId && msg.photo) {
-        const photo = msg.photo[msg.photo.length - 1]; // Maior resolução
-        
+        const photo = msg.photo[msg.photo.length - 1];
+
         await bot!.sendPhoto(adminChatId, photo.file_id, {
-          caption: 
+          caption:
             `🆕 *NOVO COMPROVANTE RECEBIDO*\n\n` +
             `👤 Usuário: @${username}\n` +
             `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
@@ -382,9 +358,10 @@ export function initTelegramBot() {
             `✅ Para aprovar: /verificar ${bet.id.slice(0, 8).toLowerCase()}`,
           parse_mode: "Markdown"
         });
+        console.log(`[Bot] Admin ${adminChatId} notificado sobre comprovante do bilhete ${bet.id}`);
+      } else {
+        console.warn(`[Bot] adminChatId não definido — comprovante recebido mas admin não notificado.`);
       }
-
-      userSessions.delete(chatId);
     } catch (error) {
       console.error("Erro ao processar comprovante:", error);
       await bot!.sendMessage(chatId, "❌ Erro ao processar comprovante. Tente novamente.");
