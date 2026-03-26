@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { storage } from "./storage";
 
-const ADMIN_USERNAME = "pedrodanieljunior";
+const ADMIN_USERNAME = "fwsports0";
 
 let bot: TelegramBot | null = null;
 let adminChatId: number | null = null;
