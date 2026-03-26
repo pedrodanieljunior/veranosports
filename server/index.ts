@@ -110,8 +110,10 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       
-      // Iniciar bot do Telegram
-      initTelegramBot();
+      // Iniciar bot do Telegram (assíncrono — configura webhook ou polling)
+      initTelegramBot().catch((err) => {
+        console.error("[Bot] Falha ao iniciar:", err);
+      });
 
       // Aquecer o cache imediatamente após o servidor iniciar
       // Isso garante que os dados estejam prontos antes dos usuários acessarem

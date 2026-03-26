@@ -8,6 +8,7 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { processUpdate } from "./telegram-bot";
 
 const bannerStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -2860,6 +2861,19 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating verification status:", error);
       res.status(500).json({ error: "Erro ao atualizar verificação" });
+    }
+  });
+
+  // Webhook do Telegram — recebe updates sem polling, sem conflito entre processos
+  app.post("/api/telegram-webhook", async (req, res) => {
+    try {
+      const update = req.body;
+      console.log(`[Webhook] Update recebido: ${JSON.stringify(update).slice(0, 200)}`);
+      await processUpdate(update);
+      res.sendStatus(200);
+    } catch (err) {
+      console.error("[Webhook] Erro ao processar update:", err);
+      res.sendStatus(500);
     }
   });
 
