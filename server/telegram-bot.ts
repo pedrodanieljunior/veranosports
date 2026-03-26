@@ -28,6 +28,17 @@ export function initTelegramBot() {
 
   console.log("Bot do Telegram iniciado!");
 
+  // Se outra instância já está fazendo polling (409), parar esta instância
+  bot.on("polling_error", (error: any) => {
+    if (error.message?.includes("409 Conflict") || error.code === "ETELEGRAM" && error.message?.includes("409")) {
+      console.log("[Bot] 409 Conflict: outra instância já está executando o polling. Esta instância vai parar.");
+      bot?.stopPolling();
+      bot = null;
+    } else {
+      console.error("Erro de polling do Telegram:", error.message);
+    }
+  });
+
   // Sessões dos usuários
   const userSessions: Map<number, { betCode?: string; waitingReceipt?: boolean }> = new Map();
 
@@ -355,11 +366,6 @@ export function initTelegramBot() {
       console.error("Erro ao processar comprovante:", error);
       await bot!.sendMessage(chatId, "❌ Erro ao processar comprovante. Tente novamente.");
     }
-  });
-
-  // Handler de erros
-  bot.on("polling_error", (error) => {
-    console.error("Erro de polling do Telegram:", error.message);
   });
 
   return bot;
