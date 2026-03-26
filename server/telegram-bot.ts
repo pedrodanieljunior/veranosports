@@ -75,21 +75,24 @@ export function initTelegramBot() {
     console.error("[Bot] Erro ao carregar adminChatId do banco:", err);
   });
 
-  // Se outra instância já está fazendo polling (409), esperar e tentar novamente
+  // Se outra instância já está fazendo polling (409), tentar de novo até conseguir
+  let retryDelay = 10000;
   bot.on("polling_error", (error: any) => {
     if (error.message?.includes("409 Conflict") || (error.code === "ETELEGRAM" && error.message?.includes("409"))) {
-      console.log("[Bot] 409 Conflict: outra instância ativa. Aguardando 60s para tentar assumir o polling...");
+      console.log(`[Bot] 409 Conflict: outra instância ativa. Aguardando ${retryDelay / 1000}s para assumir o polling...`);
       bot?.stopPolling();
       setTimeout(async () => {
         if (bot) {
           try {
             await bot.startPolling();
+            retryDelay = 10000; // reset on success
             console.log("[Bot] Polling retomado com sucesso.");
           } catch (e: any) {
             console.log("[Bot] Falha ao retomar polling:", e.message);
+            retryDelay = Math.min(retryDelay * 2, 60000); // backoff até 60s
           }
         }
-      }, 60000);
+      }, retryDelay);
     } else {
       console.error("Erro de polling do Telegram:", error.message);
     }
@@ -232,21 +235,30 @@ export function initTelegramBot() {
         { parse_mode: "Markdown" }
       );
 
-      // Notificar o cliente se tiver chatId salvo
+      // Notificar o cliente via API direta do Telegram (independente do polling)
       if (bet.telegramChatId) {
         const clientChatId = parseInt(bet.telegramChatId, 10);
-        try {
-          await bot!.sendMessage(clientChatId,
-            `✅ *Pagamento Confirmado!*\n\n` +
-            `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-            `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
-            `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-            `Seu bilhete está ativo! Boa sorte! 🍀`,
-            { parse_mode: "Markdown" }
-          );
-          console.log(`[Bot] Cliente ${clientChatId} notificado sobre verificação do bilhete ${bet.id}`);
-        } catch (notifyErr) {
-          console.error(`[Bot] Erro ao notificar cliente ${clientChatId}:`, notifyErr);
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (token) {
+          try {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: clientChatId,
+                text:
+                  `✅ *Pagamento Confirmado!*\n\n` +
+                  `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+                  `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
+                  `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+                  `Seu bilhete está ativo! Boa sorte! 🍀`,
+                parse_mode: "Markdown",
+              }),
+            });
+            console.log(`[Bot] Cliente ${clientChatId} notificado sobre verificação do bilhete ${bet.id}`);
+          } catch (notifyErr) {
+            console.error(`[Bot] Erro ao notificar cliente ${clientChatId}:`, notifyErr);
+          }
         }
       } else {
         console.log(`[Bot] Bilhete ${bet.id} não tem telegramChatId — cliente não notificado.`);

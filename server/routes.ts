@@ -2818,9 +2818,42 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Valor de verificação inválido" });
       }
 
+      const bet = await storage.getBetSlip(id);
+      if (!bet) {
+        return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
       const updated = await storage.updateBetSlipVerified(id, verified);
       if (!updated) {
         return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      // Notificar o cliente via Telegram API direta (funciona independente do polling)
+      if (verified && bet.telegramChatId) {
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (token) {
+          try {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: parseInt(bet.telegramChatId, 10),
+                text:
+                  `✅ *Pagamento Confirmado!*\n\n` +
+                  `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+                  `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
+                  `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+                  `Seu bilhete está ativo! Boa sorte! 🍀`,
+                parse_mode: "Markdown",
+              }),
+            });
+            console.log(`[Admin] Notificação enviada ao cliente ${bet.telegramChatId} para bilhete ${id}`);
+          } catch (tgErr) {
+            console.error("[Admin] Erro ao enviar notificação Telegram:", tgErr);
+          }
+        }
+      } else if (verified && !bet.telegramChatId) {
+        console.log(`[Admin] Bilhete ${id} verificado mas sem telegramChatId — cliente não notificado.`);
       }
 
       res.json(updated);
