@@ -13,6 +13,15 @@ function escapeMd(text: string): string {
 
 let bot: TelegramBot | null = null;
 let adminChatId: number | null = null;
+let groupChatId: number | null = null;
+
+// Mapa de clientes aguardando envio da chave PIX: chatId -> betId
+const awaitingPix: Record<string, string> = {};
+
+// Destino de notificações: grupo tem prioridade, senão vai para o chat privado do admin
+function notifyTarget(): number | null {
+  return groupChatId ?? adminChatId;
+}
 
 async function linkBetToChat(chatId: number, code: string): Promise<void> {
   const allBets = await storage.getAllBetSlips();
@@ -238,17 +247,137 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
     return;
   }
 
-  // Comando desconhecido iniciado com /
-  if (text.startsWith("/")) {
-    if (isAdmin(username)) {
-      await bot.sendMessage(chatId, "❌ Comando desconhecido. Use /pendentes, /verificar [código] ou /status.");
+  // /setgrupo — registra o grupo atual como destino de notificações
+  if (text.match(/^\/setgrupo$/)) {
+    if (!isAdmin(username)) {
+      await bot.sendMessage(chatId, "❌ Apenas o administrador pode configurar o grupo.");
+      return;
+    }
+    const chatType = msg.chat.type;
+    if (chatType === "private") {
+      await bot.sendMessage(chatId, "❌ Use este comando dentro de um grupo, não no chat privado.");
+      return;
+    }
+    groupChatId = chatId;
+    await storage.setSetting("group_chat_id", chatId.toString()).catch(() => {});
+    await bot.sendMessage(chatId,
+      `✅ *Grupo configurado com sucesso!*\n\n` +
+      `Todas as notificações de comprovantes serão enviadas aqui.\n` +
+      `Os comandos continuam funcionando tanto aqui quanto no chat privado.`,
+      { parse_mode: "Markdown" }
+    );
+    return;
+  }
+
+  // /ganhou <código> — notifica cliente que ganhou e pede chave PIX
+  const ganhouMatch = text.match(/^\/ganhou\s+(.+)$/);
+  if (ganhouMatch) {
+    if (!isAdmin(username)) {
+      await bot.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
+      return;
+    }
+    const code = ganhouMatch[1].trim().toLowerCase();
+    try {
+      const allBets = await storage.getAllBetSlips();
+      const bet = allBets.find(b => b.id.toLowerCase().startsWith(code));
+      if (!bet) {
+        await bot.sendMessage(chatId, `❌ Bilhete \`${code.toUpperCase()}\` não encontrado.`, { parse_mode: "Markdown" });
+        return;
+      }
+      if (!bet.telegramChatId) {
+        await bot.sendMessage(chatId, `⚠️ Bilhete \`${bet.id.slice(0, 8).toUpperCase()}\` não possui chat vinculado. O cliente precisa ter interagido com o bot.`, { parse_mode: "Markdown" });
+        return;
+      }
+      const clientChatId = parseInt(bet.telegramChatId, 10);
+      const token = process.env.TELEGRAM_BOT_TOKEN!;
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: clientChatId,
+          text:
+            `🏆 *Parabéns! Você ganhou!*\n\n` +
+            `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+            `💰 Valor apostado: R$ ${bet.stake.toFixed(2)}\n` +
+            `🎯 Retorno: *R$ ${bet.potentialWin.toFixed(2)}*\n\n` +
+            `Para receber seu pagamento, *envie sua chave PIX* (CPF, e-mail, telefone ou chave aleatória):`,
+          parse_mode: "Markdown",
+        }),
+      });
+      awaitingPix[bet.telegramChatId] = bet.id;
+      await bot.sendMessage(chatId, `✅ Mensagem de ganho enviada para o cliente do bilhete \`${bet.id.slice(0, 8).toUpperCase()}\`.\nAguardando chave PIX do cliente.`, { parse_mode: "Markdown" });
+    } catch (error) {
+      console.error("Erro ao enviar mensagem de ganho:", error);
+      await bot.sendMessage(chatId, "❌ Erro ao enviar mensagem. Tente novamente.");
     }
     return;
   }
 
-  // Mensagem de texto comum (código de bilhete do cliente)
+  // Comando desconhecido iniciado com /
+  if (text.startsWith("/")) {
+    if (isAdmin(username)) {
+      await bot.sendMessage(chatId,
+        "❌ Comando desconhecido. Comandos disponíveis:\n" +
+        "/pendentes — bilhetes aguardando verificação\n" +
+        "/verificar [código] — verificar bilhete\n" +
+        "/ganhou [código] — notificar cliente vencedor\n" +
+        "/status — estatísticas\n" +
+        "/setgrupo — configurar grupo de notificações"
+      );
+    }
+    return;
+  }
+
+  // Mensagem de texto comum de cliente
   if (isAdmin(username)) return;
 
+  const chatIdStr = chatId.toString();
+
+  // Cliente está aguardando envio da chave PIX (após /ganhou)
+  if (awaitingPix[chatIdStr]) {
+    const betId = awaitingPix[chatIdStr];
+    delete awaitingPix[chatIdStr];
+    const pixKey = text.trim();
+
+    try {
+      const allBets = await storage.getAllBetSlips();
+      const bet = allBets.find(b => b.id === betId);
+      const token = process.env.TELEGRAM_BOT_TOKEN!;
+
+      // Encaminhar chave PIX ao grupo (ou admin)
+      const target = notifyTarget();
+      if (target) {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: target,
+            text:
+              `💳 *CHAVE PIX RECEBIDA*\n\n` +
+              `🎫 Bilhete: \`${betId.slice(0, 8).toUpperCase()}\`\n` +
+              `👤 Usuário: @${escapeMd(username || "desconhecido")}\n` +
+              (bet ? `🎯 Valor a pagar: *R$ ${bet.potentialWin.toFixed(2)}*\n` : "") +
+              `🔑 Chave PIX: \`${escapeMd(pixKey)}\``,
+            parse_mode: "Markdown",
+          }),
+        });
+      }
+
+      // Confirmar para o cliente
+      await bot.sendMessage(chatId,
+        `✅ *Chave PIX recebida com sucesso!*\n\n` +
+        (bet ? `💰 Pagamento de *R$ ${bet.potentialWin.toFixed(2)}* será processado em breve.\n\n` : "") +
+        `Obrigado por jogar na FW Sports! 🏆`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (error) {
+      console.error("Erro ao processar chave PIX:", error);
+      await bot.sendMessage(chatId, "❌ Erro ao registrar sua chave PIX. Tente novamente.");
+    }
+    return;
+  }
+
+  // Código de bilhete
   try {
     await linkBetToChat(chatId, text.trim().toLowerCase());
   } catch (error) {
@@ -292,10 +421,11 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
       { parse_mode: "Markdown" }
     );
 
-    if (adminChatId && msg.photo) {
+    const target = notifyTarget();
+    if (target && msg.photo) {
       const photo = msg.photo[msg.photo.length - 1];
       const betCode = bet.id.slice(0, 8).toLowerCase();
-      await bot.sendPhoto(adminChatId, photo.file_id, {
+      await bot.sendPhoto(target, photo.file_id, {
         caption:
           `🆕 *NOVO COMPROVANTE RECEBIDO*\n\n` +
           `👤 Usuário: @${safeUsername}\n` +
@@ -312,9 +442,9 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
           ]]
         }
       });
-      console.log(`[Bot] Admin ${adminChatId} notificado sobre comprovante do bilhete ${bet.id}`);
+      console.log(`[Bot] Destino ${target} notificado sobre comprovante do bilhete ${bet.id}`);
     } else {
-      console.warn(`[Bot] adminChatId não definido — comprovante recebido mas admin não notificado.`);
+      console.warn(`[Bot] Nenhum destino configurado — comprovante recebido mas não encaminhado. Use /setgrupo no grupo ou /start no chat privado.`);
     }
   } catch (error) {
     console.error("Erro ao processar comprovante:", error);
@@ -461,15 +591,20 @@ export async function initTelegramBot() {
   // Criar instância sem polling (webhook vai alimentar updates)
   bot = new TelegramBot(token, { polling: false });
 
-  // Carregar adminChatId persistido do banco de dados
+  // Carregar adminChatId e groupChatId persistidos do banco de dados
   try {
-    const saved = await storage.getSetting("admin_chat_id");
-    if (saved) {
-      adminChatId = parseInt(saved, 10);
+    const savedAdmin = await storage.getSetting("admin_chat_id");
+    if (savedAdmin) {
+      adminChatId = parseInt(savedAdmin, 10);
       console.log("[Bot] adminChatId carregado do banco:", adminChatId);
     }
+    const savedGroup = await storage.getSetting("group_chat_id");
+    if (savedGroup) {
+      groupChatId = parseInt(savedGroup, 10);
+      console.log("[Bot] groupChatId carregado do banco:", groupChatId);
+    }
   } catch (err) {
-    console.error("[Bot] Erro ao carregar adminChatId do banco:", err);
+    console.error("[Bot] Erro ao carregar configurações do banco:", err);
   }
 
   // Detectar URL de produção automaticamente
@@ -524,9 +659,10 @@ export async function initTelegramBot() {
 }
 
 export async function notifyAdmin(message: string) {
-  if (bot && adminChatId) {
+  const target = notifyTarget();
+  if (bot && target) {
     try {
-      await bot.sendMessage(adminChatId, message, { parse_mode: "Markdown" });
+      await bot.sendMessage(target, message, { parse_mode: "Markdown" });
     } catch (error) {
       console.error("Erro ao notificar admin:", error);
     }
