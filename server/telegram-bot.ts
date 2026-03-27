@@ -7,6 +7,10 @@ function isAdmin(username?: string): boolean {
   return !!username && username.toLowerCase() === ADMIN_USERNAME.toLowerCase();
 }
 
+function escapeMd(text: string): string {
+  return text.replace(/[_*[\]`]/g, (ch) => `\\${ch}`);
+}
+
 let bot: TelegramBot | null = null;
 let adminChatId: number | null = null;
 
@@ -261,6 +265,7 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
 
   const chatId = msg.chat.id;
   const username = msg.from?.username || "Usuário";
+  const safeUsername = escapeMd(username);
 
   if (isAdmin(msg.from?.username)) return;
 
@@ -293,7 +298,7 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
       await bot.sendPhoto(adminChatId, photo.file_id, {
         caption:
           `🆕 *NOVO COMPROVANTE RECEBIDO*\n\n` +
-          `👤 Usuário: @${username}\n` +
+          `👤 Usuário: @${safeUsername}\n` +
           `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
           `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
           `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}`,
@@ -325,6 +330,7 @@ async function handleCallbackQuery(update: TelegramBot.Update): Promise<void> {
   const chatId = cb.message?.chat.id;
   const messageId = cb.message?.message_id;
   const username = cb.from?.username;
+  const safeUsername = escapeMd(username || "");
   const data = cb.data || "";
 
   // Sempre responder o callback para remover o "carregando" no Telegram
@@ -395,7 +401,7 @@ async function handleCallbackQuery(update: TelegramBot.Update): Promise<void> {
             `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
             `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
             `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-            `Verificado por @${username}`,
+            `Verificado por @${safeUsername}`,
           parse_mode: "Markdown",
           reply_markup: { inline_keyboard: [] },
         }),
