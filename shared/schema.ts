@@ -40,6 +40,7 @@ export const betSlipsTable = pgTable("bet_slips", {
   status: text("status").notNull().default("pending"),
   verified: boolean("verified").notNull().default(false),
   telegramChatId: text("telegram_chat_id"),
+  pixKey: text("pix_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -119,6 +120,7 @@ export const betSlipSchema = z.object({
   status: z.enum(["pending", "won", "lost"]).default("pending"),
   verified: z.boolean().default(false),
   telegramChatId: z.string().optional().nullable(),
+  pixKey: z.string().optional().nullable(),
   createdAt: z.string(),
 });
 

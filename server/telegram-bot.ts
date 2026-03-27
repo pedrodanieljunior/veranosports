@@ -293,6 +293,7 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
         message += `🎫 \`${b.id.slice(0, 8).toUpperCase()}\` — R$ ${b.stake.toFixed(2)} → *R$ ${b.potentialWin.toFixed(2)}*\n`;
         message += `   📅 ${date}\n`;
         message += b.telegramChatId ? `   👤 Chat vinculado ✅\n` : `   👤 Sem chat vinculado ⚠️\n`;
+        message += b.pixKey ? `   🔑 PIX: \`${escapeMd(b.pixKey)}\`\n` : `   🔑 PIX: aguardando ⏳\n`;
         message += "\n";
       }
       if (wonBets.length > 10) {
@@ -450,6 +451,10 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
       const allBets = await storage.getAllBetSlips();
       const bet = allBets.find(b => b.id === betId);
       const token = process.env.TELEGRAM_BOT_TOKEN!;
+
+      // Salvar chave PIX no banco vinculada ao bilhete
+      await storage.updateBetSlipPixKey(betId, pixKey);
+      console.log(`[Bot] Chave PIX "${pixKey}" salva no bilhete ${betId.slice(0, 8).toUpperCase()}`);
 
       // Encaminhar chave PIX ao grupo (ou admin)
       const target = notifyTarget();
