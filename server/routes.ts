@@ -2499,6 +2499,13 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Bilhete ou seleção não encontrada" });
       }
 
+      // Notificar cliente se o bilhete ficou ganho
+      if (updated.status === "won" && updated.telegramChatId) {
+        notifyWinner(updated).catch((err) => {
+          console.error("[Admin] Erro ao notificar vencedor:", err);
+        });
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating selection result:", error);
