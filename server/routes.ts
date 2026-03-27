@@ -8,7 +8,7 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { processUpdate } from "./telegram-bot";
+import { processUpdate, notifyWinner } from "./telegram-bot";
 
 const bannerStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -1827,6 +1827,10 @@ export async function registerRoutes(
       if (!updated) {
         return res.status(404).json({ error: "Bet slip not found" });
       }
+
+      if (status === "won" && updated.telegramChatId) {
+        notifyWinner(updated).catch(() => {});
+      }
       
       res.json(updated);
     } catch (error) {
@@ -2416,7 +2420,10 @@ export async function registerRoutes(
         // Se todos os jogos terminaram, atualizar o status do bilhete
         if (allSelectionsResolved) {
           const newStatus = allSelectionsWon ? "won" : "lost";
-          await storage.updateBetSlipStatus(bet.id, newStatus);
+          const updatedBetAuto = await storage.updateBetSlipStatus(bet.id, newStatus);
+          if (newStatus === "won" && updatedBetAuto?.telegramChatId) {
+            notifyWinner(updatedBetAuto).catch(() => {});
+          }
           updatedCount++;
           results.push({
             betId: bet.id,
@@ -2464,6 +2471,10 @@ export async function registerRoutes(
       const updated = await storage.updateBetSlipStatus(id, status);
       if (!updated) {
         return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      if (status === "won" && updated.telegramChatId) {
+        notifyWinner(updated).catch(() => {});
       }
 
       res.json(updated);
@@ -2798,6 +2809,9 @@ export async function registerRoutes(
       if (newStatus !== "pending") {
         const r = await storage.updateBetSlipStatus(updatedBet.id, newStatus);
         if (r) updatedBet = r;
+        if (newStatus === "won" && updatedBet.telegramChatId) {
+          notifyWinner(updatedBet).catch(() => {});
+        }
       }
 
       const resolvedCount = resolvedSelections.filter(s => s.result !== "pending").length;
