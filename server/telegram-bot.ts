@@ -102,8 +102,8 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
     return;
   }
 
-  // /pendentes
-  if (text.match(/^\/pendentes$/)) {
+  // /pendentes (ou /verificar sem código)
+  if (text.match(/^\/pendentes$/) || text.match(/^\/verificar$/)) {
     if (!isAdmin(username)) {
       await bot.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
       return;
@@ -117,20 +117,32 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
         return;
       }
 
+      const shown = pendingVerification.slice(0, 10);
+
+      // Um botão por bilhete na inline keyboard
+      const inlineKeyboard = shown.map(bet => {
+        const date = new Date(bet.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return [{
+          text: `✅ ${bet.id.slice(0, 8).toUpperCase()} — R$ ${bet.stake.toFixed(2)} (${date})`,
+          callback_data: `verificar:${bet.id.slice(0, 8).toLowerCase()}`
+        }];
+      });
+
       let message = `📋 *Bilhetes Pendentes (${pendingVerification.length})*\n\n`;
-      for (const bet of pendingVerification.slice(0, 10)) {
+      for (const bet of shown) {
         const date = new Date(bet.createdAt).toLocaleString("pt-BR");
-        message += `🎫 \`${bet.id.slice(0, 8).toUpperCase()}\`\n`;
-        message += `   💰 R$ ${bet.stake.toFixed(2)} → R$ ${bet.potentialWin.toFixed(2)}\n`;
+        message += `🎫 \`${bet.id.slice(0, 8).toUpperCase()}\` — R$ ${bet.stake.toFixed(2)} → R$ ${bet.potentialWin.toFixed(2)}\n`;
         message += `   📅 ${date}\n\n`;
       }
 
       if (pendingVerification.length > 10) {
-        message += `\n... e mais ${pendingVerification.length - 10} bilhetes`;
+        message += `_... e mais ${pendingVerification.length - 10} bilhetes_\n`;
       }
 
-      message += `\n\n✅ Use /verificar [código] para aprovar`;
-      await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
+      await bot.sendMessage(chatId, message, {
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: inlineKeyboard }
+      });
     } catch (error) {
       console.error("Erro ao buscar bilhetes pendentes:", error);
       await bot.sendMessage(chatId, "❌ Erro ao buscar bilhetes pendentes.");
@@ -138,7 +150,7 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
     return;
   }
 
-  // /verificar
+  // /verificar <código> — mostra detalhes do bilhete com botão de confirmação
   const verificarMatch = text.match(/^\/verificar\s+(.+)$/);
   if (verificarMatch) {
     if (!isAdmin(username)) {
@@ -147,7 +159,7 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
     }
 
     const code = verificarMatch[1].trim().toLowerCase();
-    console.log(`[Bot] Admin @${username} solicitou verificação do código: "${code}"`);
+    console.log(`[Bot] Admin @${username} buscou bilhete: "${code}"`);
 
     try {
       const allBets = await storage.getAllBetSlips();
@@ -163,56 +175,28 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
         return;
       }
 
-      console.log(`[Bot] Verificando bilhete ${bet.id} (admin: @${username})`);
-      const updated = await storage.updateBetSlipVerified(bet.id, true);
-
-      if (!updated) {
-        console.error(`[Bot] Falha ao atualizar bilhete ${bet.id} no banco de dados`);
-        await bot.sendMessage(chatId, `❌ Erro ao atualizar bilhete no banco de dados. Tente novamente.`);
-        return;
-      }
-
-      console.log(`[Bot] Bilhete ${bet.id} verificado com sucesso`);
-
+      // Mostrar detalhes com botão de confirmação
+      const date = new Date(bet.createdAt).toLocaleString("pt-BR");
       await bot.sendMessage(chatId,
-        `✅ *Bilhete Verificado!*\n\n` +
-        `🎫 Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+        `🎫 *Detalhes do Bilhete*\n\n` +
+        `Código: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
         `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
-        `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-        `O bilhete agora está ativo para apostas!`,
-        { parse_mode: "Markdown" }
-      );
-
-      // Notificar cliente via API direta do Telegram
-      if (bet.telegramChatId) {
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (token) {
-          try {
-            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: parseInt(bet.telegramChatId, 10),
-                text:
-                  `✅ *Pagamento Confirmado!*\n\n` +
-                  `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-                  `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
-                  `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-                  `Seu bilhete está ativo! Boa sorte! 🍀`,
-                parse_mode: "Markdown",
-              }),
-            });
-            console.log(`[Bot] Cliente ${bet.telegramChatId} notificado sobre verificação do bilhete ${bet.id}`);
-          } catch (notifyErr) {
-            console.error(`[Bot] Erro ao notificar cliente ${bet.telegramChatId}:`, notifyErr);
+        `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n` +
+        `📅 Criado: ${date}\n\n` +
+        `Clique no botão para verificar:`,
+        {
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [[{
+              text: "✅ Verificar Bilhete",
+              callback_data: `verificar:${bet.id.slice(0, 8).toLowerCase()}`
+            }]]
           }
         }
-      } else {
-        console.log(`[Bot] Bilhete ${bet.id} não tem telegramChatId — cliente não notificado.`);
-      }
+      );
     } catch (error) {
-      console.error("Erro ao verificar bilhete:", error);
-      await bot.sendMessage(chatId, "❌ Erro ao verificar bilhete.");
+      console.error("Erro ao buscar bilhete:", error);
+      await bot.sendMessage(chatId, "❌ Erro ao buscar bilhete.");
     }
     return;
   }
