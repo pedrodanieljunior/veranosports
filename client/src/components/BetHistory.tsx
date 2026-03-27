@@ -1,7 +1,6 @@
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, History, Receipt, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -165,7 +164,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
           </div>
         </CardHeader>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <CardContent className="p-4">
             {isLoading ? (
               <div className="space-y-3">
@@ -191,7 +190,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
               </div>
             )}
           </CardContent>
-        </ScrollArea>
+        </div>
       </Card>
     </>
   );
