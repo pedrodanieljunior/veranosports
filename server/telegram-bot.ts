@@ -313,6 +313,47 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
     return;
   }
 
+  // /mensagem <código> <texto> — admin envia mensagem personalizada ao cliente
+  const mensagemMatch = text.match(/^\/mensagem\s+(\S+)\s+(.+)$/s);
+  if (mensagemMatch) {
+    if (!isAdmin(username)) {
+      await bot.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
+      return;
+    }
+    const code = mensagemMatch[1].trim().toLowerCase();
+    const customText = mensagemMatch[2].trim();
+    try {
+      const allBets = await storage.getAllBetSlips();
+      const bet = allBets.find(b => b.id.toLowerCase().startsWith(code));
+      if (!bet) {
+        await bot.sendMessage(chatId, `❌ Bilhete \`${code.toUpperCase()}\` não encontrado.`, { parse_mode: "Markdown" });
+        return;
+      }
+      if (!bet.telegramChatId) {
+        await bot.sendMessage(chatId, `⚠️ Bilhete \`${bet.id.slice(0, 8).toUpperCase()}\` não possui chat vinculado.`, { parse_mode: "Markdown" });
+        return;
+      }
+      const token = process.env.TELEGRAM_BOT_TOKEN!;
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: parseInt(bet.telegramChatId, 10),
+          text: `📢 *Mensagem da FW Sports:*\n\n${customText}`,
+          parse_mode: "Markdown",
+        }),
+      });
+      await bot.sendMessage(chatId,
+        `✅ Mensagem enviada ao cliente do bilhete \`${bet.id.slice(0, 8).toUpperCase()}\`.`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (error) {
+      console.error("Erro ao enviar mensagem personalizada:", error);
+      await bot.sendMessage(chatId, "❌ Erro ao enviar mensagem. Tente novamente.");
+    }
+    return;
+  }
+
   // Comando desconhecido iniciado com /
   if (text.startsWith("/")) {
     if (isAdmin(username)) {
@@ -321,6 +362,7 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
         "/pendentes — bilhetes aguardando verificação\n" +
         "/verificar [código] — verificar bilhete\n" +
         "/ganhou [código] — notificar cliente vencedor\n" +
+        "/mensagem [código] [texto] — enviar mensagem ao cliente\n" +
         "/status — estatísticas\n" +
         "/setgrupo — configurar grupo de notificações"
       );
@@ -425,6 +467,14 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
     if (target && msg.photo) {
       const photo = msg.photo[msg.photo.length - 1];
       const betCode = bet.id.slice(0, 8).toLowerCase();
+      const clientChatIdNum = chatId;
+
+      // Botões: verificar + abrir perfil do cliente
+      const keyboard: TelegramBot.InlineKeyboardButton[][] = [
+        [{ text: "✅ Verificar Bilhete", callback_data: `verificar:${betCode}` }],
+        [{ text: "💬 Abrir chat com cliente", url: `tg://user?id=${clientChatIdNum}` }],
+      ];
+
       await bot.sendPhoto(target, photo.file_id, {
         caption:
           `🆕 *NOVO COMPROVANTE RECEBIDO*\n\n` +
@@ -433,14 +483,7 @@ async function handlePhotoUpdate(update: TelegramBot.Update): Promise<void> {
           `💰 Valor: R$ ${bet.stake.toFixed(2)}\n` +
           `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}`,
         parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: [[
-            {
-              text: "✅ Verificar Bilhete",
-              callback_data: `verificar:${betCode}`
-            }
-          ]]
-        }
+        reply_markup: { inline_keyboard: keyboard },
       });
       console.log(`[Bot] Destino ${target} notificado sobre comprovante do bilhete ${bet.id}`);
     } else {
