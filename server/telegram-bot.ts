@@ -271,6 +271,55 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
     return;
   }
 
+  // /ganhou (sem código) — lista bilhetes vencedores com botão de chat por cliente
+  if (text.match(/^\/ganhou$/)) {
+    if (!isAdmin(username)) {
+      await bot.sendMessage(chatId, "❌ Comando disponível apenas para administradores.");
+      return;
+    }
+    try {
+      const allBets = await storage.getAllBetSlips();
+      const wonBets = allBets.filter(b => b.status === "won");
+
+      if (wonBets.length === 0) {
+        await bot.sendMessage(chatId, "🏆 Nenhum bilhete marcado como vencedor ainda.");
+        return;
+      }
+
+      const shown = wonBets.slice(0, 10);
+      let message = `🏆 *Bilhetes Vencedores (${wonBets.length})*\n\n`;
+      for (const b of shown) {
+        const date = new Date(b.createdAt).toLocaleString("pt-BR");
+        message += `🎫 \`${b.id.slice(0, 8).toUpperCase()}\` — R$ ${b.stake.toFixed(2)} → *R$ ${b.potentialWin.toFixed(2)}*\n`;
+        message += `   📅 ${date}\n`;
+        message += b.telegramChatId ? `   👤 Chat vinculado ✅\n` : `   👤 Sem chat vinculado ⚠️\n`;
+        message += "\n";
+      }
+      if (wonBets.length > 10) {
+        message += `_... e mais ${wonBets.length - 10} bilhetes_\n`;
+      }
+
+      // Um botão por bilhete vencedor que tem chatId vinculado
+      const inlineKeyboard = shown
+        .filter(b => !!b.telegramChatId)
+        .map(b => [{
+          text: `💬 ${b.id.slice(0, 8).toUpperCase()} — R$ ${b.potentialWin.toFixed(2)}`,
+          url: `tg://user?id=${b.telegramChatId}`
+        }]);
+
+      await bot.sendMessage(chatId, message, {
+        parse_mode: "Markdown",
+        reply_markup: inlineKeyboard.length > 0
+          ? { inline_keyboard: inlineKeyboard }
+          : undefined,
+      });
+    } catch (error) {
+      console.error("Erro ao listar bilhetes vencedores:", error);
+      await bot.sendMessage(chatId, "❌ Erro ao buscar bilhetes vencedores.");
+    }
+    return;
+  }
+
   // /ganhou <código> — notifica cliente que ganhou e pede chave PIX
   const ganhouMatch = text.match(/^\/ganhou\s+(.+)$/);
   if (ganhouMatch) {
@@ -307,7 +356,21 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
         }),
       });
       awaitingPix[bet.telegramChatId] = bet.id;
-      await bot.sendMessage(chatId, `✅ Mensagem de ganho enviada para o cliente do bilhete \`${bet.id.slice(0, 8).toUpperCase()}\`.\nAguardando chave PIX do cliente.`, { parse_mode: "Markdown" });
+      // Confirmação com botão de chat direto
+      await bot.sendMessage(chatId,
+        `✅ *Mensagem de ganho enviada!*\n\n` +
+        `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+        `🎯 Retorno: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
+        `Aguardando chave PIX do cliente.`,
+        {
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [[
+              { text: "💬 Abrir chat com cliente", url: `tg://user?id=${bet.telegramChatId}` }
+            ]]
+          }
+        }
+      );
     } catch (error) {
       console.error("Erro ao enviar mensagem de ganho:", error);
       await bot.sendMessage(chatId, "❌ Erro ao enviar mensagem. Tente novamente.");
