@@ -782,6 +782,45 @@ export async function initTelegramBot() {
     });
   }
 
+  // Configurar menu de comandos por escopo
+  try {
+    const adminCommands = [
+      { command: "pendentes",  description: "📋 Bilhetes aguardando verificação de comprovante" },
+      { command: "ganhou",     description: "🏆 Listar vencedores ou notificar cliente (/ganhou <código>)" },
+      { command: "mensagem",   description: "💬 Enviar mensagem ao cliente (/mensagem <código> <texto>)" },
+      { command: "setgrupo",   description: "⚙️ Registrar este grupo como destino de notificações" },
+      { command: "status",     description: "📊 Ver status do bot" },
+    ];
+
+    const clientCommands = [
+      { command: "start",      description: "🎫 Vincular bilhete e enviar comprovante" },
+    ];
+
+    // Comandos visíveis em grupos (para o admin)
+    await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        commands: adminCommands,
+        scope: { type: "all_group_chats" },
+      }),
+    });
+
+    // Comandos visíveis em chats privados (para clientes)
+    await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        commands: clientCommands,
+        scope: { type: "all_private_chats" },
+      }),
+    });
+
+    console.log("[Bot] Menu de comandos configurado.");
+  } catch (err) {
+    console.error("[Bot] Erro ao configurar menu de comandos:", err);
+  }
+
   console.log("[Bot] Telegram iniciado!");
   return bot;
 }
