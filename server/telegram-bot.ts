@@ -68,7 +68,9 @@ async function handleUpdate(update: TelegramBot.Update): Promise<void> {
 
   const chatId = msg.chat.id;
   const username = msg.from?.username;
-  const text = msg.text || "";
+  // Em grupos o Telegram envia comandos como "/ganhou@Fw26_bot código"
+  // Removemos o "@nomeDoBoot" para que os regex funcionem igual em grupos e chat privado
+  const text = (msg.text || "").replace(/^(\/\w+)@\w+/, "$1");
 
   console.log(`[Bot] Mensagem recebida de @${username || "desconhecido"} (${chatId}): "${text.slice(0, 80)}"`);
 
