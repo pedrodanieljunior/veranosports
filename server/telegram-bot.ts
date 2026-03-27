@@ -803,30 +803,41 @@ export function getBot() {
 
 // Notifica automaticamente o cliente que ganhou e aguarda a chave PIX
 export async function notifyWinner(bet: { id: string; stake: number; potentialWin: number; telegramChatId?: string | null }) {
-  if (!bot || !bet.telegramChatId) return;
+  if (!bet.telegramChatId) return;
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return;
 
+  const clientChatId = parseInt(bet.telegramChatId, 10);
+  const text =
+    `🏆 *Parabéns! Você ganhou!*\n\n` +
+    `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
+    `💰 Valor apostado: R$ ${bet.stake.toFixed(2)}\n` +
+    `🎯 Retorno: *R$ ${bet.potentialWin.toFixed(2)}*\n\n` +
+    `Para receber seu pagamento, *envie sua chave PIX* (CPF, e-mail, telefone ou chave aleatória):`;
+
+  const start = Date.now();
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: parseInt(bet.telegramChatId, 10),
-        text:
-          `🏆 *Parabéns! Você ganhou!*\n\n` +
-          `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-          `💰 Valor apostado: R$ ${bet.stake.toFixed(2)}\n` +
-          `🎯 Retorno: *R$ ${bet.potentialWin.toFixed(2)}*\n\n` +
-          `Para receber seu pagamento, *envie sua chave PIX* (CPF, e-mail, telefone ou chave aleatória):`,
-        parse_mode: "Markdown",
-      }),
+      body: JSON.stringify({ chat_id: clientChatId, text, parse_mode: "Markdown" }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[Bot] Telegram recusou notifyWinner (${res.status}): ${body}`);
+      return;
+    }
 
     awaitingPix[bet.telegramChatId] = bet.id;
-    console.log(`[Bot] Cliente ${bet.telegramChatId} notificado sobre vitória no bilhete ${bet.id.slice(0, 8).toUpperCase()}`);
-  } catch (error) {
-    console.error(`[Bot] Erro ao notificar vencedor ${bet.telegramChatId}:`, error);
+    console.log(`[Bot] notifyWinner enviado em ${Date.now() - start}ms para ${bet.telegramChatId} — bilhete ${bet.id.slice(0, 8).toUpperCase()}`);
+  } catch (error: any) {
+    console.error(`[Bot] Erro notifyWinner após ${Date.now() - start}ms para ${bet.telegramChatId}:`, error?.message ?? error);
   }
 }
