@@ -166,6 +166,8 @@ export class DatabaseStorage implements IStorage {
     
     return {
       id: result.id,
+      sessionId: result.sessionId,
+      telegramChatId: result.telegramChatId,
       selections: result.selections as BetSlip["selections"],
       stake: result.stake,
       totalOdds: result.totalOdds,
@@ -208,6 +210,8 @@ export class DatabaseStorage implements IStorage {
 
     return {
       id: updated.id,
+      sessionId: updated.sessionId,
+      telegramChatId: updated.telegramChatId,
       selections: updated.selections as BetSlip["selections"],
       stake: updated.stake,
       totalOdds: updated.totalOdds,
