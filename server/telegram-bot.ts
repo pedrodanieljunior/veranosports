@@ -604,6 +604,26 @@ async function handleCallbackQuery(update: TelegramBot.Update): Promise<void> {
       } catch (notifyErr) {
         console.error(`[Bot] Erro ao notificar cliente:`, notifyErr);
       }
+
+      // Enviar mensagem no grupo com botão para abrir chat direto com o cliente
+      if (chatId) {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text:
+              `💬 *Bilhete \`${bet.id.slice(0, 8).toUpperCase()}\` verificado!*\n` +
+              `Clique abaixo para abrir o chat com o cliente e continuar a conversa.`,
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "💬 Abrir chat com cliente", url: `tg://user?id=${bet.telegramChatId}` }
+              ]]
+            },
+          }),
+        }).catch((err) => console.error("[Bot] Erro ao enviar link de chat:", err));
+      }
     }
   } catch (error) {
     console.error("Erro ao processar callback de verificação:", error);
