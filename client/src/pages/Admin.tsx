@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1553,7 +1554,7 @@ export default function Admin() {
                                 <div className="rounded-xl border border-purple-500/50 bg-muted/20 p-2 space-y-2">
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
-                                    const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+                                    const gameOdds = fmtOdds(sels.reduce((a, s) => a * s.odds, 1));
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
@@ -1564,7 +1565,7 @@ export default function Admin() {
                                             </span>
                                           </div>
                                           <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">
-                                            {gameOdds.toFixed(2)}
+                                            {gameOdds}
                                           </span>
                                         </div>
 
@@ -1592,7 +1593,7 @@ export default function Admin() {
                                                     }`}>
                                                       {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
                                                     </p>
-                                                    <span className="text-yellow-400 font-bold text-xs flex-shrink-0">@{sel.odds.toFixed(2)}</span>
+                                                    <span className="text-yellow-400 font-bold text-xs flex-shrink-0">@{fmtOdds(sel.odds)}</span>
                                                   </div>
                                                 </div>
                                                 {/* Botões ganhou/perdeu */}
@@ -1647,7 +1648,7 @@ export default function Admin() {
                                 Retorno: <span className="font-bold text-primary">R$ {bet.potentialWin.toFixed(2)}</span>
                               </span>
                               <span className="text-muted-foreground">
-                                Odd: {bet.totalOdds.toFixed(2)}
+                                Odd: {fmtOdds(bet.totalOdds)}
                               </span>
                             </div>
                           </div>

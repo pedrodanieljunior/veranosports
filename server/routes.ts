@@ -1699,6 +1699,12 @@ export async function registerRoutes(
     try {
       const validatedData = insertBetSlipSchema.parse(req.body);
 
+      // Arredondar odds para 2 casas decimais antes de salvar (evita imprecisão float)
+      validatedData.selections = validatedData.selections.map(sel => ({
+        ...sel,
+        odds: Math.round(sel.odds * 100) / 100,
+      }));
+
       // Verificar se algum jogo já iniciou
       const now = new Date();
       for (const sel of validatedData.selections) {
@@ -1781,8 +1787,8 @@ export async function registerRoutes(
         });
       }
 
-      const totalOdds = validatedData.selections.reduce((acc, sel) => acc * sel.odds, 1);
-      let potentialWin = validatedData.stake * totalOdds;
+      const totalOdds = Math.round(validatedData.selections.reduce((acc, sel) => acc * sel.odds, 1) * 100) / 100;
+      let potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
 
       if (potentialWin > MAX_BET_PAYOUT) {
         return res.status(400).json({

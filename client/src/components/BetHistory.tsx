@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
+import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
 
 interface BetHistoryProps {
@@ -34,11 +35,11 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     for (const [game, sels] of Object.entries(gameGrouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey, s.homeTeam, s.awayTeam)} @${s.odds.toFixed(2)}`);
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey, s.homeTeam, s.awayTeam)} @${fmtOdds(s.odds)}`);
       }
       lines.push("");
     }
-    lines.push(`📊 Odds Total: ${bet.totalOdds.toFixed(2)}`);
+    lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     lines.push(`🏆 Retorno: R$ ${bet.potentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
@@ -75,7 +76,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       <div className="space-y-3">
         {Object.entries(grouped).map(([gameId, sels]) => {
           const first = sels[0];
-          const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+          const gameOdds = fmtOdds(sels.reduce((a, s) => a * s.odds, 1));
           return (
             <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
               <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
@@ -86,7 +87,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
                   </span>
                 </div>
                 <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
-                  {gameOdds.toFixed(2)}
+                  {gameOdds}
                 </span>
               </div>
 
@@ -106,7 +107,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
                           </div>
                           <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                         </div>
-                        <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{sel.odds.toFixed(2)}</span>
+                        <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{fmtOdds(sel.odds)}</span>
                       </div>
                     </div>
                   ))}
@@ -120,7 +121,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       <div className="rounded-xl bg-muted border border-border overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-muted-foreground text-sm">Odds total</span>
-          <span className="text-foreground font-bold text-lg">{bet.totalOdds.toFixed(2)}</span>
+          <span className="text-foreground font-bold text-lg">{fmtOdds(bet.totalOdds)}</span>
         </div>
         <div className="flex items-center justify-between px-4 py-2 border-b border-border">
           <span className="text-muted-foreground text-sm">Valor Apostado</span>

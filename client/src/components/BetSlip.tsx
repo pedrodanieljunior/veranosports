@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
+import { fmtOdds, roundOdds } from "@/lib/formatOdds";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
@@ -83,11 +84,11 @@ export function BetSlip({
     for (const [game, sels] of Object.entries(grouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${s.odds.toFixed(2)}`);
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${fmtOdds(s.odds)}`);
       }
       lines.push("");
     }
-    lines.push(`📊 Odds Total: ${placedBet.totalOdds.toFixed(2)}`);
+    lines.push(`📊 Odds Total: ${fmtOdds(placedBet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
     lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
@@ -118,11 +119,11 @@ export function BetSlip({
     for (const [game, sels] of Object.entries(grouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${s.odds.toFixed(2)}`);
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${fmtOdds(s.odds)}`);
       }
       lines.push("");
     }
-    lines.push(`📊 Odds Total: ${placedBet.totalOdds.toFixed(2)}`);
+    lines.push(`📊 Odds Total: ${fmtOdds(placedBet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
     lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
@@ -140,7 +141,7 @@ export function BetSlip({
     }
   };
   
-  const totalOdds = selections.reduce((acc, sel) => acc * sel.odds, 1);
+  const totalOdds = roundOdds(selections.reduce((acc, sel) => acc * sel.odds, 1));
   const rawPotentialWin = parseFloat(stake || "0") * totalOdds;
   const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
   const isCappedAtMax = rawPotentialWin > MAX_BET_PAYOUT;
@@ -242,8 +243,8 @@ export function BetSlip({
                 </div>
                 
                 {(() => {
-                  const displayOdds = Math.round(placedBet.selections.reduce((acc, s) => acc * s.odds, 1) * 100) / 100;
-                  const potentialPayout = Math.min(placedBet.stake * displayOdds, MAX_BET_PAYOUT);
+                  const displayOdds = roundOdds(placedBet.selections.reduce((acc, s) => acc * s.odds, 1));
+                  const potentialPayout = Math.min(Math.round(placedBet.stake * displayOdds * 100) / 100, MAX_BET_PAYOUT);
                   const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
                   const lines: string[] = [
                     `*FW Sports - Comprovante de Aposta*`,
@@ -251,13 +252,13 @@ export function BetSlip({
                     `Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
                     `Data: ${betDate}`,
                     `Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
-                    `Odds totais: *${displayOdds.toFixed(2)}*`,
+                    `Odds totais: *${fmtOdds(displayOdds)}*`,
                     `Retorno potencial: *R$ ${potentialPayout.toFixed(2).replace(".", ",")}*`,
                     ``,
                     `*Selecoes:*`,
                     ...placedBet.selections.map((s, i) => [
                       `${i + 1}. ${s.homeTeam} x ${s.awayTeam}`,
-                      `   ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${s.odds.toFixed(2)}`,
+                      `   ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${fmtOdds(s.odds)}`,
                     ]).flat(),
                     ``,
                     `Segue o comprovante do pagamento PIX em anexo.`,
@@ -300,7 +301,7 @@ export function BetSlip({
                 <div className="space-y-3">
                   {Object.entries(grouped).map(([gameId, sels]) => {
                     const first = sels[0];
-                    const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+                    const gameOdds = roundOdds(sels.reduce((a, s) => a * s.odds, 1));
                     return (
                       <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-game-${gameId}`}>
                         <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
@@ -311,7 +312,7 @@ export function BetSlip({
                             </span>
                           </div>
                           <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
-                            {gameOdds.toFixed(2)}
+                            {fmtOdds(gameOdds)}
                           </span>
                         </div>
 
@@ -331,7 +332,7 @@ export function BetSlip({
                                     </div>
                                     <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                   </div>
-                                  <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{sel.odds.toFixed(2)}</span>
+                                  <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{fmtOdds(sel.odds)}</span>
                                 </div>
                               </div>
                             ))}
@@ -347,7 +348,7 @@ export function BetSlip({
             <div className="mt-4 rounded-xl bg-muted border border-border overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <span className="text-muted-foreground text-sm">Odds total</span>
-                <span className="text-foreground font-bold text-lg">{placedBet.totalOdds.toFixed(2)}</span>
+                <span className="text-foreground font-bold text-lg">{fmtOdds(placedBet.totalOdds)}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-2 border-b border-border">
                 <span className="text-muted-foreground text-sm">Valor Apostado</span>
@@ -415,7 +416,7 @@ export function BetSlip({
           <div className="flex items-center gap-3">
             {selections.length > 0 && (
               <span className="text-sm font-mono font-bold text-primary">
-                {totalOdds.toFixed(2)}x
+                {fmtOdds(totalOdds)}x
               </span>
             )}
             <ChevronUp className="w-5 h-5 text-muted-foreground" />
@@ -494,7 +495,7 @@ export function BetSlip({
                   <div className="space-y-3">
                     {Object.entries(grouped).map(([gameId, sels]) => {
                       const first = sels[0];
-                      const gameOdds = sels.reduce((a, s) => a * s.odds, 1);
+                      const gameOdds = roundOdds(sels.reduce((a, s) => a * s.odds, 1));
                       return (
                         <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
                           <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border">
@@ -505,7 +506,7 @@ export function BetSlip({
                               </span>
                             </div>
                             <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
-                              {gameOdds.toFixed(2)}
+                              {fmtOdds(gameOdds)}
                             </span>
                           </div>
                           <div className="px-3 py-2.5">
@@ -524,7 +525,7 @@ export function BetSlip({
                                     <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                   </div>
                                   <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
-                                    <span className="text-yellow-400 font-bold text-xs">{sel.odds.toFixed(2)}</span>
+                                    <span className="text-yellow-400 font-bold text-xs">{fmtOdds(sel.odds)}</span>
                                     <button
                                       onClick={() => onRemoveSelection(sel.id)}
                                       className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors"
@@ -626,7 +627,7 @@ export function BetSlip({
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Odds Total</span>
-                  <span className="font-medium">{totalOdds.toFixed(2)}</span>
+                  <span className="font-medium">{fmtOdds(totalOdds)}</span>
                 </div>
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
