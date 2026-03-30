@@ -245,21 +245,21 @@ export function BetSlip({
                   const potentialPayout = Math.min(placedBet.stake * placedBet.totalOdds, MAX_BET_PAYOUT);
                   const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
                   const lines: string[] = [
-                    `🏆 *FW Sports – Comprovante de Aposta*`,
+                    `*FW Sports - Comprovante de Aposta*`,
                     ``,
-                    `🆔 Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
-                    `📅 Data: ${betDate}`,
-                    `💰 Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
-                    `🎯 Odds totais: *${placedBet.totalOdds.toFixed(2)}*`,
-                    `🤑 Retorno potencial: *R$ ${potentialPayout.toFixed(2).replace(".", ",")}*`,
+                    `Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
+                    `Data: ${betDate}`,
+                    `Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
+                    `Odds totais: *${placedBet.totalOdds.toFixed(2)}*`,
+                    `Retorno potencial: *R$ ${potentialPayout.toFixed(2).replace(".", ",")}*`,
                     ``,
-                    `📋 *Seleções:*`,
+                    `*Selecoes:*`,
                     ...placedBet.selections.map((s, i) => [
                       `${i + 1}. ${s.homeTeam} x ${s.awayTeam}`,
-                      `   ▸ ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${s.odds.toFixed(2)}`,
+                      `   ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${s.odds.toFixed(2)}`,
                     ]).flat(),
                     ``,
-                    `Segue o comprovante do pagamento PIX em anexo. ✅`,
+                    `Segue o comprovante do pagamento PIX em anexo.`,
                   ];
                   const waText = encodeURIComponent(lines.join("\n"));
                   return (
