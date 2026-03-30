@@ -71,6 +71,47 @@ app.use((req, res, next) => {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   await storage.seedMarketSettings();
+
+  // Migração de dados: arredondar odds e recalcular retornos em todas as apostas
+  try {
+    const { db } = await import("./db");
+    const { sql } = await import("drizzle-orm");
+    // 1. Arredondar odds individuais nas selections (JSONB)
+    await db.execute(sql`
+      UPDATE bet_slips
+      SET selections = (
+        SELECT jsonb_agg(
+          sel || jsonb_build_object('odds', ROUND((sel->>'odds')::numeric, 2))
+        )
+        FROM jsonb_array_elements(selections) AS sel
+      )
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(selections) AS sel
+        WHERE ABS(ROUND((sel->>'odds')::numeric, 2) - (sel->>'odds')::numeric) > 0.0001
+      )
+    `);
+    // 2. Recalcular total_odds como produto das odds arredondadas
+    await db.execute(sql`
+      UPDATE bet_slips
+      SET total_odds = ROUND(
+        (SELECT EXP(SUM(LN(ROUND((sel->>'odds')::numeric, 2))))
+         FROM jsonb_array_elements(selections) AS sel)
+      ::numeric, 2)
+    `);
+    // 3. Recalcular potential_win = stake * total_odds (limitado ao cap)
+    await db.execute(sql`
+      UPDATE bet_slips
+      SET potential_win = LEAST(
+        ROUND((stake * total_odds)::numeric, 2),
+        15000
+      )
+      WHERE ABS(ROUND((stake * total_odds)::numeric, 2) - potential_win::numeric) > 0.01
+    `);
+    log("[Migration] Odds e retornos arredondados com sucesso", "db");
+  } catch (err) {
+    log(`[Migration] Falha na migração de odds: ${err}`, "db");
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
