@@ -21,6 +21,7 @@ export const leagueTranslations: Record<string, string> = {
   "soccer_usa_mls": "MLS – Estados Unidos",
   "soccer_brazil_copa_do_brasil": "Copa do Brasil",
   "soccer_conmebol_copa_sudamericana": "Copa Sul-Americana",
+  "soccer_international_friendlies": "Amistosos Internacionais",
   "soccer_england_efl_cup": "Copa da Liga Inglesa",
   "soccer_spain_segunda_division": "Segunda Divisão – Espanha",
   "soccer_germany_bundesliga2": "2. Bundesliga – Alemanha",

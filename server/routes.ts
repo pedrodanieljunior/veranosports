@@ -153,6 +153,7 @@ const ALLOWED_LEAGUES_ORDERED = [
   "soccer_usa_mls",
   "soccer_brazil_copa_do_brasil",
   "soccer_conmebol_copa_sudamericana",
+  "soccer_international_friendlies",
 ];
 const ALLOWED_LEAGUES_SET = new Set(ALLOWED_LEAGUES_ORDERED);
 
@@ -558,6 +559,7 @@ export async function registerRoutes(
     "soccer_usa_mls": 253,                      // MLS
     "soccer_mexico_ligamx": 262,                // Liga MX
     "soccer_japan_j_league": 98,               // J1 League
+    "soccer_international_friendlies": 10,     // Amistosos Internacionais
   };
 
   // Ligas com temporada no formato calendário (jan–dez), não europeu (ago–jul)
@@ -565,6 +567,7 @@ export async function registerRoutes(
     71, 72, 73,    // Brasileirão A, B, Copa do Brasil
     11, 13, 128,   // Copa Liberta, Sudamericana, Argentina
     253, 262, 98,  // MLS, Liga MX, J-League
+    10,            // Amistosos Internacionais
   ]);
 
   app.get("/api/sports", async (req, res) => {
@@ -592,6 +595,7 @@ export async function registerRoutes(
         "soccer_spain_la_liga": "La Liga",
         "soccer_turkey_super_league": "Superliga",
         "soccer_argentina_primera_division": "Primera División",
+        "soccer_international_friendlies": "Amistosos Internacionais",
       };
 
       const soccerSports = ALLOWED_LEAGUES_ORDERED.map(key => ({
@@ -709,6 +713,7 @@ export async function registerRoutes(
           { id: 262, key: "soccer_mexico_ligamx", name: "Liga MX – México", season: brazilianSeason },
           { id: 253, key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
           { id: 98, key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
+          { id: 10, key: "soccer_international_friendlies", name: "Amistosos Internacionais", season: brazilianSeason },
         ];
 
         const footballLeagues = allFootballLeagues.filter(l => !coveredSportKeys.has(l.key));
@@ -1094,6 +1099,7 @@ export async function registerRoutes(
           262: { key: "soccer_mexico_ligamx", name: "Liga MX – México", season: brazilianSeason },
           253: { key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
           98:  { key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
+          10:  { key: "soccer_international_friendlies", name: "Amistosos Internacionais", season: brazilianSeason },
         };
 
         // Passo 1: buscar IDs dos times que correspondem ao termo de pesquisa
@@ -1280,6 +1286,7 @@ export async function registerRoutes(
           "soccer_mexico_ligamx": { id: 262, name: "Liga MX", season: brazilianSeason },
           "soccer_usa_mls": { id: 253, name: "MLS", season: 2026 },
           "soccer_japan_j_league": { id: 98, name: "J1 League", season: 2026 },
+          "soccer_international_friendlies": { id: 10, name: "Amistosos Internacionais", season: brazilianSeason },
         };
         
         const league = leagueMapping[sportKey];
