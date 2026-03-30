@@ -229,7 +229,7 @@ export function BetSlip({
                     data-testid="button-copy-pix"
                   >
                     <Copy className="w-4 h-4 mr-2" />
-                    Copiar
+                    Copiar PIX
                   </Button>
                   <Button 
                     className="flex-1 bg-green-600 text-white hover:bg-green-700" 
@@ -237,7 +237,7 @@ export function BetSlip({
                     data-testid="button-share-pix"
                   >
                     <Share2 className="w-4 h-4 mr-2" />
-                    Compartilhar
+                    Compartilhar PIX
                   </Button>
                 </div>
                 
