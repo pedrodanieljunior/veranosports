@@ -292,7 +292,7 @@ export function BetSlip({
                           Enviar Comprovante via Telegram
                         </Button>
                       </a>
-                      <p className="text-xs text-center text-gray-500 mt-1">
+                      <p className="text-xs text-center text-gray-500 mt-1 font-bold">
                         Clique para enviar o comprovante PIX e ativar seu bilhete
                       </p>
                     </>
