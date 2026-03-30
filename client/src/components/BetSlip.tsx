@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
-import { SiTelegram, SiWhatsapp } from "react-icons/si";
+import { SiWhatsapp } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
@@ -278,20 +278,7 @@ export function BetSlip({
                           Enviar Comprovante via WhatsApp
                         </Button>
                       </a>
-                      <a
-                        href={`https://t.me/Fw26_bot?start=${placedBet.id.slice(0, 8).toLowerCase()}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-2"
-                      >
-                        <Button
-                          className="w-full bg-[#0088cc] text-white hover:bg-[#0077b5]"
-                          data-testid="button-telegram-comprovante"
-                        >
-                          <SiTelegram className="w-5 h-5 mr-2" />
-                          Enviar Comprovante via Telegram
-                        </Button>
-                      </a>
+
                       <p className="text-xs text-center text-black mt-1 font-bold">
                         Clique para enviar o comprovante PIX e ativar seu bilhete
                       </p>

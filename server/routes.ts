@@ -8,7 +8,6 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { processUpdate, notifyWinner } from "./telegram-bot";
 
 const bannerStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -2110,10 +2109,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Bet slip not found" });
       }
 
-      if (status === "won" && updated.telegramChatId) {
-        notifyWinner(updated).catch(() => {});
-      }
-      
       res.json(updated);
     } catch (error) {
       console.error("Error updating bet status:", error);
@@ -2703,9 +2698,6 @@ export async function registerRoutes(
         if (allSelectionsResolved) {
           const newStatus = allSelectionsWon ? "won" : "lost";
           const updatedBetAuto = await storage.updateBetSlipStatus(bet.id, newStatus);
-          if (newStatus === "won" && updatedBetAuto?.telegramChatId) {
-            notifyWinner(updatedBetAuto).catch(() => {});
-          }
           updatedCount++;
           results.push({
             betId: bet.id,
@@ -2755,10 +2747,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Bilhete não encontrado" });
       }
 
-      if (status === "won" && updated.telegramChatId) {
-        notifyWinner(updated).catch(() => {});
-      }
-
       res.json(updated);
     } catch (error) {
       console.error("Error updating bet status:", error);
@@ -2779,13 +2767,6 @@ export async function registerRoutes(
       const updated = await storage.updateSelectionResult(betId, selectionId, result);
       if (!updated) {
         return res.status(404).json({ error: "Bilhete ou seleção não encontrada" });
-      }
-
-      // Notificar cliente se o bilhete ficou ganho
-      if (updated.status === "won" && updated.telegramChatId) {
-        notifyWinner(updated).catch((err) => {
-          console.error("[Admin] Erro ao notificar vencedor:", err);
-        });
       }
 
       res.json(updated);
@@ -3098,9 +3079,6 @@ export async function registerRoutes(
       if (newStatus !== "pending") {
         const r = await storage.updateBetSlipStatus(updatedBet.id, newStatus);
         if (r) updatedBet = r;
-        if (newStatus === "won" && updatedBet.telegramChatId) {
-          notifyWinner(updatedBet).catch(() => {});
-        }
       }
 
       const resolvedCount = resolvedSelections.filter(s => s.result !== "pending").length;
@@ -3132,34 +3110,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Bilhete não encontrado" });
       }
 
-      // Notificar o cliente via Telegram API direta (funciona independente do polling)
-      if (verified && bet.telegramChatId) {
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (token) {
-          try {
-            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: parseInt(bet.telegramChatId, 10),
-                text:
-                  `✅ *Pagamento Confirmado!*\n\n` +
-                  `🎫 Bilhete: \`${bet.id.slice(0, 8).toUpperCase()}\`\n` +
-                  `💰 Valor pago: R$ ${bet.stake.toFixed(2)}\n` +
-                  `🎯 Retorno potencial: R$ ${bet.potentialWin.toFixed(2)}\n\n` +
-                  `Seu bilhete está ativo! Boa sorte! 🍀`,
-                parse_mode: "Markdown",
-              }),
-            });
-            console.log(`[Admin] Notificação enviada ao cliente ${bet.telegramChatId} para bilhete ${id}`);
-          } catch (tgErr) {
-            console.error("[Admin] Erro ao enviar notificação Telegram:", tgErr);
-          }
-        }
-      } else if (verified && !bet.telegramChatId) {
-        console.log(`[Admin] Bilhete ${id} verificado mas sem telegramChatId — cliente não notificado.`);
-      }
-
       res.json(updated);
     } catch (error) {
       console.error("Error updating verification status:", error);
@@ -3167,18 +3117,7 @@ export async function registerRoutes(
     }
   });
 
-  // Webhook do Telegram — recebe updates sem polling, sem conflito entre processos
-  app.post("/api/telegram-webhook", async (req, res) => {
-    try {
-      const update = req.body;
-      console.log(`[Webhook] Update recebido: ${JSON.stringify(update).slice(0, 200)}`);
-      await processUpdate(update);
-      res.sendStatus(200);
-    } catch (err) {
-      console.error("[Webhook] Erro ao processar update:", err);
-      res.sendStatus(500);
-    }
-  });
+
 
   return httpServer;
 }
