@@ -882,8 +882,10 @@ export async function registerRoutes(
         return new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime();
       });
 
-      // Remover campo interno _priority
-      const finalGames = allGames.map(({ _priority, ...g }) => g);
+      // Remover campo interno _priority e filtrar jogos sem odds disponíveis
+      const finalGames = allGames
+        .filter(g => g.bookmakers && g.bookmakers.length > 0)
+        .map(({ _priority, ...g }) => g);
 
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
       cache.set(cacheKey, finalGames, 5 * 60 * 1000); // cache 5 minutos
@@ -1392,9 +1394,10 @@ export async function registerRoutes(
         }
       }
       
-      cache.set(cacheKey, games, CACHE_TTL_ODDS);
+      const gamesWithOdds = games.filter((g: any) => g.bookmakers && g.bookmakers.length > 0);
+      cache.set(cacheKey, gamesWithOdds, CACHE_TTL_ODDS);
       const blockedIds = await storage.getBlockedGameIds();
-      res.json(blockedIds.size > 0 ? games.filter((g: any) => !blockedIds.has(g.id)) : games);
+      res.json(blockedIds.size > 0 ? gamesWithOdds.filter((g: any) => !blockedIds.has(g.id)) : gamesWithOdds);
     } catch (error) {
       console.error("Error fetching odds:", error);
       res.status(500).json({ error: "Failed to fetch odds" });
