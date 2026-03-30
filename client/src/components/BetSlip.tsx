@@ -242,7 +242,8 @@ export function BetSlip({
                 </div>
                 
                 {(() => {
-                  const potentialPayout = Math.min(placedBet.stake * placedBet.totalOdds, MAX_BET_PAYOUT);
+                  const displayOdds = Math.round(placedBet.selections.reduce((acc, s) => acc * s.odds, 1) * 100) / 100;
+                  const potentialPayout = Math.min(placedBet.stake * displayOdds, MAX_BET_PAYOUT);
                   const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
                   const lines: string[] = [
                     `*FW Sports - Comprovante de Aposta*`,
@@ -250,7 +251,7 @@ export function BetSlip({
                     `Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
                     `Data: ${betDate}`,
                     `Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
-                    `Odds totais: *${placedBet.totalOdds.toFixed(2)}*`,
+                    `Odds totais: *${displayOdds.toFixed(2)}*`,
                     `Retorno potencial: *R$ ${potentialPayout.toFixed(2).replace(".", ",")}*`,
                     ``,
                     `*Selecoes:*`,
