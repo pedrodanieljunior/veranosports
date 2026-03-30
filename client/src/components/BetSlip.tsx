@@ -241,37 +241,63 @@ export function BetSlip({
                   </Button>
                 </div>
                 
-                <a
-                  href={`https://wa.me/5592981128080?text=${encodeURIComponent(`Olá! Segue o comprovante do meu bilhete FW Sports.\nID do bilhete: ${placedBet.id.slice(0, 8).toUpperCase()}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block mt-3"
-                >
-                  <Button
-                    className="w-full bg-[#25D366] text-white hover:bg-[#1ebe5d]"
-                    data-testid="button-whatsapp-comprovante"
-                  >
-                    <SiWhatsapp className="w-5 h-5 mr-2" />
-                    Enviar Comprovante via WhatsApp
-                  </Button>
-                </a>
-                <a 
-                  href={`https://t.me/Fw26_bot?start=${placedBet.id.slice(0, 8).toLowerCase()}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block mt-2"
-                >
-                  <Button 
-                    className="w-full bg-[#0088cc] text-white hover:bg-[#0077b5]" 
-                    data-testid="button-telegram-comprovante"
-                  >
-                    <SiTelegram className="w-5 h-5 mr-2" />
-                    Enviar Comprovante via Telegram
-                  </Button>
-                </a>
-                <p className="text-xs text-center text-gray-500 mt-1">
-                  Clique para enviar o comprovante PIX e ativar seu bilhete
-                </p>
+                {(() => {
+                  const potentialPayout = Math.min(placedBet.stake * placedBet.totalOdds, MAX_BET_PAYOUT);
+                  const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+                  const lines: string[] = [
+                    `🏆 *FW Sports – Comprovante de Aposta*`,
+                    ``,
+                    `🆔 Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
+                    `📅 Data: ${betDate}`,
+                    `💰 Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
+                    `🎯 Odds totais: *${placedBet.totalOdds.toFixed(2)}*`,
+                    `🤑 Retorno potencial: *R$ ${potentialPayout.toFixed(2).replace(".", ",")}*`,
+                    ``,
+                    `📋 *Seleções:*`,
+                    ...placedBet.selections.map((s, i) => [
+                      `${i + 1}. ${s.homeTeam} x ${s.awayTeam}`,
+                      `   ▸ ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${s.odds.toFixed(2)}`,
+                    ]).flat(),
+                    ``,
+                    `Segue o comprovante do pagamento PIX em anexo. ✅`,
+                  ];
+                  const waText = encodeURIComponent(lines.join("\n"));
+                  return (
+                    <>
+                      <a
+                        href={`https://wa.me/5592981128080?text=${waText}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-3"
+                      >
+                        <Button
+                          className="w-full bg-[#25D366] text-white hover:bg-[#1ebe5d]"
+                          data-testid="button-whatsapp-comprovante"
+                        >
+                          <SiWhatsapp className="w-5 h-5 mr-2" />
+                          Enviar Comprovante via WhatsApp
+                        </Button>
+                      </a>
+                      <a
+                        href={`https://t.me/Fw26_bot?start=${placedBet.id.slice(0, 8).toLowerCase()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-2"
+                      >
+                        <Button
+                          className="w-full bg-[#0088cc] text-white hover:bg-[#0077b5]"
+                          data-testid="button-telegram-comprovante"
+                        >
+                          <SiTelegram className="w-5 h-5 mr-2" />
+                          Enviar Comprovante via Telegram
+                        </Button>
+                      </a>
+                      <p className="text-xs text-center text-gray-500 mt-1">
+                        Clique para enviar o comprovante PIX e ativar seu bilhete
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
             )}
             
