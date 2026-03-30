@@ -745,13 +745,25 @@ export async function registerRoutes(
         }
 
         // Coletar fixtures por liga
+        // Indicadores de times de base/seleções jovens — filtrados dos amistosos
+        const YOUTH_INDICATORS = ["U21", "U20", "U19", "U23", "U18", "U17", "U16", "Sub-21", "Sub-20", "Sub-23", "Sub 21", "Sub 20", "Sub 23", "Under-21", "Under-20", "Under-23"];
+        const isYouthTeam = (name: string) => YOUTH_INDICATORS.some(ind => name.includes(ind));
+
         const fixturesByLeague: Array<{ league: { id: number; key: string; name: string; season: number }; fixtures: any[] }> = [];
         for (const { league, fixtures } of fixtureResults) {
+          const isFriendlies = league.id === 10;
+          // Amistosos: excluir seleções jovens e usar limite maior (até 30 jogos)
           const upcoming = fixtures.filter((f: any) => {
             const status = f.fixture?.status?.short;
             const gameDate = new Date(f.fixture?.date).getTime();
-            return status === "NS" && gameDate > nowMs && gameDate <= next24hMs;
-          }).slice(0, 5);
+            if (status !== "NS" || gameDate <= nowMs || gameDate > next24hMs) return false;
+            if (isFriendlies) {
+              const home = f.teams?.home?.name || "";
+              const away = f.teams?.away?.name || "";
+              if (isYouthTeam(home) || isYouthTeam(away)) return false;
+            }
+            return true;
+          }).slice(0, isFriendlies ? 30 : 5);
           if (upcoming.length > 0) fixturesByLeague.push({ league, fixtures: upcoming });
         }
 
