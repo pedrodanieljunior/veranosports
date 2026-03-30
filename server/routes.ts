@@ -375,6 +375,12 @@ const ALLOWED_LEAGUES_ORDERED = [
   "soccer_brazil_copa_do_brasil",
   "soccer_conmebol_copa_sudamericana",
   "soccer_international_friendlies",
+  "soccer_wc_qualifiers_conmebol",
+  "soccer_wc_qualifiers_europe",
+  "soccer_wc_qualifiers_concacaf",
+  "soccer_wc_qualifiers_caf",
+  "soccer_wc_qualifiers_afc",
+  "soccer_wc_intercontinental",
 ];
 const ALLOWED_LEAGUES_SET = new Set(ALLOWED_LEAGUES_ORDERED);
 
@@ -781,6 +787,13 @@ export async function registerRoutes(
     "soccer_mexico_ligamx": 262,                // Liga MX
     "soccer_japan_j_league": 98,               // J1 League
     "soccer_international_friendlies": 10,     // Amistosos Internacionais
+    // Qualificatórias Copa do Mundo 2026
+    "soccer_wc_qualifiers_conmebol": 34,        // Eliminatórias – CONMEBOL
+    "soccer_wc_qualifiers_europe": 32,          // Eliminatórias – UEFA
+    "soccer_wc_qualifiers_concacaf": 31,        // Eliminatórias – CONCACAF
+    "soccer_wc_qualifiers_caf": 29,             // Eliminatórias – África
+    "soccer_wc_qualifiers_afc": 30,             // Eliminatórias – Ásia
+    "soccer_wc_intercontinental": 43,           // Playoffs Intercontinentais
   };
 
   // Ligas com temporada no formato calendário (jan–dez), não europeu (ago–jul)
@@ -789,6 +802,7 @@ export async function registerRoutes(
     11, 13, 128,   // Copa Liberta, Sudamericana, Argentina
     253, 262, 98,  // MLS, Liga MX, J-League
     10,            // Amistosos Internacionais
+    34, 32, 31, 29, 30, 43, // Qualificatórias Copa do Mundo
   ]);
 
   app.get("/api/sports", async (req, res) => {
@@ -817,6 +831,12 @@ export async function registerRoutes(
         "soccer_turkey_super_league": "Superliga",
         "soccer_argentina_primera_division": "Primera División",
         "soccer_international_friendlies": "Amistosos Internacionais",
+        "soccer_wc_qualifiers_conmebol": "Eliminatórias Copa – Sul-Americana",
+        "soccer_wc_qualifiers_europe": "Eliminatórias Copa – UEFA",
+        "soccer_wc_qualifiers_concacaf": "Eliminatórias Copa – CONCACAF",
+        "soccer_wc_qualifiers_caf": "Eliminatórias Copa – África",
+        "soccer_wc_qualifiers_afc": "Eliminatórias Copa – Ásia",
+        "soccer_wc_intercontinental": "Playoffs Intercontinentais Copa",
       };
 
       const soccerSports = ALLOWED_LEAGUES_ORDERED.map(key => ({
@@ -935,6 +955,13 @@ export async function registerRoutes(
           { id: 253, key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
           { id: 98, key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
           { id: 10, key: "soccer_international_friendlies", name: "Amistosos Internacionais", season: brazilianSeason },
+          // Qualificatórias Copa do Mundo 2026
+          { id: 34, key: "soccer_wc_qualifiers_conmebol", name: "Eliminatórias Copa – CONMEBOL", season: brazilianSeason },
+          { id: 32, key: "soccer_wc_qualifiers_europe", name: "Eliminatórias Copa – UEFA", season: brazilianSeason },
+          { id: 31, key: "soccer_wc_qualifiers_concacaf", name: "Eliminatórias Copa – CONCACAF", season: brazilianSeason },
+          { id: 29, key: "soccer_wc_qualifiers_caf", name: "Eliminatórias Copa – África", season: brazilianSeason },
+          { id: 30, key: "soccer_wc_qualifiers_afc", name: "Eliminatórias Copa – Ásia", season: brazilianSeason },
+          { id: 43, key: "soccer_wc_intercontinental", name: "Playoffs Intercontinentais Copa", season: brazilianSeason },
         ];
 
         const footballLeagues = allFootballLeagues.filter(l => !coveredSportKeys.has(l.key));
@@ -1335,6 +1362,12 @@ export async function registerRoutes(
           253: { key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
           98:  { key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
           10:  { key: "soccer_international_friendlies", name: "Amistosos Internacionais", season: brazilianSeason },
+          34:  { key: "soccer_wc_qualifiers_conmebol", name: "Eliminatórias Copa – CONMEBOL", season: brazilianSeason },
+          32:  { key: "soccer_wc_qualifiers_europe", name: "Eliminatórias Copa – UEFA", season: brazilianSeason },
+          31:  { key: "soccer_wc_qualifiers_concacaf", name: "Eliminatórias Copa – CONCACAF", season: brazilianSeason },
+          29:  { key: "soccer_wc_qualifiers_caf", name: "Eliminatórias Copa – África", season: brazilianSeason },
+          30:  { key: "soccer_wc_qualifiers_afc", name: "Eliminatórias Copa – Ásia", season: brazilianSeason },
+          43:  { key: "soccer_wc_intercontinental", name: "Playoffs Intercontinentais Copa", season: brazilianSeason },
         };
 
         // Passo 1: buscar IDs dos times que correspondem ao termo de pesquisa
@@ -1522,6 +1555,12 @@ export async function registerRoutes(
           "soccer_usa_mls": { id: 253, name: "MLS", season: 2026 },
           "soccer_japan_j_league": { id: 98, name: "J1 League", season: 2026 },
           "soccer_international_friendlies": { id: 10, name: "Amistosos Internacionais", season: brazilianSeason },
+          "soccer_wc_qualifiers_conmebol": { id: 34, name: "Eliminatórias Copa – CONMEBOL", season: brazilianSeason },
+          "soccer_wc_qualifiers_europe": { id: 32, name: "Eliminatórias Copa – UEFA", season: brazilianSeason },
+          "soccer_wc_qualifiers_concacaf": { id: 31, name: "Eliminatórias Copa – CONCACAF", season: brazilianSeason },
+          "soccer_wc_qualifiers_caf": { id: 29, name: "Eliminatórias Copa – África", season: brazilianSeason },
+          "soccer_wc_qualifiers_afc": { id: 30, name: "Eliminatórias Copa – Ásia", season: brazilianSeason },
+          "soccer_wc_intercontinental": { id: 43, name: "Playoffs Intercontinentais Copa", season: brazilianSeason },
         };
         
         const league = leagueMapping[sportKey];
