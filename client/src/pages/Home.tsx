@@ -116,7 +116,7 @@ export default function Home() {
   }, [mergedTodayGames, leagueOddsResults]);
 
   const games = selectedSport ? leagueGames : todayGamesWithOdds;
-  const gamesLoading = selectedSport ? leagueGamesLoading : (todayGamesLoading && brasileiraoLoading);
+  const gamesLoading = selectedSport ? leagueGamesLoading : (todayGamesLoading || brasileiraoLoading);
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
 
   const isSearching = debouncedSearch.trim().length >= 2;
