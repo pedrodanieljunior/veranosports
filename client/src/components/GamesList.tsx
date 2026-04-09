@@ -33,13 +33,55 @@ export function GamesList({
   if (isLoading) {
     return (
       <div className="flex-1 p-4 sm:p-6 bg-transparent">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
-              <Skeleton className="h-4 w-24 mb-3" />
-              <Skeleton className="h-5 w-full mb-2" />
-              <Skeleton className="h-4 w-20 mb-2" />
-              <Skeleton className="h-5 w-full" />
+        {/* Cabeçalho de carregamento */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-2 h-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-2 h-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+          <span className={`text-sm font-medium ${isDark ? "text-white/70" : "text-gray-500"}`}>
+            Carregando jogos disponíveis...
+          </span>
+        </div>
+
+        {/* Skeletons no estilo dos cards reais */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className={`rounded-lg border animate-pulse ${isDark ? "bg-[#4a4a4a] border-[#5a5a5a]" : "bg-white border-gray-200"}`}
+            >
+              {/* Header do card (horário) */}
+              <div className={`flex items-center gap-2 px-3 py-2 border-b rounded-t-lg ${isDark ? "border-[#5a5a5a] bg-[#3d3d3d]" : "border-gray-100 bg-gray-50"}`}>
+                <Skeleton className={`h-3 w-20 ${isDark ? "bg-white/10" : ""}`} />
+                <div className="ml-auto">
+                  <Skeleton className={`h-3 w-4 ${isDark ? "bg-white/10" : ""}`} />
+                </div>
+              </div>
+
+              <div className="p-2.5 space-y-2">
+                {/* Time da casa */}
+                <div className="flex items-center gap-2">
+                  <Skeleton className={`w-6 h-6 rounded-full shrink-0 ${isDark ? "bg-white/10" : ""}`} />
+                  <Skeleton className={`h-3.5 w-28 ${isDark ? "bg-white/10" : ""}`} />
+                </div>
+                {/* Time visitante */}
+                <div className="flex items-center gap-2">
+                  <Skeleton className={`w-6 h-6 rounded-full shrink-0 ${isDark ? "bg-white/10" : ""}`} />
+                  <Skeleton className={`h-3.5 w-24 ${isDark ? "bg-white/10" : ""}`} />
+                </div>
+
+                {/* Botões de odds (1 X 2) */}
+                <div className="grid grid-cols-3 gap-1.5 mt-2">
+                  {[0, 1, 2].map((j) => (
+                    <Skeleton
+                      key={j}
+                      className={`h-9 rounded-md ${isDark ? "bg-white/10" : ""}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
         </div>
