@@ -791,18 +791,18 @@ export default function Admin() {
                                     {bet.selections.map(s=>`${s.homeTeam} x ${s.awayTeam}`).join(" · ")}
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                  <div>
+                                <div className="flex flex-wrap items-center gap-3 mt-1 sm:mt-0">
+                                  <div className="whitespace-nowrap">
                                     <p className="text-xs text-muted-foreground">Apostado</p>
-                                    <p className="font-bold text-sm">R${bet.stake.toFixed(2)}</p>
+                                    <p className="font-bold text-sm">R$&nbsp;{bet.stake.toFixed(2)}</p>
                                   </div>
-                                  <div className="text-right">
+                                  <div className="text-right whitespace-nowrap">
                                     <p className="text-xs text-muted-foreground">Retorno</p>
-                                    <p className={`font-bold text-sm ${activeGroup.textCls}`}>R${bet.potentialWin.toFixed(2)}</p>
+                                    <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{bet.potentialWin.toFixed(2)}</p>
                                   </div>
                                   <Button
                                     size="sm"
-                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
                                     onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: true })}
                                     disabled={updateVerifiedMutation.isPending}
                                     data-testid={`button-validate-risk-${bet.id}`}
@@ -874,20 +874,20 @@ export default function Admin() {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
+                            <div className="flex flex-wrap items-center gap-3 mt-1 sm:mt-0">
+                              <div className="whitespace-nowrap">
                                 <p className="text-xs text-muted-foreground">Apostado</p>
-                                <p className="font-bold text-sm">R${bet.stake.toFixed(2)}</p>
+                                <p className="font-bold text-sm">R$&nbsp;{bet.stake.toFixed(2)}</p>
                               </div>
-                              <div className="text-right">
+                              <div className="text-right whitespace-nowrap">
                                 <p className="text-xs text-muted-foreground">Retorno</p>
                                 <p className={`font-bold text-sm ${risk === "low" ? "text-green-500" : risk === "mid" ? "text-orange-400" : "text-red-400"}`}>
-                                  R${bet.potentialWin.toFixed(2)}
+                                  R$&nbsp;{bet.potentialWin.toFixed(2)}
                                 </p>
                               </div>
                               <Button
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
                                 onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: true })}
                                 disabled={updateVerifiedMutation.isPending}
                                 data-testid={`button-validate-${bet.id}`}
@@ -1638,22 +1638,22 @@ export default function Admin() {
                               );
                             })()}
 
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                              <span className="flex items-center gap-1 whitespace-nowrap">
                                 <DollarSign className="w-4 h-4 text-muted-foreground" />
-                                Aposta: <span className="font-bold">R$ {bet.stake.toFixed(2)}</span>
+                                Aposta: <span className="font-bold">R$&nbsp;{bet.stake.toFixed(2)}</span>
                               </span>
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 whitespace-nowrap">
                                 <TrendingUp className="w-4 h-4 text-primary" />
-                                Retorno: <span className="font-bold text-primary">R$ {bet.potentialWin.toFixed(2)}</span>
+                                Retorno: <span className="font-bold text-primary">R$&nbsp;{bet.potentialWin.toFixed(2)}</span>
                               </span>
-                              <span className="text-muted-foreground">
-                                Odd: {fmtOdds(bet.totalOdds)}
+                              <span className="text-muted-foreground whitespace-nowrap">
+                                Odd:&nbsp;{fmtOdds(bet.totalOdds)}
                               </span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2 mt-1 w-full sm:w-auto">
                             <Select
                               value={bet.status}
                               onValueChange={(value: BetStatus) => 
