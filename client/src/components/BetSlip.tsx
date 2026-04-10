@@ -225,8 +225,8 @@ export function BetSlip({
                 </div>
                 <div className="flex justify-center">
                   <Button 
-                    className="text-black font-bold"
-                    style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}
+                    className="text-white font-bold"
+                    style={{ background: "linear-gradient(135deg, #1e90ff 0%, #1565c0 50%, #0d47a1 100%)" }}
                     onClick={copyPixCode}
                     data-testid="button-copy-pix"
                   >
