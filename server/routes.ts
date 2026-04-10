@@ -267,8 +267,8 @@ function formatTeamName(name: string): string {
     .join(' ');
 }
 
-// Configuração PIX - telefone com código do país
-const PIX_KEY = "+5592993848238";
+// Configuração PIX - CNPJ
+const PIX_KEY = "22.580.407/0001-78";
 const PIX_NAME = "WENDELL SILVA DE SOUZA";
 const PIX_CITY = "SAO PAULO";
 
