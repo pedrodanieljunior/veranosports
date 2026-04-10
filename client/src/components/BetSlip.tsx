@@ -225,20 +225,13 @@ export function BetSlip({
                 </div>
                 <div className="flex gap-2">
                   <Button 
-                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" 
+                    className="flex-1 text-black font-bold text-base py-5"
+                    style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}
                     onClick={copyPixCode}
                     data-testid="button-copy-pix"
                   >
                     <Copy className="w-4 h-4 mr-2" />
                     Copiar PIX
-                  </Button>
-                  <Button 
-                    className="flex-1 bg-green-600 text-white hover:bg-green-700" 
-                    onClick={shareBet}
-                    data-testid="button-share-pix"
-                  >
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Compartilhar PIX
                   </Button>
                 </div>
                 
@@ -281,8 +274,8 @@ export function BetSlip({
                         </Button>
                       </a>
 
-                      <p className="text-xs text-center text-black mt-1 font-bold">
-                        Clique para enviar o comprovante PIX e ativar seu bilhete
+                      <p className="text-sm text-center text-black mt-2 font-extrabold leading-snug">
+                        Clique para enviar o comprovante PIX<br />e ativar seu bilhete
                       </p>
                     </>
                   );
