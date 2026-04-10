@@ -1052,7 +1052,9 @@ export async function registerRoutes(
                 todayOddsMap.set(fid, game.bookmakers);
               }
             }
-            continue; // liga já está em cache, pular busca de odds
+            // Só pular busca se todos os fixtures já estão cobertos
+            const allCovered = upcoming.every((f: any) => todayOddsMap.has(f.fixture.id));
+            if (allCovered) continue;
           }
 
           // 2. Buscar odds em bloco para esta liga (hoje e amanhã sequencialmente)
