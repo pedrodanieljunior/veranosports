@@ -223,9 +223,9 @@ export function BetSlip({
                   </p>
                   <p className="text-xs text-gray-500">FW Sports</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex justify-center">
                   <Button 
-                    className="flex-1 text-black font-bold text-base py-5"
+                    className="text-black font-bold"
                     style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}
                     onClick={copyPixCode}
                     data-testid="button-copy-pix"
