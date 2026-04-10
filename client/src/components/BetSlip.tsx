@@ -274,7 +274,7 @@ export function BetSlip({
                         </Button>
                       </a>
 
-                      <p className="text-sm text-center text-black mt-2 font-extrabold leading-snug">
+                      <p className="text-center text-black mt-3 font-extrabold leading-tight" style={{ fontSize: "1.35rem" }}>
                         Clique para enviar o comprovante PIX<br />e ativar seu bilhete
                       </p>
                     </>
