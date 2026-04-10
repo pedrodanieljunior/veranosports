@@ -269,7 +269,7 @@ function formatTeamName(name: string): string {
 
 // Configuração PIX - CNPJ
 const PIX_KEY = "22.580.407/0001-78";
-const PIX_NAME = "WENDELL SILVA DE SOUZA";
+const PIX_NAME = "FW Sports";
 const PIX_CITY = "SAO PAULO";
 
 // Gerar payload PIX EMV (formato BRCode)
