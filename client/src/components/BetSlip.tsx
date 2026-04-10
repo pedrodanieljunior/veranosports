@@ -221,7 +221,7 @@ export function BetSlip({
                   <p className="text-2xl font-bold text-primary">
                     R$ {placedBet.stake.toFixed(2)}
                   </p>
-                  <p className="text-xs text-gray-500">Wendell Silva de Souza</p>
+                  <p className="text-xs text-gray-500">FW Sports</p>
                 </div>
                 <div className="flex gap-2">
                   <Button 
