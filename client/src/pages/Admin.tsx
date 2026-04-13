@@ -185,8 +185,7 @@ export default function Admin() {
     const db = periodBets.filter(b => new Date(b.createdAt).getDay() === idx);
     const e = db.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
     const s2 = db.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
-    const lucroEntrada = db.filter(b=>b.verified && b.status==="lost").reduce((s,b)=>s+b.stake,0);
-    return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((lucroEntrada-s2).toFixed(2)) };
+    return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
   }), [periodBets]);
 
   const finMarketRows = useMemo(() => {
@@ -201,7 +200,7 @@ export default function Admin() {
         else cur.pending++;
         if (bet.verified) cur.entrada += bet.stake;
         if (bet.verified && bet.status==="won") cur.saida += bet.potentialWin;
-        if (bet.verified && bet.status==="lost") cur.lucroEntrada += bet.stake;
+        if (bet.verified) cur.lucroEntrada += bet.stake;
         map.set(key, cur);
       });
     });
@@ -913,7 +912,7 @@ export default function Admin() {
               {/* Painel central — Caixa acumulado */}
               {(() => {
                 const APORTE_INICIAL = 50000;
-                const ganhos = bets.filter(b => b.verified && b.status === "lost").reduce((s, b) => s + b.stake, 0);
+                const ganhos = bets.filter(b => b.verified).reduce((s, b) => s + b.stake, 0);
                 const perdas = bets.filter(b => b.verified && b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
                 const totalSaques = withdrawals.reduce((s, w) => s + w.amount, 0);
