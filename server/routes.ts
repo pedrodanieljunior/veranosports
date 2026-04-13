@@ -3041,17 +3041,22 @@ export async function registerRoutes(
             if (firstScorer === null) {
               // null = falha ao buscar → mantém pendente
               resolved = false;
-            } else if (firstScorer === "") {
-              // "" = jogo sem gols (0x0) → perdido
-              selResult = "lost";
             } else {
-              const pickedHome = teamsMatch(sel.outcome, homeTeam);
-              const pickedAway = teamsMatch(sel.outcome, awayTeam);
-              const scoredHome = teamsMatch(firstScorer, homeTeam);
-              const scoredAway = teamsMatch(firstScorer, awayTeam);
-              if (pickedHome)      selResult = scoredHome ? "won" : "lost";
-              else if (pickedAway) selResult = scoredAway ? "won" : "lost";
-              else                 resolved = false;
+              const ocLc = sel.outcome.toLowerCase().trim();
+              const pickedNoGoal = ocLc.includes("no goal") || ocLc.includes("sem gol") || ocLc.includes("nenhum");
+              const pickedHome = ocLc === "home" || ocLc === "casa" || teamsMatch(sel.outcome, homeTeam) || teamsMatch(sel.outcome, sel.homeTeam);
+              const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || teamsMatch(sel.outcome, awayTeam) || teamsMatch(sel.outcome, sel.awayTeam);
+              if (firstScorer === "") {
+                // Jogo sem gols (0x0) → "no goal" ganha, time marcador perde
+                selResult = pickedNoGoal ? "won" : "lost";
+              } else {
+                const scoredHome = teamsMatch(firstScorer, homeTeam);
+                const scoredAway = teamsMatch(firstScorer, awayTeam);
+                if (pickedNoGoal)    selResult = "lost";
+                else if (pickedHome) selResult = scoredHome ? "won" : "lost";
+                else if (pickedAway) selResult = scoredAway ? "won" : "lost";
+                else                 resolved = false;
+              }
             }
           } else {
             // Red Card
@@ -3356,15 +3361,18 @@ function checkSelectionResult(
       console.log(`    Team To Score First: dados de eventos não disponíveis`);
       return null;
     }
+    const ocLc = selection.outcome.toLowerCase().trim();
+    const pickedNoGoal = ocLc.includes("no goal") || ocLc.includes("sem gol") || ocLc.includes("nenhum");
+    const pickedHome = ocLc === "home" || ocLc === "casa" || teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
+    const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || teamsMatch(selection.outcome, awayTeamName) || teamsMatch(selection.outcome, selection.awayTeam);
     if (firstScorerTeam === "") {
-      // "" = jogo terminado sem gols (0x0) → todas as apostas perdidas
-      console.log(`    Team To Score First: jogo terminou sem gols (0x0) → perdido`);
-      return false;
+      // 0x0 — sem gols: "no goal" ganha, apostas em time perdem
+      console.log(`    1st scorer: jogo sem gols, apostou noGoal=${pickedNoGoal}`);
+      return pickedNoGoal;
     }
-    const pickedHome = teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
-    const pickedAway = teamsMatch(selection.outcome, awayTeamName) || teamsMatch(selection.outcome, selection.awayTeam);
     const scoredHome = teamsMatch(firstScorerTeam, homeTeamName);
     const scoredAway = teamsMatch(firstScorerTeam, awayTeamName);
+    if (pickedNoGoal) { console.log(`    1st scorer: apostou sem gol mas houve gol → perdido`); return false; }
     if (pickedHome) { console.log(`    1st scorer: apostou casa, marcou ${firstScorerTeam}: ${scoredHome}`); return scoredHome; }
     if (pickedAway) { console.log(`    1st scorer: apostou visitante, marcou ${firstScorerTeam}: ${scoredAway}`); return scoredAway; }
     console.log(`    1st scorer: não identificou time no outcome "${selection.outcome}"`);
