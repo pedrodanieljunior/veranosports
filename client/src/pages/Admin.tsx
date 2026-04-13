@@ -1263,8 +1263,7 @@ export default function Admin() {
 
               const entrada   = periodBets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
               const saida     = periodBets.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
-              const lucroEntrada = periodBets.filter(b=>b.verified && b.status==="lost").reduce((s,b)=>s+b.stake,0);
-              const lucro     = lucroEntrada - saida;
+              const lucro     = entrada - saida;
               const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
               const totalBets = periodBets.length;
               const wonBets   = periodBets.filter(b=>b.status==="won").length;
