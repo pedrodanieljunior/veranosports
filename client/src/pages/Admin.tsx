@@ -848,21 +848,13 @@ export default function Admin() {
                   ) : (
                     <div className="space-y-3">
                       {bets.filter(b => !b.verified && b.status === "pending").map(bet => {
-                        const risk = bet.potentialWin <= 5000 ? "low" : bet.potentialWin <= 10000 ? "mid" : "high";
-                        const riskStyle = {
-                          low:  { dot: "bg-green-500",  border: "border-green-500/30",  bg: "bg-green-500/5",  label: "Baixo",  labelCls: "bg-green-500/20 text-green-400 border-green-500/30" },
-                          mid:  { dot: "bg-orange-500", border: "border-orange-500/30", bg: "bg-orange-500/5", label: "Médio",  labelCls: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
-                          high: { dot: "bg-red-500",    border: "border-red-500/30",    bg: "bg-red-500/5",    label: "Alto",   labelCls: "bg-red-500/20 text-red-400 border-red-500/30" },
-                        }[risk];
                         return (
-                          <div key={bet.id} className={`flex items-center justify-between gap-4 rounded-lg border ${riskStyle.border} ${riskStyle.bg} p-4 flex-wrap`}>
+                          <div key={bet.id} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 p-4 flex-wrap">
                             <div className="flex items-center gap-3">
-                              <div className={`w-3 h-3 rounded-full shrink-0 ${riskStyle.dot}`} title={`Risco ${riskStyle.label}`} />
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-mono text-sm font-bold">#{bet.id.slice(0,8).toUpperCase()}</span>
                                   <Badge variant="secondary">Pendente</Badge>
-                                  <Badge className={riskStyle.labelCls}>Risco {riskStyle.label}</Badge>
                                 </div>
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
@@ -880,7 +872,7 @@ export default function Admin() {
                               </div>
                               <div className="text-right whitespace-nowrap">
                                 <p className="text-xs text-muted-foreground">Retorno</p>
-                                <p className={`font-bold text-sm ${risk === "low" ? "text-green-500" : risk === "mid" ? "text-orange-400" : "text-red-400"}`}>
+                                <p className="font-bold text-sm">
                                   R$&nbsp;{bet.potentialWin.toFixed(2)}
                                 </p>
                               </div>
