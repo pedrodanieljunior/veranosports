@@ -715,7 +715,7 @@ export default function Admin() {
 
               {/* Painel de classificação por risco */}
               {(() => {
-                const pending = bets.filter(b => !b.verified && b.status === "pending");
+                const pending = bets.filter(b => b.verified && b.status === "pending");
                 const groups: { key: "low" | "mid" | "high"; label: string; range: string; dot: string; border: string; bg: string; badgeCls: string; textCls: string; bets: typeof pending }[] = [
                   {
                     key: "low", label: "Risco Baixo", range: "até R$5.000",
@@ -799,16 +799,9 @@ export default function Admin() {
                                     <p className="text-xs text-muted-foreground">Retorno</p>
                                     <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{bet.potentialWin.toFixed(2)}</p>
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                                    onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: true })}
-                                    disabled={updateVerifiedMutation.isPending}
-                                    data-testid={`button-validate-risk-${bet.id}`}
-                                  >
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                    Confirmar Pago
-                                  </Button>
+                                  <Badge className={`${activeGroup.badgeCls} text-xs`}>
+                                    Pago ✓
+                                  </Badge>
                                 </div>
                               </div>
                             ))}
