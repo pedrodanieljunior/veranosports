@@ -3047,8 +3047,8 @@ export async function registerRoutes(
               const pickedHome = ocLc === "home" || ocLc === "casa" || ocLc.endsWith("-home") || ocLc.endsWith(" home") || teamsMatch(sel.outcome, homeTeam) || teamsMatch(sel.outcome, sel.homeTeam);
               const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || ocLc.endsWith("-away") || ocLc.endsWith(" away") || teamsMatch(sel.outcome, awayTeam) || teamsMatch(sel.outcome, sel.awayTeam);
               if (firstScorer === "") {
-                // Jogo sem gols (0x0) → "no goal" ganha, time marcador perde
-                selResult = pickedNoGoal ? "won" : "lost";
+                // Jogo sem gols (0x0) → todos perdem
+                selResult = "lost";
               } else {
                 const scoredHome = teamsMatch(firstScorer, homeTeam);
                 const scoredAway = teamsMatch(firstScorer, awayTeam);
@@ -3366,9 +3366,9 @@ function checkSelectionResult(
     const pickedHome = ocLc === "home" || ocLc === "casa" || ocLc.endsWith("-home") || ocLc.endsWith(" home") || teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
     const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || ocLc.endsWith("-away") || ocLc.endsWith(" away") || teamsMatch(selection.outcome, awayTeamName) || teamsMatch(selection.outcome, selection.awayTeam);
     if (firstScorerTeam === "") {
-      // 0x0 — sem gols: "no goal" ganha, apostas em time perdem
-      console.log(`    1st scorer: jogo sem gols, apostou noGoal=${pickedNoGoal}`);
-      return pickedNoGoal;
+      // 0x0 — sem gols: todos perdem
+      console.log(`    1st scorer: jogo sem gols (0x0) → perdido`);
+      return false;
     }
     const scoredHome = teamsMatch(firstScorerTeam, homeTeamName);
     const scoredAway = teamsMatch(firstScorerTeam, awayTeamName);
