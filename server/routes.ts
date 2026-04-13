@@ -3044,8 +3044,8 @@ export async function registerRoutes(
             } else {
               const ocLc = sel.outcome.toLowerCase().trim();
               const pickedNoGoal = ocLc.includes("no goal") || ocLc.includes("sem gol") || ocLc.includes("nenhum");
-              const pickedHome = ocLc === "home" || ocLc === "casa" || teamsMatch(sel.outcome, homeTeam) || teamsMatch(sel.outcome, sel.homeTeam);
-              const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || teamsMatch(sel.outcome, awayTeam) || teamsMatch(sel.outcome, sel.awayTeam);
+              const pickedHome = ocLc === "home" || ocLc === "casa" || ocLc.endsWith("-home") || ocLc.endsWith(" home") || teamsMatch(sel.outcome, homeTeam) || teamsMatch(sel.outcome, sel.homeTeam);
+              const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || ocLc.endsWith("-away") || ocLc.endsWith(" away") || teamsMatch(sel.outcome, awayTeam) || teamsMatch(sel.outcome, sel.awayTeam);
               if (firstScorer === "") {
                 // Jogo sem gols (0x0) → "no goal" ganha, time marcador perde
                 selResult = pickedNoGoal ? "won" : "lost";
@@ -3363,8 +3363,8 @@ function checkSelectionResult(
     }
     const ocLc = selection.outcome.toLowerCase().trim();
     const pickedNoGoal = ocLc.includes("no goal") || ocLc.includes("sem gol") || ocLc.includes("nenhum");
-    const pickedHome = ocLc === "home" || ocLc === "casa" || teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
-    const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || teamsMatch(selection.outcome, awayTeamName) || teamsMatch(selection.outcome, selection.awayTeam);
+    const pickedHome = ocLc === "home" || ocLc === "casa" || ocLc.endsWith("-home") || ocLc.endsWith(" home") || teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam);
+    const pickedAway = ocLc === "away" || ocLc === "fora" || ocLc === "visitante" || ocLc.endsWith("-away") || ocLc.endsWith(" away") || teamsMatch(selection.outcome, awayTeamName) || teamsMatch(selection.outcome, selection.awayTeam);
     if (firstScorerTeam === "") {
       // 0x0 — sem gols: "no goal" ganha, apostas em time perdem
       console.log(`    1st scorer: jogo sem gols, apostou noGoal=${pickedNoGoal}`);
