@@ -1261,9 +1261,10 @@ export default function Admin() {
           <TabsContent value="financeiro">
             {(() => {
 
-              const entrada   = periodBets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
-              const saida     = periodBets.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
-              const lucro     = entrada - saida;
+              const entrada      = periodBets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
+              const saida        = periodBets.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+              const totalSaques  = withdrawals.reduce((s,w)=>s+w.amount,0);
+              const lucro        = entrada - saida - totalSaques;
               const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
               const totalBets = periodBets.length;
               const wonBets   = periodBets.filter(b=>b.status==="won").length;
