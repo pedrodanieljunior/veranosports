@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal } from "@shared/schema";
+import { computeTotalOdds } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1538,7 +1539,7 @@ export default function Admin() {
                                 <div className="rounded-xl border border-purple-500/50 bg-muted/20 p-2 space-y-2">
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
-                                    const gameOdds = fmtOdds(sels.reduce((a, s) => a * s.odds, 1));
+                                    const gameOdds = fmtOdds(computeTotalOdds(sels));
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
