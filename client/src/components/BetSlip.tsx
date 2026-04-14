@@ -73,14 +73,21 @@ export function BetSlip({
     }
   };
 
-  const shareBet = async () => {
-    if (!placedBet) return;
+  const buildShareLines = (bet: typeof placedBet, includePixCode: boolean, includeFooter: boolean): string[] => {
+    if (!bet) return [];
     const grouped: Record<string, Selection[]> = {};
-    for (const sel of placedBet.selections) {
+    for (const sel of bet.selections) {
       const gameLabel = `${sel.homeTeam} vs ${sel.awayTeam}`;
       if (!grouped[gameLabel]) grouped[gameLabel] = [];
       grouped[gameLabel].push(sel);
     }
+    const isCombo = checkIsComboBonus(bet.selections);
+    const comboCount = isCombo ? new Set(bet.selections.map(s => s.gameId)).size : 0;
+    const comboPct = getComboBonus(comboCount);
+    const baseReturn = isCombo
+      ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
+      : 0;
+
     let lines = [`🎯 Bilhete FW Sports\n`];
     for (const [game, sels] of Object.entries(grouped)) {
       lines.push(`⚽ ${game}`);
@@ -89,15 +96,32 @@ export function BetSlip({
       }
       lines.push("");
     }
-    lines.push(`📊 Odds Total: ${fmtOdds(placedBet.totalOdds)}`);
-    lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
-    lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
-    lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
-    lines.push(`📅 Data: ${format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
-    if (placedBet.pixCode) {
-      lines.push(`\n📱 Código PIX:\n${placedBet.pixCode}`);
+    lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
+    lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
+    if (isCombo && comboPct > 0) {
+      const bonusPctStr = (comboPct * 100) % 1 === 0
+        ? `${(comboPct * 100).toFixed(0)}%`
+        : `${(comboPct * 100).toFixed(1)}%`;
+      lines.push(`⚡ Bônus Combinada (${comboCount} jogos): +${bonusPctStr}`);
+      lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
+      lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
     }
-    const shareText = lines.join("\n");
+    lines.push(`🏆 Retorno: R$ ${bet.potentialWin.toFixed(2)}`);
+    lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
+    lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
+    if (includePixCode && bet.pixCode) {
+      lines.push(`\n📱 Código PIX:\n${bet.pixCode}`);
+    }
+    if (includeFooter) {
+      lines.push(`\n📱 FW SPORTS`);
+      lines.push(`Caso sua aposta seja vencedora, entraremos em contato para informar o pagamento. Boa sorte!`);
+    }
+    return lines;
+  };
+
+  const shareBet = async () => {
+    if (!placedBet) return;
+    const shareText = buildShareLines(placedBet, true, false).join("\n");
     if (navigator.share) {
       try {
         await navigator.share({ title: "Bilhete FW Sports", text: shareText });
@@ -110,28 +134,7 @@ export function BetSlip({
 
   const shareBetSlip = async () => {
     if (!placedBet) return;
-    const grouped: Record<string, Selection[]> = {};
-    for (const sel of placedBet.selections) {
-      const gameLabel = `${sel.homeTeam} vs ${sel.awayTeam}`;
-      if (!grouped[gameLabel]) grouped[gameLabel] = [];
-      grouped[gameLabel].push(sel);
-    }
-    let lines = [`🎯 Bilhete FW Sports\n`];
-    for (const [game, sels] of Object.entries(grouped)) {
-      lines.push(`⚽ ${game}`);
-      for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${fmtOdds(s.odds)}`);
-      }
-      lines.push("");
-    }
-    lines.push(`📊 Odds Total: ${fmtOdds(placedBet.totalOdds)}`);
-    lines.push(`💰 Apostado: R$ ${placedBet.stake.toFixed(2)}`);
-    lines.push(`🏆 Retorno: R$ ${placedBet.potentialWin.toFixed(2)}`);
-    lines.push(`📋 ID: #${placedBet.id.slice(0, 8).toUpperCase()}`);
-    lines.push(`📅 Data: ${format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
-    lines.push(`\n📱 FW SPORTS`);
-    lines.push(`Caso sua aposta seja vencedora, entraremos em contato para informar o pagamento. Boa sorte!`);
-    const shareText = lines.join("\n");
+    const shareText = buildShareLines(placedBet, false, true).join("\n");
     if (navigator.share) {
       try {
         await navigator.share({ title: "Bilhete FW Sports", text: shareText });

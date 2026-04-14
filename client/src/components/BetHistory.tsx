@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
+import { checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -31,6 +32,13 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       if (!gameGrouped[gameLabel]) gameGrouped[gameLabel] = [];
       gameGrouped[gameLabel].push(sel);
     }
+    const isCombo = checkIsComboBonus(bet.selections);
+    const comboCount = isCombo ? new Set(bet.selections.map(s => s.gameId)).size : 0;
+    const comboPct = getComboBonus(comboCount);
+    const baseReturn = isCombo
+      ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
+      : 0;
+
     let lines = [`🎯 Bilhete FW Sports\n`];
     for (const [game, sels] of Object.entries(gameGrouped)) {
       lines.push(`⚽ ${game}`);
@@ -41,6 +49,14 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     }
     lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
+    if (isCombo && comboPct > 0) {
+      const bonusPctStr = (comboPct * 100) % 1 === 0
+        ? `${(comboPct * 100).toFixed(0)}%`
+        : `${(comboPct * 100).toFixed(1)}%`;
+      lines.push(`⚡ Bônus Combinada (${comboCount} jogos): +${bonusPctStr}`);
+      lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
+      lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
+    }
     lines.push(`🏆 Retorno: R$ ${bet.potentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
     lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
