@@ -1,4 +1,5 @@
 import { Selection, BetSlip as BetSlipType } from "@shared/schema";
+import { computeTotalOdds } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,7 +142,7 @@ export function BetSlip({
     }
   };
   
-  const totalOdds = roundOdds(selections.reduce((acc, sel) => acc * sel.odds, 1));
+  const totalOdds = roundOdds(computeTotalOdds(selections));
   const rawPotentialWin = parseFloat(stake || "0") * totalOdds;
   const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
   const isCappedAtMax = rawPotentialWin > MAX_BET_PAYOUT;

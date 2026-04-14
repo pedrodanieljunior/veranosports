@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBetSlipSchema } from "@shared/schema";
+import { computeTotalOdds } from "@shared/oddsUtils";
 import { z } from "zod";
 import { cache } from "./cache";
 import QRCode from "qrcode";
@@ -1789,7 +1790,7 @@ export async function registerRoutes(
         });
       }
 
-      const totalOdds = Math.round(validatedData.selections.reduce((acc, sel) => acc * sel.odds, 1) * 100) / 100;
+      const totalOdds = Math.round(computeTotalOdds(validatedData.selections) * 100) / 100;
       let potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
 
       if (potentialWin > MAX_BET_PAYOUT) {
