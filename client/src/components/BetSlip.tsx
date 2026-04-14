@@ -237,7 +237,7 @@ export function BetSlip({
                 </div>
                 
                 {(() => {
-                  const displayOdds = roundOdds(placedBet.selections.reduce((acc, s) => acc * s.odds, 1));
+                  const displayOdds = roundOdds(computeTotalOdds(placedBet.selections));
                   const potentialPayout = Math.min(Math.round(placedBet.stake * displayOdds * 100) / 100, MAX_BET_PAYOUT);
                   const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
                   const lines: string[] = [
@@ -295,7 +295,7 @@ export function BetSlip({
                 <div className="space-y-3">
                   {Object.entries(grouped).map(([gameId, sels]) => {
                     const first = sels[0];
-                    const gameOdds = roundOdds(sels.reduce((a, s) => a * s.odds, 1));
+                    const gameOdds = roundOdds(computeTotalOdds(sels));
                     return (
                       <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-game-${gameId}`}>
                         <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
@@ -489,7 +489,7 @@ export function BetSlip({
                   <div className="space-y-3">
                     {Object.entries(grouped).map(([gameId, sels]) => {
                       const first = sels[0];
-                      const gameOdds = roundOdds(sels.reduce((a, s) => a * s.odds, 1));
+                      const gameOdds = roundOdds(computeTotalOdds(sels));
                       return (
                         <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
                           <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border">
