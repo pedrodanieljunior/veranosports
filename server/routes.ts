@@ -1010,7 +1010,7 @@ export async function registerRoutes(
               if (isYouthTeam(home) || isYouthTeam(away)) return false;
             }
             return true;
-          }).slice(0, isFriendlies ? 30 : 5);
+          }).slice(0, isFriendlies ? 30 : 20);
           if (upcoming.length > 0) fixturesByLeague.push({ league, fixtures: upcoming });
         }
 
