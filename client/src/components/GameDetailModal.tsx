@@ -2,7 +2,7 @@ import { Game, Selection } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, TrendingUp, TrendingDown, Loader2, Zap } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, Loader2, Zap, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
@@ -73,11 +73,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   const selectionsForThisGame = selections.filter(s => s.gameId === game.id);
   const gameSelectionLimitReached = selectionsForThisGame.length >= 3;
 
-  const isButtonDisabled = (outcomeName: string, marketKey: string) => {
-    const selected = isSelected(outcomeName, marketKey);
-    return !selected && gameSelectionLimitReached;
-  };
-
   const marketKeyToBoostKey = (mk: string): string => {
     if (mk === "h2h") return "h2h";
     const nameToBoostKey: Record<string, string> = {
@@ -106,6 +101,25 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       return idMap[id] || mk;
     }
     return mk;
+  };
+
+  const CORRELATED_BOOST_KEYS = new Set(["h2h", "totals", "btts"]);
+
+  const isCorrelatedLocked = (boostKey: string): boolean => {
+    if (!CORRELATED_BOOST_KEYS.has(boostKey)) return false;
+    const selectedCorrelated = new Set(
+      selectionsForThisGame
+        .map(s => marketKeyToBoostKey(s.marketKey))
+        .filter(k => CORRELATED_BOOST_KEYS.has(k))
+    );
+    return selectedCorrelated.size >= 2 && !selectedCorrelated.has(boostKey);
+  };
+
+  const isButtonDisabled = (outcomeName: string, marketKey: string) => {
+    const selected = isSelected(outcomeName, marketKey);
+    if (selected) return false;
+    const boostKey = marketKeyToBoostKey(marketKey);
+    return gameSelectionLimitReached || isCorrelatedLocked(boostKey);
   };
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
@@ -188,20 +202,28 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             }
             
             const disabled = isButtonDisabled(outcomeKey, marketKey);
+            const correlatedLocked = !selected && isCorrelatedLocked(boostKey);
             return (
               <button
                 key={value.value}
                 onClick={() => !disabled && handleOddClick(outcomeKey, value.odd, marketKey, bookmaker)}
                 disabled={disabled}
-                className={`flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
+                className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
                   disabled
-                    ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                    ? correlatedLocked
+                      ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
+                      : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
                     : selected
                       ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
                       : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
                 }`}
                 data-testid={`button-modal-extra-${market.id}-${value.value}`}
               >
+                {correlatedLocked && (
+                  <span className="absolute top-1 right-1">
+                    <Lock className="w-3 h-3 text-gray-400" />
+                  </span>
+                )}
                 <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">
                   {displayLabel}
                 </span>
@@ -276,20 +298,28 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                                         isHome ? game.homeTeam.substring(0, 10) : 
                                         game.awayTeam.substring(0, 10);
                     const disabled = isButtonDisabled(outcome.name, "h2h");
+                    const correlatedLocked = !selected && isCorrelatedLocked("h2h");
                     return (
                       <button
                         key={outcome.name}
                         onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "h2h", h2hMarket.bookmaker)}
                         disabled={disabled}
-                        className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                        className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
                           disabled
-                            ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                            ? correlatedLocked
+                              ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
+                              : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
                             : selected
                               ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
                               : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
                         }`}
                         data-testid={`button-modal-h2h-${outcome.name}`}
                       >
+                        {correlatedLocked && (
+                          <span className="absolute top-1.5 right-1.5">
+                            <Lock className="w-3 h-3 text-gray-400" />
+                          </span>
+                        )}
                         <span className="text-xs text-gray-400 mb-1">
                           {displayName}
                         </span>
