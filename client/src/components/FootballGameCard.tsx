@@ -33,6 +33,16 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
   const matchWinner = fixture.odds.find(o => o.name === "Match Winner");
   const btts = fixture.odds.find(o => o.name === "Both Teams Score");
   const htFt = fixture.odds.find(o => o.name === "HT/FT Double");
+
+  const gameSelections = selections.filter(s => s.gameId === String(fixture.id));
+  const isDrawSelected = gameSelections.some(s => s.marketKey === "match_winner" && s.outcome.includes("-Draw"));
+  const isBttsNoSelected = gameSelections.some(s => s.marketKey === "btts" && s.outcome.includes("-No"));
+
+  const isCrossLocked = (marketKey: string, value: string): boolean => {
+    if (marketKey === "match_winner" && value === "Draw") return isBttsNoSelected;
+    if (marketKey === "btts" && value === "No") return isDrawSelected;
+    return false;
+  };
   
   const isSelected = (outcomeName: string, marketKey: string) => {
     return selections.some(
@@ -88,17 +98,26 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
             const boostPct = getBoostPercent(boostKey);
             const displayOdd = isBoosted ? outcome.odd * getBoostMultiplier(boostKey) : outcome.odd;
             const displayValue = translateFn ? translateFn(outcome.value) : outcome.value;
+            const crossLocked = !selected && isCrossLocked(marketKey, outcome.value);
             return (
               <button
                 key={outcome.value}
-                onClick={() => handleOddClick(`${marketKey}-${outcome.value}`, outcome.odd, marketKey, title)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all hover-elevate active-elevate-2 ${
-                  selected
-                    ? "bg-primary/10 border-primary text-foreground"
-                    : "bg-muted/50 border-transparent"
+                onClick={() => !crossLocked && handleOddClick(`${marketKey}-${outcome.value}`, outcome.odd, marketKey, title)}
+                disabled={crossLocked}
+                className={`relative flex flex-col items-center gap-1 p-3 rounded-md border transition-all ${
+                  crossLocked
+                    ? "bg-muted/30 border-transparent opacity-60 cursor-not-allowed"
+                    : selected
+                      ? "bg-primary/10 border-primary text-foreground hover-elevate active-elevate-2"
+                      : "bg-muted/50 border-transparent hover-elevate active-elevate-2"
                 }`}
                 data-testid={`button-${marketKey}-${fixture.id}-${outcome.value}`}
               >
+                {crossLocked && (
+                  <span className="absolute top-1 right-1">
+                    <Lock className="w-3 h-3 text-muted-foreground/60" />
+                  </span>
+                )}
                 <span className="text-xs text-muted-foreground truncate w-full text-center">
                   {displayValue}
                 </span>
