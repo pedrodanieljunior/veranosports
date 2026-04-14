@@ -261,7 +261,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                   </span>
                   <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-amber-500/40">
                     <Zap className="w-2.5 h-2.5 fill-black" />
-                    Super Aumento
+                    Super Aumento Apostas simples
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
