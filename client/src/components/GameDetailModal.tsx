@@ -136,6 +136,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       bookmaker,
       outcome: outcomeName,
       odds: finalOdds,
+      originalOdds: marketKey === "h2h" ? originalOdds : undefined,
       result: "pending",
     };
     onToggleSelection(selection);

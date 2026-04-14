@@ -54,6 +54,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
       bookmaker: "API-Football",
       outcome: `${marketName}: ${outcomeName}`,
       odds: finalOdds,
+      originalOdds: marketKey === "match_winner" ? originalOdds : undefined,
       result: "pending",
     };
     onToggleSelection(selection);

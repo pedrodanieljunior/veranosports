@@ -1,10 +1,10 @@
 import { Selection, BetSlip as BetSlipType } from "@shared/schema";
-import { computeTotalOdds } from "@shared/oddsUtils";
+import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -143,9 +143,22 @@ export function BetSlip({
   };
   
   const totalOdds = roundOdds(computeTotalOdds(selections));
-  const rawPotentialWin = parseFloat(stake || "0") * totalOdds;
+  const stakeNum = parseFloat(stake || "0");
+
+  const comboApplies = checkIsComboBonus(selections);
+  const comboGameCount = comboApplies ? new Set(selections.map(s => s.gameId)).size : 0;
+  const comboBonusPct = getComboBonus(comboGameCount);
+  const baseOddsForBonus = comboApplies
+    ? selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
+    : 0;
+  const returnWithoutBonus = stakeNum * baseOddsForBonus;
+  const returnWithBonus = Math.min(returnWithoutBonus * (1 + comboBonusPct), MAX_BET_PAYOUT);
+
+  const rawPotentialWin = comboApplies ? returnWithBonus : stakeNum * totalOdds;
   const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
-  const isCappedAtMax = rawPotentialWin > MAX_BET_PAYOUT;
+  const isCappedAtMax = comboApplies
+    ? returnWithoutBonus * (1 + comboBonusPct) > MAX_BET_PAYOUT
+    : stakeNum * totalOdds > MAX_BET_PAYOUT;
 
   const isNearDailyLimit = limits && displayPotentialWin > limits.dailyRemaining && limits.dailyRemaining > 0;
   const isDailyLimitReached = limits?.isDailyLimitReached ?? false;
@@ -623,9 +636,37 @@ export function BetSlip({
                   <span className="text-muted-foreground">Odds Total</span>
                   <span className="font-medium">{fmtOdds(totalOdds)}</span>
                 </div>
+
+                {comboApplies && comboBonusPct > 0 && (
+                  <div className="rounded-xl overflow-hidden border border-yellow-500/60 shadow-md shadow-yellow-500/10">
+                    <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
+                        <span className="text-black font-bold text-sm">Bônus Combinada</span>
+                        <span className="text-black/80 text-xs font-medium">{comboGameCount} jogos</span>
+                      </div>
+                      <span className="bg-black/20 text-black font-extrabold text-sm px-2 py-0.5 rounded-full">
+                        +{(comboBonusPct * 100) % 1 === 0 ? (comboBonusPct * 100).toFixed(0) : (comboBonusPct * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="bg-yellow-500/10 px-3 py-2 space-y-1.5">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Sem bônus</span>
+                        <span className="text-foreground font-medium">R$ {returnWithoutBonus.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm border-t border-yellow-500/30 pt-1.5">
+                        <span className="text-yellow-400 font-bold flex items-center gap-1">
+                          <Zap className="w-3 h-3 fill-yellow-400" /> Com bônus
+                        </span>
+                        <span className="text-yellow-300 font-extrabold">R$ {returnWithBonus.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className="font-bold text-primary">
+                  <span className={`font-bold ${comboApplies ? "text-yellow-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>

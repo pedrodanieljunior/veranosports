@@ -105,6 +105,7 @@ export const selectionSchema = z.object({
   bookmaker: z.string(),
   outcome: z.string(),
   odds: z.number(),
+  originalOdds: z.number().optional(),
   result: z.enum(["pending", "won", "lost"]).optional().default("pending"),
 });
 
