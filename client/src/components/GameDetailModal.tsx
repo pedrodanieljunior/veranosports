@@ -115,29 +115,11 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     return selectedCorrelated.size >= 2 && !selectedCorrelated.has(boostKey);
   };
 
-  const isDrawSelected = selectionsForThisGame.some(
-    s => s.marketKey === "h2h" && (s.outcome === "Empate" || s.outcome === "Draw")
-  );
-
-  const isBttsNoSelected = selectionsForThisGame.some(
-    s => s.outcome === "Both Teams Score-No"
-  );
-
-  const isCrossLocked = (outcomeName: string, marketKey: string): boolean => {
-    if (marketKey === "h2h" && (outcomeName === "Empate" || outcomeName === "Draw")) {
-      return isBttsNoSelected;
-    }
-    if (outcomeName === "Both Teams Score-No") {
-      return isDrawSelected;
-    }
-    return false;
-  };
-
   const isButtonDisabled = (outcomeName: string, marketKey: string) => {
     const selected = isSelected(outcomeName, marketKey);
     if (selected) return false;
     const boostKey = marketKeyToBoostKey(marketKey);
-    return gameSelectionLimitReached || isCorrelatedLocked(boostKey) || isCrossLocked(outcomeName, marketKey);
+    return gameSelectionLimitReached || isCorrelatedLocked(boostKey);
   };
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
@@ -221,8 +203,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             
             const disabled = isButtonDisabled(outcomeKey, marketKey);
             const correlatedLocked = !selected && isCorrelatedLocked(boostKey);
-            const crossLocked = !selected && isCrossLocked(outcomeKey, marketKey);
-            const showLock = correlatedLocked || crossLocked;
+            const showLock = correlatedLocked;
             return (
               <button
                 key={value.value}
@@ -319,8 +300,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                                         game.awayTeam.substring(0, 10);
                     const disabled = isButtonDisabled(outcome.name, "h2h");
                     const correlatedLocked = !selected && isCorrelatedLocked("h2h");
-                    const crossLocked = !selected && isCrossLocked(outcome.name, "h2h");
-                    const showLock = correlatedLocked || crossLocked;
+                    const showLock = correlatedLocked;
                     return (
                       <button
                         key={outcome.name}
