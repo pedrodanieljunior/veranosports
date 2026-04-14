@@ -645,9 +645,6 @@ export function BetSlip({
                         <span className="text-black font-bold text-sm">Bônus Combinada</span>
                         <span className="text-black/80 text-xs font-medium">{comboGameCount} jogos</span>
                       </div>
-                      <span className="bg-black/20 text-black font-extrabold text-sm px-2 py-0.5 rounded-full">
-                        +{(comboBonusPct * 100) % 1 === 0 ? (comboBonusPct * 100).toFixed(0) : (comboBonusPct * 100).toFixed(1)}%
-                      </span>
                     </div>
                     <div className="bg-yellow-500/10 px-3 py-2 space-y-1.5">
                       <div className="flex justify-between items-center text-xs">
