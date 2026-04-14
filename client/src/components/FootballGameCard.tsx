@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Selection } from "@shared/schema";
@@ -69,9 +69,17 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
     
     return (
       <div className="space-y-2 mt-4">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          {title}
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {title}
+          </span>
+          {marketKey === "match_winner" && (
+            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-amber-500/40">
+              <Zap className="w-2.5 h-2.5 fill-black" />
+              Super Aumento
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {market.values.slice(0, 6).map((outcome) => {
             const selected = isSelected(`${marketKey}-${outcome.value}`, marketKey);

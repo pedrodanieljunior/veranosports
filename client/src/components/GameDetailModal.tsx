@@ -2,7 +2,7 @@ import { Game, Selection } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, Loader2, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
@@ -258,6 +258,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-200">
                     {marketLabels.h2h}
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-amber-500/40">
+                    <Zap className="w-2.5 h-2.5 fill-black" />
+                    Super Aumento
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
