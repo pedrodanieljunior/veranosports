@@ -50,10 +50,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     if (isCombo && comboPct > 0) {
-      const bonusPctStr = (comboPct * 100) % 1 === 0
-        ? `${(comboPct * 100).toFixed(0)}%`
-        : `${(comboPct * 100).toFixed(1)}%`;
-      lines.push(`⚡ Bônus Combinada (${comboCount} jogos): +${bonusPctStr}`);
+      lines.push(`⚡ Bônus Combinada (${comboCount} jogos)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
       lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
     }
