@@ -1816,13 +1816,13 @@ export async function registerRoutes(
 
       const betSlip = await storage.createBetSlip(validatedData);
 
-      const updatedBetSlip = { ...betSlip, potentialWin };
-      if (betSlip.potentialWin !== potentialWin) {
+      const updatedBetSlip = { ...betSlip, potentialWin, totalOdds };
+      if (betSlip.potentialWin !== potentialWin || betSlip.totalOdds !== totalOdds) {
         const { eq } = await import("drizzle-orm");
         const { db } = await import("./db");
         const { betSlipsTable } = await import("@shared/schema");
         await db.update(betSlipsTable)
-          .set({ potentialWin })
+          .set({ potentialWin, totalOdds })
           .where(eq(betSlipsTable.id, betSlip.id));
       }
 
