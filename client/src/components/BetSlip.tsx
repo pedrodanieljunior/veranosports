@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
+import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
@@ -58,6 +59,7 @@ export function BetSlip({
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
   const { toast } = useToast();
+  const { getBoostPercent, getBoostMultiplier } = useMarketSettings();
 
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
 
@@ -100,6 +102,16 @@ export function BetSlip({
     }
     lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
+    const betIsSingleH2H = bet.selections.length === 1 &&
+      (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
+    const betSuperPct = betIsSingleH2H ? getBoostPercent("h2h") : 0;
+    const betBaseReturn = betIsSingleH2H && bet.selections[0]?.originalOdds
+      ? bet.stake * bet.selections[0].originalOdds : 0;
+    if (betIsSingleH2H && betSuperPct > 0 && betBaseReturn > 0) {
+      lines.push(`⚡ SUPER AUMENTADA +${betSuperPct}%`);
+      lines.push(`  Odd normal: R$ ${betBaseReturn.toFixed(2)}`);
+      lines.push(`  Super Aumentada: R$ ${bet.potentialWin.toFixed(2)}`);
+    }
     if (isCombo && comboPct > 0) {
       lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${bet.selections.length} seleções)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
@@ -154,6 +166,12 @@ export function BetSlip({
     : 0;
   const returnWithoutBonus = stakeNum * baseOddsForBonus;
   const returnWithBonus = Math.min(returnWithoutBonus * (1 + comboBonusPct), MAX_BET_PAYOUT);
+
+  const isSingleH2H = selections.length === 1 &&
+    (selections[0].marketKey === "h2h" || selections[0].marketKey === "match_winner");
+  const superAumentoPct = isSingleH2H ? getBoostPercent("h2h") : 0;
+  const superAumentoBaseReturn = isSingleH2H && selections[0]?.originalOdds
+    ? stakeNum * selections[0].originalOdds : 0;
 
   const rawPotentialWin = comboApplies ? returnWithBonus : stakeNum * totalOdds;
   const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
@@ -638,6 +656,32 @@ export function BetSlip({
                   <span className="font-medium">{fmtOdds(totalOdds)}</span>
                 </div>
 
+                {isSingleH2H && superAumentoPct > 0 && superAumentoBaseReturn > 0 && (
+                  <div className="rounded-xl overflow-hidden border-2 border-green-400 shadow-lg shadow-green-500/20">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-400 px-3 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
+                        <span className="text-black font-extrabold text-sm tracking-wide">SUPER AUMENTADA</span>
+                      </div>
+                      <span className="bg-black text-green-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
+                        +{superAumentoPct}%
+                      </span>
+                    </div>
+                    <div className="bg-green-500/10 px-3 py-2.5 space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Odd normal</span>
+                        <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {superAumentoBaseReturn.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-green-500/40 pt-2">
+                        <span className="text-green-400 font-bold text-sm flex items-center gap-1">
+                          <Zap className="w-3.5 h-3.5 fill-green-400" /> Super Aumentada
+                        </span>
+                        <span className="text-green-300 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {comboApplies && comboBonusPct > 0 && (
                   <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
                     <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
@@ -671,7 +715,7 @@ export function BetSlip({
 
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${comboApplies ? "text-yellow-400" : "text-primary"}`}>
+                  <span className={`font-bold ${comboApplies ? "text-yellow-400" : isSingleH2H && superAumentoPct > 0 ? "text-green-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>

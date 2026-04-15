@@ -9,6 +9,7 @@ import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
 import { checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
+import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -18,6 +19,7 @@ interface BetHistoryProps {
 
 function BetCard({ bet }: { bet: BetSlipType }) {
   const { toast } = useToast();
+  const { getBoostPercent } = useMarketSettings();
   const grouped: Record<string, Selection[]> = {};
   for (const sel of bet.selections) {
     const key = sel.gameId;
@@ -51,6 +53,16 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     }
     lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
+    const isSingleH2H = bet.selections.length === 1 &&
+      (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
+    const superPct = isSingleH2H ? getBoostPercent("h2h") : 0;
+    const superBase = isSingleH2H && bet.selections[0]?.originalOdds
+      ? bet.stake * bet.selections[0].originalOdds : 0;
+    if (isSingleH2H && superPct > 0 && superBase > 0) {
+      lines.push(`⚡ SUPER AUMENTADA +${superPct}%`);
+      lines.push(`  Odd normal: R$ ${superBase.toFixed(2)}`);
+      lines.push(`  Super Aumentada: R$ ${bet.potentialWin.toFixed(2)}`);
+    }
     if (isCombo && comboPct > 0) {
       lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${bet.selections.length} seleções)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
