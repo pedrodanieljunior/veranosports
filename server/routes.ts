@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBetSlipSchema } from "@shared/schema";
-import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
+import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
 import { z } from "zod";
 import { cache } from "./cache";
 import QRCode from "qrcode";
@@ -1792,8 +1792,8 @@ export async function registerRoutes(
 
       let totalOdds: number;
       if (checkIsComboBonus(validatedData.selections)) {
-        const gameCount = new Set(validatedData.selections.map((s: any) => s.gameId)).size;
-        const bonusPct = getComboBonus(gameCount);
+        const h2hCount = countH2HGames(validatedData.selections);
+        const bonusPct = getComboBonus(h2hCount);
         const baseOdds = validatedData.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
         totalOdds = Math.round(baseOdds * (1 + bonusPct) * 100) / 100;
       } else {

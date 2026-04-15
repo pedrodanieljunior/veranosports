@@ -7,32 +7,38 @@ export interface SelectionForOdds {
 }
 
 const COMBO_BONUS_TABLE: Record<number, number> = {
-  2: 0.06,
-  3: 0.09,
-  4: 0.12,
-  5: 0.15,
-  6: 0.20,
-  7: 0.25,
-  8: 0.30,
-  9: 0.375,
-  10: 0.45,
-  11: 0.525,
+  2: 0.05,
+  3: 0.10,
+  4: 0.15,
+  5: 0.20,
+  6: 0.27,
+  7: 0.34,
+  8: 0.41,
+  9: 0.49,
+  10: 0.58,
+  11: 0.65,
 };
 
-export function getComboBonus(gameCount: number): number {
-  if (gameCount < 2) return 0;
-  if (gameCount >= 12) return 0.60;
-  return COMBO_BONUS_TABLE[gameCount] ?? 0;
+export function countH2HGames(selections: SelectionForOdds[]): number {
+  const h2hGameIds = new Set(
+    selections
+      .filter(s => s.marketKey === "h2h" || s.marketKey === "match_winner")
+      .map(s => s.gameId)
+  );
+  return h2hGameIds.size;
+}
+
+export function getComboBonus(h2hGameCount: number): number {
+  if (h2hGameCount < 2) return 0;
+  if (h2hGameCount >= 12) return 0.72;
+  return COMBO_BONUS_TABLE[h2hGameCount] ?? 0;
 }
 
 export function checkIsComboBonus(selections: SelectionForOdds[]): boolean {
   if (selections.length < 2) return false;
-  const isAllH2H = selections.every(
-    s => s.marketKey === "h2h" || s.marketKey === "match_winner"
-  );
-  if (!isAllH2H) return false;
   const distinctGames = new Set(selections.map(s => s.gameId));
-  return distinctGames.size >= 2 && distinctGames.size === selections.length;
+  if (distinctGames.size < 2) return false;
+  return countH2HGames(selections) >= 2;
 }
 
 function isBTTS(sel: SelectionForOdds): boolean {
