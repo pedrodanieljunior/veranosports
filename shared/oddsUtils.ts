@@ -61,6 +61,13 @@ function isGoalsOverUnder(sel: SelectionForOdds): boolean {
  *
  * Exemplos: Ambos Sim + Over Sim, Ambos Não + Under Não, Ambos Não + Over Sim, etc.
  */
+function effectiveOdd(sel: SelectionForOdds, isMultiMarketGame: boolean): number {
+  if (!isMultiMarketGame) return sel.odds;
+  const isH2H = sel.marketKey === "h2h" || sel.marketKey === "match_winner";
+  if (isH2H && sel.originalOdds != null) return sel.originalOdds;
+  return sel.odds;
+}
+
 export function computeTotalOdds(selections: SelectionForOdds[]): number {
   if (selections.length === 0) return 1;
 
@@ -73,20 +80,23 @@ export function computeTotalOdds(selections: SelectionForOdds[]): number {
   let totalOdds = 1;
 
   for (const gameSelections of byGame.values()) {
+    const isMultiMarket = gameSelections.length > 1;
     const btts = gameSelections.find(isBTTS);
     const overUnder = gameSelections.find(isGoalsOverUnder);
 
     if (btts && overUnder) {
-      const combined = Math.max(btts.odds, overUnder.odds) * 1.15;
+      const bttsOdd = effectiveOdd(btts, isMultiMarket);
+      const ouOdd = effectiveOdd(overUnder, isMultiMarket);
+      const combined = Math.max(bttsOdd, ouOdd) * 1.15;
       totalOdds *= combined;
       for (const sel of gameSelections) {
         if (sel !== btts && sel !== overUnder) {
-          totalOdds *= sel.odds;
+          totalOdds *= effectiveOdd(sel, isMultiMarket);
         }
       }
     } else {
       for (const sel of gameSelections) {
-        totalOdds *= sel.odds;
+        totalOdds *= effectiveOdd(sel, isMultiMarket);
       }
     }
   }
