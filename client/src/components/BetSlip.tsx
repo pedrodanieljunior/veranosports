@@ -358,7 +358,6 @@ export function BetSlip({
                                     </div>
                                     <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                   </div>
-                                  <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{fmtOdds(sel.odds)}</span>
                                 </div>
                               </div>
                             ))}
@@ -551,7 +550,6 @@ export function BetSlip({
                                     <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                   </div>
                                   <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
-                                    <span className="text-yellow-400 font-bold text-xs">{fmtOdds(sel.odds)}</span>
                                     <button
                                       onClick={() => onRemoveSelection(sel.id)}
                                       className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors"
