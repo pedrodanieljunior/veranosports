@@ -47,7 +47,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     for (const [game, sels] of Object.entries(gameGrouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey, s.homeTeam, s.awayTeam)} @${fmtOdds(s.odds)}`);
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey, s.homeTeam, s.awayTeam)}`);
       }
       lines.push("");
     }
@@ -134,7 +134,6 @@ function BetCard({ bet }: { bet: BetSlipType }) {
                           </div>
                           <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                         </div>
-                        <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">{fmtOdds(sel.odds)}</span>
                       </div>
                     </div>
                   ))}

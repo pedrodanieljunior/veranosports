@@ -1578,7 +1578,6 @@ export default function Admin() {
                                                     }`}>
                                                       {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
                                                     </p>
-                                                    <span className="text-yellow-400 font-bold text-xs flex-shrink-0">@{fmtOdds(sel.odds)}</span>
                                                   </div>
                                                 </div>
                                                 {/* Botões ganhou/perdeu */}

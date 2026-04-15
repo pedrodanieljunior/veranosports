@@ -96,7 +96,7 @@ export function BetSlip({
     for (const [game, sels] of Object.entries(grouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome} @${fmtOdds(s.odds)}`);
+        lines.push(`  • ${translateMarket(s.marketKey)}: ${s.outcome}`);
       }
       lines.push("");
     }
