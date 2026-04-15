@@ -1,5 +1,5 @@
 import { Selection, BetSlip as BetSlipType } from "@shared/schema";
-import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
+import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,9 +82,7 @@ export function BetSlip({
       grouped[gameLabel].push(sel);
     }
     const isCombo = checkIsComboBonus(bet.selections);
-    const totalBetGames = isCombo ? new Set(bet.selections.map(s => s.gameId)).size : 0;
-    const comboCount = isCombo ? countH2HGames(bet.selections) : 0;
-    const comboPct = getComboBonus(totalBetGames);
+    const comboPct = isCombo ? getComboBonus(bet.selections.length) : 0;
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
@@ -103,7 +101,7 @@ export function BetSlip({
     lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     if (isCombo && comboPct > 0) {
-      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${comboCount} jogos 1X2)`);
+      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${bet.selections.length} seleções)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
       lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
     }
@@ -150,9 +148,7 @@ export function BetSlip({
   const stakeNum = parseFloat(stake || "0");
 
   const comboApplies = checkIsComboBonus(selections);
-  const totalDistinctGames = comboApplies ? new Set(selections.map(s => s.gameId)).size : 0;
-  const comboGameCount = countH2HGames(selections);
-  const comboBonusPct = getComboBonus(totalDistinctGames);
+  const comboBonusPct = comboApplies ? getComboBonus(selections.length) : 0;
   const baseOddsForBonus = comboApplies
     ? selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
     : 0;
@@ -650,7 +646,7 @@ export function BetSlip({
                         <span className="text-black font-extrabold text-sm tracking-wide">BÔNUS COMBINADA</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-black/70 text-xs font-medium">{comboGameCount} jogos 1X2</span>
+                        <span className="text-black/70 text-xs font-medium">{selections.length} seleções</span>
                         <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
                           +{(comboBonusPct * 100) % 1 === 0
                             ? `${(comboBonusPct * 100).toFixed(0)}%`

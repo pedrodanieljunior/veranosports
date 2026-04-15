@@ -37,8 +37,7 @@ export function getComboBonus(h2hGameCount: number): number {
 export function checkIsComboBonus(selections: SelectionForOdds[]): boolean {
   if (selections.length < 2) return false;
   const distinctGames = new Set(selections.map(s => s.gameId));
-  if (distinctGames.size < 2) return false;
-  return countH2HGames(selections) >= 2;
+  return distinctGames.size >= 2;
 }
 
 function isBTTS(sel: SelectionForOdds): boolean {

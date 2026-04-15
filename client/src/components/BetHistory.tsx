@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
-import { checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
+import { checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -33,9 +33,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       gameGrouped[gameLabel].push(sel);
     }
     const isCombo = checkIsComboBonus(bet.selections);
-    const totalBetGames = isCombo ? new Set(bet.selections.map(s => s.gameId)).size : 0;
-    const comboCount = isCombo ? countH2HGames(bet.selections) : 0;
-    const comboPct = getComboBonus(totalBetGames);
+    const comboPct = isCombo ? getComboBonus(bet.selections.length) : 0;
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
@@ -54,7 +52,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     if (isCombo && comboPct > 0) {
-      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${comboCount} jogos 1X2)`);
+      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${bet.selections.length} seleções)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
       lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
     }
