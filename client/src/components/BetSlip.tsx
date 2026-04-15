@@ -657,26 +657,26 @@ export function BetSlip({
                 </div>
 
                 {isSingleH2H && superAumentoPct > 0 && superAumentoBaseReturn > 0 && (
-                  <div className="rounded-xl overflow-hidden border-2 border-green-400 shadow-lg shadow-green-500/20">
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-400 px-3 py-2.5 flex items-center justify-between">
+                  <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
+                    <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
                         <span className="text-black font-extrabold text-sm tracking-wide">SUPER AUMENTADA</span>
                       </div>
-                      <span className="bg-black text-green-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
+                      <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
                         +{superAumentoPct}%
                       </span>
                     </div>
-                    <div className="bg-green-500/10 px-3 py-2.5 space-y-2">
+                    <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">Odd normal</span>
                         <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {superAumentoBaseReturn.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center border-t border-green-500/40 pt-2">
-                        <span className="text-green-400 font-bold text-sm flex items-center gap-1">
-                          <Zap className="w-3.5 h-3.5 fill-green-400" /> Super Aumentada
+                      <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
+                        <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
+                          <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Super Aumentada
                         </span>
-                        <span className="text-green-300 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
+                        <span className="text-yellow-300 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -715,7 +715,7 @@ export function BetSlip({
 
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${comboApplies ? "text-yellow-400" : isSingleH2H && superAumentoPct > 0 ? "text-green-400" : "text-primary"}`}>
+                  <span className={`font-bold ${comboApplies || (isSingleH2H && superAumentoPct > 0) ? "text-yellow-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>
