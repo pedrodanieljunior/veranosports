@@ -33,8 +33,9 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       gameGrouped[gameLabel].push(sel);
     }
     const isCombo = checkIsComboBonus(bet.selections);
+    const totalBetGames = isCombo ? new Set(bet.selections.map(s => s.gameId)).size : 0;
     const comboCount = isCombo ? countH2HGames(bet.selections) : 0;
-    const comboPct = getComboBonus(comboCount);
+    const comboPct = getComboBonus(totalBetGames);
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;

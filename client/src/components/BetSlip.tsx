@@ -82,8 +82,9 @@ export function BetSlip({
       grouped[gameLabel].push(sel);
     }
     const isCombo = checkIsComboBonus(bet.selections);
+    const totalBetGames = isCombo ? new Set(bet.selections.map(s => s.gameId)).size : 0;
     const comboCount = isCombo ? countH2HGames(bet.selections) : 0;
-    const comboPct = getComboBonus(comboCount);
+    const comboPct = getComboBonus(totalBetGames);
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
@@ -149,8 +150,9 @@ export function BetSlip({
   const stakeNum = parseFloat(stake || "0");
 
   const comboApplies = checkIsComboBonus(selections);
-  const comboGameCount = comboApplies ? countH2HGames(selections) : 0;
-  const comboBonusPct = getComboBonus(comboGameCount);
+  const totalDistinctGames = comboApplies ? new Set(selections.map(s => s.gameId)).size : 0;
+  const comboGameCount = countH2HGames(selections);
+  const comboBonusPct = getComboBonus(totalDistinctGames);
   const baseOddsForBonus = comboApplies
     ? selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
     : 0;
