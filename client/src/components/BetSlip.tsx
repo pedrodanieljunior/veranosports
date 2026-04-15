@@ -676,7 +676,7 @@ export function BetSlip({
                         <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
                           <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Super Aumentada
                         </span>
-                        <span className="text-yellow-300 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
+                        <span className="text-yellow-400 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -715,7 +715,7 @@ export function BetSlip({
 
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${comboApplies || (isSingleH2H && superAumentoPct > 0) ? "text-yellow-400" : "text-primary"}`}>
+                  <span className={`font-bold ${comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>
