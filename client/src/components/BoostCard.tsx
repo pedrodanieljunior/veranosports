@@ -114,7 +114,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
         {/* Description (optional) */}
         {card.description && (
-          <p className="text-[11px] mb-1.5" style={{ color: "#aaa" }}>{card.description}</p>
+          <p className="text-sm font-semibold text-center mb-1.5" style={{ color: "#fff" }}>{card.description}</p>
         )}
 
         {/* Selections list */}
