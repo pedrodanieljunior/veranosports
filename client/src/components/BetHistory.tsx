@@ -30,7 +30,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
   const shareBet = async () => {
     const gameGrouped: Record<string, Selection[]> = {};
     for (const sel of bet.selections) {
-      const gameLabel = `${sel.homeTeam} vs ${sel.awayTeam}`;
+      const gameLabel = sel.awayTeam ? `${sel.homeTeam} vs ${sel.awayTeam}` : sel.homeTeam;
       if (!gameGrouped[gameLabel]) gameGrouped[gameLabel] = [];
       gameGrouped[gameLabel].push(sel);
     }
@@ -110,7 +110,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-base">⚽</span>
                   <span className="font-semibold text-foreground text-sm truncate">
-                    {first.homeTeam} vs {first.awayTeam}
+                    {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
                   </span>
                 </div>
                 <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
