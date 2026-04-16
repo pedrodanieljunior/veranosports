@@ -2623,10 +2623,10 @@ function BoostTab() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Legenda / Descrição (opcional)</label>
+              <label className="text-xs font-medium text-muted-foreground">Dia e horário do evento (opcional)</label>
               <input
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Texto adicional exibido abaixo do badge SUPER BOOST"
+                placeholder="Ex: Hoje, 21:00  ou  17/04 • 16:00"
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               />

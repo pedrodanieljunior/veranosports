@@ -2,8 +2,6 @@ import { Zap } from "lucide-react";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
 import { fmtOdds } from "@/lib/formatOdds";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface BoostCardProps {
   card: BoostCardType;
@@ -53,12 +51,6 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
     };
   };
 
-  const startDate = new Date(card.startsAt);
-  const today = new Date();
-  const isToday = startDate.toDateString() === today.toDateString();
-  const dateLabel = isToday
-    ? `Hoje, ${format(startDate, "HH:mm", { locale: ptBR })}`
-    : format(startDate, "dd/MM • HH:mm", { locale: ptBR });
 
   const cardStyle = {
     background: "linear-gradient(135deg, #1a1a1a 0%, #222 60%, #1c1a10 100%)",
@@ -89,10 +81,12 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
           {card.matchTitle}
         </h3>
 
-        {/* Date */}
-        <p className="text-center text-[11px] mb-2" style={{ color: "#888" }}>
-          {dateLabel}
-        </p>
+        {/* Date / description from admin */}
+        {card.description && (
+          <p className="text-center text-[11px] mb-2" style={{ color: "#888" }}>
+            {card.description}
+          </p>
+        )}
 
         {/* Divider */}
         <div className="border-t mb-2" style={{ borderColor: "#333" }} />
@@ -111,11 +105,6 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
             ⚡ SUPER BOOST FW
           </span>
         </div>
-
-        {/* Description (optional) */}
-        {card.description && (
-          <p className="text-sm font-semibold italic text-center mb-1.5" style={{ color: "#fff" }}>{card.description}</p>
-        )}
 
         {/* Selections list */}
         {card.selections.length > 0 && (
