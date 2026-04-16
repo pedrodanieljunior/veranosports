@@ -41,43 +41,43 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
   return (
     <div
-      className="relative rounded-2xl overflow-hidden cursor-pointer mx-3 mb-3"
+      className="relative rounded-xl overflow-hidden cursor-pointer mx-3 mb-2.5"
       style={{
         background: "linear-gradient(135deg, #1a1a1a 0%, #222 60%, #1c1a10 100%)",
         border: isSelected ? "2px solid #f5c518" : "2px solid #333",
         boxShadow: isSelected
-          ? "0 0 0 1px #f5c51840, 0 8px 32px #f5c51830"
-          : "0 4px 24px rgba(0,0,0,0.5)",
+          ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
+          : "0 3px 16px rgba(0,0,0,0.5)",
       }}
       onClick={handleClick}
       data-testid={`boost-card-${card.id}`}
     >
       {/* Golden left accent bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8a800 100%)" }} />
+      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8a800 100%)" }} />
 
-      <div className="pl-4 pr-4 pt-4 pb-3">
+      <div className="pl-4 pr-3 pt-3 pb-2.5">
         {/* Event name */}
-        <p className="text-center text-xs font-medium mb-1" style={{ color: "#aaa" }}>
+        <p className="text-center text-[11px] font-medium mb-0.5" style={{ color: "#aaa" }}>
           {card.eventName}
         </p>
 
         {/* Match title */}
-        <h3 className="text-center text-white font-bold text-base leading-tight mb-1">
+        <h3 className="text-center text-white font-bold text-sm leading-tight mb-0.5">
           {card.matchTitle}
         </h3>
 
         {/* Date */}
-        <p className="text-center text-xs mb-3" style={{ color: "#888" }}>
+        <p className="text-center text-[11px] mb-2" style={{ color: "#888" }}>
           {dateLabel}
         </p>
 
         {/* Divider */}
-        <div className="border-t mb-3" style={{ borderColor: "#333" }} />
+        <div className="border-t mb-2" style={{ borderColor: "#333" }} />
 
         {/* SUPER BOOST badge */}
-        <div className="mb-3">
+        <div className="mb-2">
           <span
-            className="inline-block text-xs font-black italic px-2.5 py-1 rounded-full"
+            className="inline-block text-[11px] font-black italic px-2 py-0.5 rounded-full"
             style={{
               color: "#f5c518",
               border: "1.5px solid #f5c518",
@@ -91,33 +91,33 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
         {/* Description (optional) */}
         {card.description && (
-          <p className="text-xs mb-2" style={{ color: "#aaa" }}>{card.description}</p>
+          <p className="text-[11px] mb-1.5" style={{ color: "#aaa" }}>{card.description}</p>
         )}
 
         {/* Selections list */}
         {card.selections.length > 0 && (
-          <div className="relative pl-5 mb-3">
+          <div className="relative pl-4 mb-2">
             {/* Golden vertical connector line */}
             {card.selections.length > 1 && (
               <div
-                className="absolute left-[5px] top-[6px] w-[2px]"
+                className="absolute left-[4px] top-[5px] w-[2px]"
                 style={{
                   background: "linear-gradient(180deg, #f5c518 0%, #e8a800 100%)",
-                  height: "calc(100% - 12px)",
+                  height: "calc(100% - 10px)",
                 }}
               />
             )}
             {card.selections.map((sel, idx) => (
-              <div key={idx} className={`relative${idx > 0 ? " mt-2.5" : ""}`}>
+              <div key={idx} className={`relative${idx > 0 ? " mt-2" : ""}`}>
                 {/* Golden bullet */}
                 <div
-                  className="absolute -left-5 top-[2px] w-[11px] h-[11px] rounded-full z-10"
+                  className="absolute -left-4 top-[3px] w-[9px] h-[9px] rounded-full z-10"
                   style={{
                     background: "linear-gradient(135deg, #f5c518 0%, #e8a800 100%)",
-                    boxShadow: "0 0 6px #f5c51860",
+                    boxShadow: "0 0 5px #f5c51860",
                   }}
                 />
-                <p className="text-sm leading-snug" style={{ color: "#ddd" }}>
+                <p className="text-xs leading-snug" style={{ color: "#ddd" }}>
                   {sel.description}
                 </p>
               </div>
@@ -127,25 +127,25 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
         {/* Odds bar */}
         <div
-          className="flex items-center justify-center gap-3 rounded-xl px-4 py-2.5 mt-1"
+          className="flex items-center justify-center gap-2.5 rounded-lg px-3 py-2 mt-0.5"
           style={{ background: "#111", border: "1px solid #2a2a2a" }}
         >
           <span
-            className="text-base font-semibold line-through"
+            className="text-sm font-semibold line-through"
             style={{ color: "#777", textDecorationColor: "#555" }}
           >
             {fmtOdds(card.originalOdds)}
           </span>
-          <Zap className="w-5 h-5 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
-          <span className="text-2xl font-extrabold" style={{ color: "#f5c518" }}>
+          <Zap className="w-4 h-4 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
+          <span className="text-xl font-extrabold" style={{ color: "#f5c518" }}>
             {fmtOdds(card.boostedOdds)}
           </span>
         </div>
 
         {/* Selected indicator */}
         {isSelected && (
-          <div className="mt-2.5 text-center">
-            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: "#f5c51820", color: "#f5c518", border: "1px solid #f5c51850" }}>
+          <div className="mt-2 text-center">
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: "#f5c51820", color: "#f5c518", border: "1px solid #f5c51850" }}>
               ✓ Adicionado ao bilhete
             </span>
           </div>
