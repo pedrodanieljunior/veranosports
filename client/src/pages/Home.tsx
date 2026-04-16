@@ -137,9 +137,10 @@ export default function Home() {
 
   const { data: boostCards = [] } = useQuery<BoostCardType[]>({
     queryKey: ["/api/boost-cards"],
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 0,
+    refetchInterval: 30 * 1000,
     refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const sessionId = getSessionId();
