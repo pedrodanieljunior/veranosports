@@ -187,6 +187,20 @@ export default function Home() {
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
       if (exists) return prev.filter((s) => s.id !== selection.id);
+
+      const isBoost = selection.marketKey === "boost";
+      const hasBoost = prev.some((s) => s.marketKey === "boost");
+      const hasOther = prev.some((s) => s.marketKey !== "boost");
+
+      if (isBoost && hasOther) {
+        toast({ title: "Super Boost é exclusivo", description: "Remova as outras seleções antes de adicionar o Super Boost.", variant: "destructive" });
+        return prev;
+      }
+      if (!isBoost && hasBoost) {
+        toast({ title: "Bilhete com Super Boost", description: "Remova o Super Boost para adicionar outras seleções.", variant: "destructive" });
+        return prev;
+      }
+
       const selectionsFromSameGame = prev.filter((s) => s.gameId === selection.gameId);
       if (selectionsFromSameGame.length >= 3) {
         toast({ title: "Máximo de 3 mercados por jogo", variant: "destructive" });
