@@ -77,7 +77,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
         </p>
 
         {/* Match title */}
-        <h3 className="text-center text-white font-bold text-sm leading-tight mb-0.5">
+        <h3 className="text-center text-sm leading-tight mb-0.5" style={{ color: "#aaa" }}>
           {card.matchTitle}
         </h3>
 
