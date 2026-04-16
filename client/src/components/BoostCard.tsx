@@ -85,7 +85,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
               background: "#f5c51812",
             }}
           >
-            ⚡ SUPER BOOST
+            ⚡ SUPER BOOST FW
           </span>
         </div>
 
