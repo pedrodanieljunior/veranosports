@@ -2455,6 +2455,12 @@ function BoostTab() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {fmt(card.startsAt)} → {fmt(card.endsAt)}
                         </p>
+                        {card.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{card.description}</p>
+                        )}
+                        {card.subtitle && (
+                          <p className="text-xs font-medium italic mt-0.5" style={{ color: "#eee" }}>{card.subtitle}</p>
+                        )}
                         {card.outcomes && card.outcomes.length > 0 ? (
                           <div className="flex flex-wrap gap-2 mt-1">
                             {card.outcomes.map((o, oi) => (
