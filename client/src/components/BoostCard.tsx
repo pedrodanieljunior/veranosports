@@ -83,7 +83,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
         {/* Date / description from admin */}
         {card.description && (
-          <p className="text-center text-[11px] mb-2" style={{ color: "#888" }}>
+          <p className="text-center text-sm font-semibold italic mb-2" style={{ color: "#fff" }}>
             {card.description}
           </p>
         )}
