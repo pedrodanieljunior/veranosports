@@ -84,7 +84,8 @@ export function BetSlip({
       grouped[gameLabel].push(sel);
     }
     const isCombo = checkIsComboBonus(bet.selections);
-    const comboPct = isCombo ? getComboBonus(bet.selections.length) : 0;
+    const distinctBetGames = new Set(bet.selections.map(s => s.gameId)).size;
+    const comboPct = isCombo ? getComboBonus(distinctBetGames) : 0;
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
@@ -113,7 +114,7 @@ export function BetSlip({
       lines.push(`  Super Aumentada: R$ ${bet.potentialWin.toFixed(2)}`);
     }
     if (isCombo && comboPct > 0) {
-      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${bet.selections.length} seleções)`);
+      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${distinctBetGames} jogos)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
       lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
     }
@@ -160,7 +161,8 @@ export function BetSlip({
   const stakeNum = parseFloat(stake || "0");
 
   const comboApplies = checkIsComboBonus(selections);
-  const comboBonusPct = comboApplies ? getComboBonus(selections.length) : 0;
+  const distinctGameCount = new Set(selections.map(s => s.gameId)).size;
+  const comboBonusPct = comboApplies ? getComboBonus(distinctGameCount) : 0;
   const baseOddsForBonus = comboApplies
     ? selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
     : 0;
@@ -688,7 +690,7 @@ export function BetSlip({
                         <span className="text-black font-extrabold text-sm tracking-wide">BÔNUS COMBINADA</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-black/70 text-xs font-medium">{selections.length} seleções</span>
+                        <span className="text-black/70 text-xs font-medium">{distinctGameCount} jogos</span>
                         <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
                           +{(comboBonusPct * 100) % 1 === 0
                             ? `${(comboBonusPct * 100).toFixed(0)}%`
