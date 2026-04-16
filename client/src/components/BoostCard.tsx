@@ -81,10 +81,17 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
           {card.matchTitle}
         </h3>
 
-        {/* Date / description from admin */}
+        {/* Date / time from admin — same style as eventName */}
         {card.description && (
-          <p className="text-center text-sm font-semibold italic mb-2" style={{ color: "#fff" }}>
+          <p className="text-center text-[11px] font-medium mb-2" style={{ color: "#aaa" }}>
             {card.description}
+          </p>
+        )}
+
+        {/* Market subtitle — white, bold, italic */}
+        {card.subtitle && (
+          <p className="text-center text-sm font-semibold italic mb-2" style={{ color: "#fff" }}>
+            {card.subtitle}
           </p>
         )}
 

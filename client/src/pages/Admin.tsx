@@ -2209,6 +2209,7 @@ function BoostTab() {
     boostedOdds: "",
     outcomes: [] as { label: string; originalOdds: string; boostedOdds: string }[],
     outcomeMode: false,
+    subtitle: "",
     startsAt: "",
     endsAt: "",
     active: true,
@@ -2319,6 +2320,7 @@ function BoostTab() {
         ? card.outcomes.map(o => ({ label: o.label, originalOdds: String(o.originalOdds), boostedOdds: String(o.boostedOdds) }))
         : [],
       outcomeMode: hasOutcomes,
+      subtitle: card.subtitle ?? "",
       startsAt: toLocalDatetime(card.startsAt),
       endsAt: toLocalDatetime(card.endsAt),
       active: card.active,
@@ -2347,6 +2349,7 @@ function BoostTab() {
         originalOdds: 1,
         boostedOdds: 1,
         outcomes: validOutcomes.map(o => ({ label: o.label, originalOdds: parseFloat(o.originalOdds), boostedOdds: parseFloat(o.boostedOdds) })),
+        subtitle: form.subtitle,
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
         active: form.active,
@@ -2365,6 +2368,7 @@ function BoostTab() {
         originalOdds: parseFloat(form.originalOdds),
         boostedOdds: parseFloat(form.boostedOdds),
         outcomes: [],
+        subtitle: form.subtitle,
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
         active: form.active,
@@ -2629,6 +2633,16 @@ function BoostTab() {
                 placeholder="Ex: Hoje, 21:00  ou  17/04 • 16:00"
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Descrição do mercado (opcional)</label>
+              <input
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Ex: Ambos marcam no jogo do mengão?"
+                value={form.subtitle}
+                onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
               />
             </div>
 

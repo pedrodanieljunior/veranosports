@@ -527,6 +527,7 @@ export class DatabaseStorage implements IStorage {
       boostedOdds: r.boostedOdds,
       outcomes: (r.outcomes as { label: string; originalOdds: number; boostedOdds: number }[]) ?? [],
       outcomeResults: (r.outcomeResults as ("pending" | "won" | "lost")[]) ?? [],
+      subtitle: r.subtitle ?? "",
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       active: r.active,
