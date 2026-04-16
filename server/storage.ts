@@ -574,6 +574,7 @@ export class DatabaseStorage implements IStorage {
     if (data.originalOdds !== undefined) update.originalOdds = data.originalOdds;
     if (data.boostedOdds !== undefined) update.boostedOdds = data.boostedOdds;
     if (data.outcomes !== undefined) update.outcomes = data.outcomes;
+    if (data.subtitle !== undefined) update.subtitle = data.subtitle;
     if (data.startsAt !== undefined) update.startsAt = new Date(data.startsAt);
     if (data.endsAt !== undefined) update.endsAt = new Date(data.endsAt);
     if (data.active !== undefined) update.active = data.active;
