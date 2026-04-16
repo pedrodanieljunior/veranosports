@@ -525,6 +525,7 @@ export class DatabaseStorage implements IStorage {
       selections: (r.selections as { description: string }[]) ?? [],
       originalOdds: r.originalOdds,
       boostedOdds: r.boostedOdds,
+      outcomes: (r.outcomes as { label: string; originalOdds: number; boostedOdds: number }[]) ?? [],
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       active: r.active,
@@ -554,6 +555,7 @@ export class DatabaseStorage implements IStorage {
       selections: data.selections ?? [],
       originalOdds: data.originalOdds,
       boostedOdds: data.boostedOdds,
+      outcomes: data.outcomes ?? [],
       startsAt: new Date(data.startsAt),
       endsAt: new Date(data.endsAt),
       active: data.active ?? true,
@@ -569,6 +571,7 @@ export class DatabaseStorage implements IStorage {
     if (data.selections !== undefined) update.selections = data.selections;
     if (data.originalOdds !== undefined) update.originalOdds = data.originalOdds;
     if (data.boostedOdds !== undefined) update.boostedOdds = data.boostedOdds;
+    if (data.outcomes !== undefined) update.outcomes = data.outcomes;
     if (data.startsAt !== undefined) update.startsAt = new Date(data.startsAt);
     if (data.endsAt !== undefined) update.endsAt = new Date(data.endsAt);
     if (data.active !== undefined) update.active = data.active;

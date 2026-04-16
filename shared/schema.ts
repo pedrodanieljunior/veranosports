@@ -179,11 +179,18 @@ export const boostCardsTable = pgTable("boost_cards", {
   selections: jsonb("selections").notNull().default([]),
   originalOdds: real("original_odds").notNull().default(0),
   boostedOdds: real("boosted_odds").notNull().default(0),
+  outcomes: jsonb("outcomes").default([]),
   startsAt: timestamp("starts_at").notNull(),
   endsAt: timestamp("ends_at").notNull(),
   active: boolean("active").notNull().default(true),
   result: text("result").default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const boostOutcomeSchema = z.object({
+  label: z.string(),
+  originalOdds: z.number(),
+  boostedOdds: z.number(),
 });
 
 export const boostCardSchema = z.object({
@@ -194,6 +201,7 @@ export const boostCardSchema = z.object({
   selections: z.array(z.object({ description: z.string() })),
   originalOdds: z.number(),
   boostedOdds: z.number(),
+  outcomes: z.array(boostOutcomeSchema).default([]),
   startsAt: z.string(),
   endsAt: z.string(),
   active: z.boolean(),
@@ -202,6 +210,7 @@ export const boostCardSchema = z.object({
 });
 
 export type BoostCard = z.infer<typeof boostCardSchema>;
+export type BoostOutcome = z.infer<typeof boostOutcomeSchema>;
 
 export const insertBoostCardSchema = z.object({
   eventName: z.string().min(1, "Nome do evento obrigatório"),
@@ -210,6 +219,7 @@ export const insertBoostCardSchema = z.object({
   selections: z.array(z.object({ description: z.string() })).max(3).optional().default([]),
   originalOdds: z.number().min(1, "Odd mínima é 1.00"),
   boostedOdds: z.number().min(1, "Odd mínima é 1.00"),
+  outcomes: z.array(boostOutcomeSchema).optional().default([]),
   startsAt: z.string(),
   endsAt: z.string(),
   active: z.boolean().optional().default(true),

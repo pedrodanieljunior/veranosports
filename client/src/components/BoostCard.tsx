@@ -12,12 +12,34 @@ interface BoostCardProps {
 }
 
 export function BoostCard({ card, selections, onToggleSelection }: BoostCardProps) {
-  const selectionId = `boost-${card.id}`;
-  const isSelected = selections.some(s => s.id === selectionId);
+  const hasOutcomes = card.outcomes && card.outcomes.length > 0;
 
-  const handleClick = () => {
-    const sel: Selection = {
-      id: selectionId,
+  const singleId = `boost-${card.id}`;
+  const isSingleSelected = !hasOutcomes && selections.some(s => s.id === singleId);
+  const selectedOutcomeId = hasOutcomes
+    ? selections.find(s => s.id.startsWith(`boost-${card.id}-`))?.id ?? null
+    : null;
+  const isAnySelected = isSingleSelected || !!selectedOutcomeId;
+
+  const makeSelection = (outcomeIdx?: number): Selection => {
+    if (hasOutcomes && outcomeIdx !== undefined) {
+      const o = card.outcomes[outcomeIdx];
+      return {
+        id: `boost-${card.id}-${outcomeIdx}`,
+        gameId: `boost-${card.id}`,
+        homeTeam: card.matchTitle,
+        awayTeam: "",
+        commenceTime: card.endsAt,
+        sportTitle: card.eventName,
+        marketKey: "boost",
+        bookmaker: "FW Sports",
+        outcome: o.label,
+        odds: o.boostedOdds,
+        originalOdds: o.originalOdds,
+      };
+    }
+    return {
+      id: singleId,
       gameId: `boost-${card.id}`,
       homeTeam: card.matchTitle,
       awayTeam: "",
@@ -29,7 +51,6 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
       odds: card.boostedOdds,
       originalOdds: card.originalOdds,
     };
-    onToggleSelection(sel);
   };
 
   const startDate = new Date(card.startsAt);
@@ -39,17 +60,19 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
     ? `Hoje, ${format(startDate, "HH:mm", { locale: ptBR })}`
     : format(startDate, "dd/MM • HH:mm", { locale: ptBR });
 
+  const cardStyle = {
+    background: "linear-gradient(135deg, #1a1a1a 0%, #222 60%, #1c1a10 100%)",
+    border: isAnySelected ? "2px solid #f5c518" : "2px solid #c8991a",
+    boxShadow: isAnySelected
+      ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
+      : "0 3px 16px rgba(0,0,0,0.5), 0 0 0 1px #f5c51820",
+  };
+
   return (
     <div
-      className="relative rounded-xl overflow-hidden cursor-pointer mx-3 mb-2.5"
-      style={{
-        background: "linear-gradient(135deg, #1a1a1a 0%, #222 60%, #1c1a10 100%)",
-        border: isSelected ? "2px solid #f5c518" : "2px solid #c8991a",
-        boxShadow: isSelected
-          ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
-          : "0 3px 16px rgba(0,0,0,0.5), 0 0 0 1px #f5c51820",
-      }}
-      onClick={handleClick}
+      className={`relative rounded-xl overflow-hidden mx-3 mb-2.5 ${!hasOutcomes ? "cursor-pointer" : ""}`}
+      style={cardStyle}
+      onClick={!hasOutcomes ? () => onToggleSelection(makeSelection()) : undefined}
       data-testid={`boost-card-${card.id}`}
     >
       {/* Golden left accent bar */}
@@ -97,7 +120,6 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
         {/* Selections list */}
         {card.selections.length > 0 && (
           <div className="relative pl-4 mb-2">
-            {/* Golden vertical connector line */}
             {card.selections.length > 1 && (
               <div
                 className="absolute left-[4px] top-[5px] w-[2px]"
@@ -109,7 +131,6 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
             )}
             {card.selections.map((sel, idx) => (
               <div key={idx} className={`relative${idx > 0 ? " mt-2" : ""}`}>
-                {/* Golden bullet */}
                 <div
                   className="absolute -left-4 top-[3px] w-[9px] h-[9px] rounded-full z-10"
                   style={{
@@ -125,25 +146,59 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
           </div>
         )}
 
-        {/* Odds bar */}
-        <div
-          className="flex items-center justify-center gap-2.5 rounded-lg px-3 py-2 mt-0.5"
-          style={{ background: "#111", border: "1px solid #2a2a2a" }}
-        >
-          <span
-            className="text-sm font-semibold line-through"
-            style={{ color: "#777", textDecorationColor: "#555" }}
+        {/* ── SINGLE ODDS (no outcomes) ── */}
+        {!hasOutcomes && (
+          <div
+            className="flex items-center justify-center gap-2.5 rounded-lg px-3 py-2 mt-0.5"
+            style={{ background: "#111", border: "1px solid #2a2a2a" }}
           >
-            {fmtOdds(card.originalOdds)}
-          </span>
-          <Zap className="w-4 h-4 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
-          <span className="text-xl font-extrabold" style={{ color: "#f5c518" }}>
-            {fmtOdds(card.boostedOdds)}
-          </span>
-        </div>
+            <span className="text-sm font-semibold line-through" style={{ color: "#777", textDecorationColor: "#555" }}>
+              {fmtOdds(card.originalOdds)}
+            </span>
+            <Zap className="w-4 h-4 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
+            <span className="text-xl font-extrabold" style={{ color: "#f5c518" }}>
+              {fmtOdds(card.boostedOdds)}
+            </span>
+          </div>
+        )}
+
+        {/* ── MULTI OUTCOMES (selectable buttons) ── */}
+        {hasOutcomes && (
+          <div className="flex flex-col gap-1.5 mt-0.5">
+            {card.outcomes.map((o, idx) => {
+              const selId = `boost-${card.id}-${idx}`;
+              const isChosen = selectedOutcomeId === selId;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onToggleSelection(makeSelection(idx))}
+                  className="w-full flex items-center justify-between rounded-lg px-3 py-2 transition-all"
+                  style={{
+                    background: isChosen ? "#f5c51820" : "#111",
+                    border: isChosen ? "1.5px solid #f5c518" : "1px solid #2a2a2a",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="text-xs font-semibold" style={{ color: isChosen ? "#f5c518" : "#ccc" }}>
+                    {o.label}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs line-through" style={{ color: "#666", textDecorationColor: "#555" }}>
+                      {fmtOdds(o.originalOdds)}
+                    </span>
+                    <Zap className="w-3 h-3 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
+                    <span className="text-sm font-extrabold" style={{ color: "#f5c518" }}>
+                      {fmtOdds(o.boostedOdds)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Selected indicator */}
-        {isSelected && (
+        {isAnySelected && (
           <div className="mt-2 text-center">
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: "#f5c51820", color: "#f5c518", border: "1px solid #f5c51850" }}>
               ✓ Adicionado ao bilhete

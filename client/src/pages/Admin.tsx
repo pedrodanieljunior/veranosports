@@ -2207,6 +2207,8 @@ function BoostTab() {
     selections: [] as { description: string }[],
     originalOdds: "",
     boostedOdds: "",
+    outcomes: [] as { label: string; originalOdds: string; boostedOdds: string }[],
+    outcomeMode: false,
     startsAt: "",
     endsAt: "",
     active: true,
@@ -2306,6 +2308,7 @@ function BoostTab() {
 
   const openEdit = (card: BoostCard) => {
     setEditingCard(card);
+    const hasOutcomes = card.outcomes && card.outcomes.length > 0;
     setForm({
       eventName: card.eventName,
       matchTitle: card.matchTitle,
@@ -2313,6 +2316,10 @@ function BoostTab() {
       selections: card.selections.map(s => ({ description: s.description })),
       originalOdds: String(card.originalOdds),
       boostedOdds: String(card.boostedOdds),
+      outcomes: hasOutcomes
+        ? card.outcomes.map(o => ({ label: o.label, originalOdds: String(o.originalOdds), boostedOdds: String(o.boostedOdds) }))
+        : [],
+      outcomeMode: hasOutcomes,
       startsAt: toLocalDatetime(card.startsAt),
       endsAt: toLocalDatetime(card.endsAt),
       active: card.active,
@@ -2327,25 +2334,47 @@ function BoostTab() {
   };
 
   const handleSubmit = () => {
-    const payload = {
-      eventName: form.eventName,
-      matchTitle: form.matchTitle,
-      description: form.description,
-      selections: form.selections.filter(s => s.description.trim()),
-      originalOdds: parseFloat(form.originalOdds),
-      boostedOdds: parseFloat(form.boostedOdds),
-      startsAt: new Date(form.startsAt).toISOString(),
-      endsAt: new Date(form.endsAt).toISOString(),
-      active: form.active,
-    };
-    if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
-      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
-      return;
-    }
-    if (editingCard) {
-      updateMutation.mutate({ id: editingCard.id, data: payload });
+    if (form.outcomeMode) {
+      const validOutcomes = form.outcomes.filter(o => o.label.trim() && parseFloat(o.originalOdds) >= 1 && parseFloat(o.boostedOdds) >= 1);
+      if (validOutcomes.length < 2) {
+        toast({ title: "Adicione pelo menos 2 opções válidas no modo múltiplas opções", variant: "destructive" });
+        return;
+      }
+      const payload = {
+        eventName: form.eventName,
+        matchTitle: form.matchTitle,
+        description: form.description,
+        selections: form.selections.filter(s => s.description.trim()),
+        originalOdds: 1,
+        boostedOdds: 1,
+        outcomes: validOutcomes.map(o => ({ label: o.label, originalOdds: parseFloat(o.originalOdds), boostedOdds: parseFloat(o.boostedOdds) })),
+        startsAt: new Date(form.startsAt).toISOString(),
+        endsAt: new Date(form.endsAt).toISOString(),
+        active: form.active,
+      };
+      if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
+        toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+        return;
+      }
+      editingCard ? updateMutation.mutate({ id: editingCard.id, data: payload }) : createMutation.mutate(payload);
     } else {
-      createMutation.mutate(payload);
+      const payload = {
+        eventName: form.eventName,
+        matchTitle: form.matchTitle,
+        description: form.description,
+        selections: form.selections.filter(s => s.description.trim()),
+        originalOdds: parseFloat(form.originalOdds),
+        boostedOdds: parseFloat(form.boostedOdds),
+        outcomes: [],
+        startsAt: new Date(form.startsAt).toISOString(),
+        endsAt: new Date(form.endsAt).toISOString(),
+        active: form.active,
+      };
+      if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
+        toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+        return;
+      }
+      editingCard ? updateMutation.mutate({ id: editingCard.id, data: payload }) : createMutation.mutate(payload);
     }
   };
 
@@ -2423,11 +2452,24 @@ function BoostTab() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {fmt(card.startsAt)} → {fmt(card.endsAt)}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs line-through text-muted-foreground">{fmtOdds(card.originalOdds)}</span>
-                          <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                          <span className="text-sm font-bold text-yellow-400">{fmtOdds(card.boostedOdds)}</span>
-                        </div>
+                        {card.outcomes && card.outcomes.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {card.outcomes.map((o, oi) => (
+                              <span key={oi} className="text-xs flex items-center gap-1 px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-400/10">
+                                <span className="text-muted-foreground">{o.label}:</span>
+                                <span className="line-through text-muted-foreground">{fmtOdds(o.originalOdds)}</span>
+                                <Zap className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
+                                <span className="font-bold text-yellow-400">{fmtOdds(o.boostedOdds)}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs line-through text-muted-foreground">{fmtOdds(card.originalOdds)}</span>
+                            <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            <span className="text-sm font-bold text-yellow-400">{fmtOdds(card.boostedOdds)}</span>
+                          </div>
+                        )}
                         {card.selections.length > 0 && (
                           <div className="relative pl-4 mt-2">
                             {card.selections.length > 1 && (
@@ -2573,27 +2615,109 @@ function BoostTab() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Odd original (riscada) *</label>
-                <input
-                  type="number" step="0.01" min="1"
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                  placeholder="2.75"
-                  value={form.originalOdds}
-                  onChange={e => setForm(f => ({ ...f, originalOdds: e.target.value }))}
-                />
+            {/* Odds mode toggle */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, outcomeMode: false, outcomes: [] }))}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${!form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                  >
+                    ⚡ Odd simples
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, outcomeMode: true, outcomes: f.outcomes.length >= 2 ? f.outcomes : [{ label: "Sim", originalOdds: "", boostedOdds: "" }, { label: "Não", originalOdds: "", boostedOdds: "" }] }))}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                  >
+                    ⚡ Múltiplas opções
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {form.outcomeMode ? "Ex: Ambos marcam: Sim / Não" : "Ex: Over 2.5 — uma única seleção"}
+                </p>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Odd boostada ⚡ *</label>
-                <input
-                  type="number" step="0.01" min="1"
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                  placeholder="3.55"
-                  value={form.boostedOdds}
-                  onChange={e => setForm(f => ({ ...f, boostedOdds: e.target.value }))}
-                />
-              </div>
+
+              {!form.outcomeMode && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Odd original (riscada) *</label>
+                    <input
+                      type="number" step="0.01" min="1"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="2.75"
+                      value={form.originalOdds}
+                      onChange={e => setForm(f => ({ ...f, originalOdds: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Odd boostada ⚡ *</label>
+                    <input
+                      type="number" step="0.01" min="1"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="3.55"
+                      value={form.boostedOdds}
+                      onChange={e => setForm(f => ({ ...f, boostedOdds: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {form.outcomeMode && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Opções de escolha (mín. 2) *</label>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setForm(f => ({ ...f, outcomes: [...f.outcomes, { label: "", originalOdds: "", boostedOdds: "" }] }))}>
+                      <Plus className="w-3 h-3" /> Opção
+                    </Button>
+                  </div>
+                  {form.outcomes.map((o, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        className="flex-1 min-w-0 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                        placeholder={idx === 0 ? "Sim" : idx === 1 ? "Não" : `Opção ${idx + 1}`}
+                        value={o.label}
+                        onChange={e => {
+                          const outcomes = [...form.outcomes];
+                          outcomes[idx] = { ...outcomes[idx], label: e.target.value };
+                          setForm(f => ({ ...f, outcomes }));
+                        }}
+                      />
+                      <input
+                        type="number" step="0.01" min="1"
+                        className="w-20 rounded-md border bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="orig."
+                        title="Odd original"
+                        value={o.originalOdds}
+                        onChange={e => {
+                          const outcomes = [...form.outcomes];
+                          outcomes[idx] = { ...outcomes[idx], originalOdds: e.target.value };
+                          setForm(f => ({ ...f, outcomes }));
+                        }}
+                      />
+                      <input
+                        type="number" step="0.01" min="1"
+                        className="w-20 rounded-md border bg-background px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-primary text-yellow-400 font-semibold"
+                        placeholder="⚡boost"
+                        title="Odd boostada"
+                        value={o.boostedOdds}
+                        onChange={e => {
+                          const outcomes = [...form.outcomes];
+                          outcomes[idx] = { ...outcomes[idx], boostedOdds: e.target.value };
+                          setForm(f => ({ ...f, outcomes }));
+                        }}
+                      />
+                      {form.outcomes.length > 2 && (
+                        <Button size="icon" variant="ghost" className="h-9 w-9 text-red-400 hover:text-red-300 flex-shrink-0" onClick={() => setForm(f => ({ ...f, outcomes: f.outcomes.filter((_, i) => i !== idx) }))}>
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground">Campo "orig." = odd original (riscada) · "⚡boost" = odd boostada</p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
