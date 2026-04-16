@@ -2272,6 +2272,31 @@ function BoostTab() {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const resolveMutation = useMutation({
+    mutationFn: async ({ id, result }: { id: number; result: "pending" | "won" | "lost" }) => {
+      const res = await fetch(`/api/admin/boost-cards/${id}/result`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json() as Promise<{ card: BoostCard; affectedBets: number }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      const label = data.card.result === "won" ? "Ganhou ✓" : data.card.result === "lost" ? "Perdeu ✗" : "Pendente";
+      toast({
+        title: `Resultado: ${label}`,
+        description: data.affectedBets > 0
+          ? `${data.affectedBets} bilhete(s) atualizado(s) automaticamente.`
+          : "Nenhum bilhete pendente afetado.",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const toLocalDatetime = (iso: string) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -2380,15 +2405,19 @@ function BoostTab() {
                 const now = new Date();
                 const isLive = card.active && new Date(card.startsAt) <= now && new Date(card.endsAt) >= now;
                 const isPast = new Date(card.endsAt) < now;
+                const cardResult = card.result ?? "pending";
+                const isResolving = resolveMutation.isPending;
                 return (
-                  <div key={card.id} className="border rounded-xl p-4 space-y-2">
+                  <div key={card.id} className={`border rounded-xl p-4 space-y-3 ${cardResult === "won" ? "border-green-500/40 bg-green-500/5" : cardResult === "lost" ? "border-red-500/40 bg-red-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-sm">{card.matchTitle}</span>
                           {isLive && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">● Visível</Badge>}
-                          {isPast && <Badge variant="outline" className="text-xs text-muted-foreground">Encerrado</Badge>}
+                          {isPast && !isLive && <Badge variant="outline" className="text-xs text-muted-foreground">Encerrado</Badge>}
                           {!card.active && <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>}
+                          {cardResult === "won" && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">✓ Ganhou</Badge>}
+                          {cardResult === "lost" && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">✗ Perdeu</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground">{card.eventName}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -2412,6 +2441,42 @@ function BoostTab() {
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300" onClick={() => deleteMutation.mutate(card.id)} title="Excluir">
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
+                      </div>
+                    </div>
+
+                    {/* Manual result control */}
+                    <div className="border-t pt-2.5">
+                      <p className="text-[11px] text-muted-foreground mb-2 font-medium">RESULTADO DO BOOST</p>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant={cardResult === "won" ? "default" : "outline"}
+                          className={`h-7 text-xs gap-1 ${cardResult === "won" ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : "border-green-600/40 text-green-400 hover:bg-green-500/10 hover:border-green-500"}`}
+                          disabled={isResolving}
+                          onClick={() => resolveMutation.mutate({ id: card.id, result: "won" })}
+                        >
+                          ✓ Ganhou
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={cardResult === "lost" ? "default" : "outline"}
+                          className={`h-7 text-xs gap-1 ${cardResult === "lost" ? "bg-red-600 hover:bg-red-700 text-white border-red-600" : "border-red-600/40 text-red-400 hover:bg-red-500/10 hover:border-red-500"}`}
+                          disabled={isResolving}
+                          onClick={() => resolveMutation.mutate({ id: card.id, result: "lost" })}
+                        >
+                          ✗ Perdeu
+                        </Button>
+                        {cardResult !== "pending" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                            disabled={isResolving}
+                            onClick={() => resolveMutation.mutate({ id: card.id, result: "pending" })}
+                          >
+                            ↺ Pendente
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

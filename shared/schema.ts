@@ -182,6 +182,7 @@ export const boostCardsTable = pgTable("boost_cards", {
   startsAt: timestamp("starts_at").notNull(),
   endsAt: timestamp("ends_at").notNull(),
   active: boolean("active").notNull().default(true),
+  result: text("result").default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -196,6 +197,7 @@ export const boostCardSchema = z.object({
   startsAt: z.string(),
   endsAt: z.string(),
   active: z.boolean(),
+  result: z.enum(["pending", "won", "lost"]).default("pending"),
   createdAt: z.string(),
 });
 

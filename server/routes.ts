@@ -1985,6 +1985,20 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/admin/boost-cards/:id/result", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { result } = req.body;
+      if (!["pending", "won", "lost"].includes(result)) {
+        return res.status(400).json({ error: "Resultado inválido. Use: pending, won ou lost" });
+      }
+      const data = await storage.resolveBoostCard(id, result as "pending" | "won" | "lost");
+      res.json({ card: data.card, affectedBets: data.affectedBets });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Erro ao resolver boost card" });
+    }
+  });
+
   // Banner routes
   app.get("/api/banners", async (req, res) => {
     try {

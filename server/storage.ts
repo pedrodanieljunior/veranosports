@@ -49,6 +49,7 @@ export interface IStorage {
   getActiveBoostCards(): Promise<BoostCard[]>;
   createBoostCard(data: InsertBoostCard): Promise<BoostCard>;
   updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined>;
+  resolveBoostCard(id: number, result: "pending" | "won" | "lost"): Promise<{ card: BoostCard; affectedBets: number }>;
   deleteBoostCard(id: number): Promise<boolean>;
 }
 
@@ -527,6 +528,7 @@ export class DatabaseStorage implements IStorage {
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       active: r.active,
+      result: (r.result as "pending" | "won" | "lost") ?? "pending",
       createdAt: r.createdAt.toISOString(),
     };
   }
@@ -572,6 +574,29 @@ export class DatabaseStorage implements IStorage {
     if (data.active !== undefined) update.active = data.active;
     const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();
     return row ? this.mapBoostCard(row) : undefined;
+  }
+
+  async resolveBoostCard(id: number, result: "pending" | "won" | "lost"): Promise<{ card: BoostCard; affectedBets: number }> {
+    const [row] = await db.update(boostCardsTable)
+      .set({ result })
+      .where(eq(boostCardsTable.id, id))
+      .returning();
+    if (!row) throw new Error("Boost card não encontrado");
+    const card = this.mapBoostCard(row);
+
+    const selectionId = `boost-${id}`;
+    const allBets = await db.select().from(betSlipsTable).where(eq(betSlipsTable.status, "pending"));
+    let affectedBets = 0;
+
+    for (const bet of allBets) {
+      const sels = bet.selections as any[];
+      const boostSel = sels.find((s: any) => s.id === selectionId);
+      if (!boostSel) continue;
+      await this.updateSelectionResult(bet.id, selectionId, result);
+      affectedBets++;
+    }
+
+    return { card, affectedBets };
   }
 
   async deleteBoostCard(id: number): Promise<boolean> {
