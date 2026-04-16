@@ -127,7 +127,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                     boxShadow: "0 0 5px #f5c51860",
                   }}
                 />
-                <p className="text-xs leading-snug" style={{ color: "#ddd" }}>
+                <p className="text-sm font-semibold italic leading-snug" style={{ color: "#fff" }}>
                   {sel.description}
                 </p>
               </div>
