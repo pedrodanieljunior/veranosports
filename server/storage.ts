@@ -1,6 +1,6 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, gte, sql } from "drizzle-orm";
+import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface GameSimpleBetTotal {
@@ -45,6 +45,11 @@ export interface IStorage {
   deleteWithdrawal(id: number): Promise<boolean>;
   getSetting(key: string): Promise<string | null>;
   setSetting(key: string, value: string): Promise<void>;
+  getBoostCards(): Promise<BoostCard[]>;
+  getActiveBoostCards(): Promise<BoostCard[]>;
+  createBoostCard(data: InsertBoostCard): Promise<BoostCard>;
+  updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined>;
+  deleteBoostCard(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -508,6 +513,70 @@ export class DatabaseStorage implements IStorage {
     } else {
       await db.insert(siteContentTable).values({ key: dbKey, content: value });
     }
+  }
+
+  private mapBoostCard(r: typeof boostCardsTable.$inferSelect): BoostCard {
+    return {
+      id: r.id,
+      eventName: r.eventName,
+      matchTitle: r.matchTitle,
+      description: r.description,
+      selections: (r.selections as { description: string }[]) ?? [],
+      originalOdds: r.originalOdds,
+      boostedOdds: r.boostedOdds,
+      startsAt: r.startsAt.toISOString(),
+      endsAt: r.endsAt.toISOString(),
+      active: r.active,
+      createdAt: r.createdAt.toISOString(),
+    };
+  }
+
+  async getBoostCards(): Promise<BoostCard[]> {
+    const rows = await db.select().from(boostCardsTable).orderBy(desc(boostCardsTable.createdAt));
+    return rows.map(r => this.mapBoostCard(r));
+  }
+
+  async getActiveBoostCards(): Promise<BoostCard[]> {
+    const now = new Date();
+    const rows = await db.select().from(boostCardsTable).where(
+      and(eq(boostCardsTable.active, true), lte(boostCardsTable.startsAt, now), gte(boostCardsTable.endsAt, now))
+    ).orderBy(boostCardsTable.startsAt);
+    return rows.map(r => this.mapBoostCard(r));
+  }
+
+  async createBoostCard(data: InsertBoostCard): Promise<BoostCard> {
+    const [row] = await db.insert(boostCardsTable).values({
+      eventName: data.eventName,
+      matchTitle: data.matchTitle,
+      description: data.description ?? "",
+      selections: data.selections ?? [],
+      originalOdds: data.originalOdds,
+      boostedOdds: data.boostedOdds,
+      startsAt: new Date(data.startsAt),
+      endsAt: new Date(data.endsAt),
+      active: data.active ?? true,
+    }).returning();
+    return this.mapBoostCard(row);
+  }
+
+  async updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined> {
+    const update: any = {};
+    if (data.eventName !== undefined) update.eventName = data.eventName;
+    if (data.matchTitle !== undefined) update.matchTitle = data.matchTitle;
+    if (data.description !== undefined) update.description = data.description;
+    if (data.selections !== undefined) update.selections = data.selections;
+    if (data.originalOdds !== undefined) update.originalOdds = data.originalOdds;
+    if (data.boostedOdds !== undefined) update.boostedOdds = data.boostedOdds;
+    if (data.startsAt !== undefined) update.startsAt = new Date(data.startsAt);
+    if (data.endsAt !== undefined) update.endsAt = new Date(data.endsAt);
+    if (data.active !== undefined) update.active = data.active;
+    const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();
+    return row ? this.mapBoostCard(row) : undefined;
+  }
+
+  async deleteBoostCard(id: number): Promise<boolean> {
+    const result = await db.delete(boostCardsTable).where(eq(boostCardsTable.id, id)).returning();
+    return result.length > 0;
   }
 }
 

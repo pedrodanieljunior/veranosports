@@ -170,3 +170,47 @@ export const insertWithdrawalSchema = z.object({
   amount: z.number().positive("Valor deve ser positivo"),
   description: z.string().optional().default(""),
 });
+
+export const boostCardsTable = pgTable("boost_cards", {
+  id: serial("id").primaryKey(),
+  eventName: text("event_name").notNull().default(""),
+  matchTitle: text("match_title").notNull().default(""),
+  description: text("description").notNull().default(""),
+  selections: jsonb("selections").notNull().default([]),
+  originalOdds: real("original_odds").notNull().default(0),
+  boostedOdds: real("boosted_odds").notNull().default(0),
+  startsAt: timestamp("starts_at").notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const boostCardSchema = z.object({
+  id: z.number(),
+  eventName: z.string(),
+  matchTitle: z.string(),
+  description: z.string(),
+  selections: z.array(z.object({ description: z.string() })),
+  originalOdds: z.number(),
+  boostedOdds: z.number(),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  active: z.boolean(),
+  createdAt: z.string(),
+});
+
+export type BoostCard = z.infer<typeof boostCardSchema>;
+
+export const insertBoostCardSchema = z.object({
+  eventName: z.string().min(1, "Nome do evento obrigatório"),
+  matchTitle: z.string().min(1, "Título do confronto obrigatório"),
+  description: z.string().optional().default(""),
+  selections: z.array(z.object({ description: z.string() })).max(3).optional().default([]),
+  originalOdds: z.number().min(1, "Odd mínima é 1.00"),
+  boostedOdds: z.number().min(1, "Odd mínima é 1.00"),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  active: z.boolean().optional().default(true),
+});
+
+export type InsertBoostCard = z.infer<typeof insertBoostCardSchema>;

@@ -47,6 +47,14 @@ The server handles:
 - **ORM**: Drizzle ORM configured for PostgreSQL (schema defined but database may not be provisioned)
 - **Shared Types**: Common schemas in `shared/schema.ts` shared between frontend and backend
 
+### Super Boost Cards
+- Admin tab "Boost" at `/painel-gm7x9k2` → guia **Boost**
+- Admin can create cards with: event name, match title, description, up to 3 manual selections, original odds, boosted odds, start/end datetime, active toggle
+- Cards automatically appear on the site only during the configured time window (startsAt → endsAt) when active
+- Displayed before the games list (both mobile and desktop) on the homepage
+- Clicking the card adds a single "Super Boost" selection to the bet slip (marketKey: "boost", odds = boostedOdds, originalOdds = originalOdds)
+- Table: `boost_cards` in PostgreSQL
+
 ### Key Design Decisions
 
 1. **Monorepo Structure**: Client and server code coexist with shared types in `shared/` directory, enabling type safety across the stack.

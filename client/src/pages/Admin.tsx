@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard } from "@shared/schema";
 import { computeTotalOdds } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -628,6 +628,10 @@ export default function Admin() {
             <TabsTrigger value="regras" data-testid="tab-regras">
               <BookOpen className="w-4 h-4 mr-2" />
               Regras
+            </TabsTrigger>
+            <TabsTrigger value="boost" data-testid="tab-boost">
+              <Zap className="w-4 h-4 mr-2" />
+              Boost
             </TabsTrigger>
           </TabsList>
 
@@ -1847,6 +1851,10 @@ export default function Admin() {
           <TabsContent value="regras">
             <RulesEditorTab />
           </TabsContent>
+
+          <TabsContent value="boost">
+            <BoostTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -2184,5 +2192,369 @@ function RulesEditorTab() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function BoostTab() {
+  const { toast } = useToast();
+  const [editingCard, setEditingCard] = useState<BoostCard | null>(null);
+  const [showForm, setShowForm] = useState(false);
+
+  const emptyForm = {
+    eventName: "",
+    matchTitle: "",
+    description: "",
+    selections: [] as { description: string }[],
+    originalOdds: "",
+    boostedOdds: "",
+    startsAt: "",
+    endsAt: "",
+    active: true,
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  const { data: cards = [], isLoading } = useQuery<BoostCard[]>({
+    queryKey: ["/api/admin/boost-cards"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/admin/boost-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
+      toast({ title: "Super Boost criado!" });
+      setShowForm(false);
+      setForm(emptyForm);
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/admin/boost-cards/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
+      toast({ title: "Super Boost atualizado!" });
+      setShowForm(false);
+      setEditingCard(null);
+      setForm(emptyForm);
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/admin/boost-cards/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao deletar");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
+      toast({ title: "Super Boost removido!" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const toLocalDatetime = (iso: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const openEdit = (card: BoostCard) => {
+    setEditingCard(card);
+    setForm({
+      eventName: card.eventName,
+      matchTitle: card.matchTitle,
+      description: card.description,
+      selections: card.selections.map(s => ({ description: s.description })),
+      originalOdds: String(card.originalOdds),
+      boostedOdds: String(card.boostedOdds),
+      startsAt: toLocalDatetime(card.startsAt),
+      endsAt: toLocalDatetime(card.endsAt),
+      active: card.active,
+    });
+    setShowForm(true);
+  };
+
+  const openNew = () => {
+    setEditingCard(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    const payload = {
+      eventName: form.eventName,
+      matchTitle: form.matchTitle,
+      description: form.description,
+      selections: form.selections.filter(s => s.description.trim()),
+      originalOdds: parseFloat(form.originalOdds),
+      boostedOdds: parseFloat(form.boostedOdds),
+      startsAt: new Date(form.startsAt).toISOString(),
+      endsAt: new Date(form.endsAt).toISOString(),
+      active: form.active,
+    };
+    if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      return;
+    }
+    if (editingCard) {
+      updateMutation.mutate({ id: editingCard.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const addSelection = () => {
+    if (form.selections.length >= 3) return;
+    setForm(f => ({ ...f, selections: [...f.selections, { description: "" }] }));
+  };
+
+  const updateSelection = (idx: number, val: string) => {
+    setForm(f => {
+      const sels = [...f.selections];
+      sels[idx] = { description: val };
+      return { ...f, selections: sels };
+    });
+  };
+
+  const removeSelection = (idx: number) => {
+    setForm(f => ({ ...f, selections: f.selections.filter((_, i) => i !== idx) }));
+  };
+
+  const fmt = (iso: string) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    const isToday = d.toDateString() === new Date().toDateString();
+    return isToday
+      ? `Hoje ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+      : d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-yellow-400" />
+              Super Boost Cards
+            </CardTitle>
+            <Button onClick={openNew} size="sm" className="gap-1">
+              <Plus className="w-4 h-4" /> Novo Boost
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Cards destacados exibidos antes dos jogos do dia. O horário controla quando aparecem no site automaticamente.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />)}</div>
+          ) : cards.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground text-sm">
+              Nenhum Super Boost criado. Clique em "Novo Boost" para começar.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cards.map(card => {
+                const now = new Date();
+                const isLive = card.active && new Date(card.startsAt) <= now && new Date(card.endsAt) >= now;
+                const isPast = new Date(card.endsAt) < now;
+                return (
+                  <div key={card.id} className="border rounded-xl p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm">{card.matchTitle}</span>
+                          {isLive && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">● Visível</Badge>}
+                          {isPast && <Badge variant="outline" className="text-xs text-muted-foreground">Encerrado</Badge>}
+                          {!card.active && <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{card.eventName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {fmt(card.startsAt)} → {fmt(card.endsAt)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs line-through text-muted-foreground">{fmtOdds(card.originalOdds)}</span>
+                          <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                          <span className="text-sm font-bold text-yellow-400">{fmtOdds(card.boostedOdds)}</span>
+                        </div>
+                        {card.selections.length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {card.selections.map((s, i) => <li key={i} className="text-xs text-muted-foreground">• {s.description}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(card)} title="Editar">
+                          <Save className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300" onClick={() => deleteMutation.mutate(card.id)} title="Excluir">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {showForm && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {editingCard ? "✏️ Editar Super Boost" : "✨ Novo Super Boost"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Evento / Liga *</label>
+                <input
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Ex: Copa Libertadores - Gr.F"
+                  value={form.eventName}
+                  onChange={e => setForm(f => ({ ...f, eventName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Confronto *</label>
+                <input
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Ex: Palmeiras — Sporting Cristal"
+                  value={form.matchTitle}
+                  onChange={e => setForm(f => ({ ...f, matchTitle: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Legenda / Descrição (opcional)</label>
+              <input
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Texto adicional exibido abaixo do badge SUPER BOOST"
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground">Mercados / Seleções (até 3, opcional)</label>
+                {form.selections.length < 3 && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addSelection}>
+                    <Plus className="w-3 h-3" /> Adicionar linha
+                  </Button>
+                )}
+              </div>
+              {form.selections.map((sel, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <input
+                    className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Ex: Lopez, Flaco - Mais de 1.5 chutes no gol"
+                    value={sel.description}
+                    onChange={e => updateSelection(idx, e.target.value)}
+                  />
+                  <Button size="icon" variant="ghost" className="h-9 w-9 text-red-400 hover:text-red-300 flex-shrink-0" onClick={() => removeSelection(idx)}>
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              {form.selections.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">Nenhuma seleção adicionada. O card mostrará apenas as odds.</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Odd original (riscada) *</label>
+                <input
+                  type="number" step="0.01" min="1"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="2.75"
+                  value={form.originalOdds}
+                  onChange={e => setForm(f => ({ ...f, originalOdds: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Odd boostada ⚡ *</label>
+                <input
+                  type="number" step="0.01" min="1"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="3.55"
+                  value={form.boostedOdds}
+                  onChange={e => setForm(f => ({ ...f, boostedOdds: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Início do evento *</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  value={form.startsAt}
+                  onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Fim do evento *</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  value={form.endsAt}
+                  onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="boost-active"
+                checked={form.active}
+                onChange={e => setForm(f => ({ ...f, active: e.target.checked }))}
+                className="w-4 h-4"
+              />
+              <label htmlFor="boost-active" className="text-sm cursor-pointer">Ativo (visível no site dentro do horário configurado)</label>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t">
+              <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending} className="gap-1">
+                <Save className="w-4 h-4" />
+                {editingCard ? "Salvar alterações" : "Criar Super Boost"}
+              </Button>
+              <Button variant="outline" onClick={() => { setShowForm(false); setEditingCard(null); setForm(emptyForm); }}>
+                Cancelar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

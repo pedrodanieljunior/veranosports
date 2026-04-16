@@ -54,6 +54,7 @@ const MARKET_LABELS: Record<string, string> = {
 };
 
 export function translateMarket(key: string): string {
+  if (key === "boost") return "Super Boost";
   if (MARKET_LABELS[key]) return MARKET_LABELS[key];
   if (key.startsWith("extra-")) {
     return "Mercado Extra";

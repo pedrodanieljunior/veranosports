@@ -8,6 +8,8 @@ import { MobileNav } from "@/components/MobileNav";
 import { GameDetailModal } from "@/components/GameDetailModal";
 import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
 import { RulesModal } from "@/components/RulesModal";
+import { BoostCard } from "@/components/BoostCard";
+import { BoostCard as BoostCardType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { History, Receipt, Search, X, BookOpen } from "lucide-react";
@@ -132,6 +134,13 @@ export default function Home() {
     g => new Date(g.commenceTime).getTime() > now
   );
   const isLoadingGames = isTyping || (isSearching ? searchLoading : gamesLoading);
+
+  const { data: boostCards = [] } = useQuery<BoostCardType[]>({
+    queryKey: ["/api/boost-cards"],
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
+  });
 
   const sessionId = getSessionId();
 
@@ -268,6 +277,13 @@ export default function Home() {
         <div className="px-3 pt-2">
           <MobileBannerCarousel />
         </div>
+        {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
+          <div className="pt-2">
+            {boostCards.map(card => (
+              <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection} />
+            ))}
+          </div>
+        )}
         <div className="flex-1">
           <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
         </div>
@@ -379,6 +395,15 @@ export default function Home() {
             <div className="pb-4 flex-shrink-0" style={{ paddingRight: "8vw" }}>
               <DesktopBannerCarousel />
             </div>
+
+            {/* Boost cards */}
+            {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
+              <div className="pb-2" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+                {boostCards.map(card => (
+                  <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection} />
+                ))}
+              </div>
+            )}
 
             {/* Games content */}
             <div className="pb-4" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>

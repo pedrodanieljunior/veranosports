@@ -1932,6 +1932,59 @@ export async function registerRoutes(
     }
   });
 
+  // Boost card routes
+  app.get("/api/boost-cards", async (_req, res) => {
+    try {
+      const cards = await storage.getActiveBoostCards();
+      res.json(cards);
+    } catch (error) {
+      console.error("Error fetching boost cards:", error);
+      res.status(500).json({ error: "Failed to fetch boost cards" });
+    }
+  });
+
+  app.get("/api/admin/boost-cards", async (_req, res) => {
+    try {
+      const cards = await storage.getBoostCards();
+      res.json(cards);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch boost cards" });
+    }
+  });
+
+  app.post("/api/admin/boost-cards", async (req, res) => {
+    try {
+      const { insertBoostCardSchema } = await import("@shared/schema");
+      const data = insertBoostCardSchema.parse(req.body);
+      const card = await storage.createBoostCard(data);
+      res.json(card);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Invalid data" });
+    }
+  });
+
+  app.put("/api/admin/boost-cards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const card = await storage.updateBoostCard(id, req.body);
+      if (!card) return res.status(404).json({ error: "Not found" });
+      res.json(card);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Invalid data" });
+    }
+  });
+
+  app.delete("/api/admin/boost-cards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const ok = await storage.deleteBoostCard(id);
+      if (!ok) return res.status(404).json({ error: "Not found" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete" });
+    }
+  });
+
   // Banner routes
   app.get("/api/banners", async (req, res) => {
     try {
