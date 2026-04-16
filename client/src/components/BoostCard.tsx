@@ -96,16 +96,31 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
         {/* Selections list */}
         {card.selections.length > 0 && (
-          <div className="relative pl-3 mb-3 space-y-1.5">
-            {/* Vertical line */}
-            <div
-              className="absolute left-0 top-1 bottom-1 w-px"
-              style={{ background: "#555" }}
-            />
+          <div className="relative pl-5 mb-3">
+            {/* Golden vertical connector line */}
+            {card.selections.length > 1 && (
+              <div
+                className="absolute left-[5px] top-[6px] w-[2px]"
+                style={{
+                  background: "linear-gradient(180deg, #f5c518 0%, #e8a800 100%)",
+                  height: "calc(100% - 12px)",
+                }}
+              />
+            )}
             {card.selections.map((sel, idx) => (
-              <p key={idx} className="text-sm" style={{ color: "#ddd" }}>
-                {sel.description}
-              </p>
+              <div key={idx} className={`relative${idx > 0 ? " mt-2.5" : ""}`}>
+                {/* Golden bullet */}
+                <div
+                  className="absolute -left-5 top-[2px] w-[11px] h-[11px] rounded-full z-10"
+                  style={{
+                    background: "linear-gradient(135deg, #f5c518 0%, #e8a800 100%)",
+                    boxShadow: "0 0 6px #f5c51860",
+                  }}
+                />
+                <p className="text-sm leading-snug" style={{ color: "#ddd" }}>
+                  {sel.description}
+                </p>
+              </div>
             ))}
           </div>
         )}
