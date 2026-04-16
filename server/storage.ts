@@ -558,6 +558,7 @@ export class DatabaseStorage implements IStorage {
       originalOdds: data.originalOdds,
       boostedOdds: data.boostedOdds,
       outcomes: data.outcomes ?? [],
+      subtitle: data.subtitle ?? "",
       startsAt: new Date(data.startsAt),
       endsAt: new Date(data.endsAt),
       active: data.active ?? true,
