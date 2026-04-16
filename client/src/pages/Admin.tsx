@@ -2429,9 +2429,29 @@ function BoostTab() {
                           <span className="text-sm font-bold text-yellow-400">{fmtOdds(card.boostedOdds)}</span>
                         </div>
                         {card.selections.length > 0 && (
-                          <ul className="mt-1 space-y-0.5">
-                            {card.selections.map((s, i) => <li key={i} className="text-xs text-muted-foreground">• {s.description}</li>)}
-                          </ul>
+                          <div className="relative pl-4 mt-2">
+                            {card.selections.length > 1 && (
+                              <div
+                                className="absolute left-[4px] top-[5px] w-[2px] rounded-full"
+                                style={{
+                                  background: "linear-gradient(180deg, #f5c518 0%, #e8a800 100%)",
+                                  height: "calc(100% - 10px)",
+                                }}
+                              />
+                            )}
+                            {card.selections.map((s, i) => (
+                              <div key={i} className={`relative${i > 0 ? " mt-2" : ""}`}>
+                                <div
+                                  className="absolute -left-4 top-[3px] w-[9px] h-[9px] rounded-full z-10"
+                                  style={{
+                                    background: "linear-gradient(135deg, #f5c518 0%, #e8a800 100%)",
+                                    boxShadow: "0 0 4px #f5c51860",
+                                  }}
+                                />
+                                <p className="text-xs text-muted-foreground leading-snug">{s.description}</p>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
