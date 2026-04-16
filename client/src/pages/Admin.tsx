@@ -2275,11 +2275,11 @@ function BoostTab() {
   });
 
   const resolveMutation = useMutation({
-    mutationFn: async ({ id, result }: { id: number; result: "pending" | "won" | "lost" }) => {
+    mutationFn: async ({ id, result, outcomeIdx }: { id: number; result: "pending" | "won" | "lost"; outcomeIdx?: number }) => {
       const res = await fetch(`/api/admin/boost-cards/${id}/result`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ result }),
+        body: JSON.stringify({ result, ...(outcomeIdx !== undefined ? { outcomeIdx } : {}) }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
       return res.json() as Promise<{ card: BoostCard; affectedBets: number }>;
@@ -2288,9 +2288,8 @@ function BoostTab() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
-      const label = data.card.result === "won" ? "Ganhou ✓" : data.card.result === "lost" ? "Perdeu ✗" : "Pendente";
       toast({
-        title: `Resultado: ${label}`,
+        title: "Resultado salvo",
         description: data.affectedBets > 0
           ? `${data.affectedBets} bilhete(s) atualizado(s) automaticamente.`
           : "Nenhum bilhete pendente afetado.",
@@ -2509,37 +2508,82 @@ function BoostTab() {
                     {/* Manual result control */}
                     <div className="border-t pt-2.5">
                       <p className="text-[11px] text-muted-foreground mb-2 font-medium">RESULTADO DO BOOST</p>
-                      <div className="flex gap-2 flex-wrap">
-                        <Button
-                          size="sm"
-                          variant={cardResult === "won" ? "default" : "outline"}
-                          className={`h-7 text-xs gap-1 ${cardResult === "won" ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : "border-green-600/40 text-green-400 hover:bg-green-500/10 hover:border-green-500"}`}
-                          disabled={isResolving}
-                          onClick={() => resolveMutation.mutate({ id: card.id, result: "won" })}
-                        >
-                          ✓ Ganhou
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={cardResult === "lost" ? "default" : "outline"}
-                          className={`h-7 text-xs gap-1 ${cardResult === "lost" ? "bg-red-600 hover:bg-red-700 text-white border-red-600" : "border-red-600/40 text-red-400 hover:bg-red-500/10 hover:border-red-500"}`}
-                          disabled={isResolving}
-                          onClick={() => resolveMutation.mutate({ id: card.id, result: "lost" })}
-                        >
-                          ✗ Perdeu
-                        </Button>
-                        {cardResult !== "pending" && (
+
+                      {card.outcomes && card.outcomes.length > 0 ? (
+                        /* Multi-outcome: one row of buttons per outcome */
+                        <div className="space-y-2">
+                          {card.outcomes.map((o, oi) => {
+                            const ores = (card.outcomeResults ?? [])[oi] ?? "pending";
+                            return (
+                              <div key={oi} className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-semibold text-yellow-400 min-w-[60px]">{o.label}:</span>
+                                <Button
+                                  size="sm"
+                                  variant={ores === "won" ? "default" : "outline"}
+                                  className={`h-7 text-xs gap-1 ${ores === "won" ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : "border-green-600/40 text-green-400 hover:bg-green-500/10 hover:border-green-500"}`}
+                                  disabled={isResolving}
+                                  onClick={() => resolveMutation.mutate({ id: card.id, result: "won", outcomeIdx: oi })}
+                                >
+                                  ✓ Ganhou
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={ores === "lost" ? "default" : "outline"}
+                                  className={`h-7 text-xs gap-1 ${ores === "lost" ? "bg-red-600 hover:bg-red-700 text-white border-red-600" : "border-red-600/40 text-red-400 hover:bg-red-500/10 hover:border-red-500"}`}
+                                  disabled={isResolving}
+                                  onClick={() => resolveMutation.mutate({ id: card.id, result: "lost", outcomeIdx: oi })}
+                                >
+                                  ✗ Perdeu
+                                </Button>
+                                {ores !== "pending" && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                                    disabled={isResolving}
+                                    onClick={() => resolveMutation.mutate({ id: card.id, result: "pending", outcomeIdx: oi })}
+                                  >
+                                    ↺ Pendente
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        /* Simple card: single set of buttons */
+                        <div className="flex gap-2 flex-wrap">
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                            variant={cardResult === "won" ? "default" : "outline"}
+                            className={`h-7 text-xs gap-1 ${cardResult === "won" ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : "border-green-600/40 text-green-400 hover:bg-green-500/10 hover:border-green-500"}`}
                             disabled={isResolving}
-                            onClick={() => resolveMutation.mutate({ id: card.id, result: "pending" })}
+                            onClick={() => resolveMutation.mutate({ id: card.id, result: "won" })}
                           >
-                            ↺ Pendente
+                            ✓ Ganhou
                           </Button>
-                        )}
-                      </div>
+                          <Button
+                            size="sm"
+                            variant={cardResult === "lost" ? "default" : "outline"}
+                            className={`h-7 text-xs gap-1 ${cardResult === "lost" ? "bg-red-600 hover:bg-red-700 text-white border-red-600" : "border-red-600/40 text-red-400 hover:bg-red-500/10 hover:border-red-500"}`}
+                            disabled={isResolving}
+                            onClick={() => resolveMutation.mutate({ id: card.id, result: "lost" })}
+                          >
+                            ✗ Perdeu
+                          </Button>
+                          {cardResult !== "pending" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                              disabled={isResolving}
+                              onClick={() => resolveMutation.mutate({ id: card.id, result: "pending" })}
+                            >
+                              ↺ Pendente
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

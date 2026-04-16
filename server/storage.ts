@@ -49,7 +49,7 @@ export interface IStorage {
   getActiveBoostCards(): Promise<BoostCard[]>;
   createBoostCard(data: InsertBoostCard): Promise<BoostCard>;
   updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined>;
-  resolveBoostCard(id: number, result: "pending" | "won" | "lost"): Promise<{ card: BoostCard; affectedBets: number }>;
+  resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }>;
   deleteBoostCard(id: number): Promise<boolean>;
 }
 
@@ -526,6 +526,7 @@ export class DatabaseStorage implements IStorage {
       originalOdds: r.originalOdds,
       boostedOdds: r.boostedOdds,
       outcomes: (r.outcomes as { label: string; originalOdds: number; boostedOdds: number }[]) ?? [],
+      outcomeResults: (r.outcomeResults as ("pending" | "won" | "lost")[]) ?? [],
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       active: r.active,
@@ -579,15 +580,38 @@ export class DatabaseStorage implements IStorage {
     return row ? this.mapBoostCard(row) : undefined;
   }
 
-  async resolveBoostCard(id: number, result: "pending" | "won" | "lost"): Promise<{ card: BoostCard; affectedBets: number }> {
-    const [row] = await db.update(boostCardsTable)
-      .set({ result })
-      .where(eq(boostCardsTable.id, id))
-      .returning();
-    if (!row) throw new Error("Boost card não encontrado");
-    const card = this.mapBoostCard(row);
+  async resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }> {
+    let updatedRow: typeof boostCardsTable.$inferSelect;
+    let selectionId: string;
 
-    const selectionId = `boost-${id}`;
+    if (outcomeIdx !== undefined) {
+      // Multi-outcome: update only that outcome's result in outcomeResults array
+      const [existing] = await db.select().from(boostCardsTable).where(eq(boostCardsTable.id, id));
+      if (!existing) throw new Error("Boost card não encontrado");
+
+      const currentResults = ((existing.outcomeResults ?? []) as ("pending" | "won" | "lost")[]);
+      const outcomes = ((existing.outcomes ?? []) as any[]);
+      const newResults = outcomes.map((_, i) => (i === outcomeIdx ? result : (currentResults[i] ?? "pending")));
+
+      const [row] = await db.update(boostCardsTable)
+        .set({ outcomeResults: newResults })
+        .where(eq(boostCardsTable.id, id))
+        .returning();
+      if (!row) throw new Error("Boost card não encontrado");
+      updatedRow = row;
+      selectionId = `boost-${id}-${outcomeIdx}`;
+    } else {
+      // Simple card: update top-level result
+      const [row] = await db.update(boostCardsTable)
+        .set({ result })
+        .where(eq(boostCardsTable.id, id))
+        .returning();
+      if (!row) throw new Error("Boost card não encontrado");
+      updatedRow = row;
+      selectionId = `boost-${id}`;
+    }
+
+    const card = this.mapBoostCard(updatedRow);
     const allBets = await db.select().from(betSlipsTable).where(eq(betSlipsTable.status, "pending"));
     let affectedBets = 0;
 

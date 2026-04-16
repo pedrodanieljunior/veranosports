@@ -1988,11 +1988,12 @@ export async function registerRoutes(
   app.patch("/api/admin/boost-cards/:id/result", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { result } = req.body;
+      const { result, outcomeIdx } = req.body;
       if (!["pending", "won", "lost"].includes(result)) {
         return res.status(400).json({ error: "Resultado inválido. Use: pending, won ou lost" });
       }
-      const data = await storage.resolveBoostCard(id, result as "pending" | "won" | "lost");
+      const idx = outcomeIdx !== undefined && outcomeIdx !== null ? Number(outcomeIdx) : undefined;
+      const data = await storage.resolveBoostCard(id, result as "pending" | "won" | "lost", idx);
       res.json({ card: data.card, affectedBets: data.affectedBets });
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Erro ao resolver boost card" });
