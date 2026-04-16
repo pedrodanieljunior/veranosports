@@ -44,10 +44,10 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
       className="relative rounded-xl overflow-hidden cursor-pointer mx-3 mb-2.5"
       style={{
         background: "linear-gradient(135deg, #1a1a1a 0%, #222 60%, #1c1a10 100%)",
-        border: isSelected ? "2px solid #f5c518" : "2px solid #333",
+        border: isSelected ? "2px solid #f5c518" : "2px solid #c8991a",
         boxShadow: isSelected
           ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
-          : "0 3px 16px rgba(0,0,0,0.5)",
+          : "0 3px 16px rgba(0,0,0,0.5), 0 0 0 1px #f5c51820",
       }}
       onClick={handleClick}
       data-testid={`boost-card-${card.id}`}
