@@ -329,7 +329,8 @@ export function BetSlip({
                 <div className="space-y-3">
                   {Object.entries(grouped).map(([gameId, sels]) => {
                     const first = sels[0];
-                    const gameOdds = roundOdds(computeTotalOdds(sels));
+                    const isPlacedCombo = checkIsComboBonus(placedBet.selections);
+                    const gameOdds = roundOdds(computeTotalOdds(sels, isPlacedCombo));
                     return (
                       <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-game-${gameId}`}>
                         <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
@@ -522,7 +523,7 @@ export function BetSlip({
                   <div className="space-y-3">
                     {Object.entries(grouped).map(([gameId, sels]) => {
                       const first = sels[0];
-                      const gameOdds = roundOdds(computeTotalOdds(sels));
+                      const gameOdds = roundOdds(computeTotalOdds(sels, comboApplies));
                       return (
                         <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
                           <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border">

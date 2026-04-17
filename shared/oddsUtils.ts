@@ -69,7 +69,7 @@ function effectiveOdd(sel: SelectionForOdds, isMultiMarketGame: boolean, isCombo
   return sel.odds;
 }
 
-export function computeTotalOdds(selections: SelectionForOdds[]): number {
+export function computeTotalOdds(selections: SelectionForOdds[], forceComboContext?: boolean): number {
   if (selections.length === 0) return 1;
 
   const byGame = new Map<string, SelectionForOdds[]>();
@@ -78,7 +78,7 @@ export function computeTotalOdds(selections: SelectionForOdds[]): number {
     byGame.get(sel.gameId)!.push(sel);
   }
 
-  const isComboContext = byGame.size > 1;
+  const isComboContext = forceComboContext ?? byGame.size > 1;
   let totalOdds = 1;
 
   for (const gameSelections of byGame.values()) {
