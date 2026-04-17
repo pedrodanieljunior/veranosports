@@ -20,6 +20,7 @@ interface BetHistoryProps {
 function BetCard({ bet }: { bet: BetSlipType }) {
   const { toast } = useToast();
   const { getBoostPercent } = useMarketSettings();
+  const isCombo = checkIsComboBonus(bet.selections);
   const grouped: Record<string, Selection[]> = {};
   for (const sel of bet.selections) {
     const key = sel.gameId;
@@ -104,7 +105,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       <div className="space-y-3">
         {Object.entries(grouped).map(([gameId, sels]) => {
           const first = sels[0];
-          const gameOdds = fmtOdds(sels.reduce((a, s) => a * s.odds, 1));
+          const gameOdds = fmtOdds(sels.reduce((a, s) => a * (isCombo ? (s.originalOdds ?? s.odds) : s.odds), 1));
           return (
             <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
               <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
