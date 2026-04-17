@@ -60,10 +60,12 @@ function isGoalsOverUnder(sel: SelectionForOdds): boolean {
  *
  * Exemplos: Ambos Sim + Over Sim, Ambos Não + Under Não, Ambos Não + Over Sim, etc.
  */
-function effectiveOdd(sel: SelectionForOdds, isMultiMarketGame: boolean): number {
-  if (!isMultiMarketGame) return sel.odds;
+function effectiveOdd(sel: SelectionForOdds, isMultiMarketGame: boolean, isComboContext: boolean = false): number {
   const isH2H = sel.marketKey === "h2h" || sel.marketKey === "match_winner";
-  if (isH2H && sel.originalOdds != null) return sel.originalOdds;
+  // Em combinadas (múltiplos jogos) ou dentro do mesmo jogo com múltiplos mercados,
+  // h2h sempre usa a odd original (sem super aumento)
+  if ((isComboContext || isMultiMarketGame) && isH2H && sel.originalOdds != null) return sel.originalOdds;
+  if (!isMultiMarketGame) return sel.odds;
   return sel.odds;
 }
 
@@ -76,6 +78,7 @@ export function computeTotalOdds(selections: SelectionForOdds[]): number {
     byGame.get(sel.gameId)!.push(sel);
   }
 
+  const isComboContext = byGame.size > 1;
   let totalOdds = 1;
 
   for (const gameSelections of byGame.values()) {
@@ -84,18 +87,18 @@ export function computeTotalOdds(selections: SelectionForOdds[]): number {
     const overUnder = gameSelections.find(isGoalsOverUnder);
 
     if (btts && overUnder) {
-      const bttsOdd = effectiveOdd(btts, isMultiMarket);
-      const ouOdd = effectiveOdd(overUnder, isMultiMarket);
+      const bttsOdd = effectiveOdd(btts, isMultiMarket, isComboContext);
+      const ouOdd = effectiveOdd(overUnder, isMultiMarket, isComboContext);
       const combined = Math.max(bttsOdd, ouOdd) * 1.15;
       totalOdds *= combined;
       for (const sel of gameSelections) {
         if (sel !== btts && sel !== overUnder) {
-          totalOdds *= effectiveOdd(sel, isMultiMarket);
+          totalOdds *= effectiveOdd(sel, isMultiMarket, isComboContext);
         }
       }
     } else {
       for (const sel of gameSelections) {
-        totalOdds *= effectiveOdd(sel, isMultiMarket);
+        totalOdds *= effectiveOdd(sel, isMultiMarket, isComboContext);
       }
     }
   }
