@@ -4,6 +4,7 @@ import { Clock, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { useMarketSettings } from "@/hooks/use-market-settings";
+import { roundOdds } from "@/lib/formatOdds";
 
 interface GameCardProps {
   game: Game;
@@ -31,7 +32,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
 
   const formattedDate = isValidDate ? format(gameDate, "dd/MM HH:mm") : "A definir";
 
-  const displayOdd = (price: number) => isBoosted ? (price * multiplier).toFixed(2) : price.toFixed(2);
+  const displayOdd = (price: number) => roundOdds(isBoosted ? price * multiplier : price).toFixed(2);
 
   return (
     <div 

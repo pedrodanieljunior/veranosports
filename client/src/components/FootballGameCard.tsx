@@ -42,7 +42,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, marketName: string) => {
     const boostKey = marketKey === "match_winner" ? "h2h" : marketKey;
-    const finalOdds = originalOdds * getBoostMultiplier(boostKey);
+    const finalOdds = Math.round(originalOdds * getBoostMultiplier(boostKey) * 100) / 100;
     const selection: Selection = {
       id: `${fixture.id}-${marketKey}-${outcomeName}`,
       gameId: String(fixture.id),
@@ -87,7 +87,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
             const boostKey = marketKey === "match_winner" ? "h2h" : marketKey;
             const isBoosted = hasBoosted(boostKey);
             const boostPct = getBoostPercent(boostKey);
-            const displayOdd = isBoosted ? outcome.odd * getBoostMultiplier(boostKey) : outcome.odd;
+            const displayOdd = Math.round((isBoosted ? outcome.odd * getBoostMultiplier(boostKey) : outcome.odd) * 100) / 100;
             const displayValue = translateFn ? translateFn(outcome.value) : outcome.value;
             return (
               <button

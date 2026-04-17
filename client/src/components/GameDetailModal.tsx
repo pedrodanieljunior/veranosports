@@ -124,7 +124,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
     const boostKey = marketKeyToBoostKey(marketKey);
-    const finalOdds = originalOdds * getBoostMultiplier(boostKey);
+    const finalOdds = Math.round(originalOdds * getBoostMultiplier(boostKey) * 100) / 100;
     const selection: Selection = {
       id: `${game.id}-${marketKey}-${outcomeName}`,
       gameId: game.id,
@@ -293,7 +293,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                     const selected = isSelected(outcome.name, "h2h");
                     const h2hBoosted = hasBoosted("h2h");
                     const h2hBoostPct = getBoostPercent("h2h");
-                    const displayOdd = h2hBoosted ? outcome.price * getBoostMultiplier("h2h") : outcome.price;
+                    const displayOdd = Math.round((h2hBoosted ? outcome.price * getBoostMultiplier("h2h") : outcome.price) * 100) / 100;
                     const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
                     const isHome = outcome.name === game.homeTeam;
                     const displayName = isDraw ? "Empate" : 
