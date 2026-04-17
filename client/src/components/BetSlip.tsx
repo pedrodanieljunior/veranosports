@@ -271,8 +271,7 @@ export function BetSlip({
                 </div>
                 
                 {(() => {
-                  const displayOdds = roundOdds(computeTotalOdds(placedBet.selections));
-                  const potentialPayout = Math.min(Math.round(placedBet.stake * displayOdds * 100) / 100, MAX_BET_PAYOUT);
+                  const isCombo = checkIsComboBonus(placedBet.selections);
                   const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
                   const lines: string[] = [
                     `*FW Sports - Comprovante de Aposta*`,
@@ -280,13 +279,13 @@ export function BetSlip({
                     `Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
                     `Data: ${betDate}`,
                     `Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
-                    `Odds totais: *${fmtOdds(displayOdds)}*`,
-                    `Retorno potencial: *R$ ${potentialPayout.toFixed(2).replace(".", ",")}*`,
+                    `Odds totais: *${fmtOdds(placedBet.totalOdds)}*`,
+                    `Retorno potencial: *R$ ${placedBet.potentialWin.toFixed(2).replace(".", ",")}*`,
                     ``,
                     `*Selecoes:*`,
                     ...placedBet.selections.map((s, i) => [
                       `${i + 1}. ${s.homeTeam} x ${s.awayTeam}`,
-                      `   ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${fmtOdds(s.odds)}`,
+                      `   ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${fmtOdds(isCombo ? (s.originalOdds ?? s.odds) : s.odds)}`,
                     ]).flat(),
                     ``,
                     `Segue o comprovante do pagamento PIX em anexo.`,
