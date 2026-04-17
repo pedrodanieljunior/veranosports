@@ -1792,7 +1792,8 @@ export async function registerRoutes(
 
       let totalOdds: number;
       if (checkIsComboBonus(validatedData.selections)) {
-        const bonusPct = getComboBonus(validatedData.selections.length);
+        const distinctGameCount = new Set(validatedData.selections.map((s: any) => s.gameId)).size;
+        const bonusPct = getComboBonus(distinctGameCount);
         const baseOdds = validatedData.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
         totalOdds = Math.round(baseOdds * (1 + bonusPct) * 100) / 100;
       } else {

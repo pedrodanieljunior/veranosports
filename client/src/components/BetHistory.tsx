@@ -35,7 +35,8 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       gameGrouped[gameLabel].push(sel);
     }
     const isCombo = checkIsComboBonus(bet.selections);
-    const comboPct = isCombo ? getComboBonus(bet.selections.length) : 0;
+    const distinctGames = new Set(bet.selections.map(s => s.gameId)).size;
+    const comboPct = isCombo ? getComboBonus(distinctGames) : 0;
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
@@ -64,7 +65,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       lines.push(`  Super Aumentada: R$ ${bet.potentialWin.toFixed(2)}`);
     }
     if (isCombo && comboPct > 0) {
-      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${bet.selections.length} seleções)`);
+      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${distinctGames} jogos)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
       lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
     }
