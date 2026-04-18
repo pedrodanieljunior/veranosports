@@ -216,197 +216,36 @@ export function BetSlip({
         </CardHeader>
         
         <ScrollArea className="flex-1">
-          <CardContent className="p-4">
-            <div className="bg-primary/10 border border-primary rounded-md p-4 mb-4">
-              <div className="text-center">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-9 h-9 text-green-500" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">Bilhete registrado!</p>
+                <p className="text-sm text-muted-foreground mt-1">Sua aposta foi confirmada com sucesso.</p>
+              </div>
+              <div className="bg-primary/10 border border-primary rounded-lg px-6 py-3">
                 <p className="text-xs text-muted-foreground mb-1">Código do Bilhete</p>
-                <p className="font-mono text-lg font-bold text-primary" data-testid="text-bet-id">
+                <p className="font-mono text-xl font-bold text-primary" data-testid="text-bet-id">
                   #{placedBet.id.slice(0, 8).toUpperCase()}
                 </p>
               </div>
-            </div>
-
-            {placedBet.cappedAtMax && (
-              <div className="bg-yellow-500/10 border border-yellow-500 rounded-md p-3 mb-4 flex items-start gap-2" data-testid="alert-capped-max">
-                <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-yellow-700 dark:text-yellow-400">Os ganhos se limitam a R$15.000,00</p>
-              </div>
-            )}
-
-            {placedBet.cappedByDaily && (
-              <div className="bg-orange-500/10 border border-orange-500 rounded-md p-3 mb-4 flex items-start gap-2" data-testid="alert-capped-daily">
-                <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-orange-700 dark:text-orange-400">
-                  Ganhos limitados ao valor restante do limite diário: R$ {placedBet.potentialWin.toFixed(2)}
-                </p>
-              </div>
-            )}
-
-            {placedBet.pixQrCode && (
-              <div className="bg-white rounded-md p-4 mb-4">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <QrCode className="w-5 h-5 text-primary" />
-                  <p className="font-medium text-black">Pague com PIX</p>
+              {placedBet.cappedAtMax && (
+                <div className="bg-yellow-500/10 border border-yellow-500 rounded-md p-3 flex items-start gap-2 text-left w-full" data-testid="alert-capped-max">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400">Os ganhos se limitam a R$15.000,00</p>
                 </div>
-                <div className="flex justify-center mb-3">
-                  <img 
-                    src={placedBet.pixQrCode} 
-                    alt="QR Code PIX" 
-                    className="w-48 h-48"
-                    data-testid="img-pix-qrcode"
-                  />
-                </div>
-                <div className="text-center mb-3">
-                  <p className="text-2xl font-bold text-primary">
-                    R$ {placedBet.stake.toFixed(2)}
+              )}
+              {placedBet.cappedByDaily && (
+                <div className="bg-orange-500/10 border border-orange-500 rounded-md p-3 flex items-start gap-2 text-left w-full" data-testid="alert-capped-daily">
+                  <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-orange-700 dark:text-orange-400">
+                    Ganhos limitados ao valor restante do limite diário: R$ {placedBet.potentialWin.toFixed(2)}
                   </p>
-                  <p className="text-xs text-gray-500">FW Sports</p>
                 </div>
-                <div className="flex justify-center">
-                  <Button 
-                    className="text-white font-bold"
-                    style={{ background: "linear-gradient(135deg, #1e90ff 0%, #1565c0 50%, #0d47a1 100%)" }}
-                    onClick={copyPixCode}
-                    data-testid="button-copy-pix"
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar PIX
-                  </Button>
-                </div>
-                
-                {(() => {
-                  const isCombo = checkIsComboBonus(placedBet.selections);
-                  const betDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-                  const lines: string[] = [
-                    `*FW Sports - Comprovante de Aposta*`,
-                    ``,
-                    `Bilhete: *${placedBet.id.slice(0, 8).toUpperCase()}*`,
-                    `Data: ${betDate}`,
-                    `Valor apostado: *R$ ${placedBet.stake.toFixed(2).replace(".", ",")}*`,
-                    `Odds totais: *${fmtOdds(placedBet.totalOdds)}*`,
-                    `Retorno potencial: *R$ ${placedBet.potentialWin.toFixed(2).replace(".", ",")}*`,
-                    ``,
-                    `*Selecoes:*`,
-                    ...placedBet.selections.map((s, i) => [
-                      `${i + 1}. ${s.homeTeam} x ${s.awayTeam}`,
-                      `   ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey)} | Odd: ${fmtOdds(isCombo ? (s.originalOdds ?? s.odds) : s.odds)}`,
-                    ]).flat(),
-                    ``,
-                    `Segue o comprovante do pagamento PIX em anexo.`,
-                  ];
-                  const waText = encodeURIComponent(lines.join("\n"));
-                  return (
-                    <>
-                      <a
-                        href={`https://wa.me/5592981128080?text=${waText}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-3"
-                      >
-                        <Button
-                          className="w-full bg-[#25D366] text-white hover:bg-[#1ebe5d]"
-                          data-testid="button-whatsapp-comprovante"
-                        >
-                          <SiWhatsapp className="w-5 h-5 mr-2" />
-                          Enviar Comprovante via WhatsApp
-                        </Button>
-                      </a>
-
-                      <p className="text-center text-black mt-3 font-extrabold leading-tight" style={{ fontSize: "1.35rem" }}>
-                        Clique para enviar o comprovante PIX<br />e ativar seu bilhete
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-            
-            {(() => {
-              const grouped: Record<string, Selection[]> = {};
-              for (const sel of placedBet.selections) {
-                const key = sel.gameId;
-                if (!grouped[key]) grouped[key] = [];
-                grouped[key].push(sel);
-              }
-              return (
-                <div className="space-y-3">
-                  {Object.entries(grouped).map(([gameId, sels]) => {
-                    const first = sels[0];
-                    const isPlacedCombo = checkIsComboBonus(placedBet.selections);
-                    const gameOdds = roundOdds(computeTotalOdds(sels, isPlacedCombo));
-                    return (
-                      <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-game-${gameId}`}>
-                        <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-base">⚽</span>
-                            <span className="font-semibold text-foreground text-sm truncate">
-                              {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
-                            </span>
-                          </div>
-                          <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
-                            {fmtOdds(gameOdds)}
-                          </span>
-                        </div>
-
-                        <div className="px-4 py-3">
-                          <div className="relative pl-5">
-                            <div
-                              className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
-                              style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
-                            />
-                            {sels.map((sel, idx) => (
-                              <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
-                                <div className="flex items-center justify-between relative">
-                                  <div>
-                                    <div className="flex items-center gap-0 relative">
-                                      <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
-                                      <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
-                                    </div>
-                                    <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-            <div className="mt-4 rounded-xl bg-muted border border-border overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                <span className="text-muted-foreground text-sm">Odds total</span>
-                <span className="text-foreground font-bold text-lg">{fmtOdds(placedBet.totalOdds)}</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                <span className="text-muted-foreground text-sm">Valor Apostado</span>
-                <span className="text-foreground font-medium">R$ {placedBet.stake.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                <span className="text-muted-foreground text-sm">Retorno Potencial</span>
-                <span className="text-yellow-400 font-bold" data-testid="text-potential-win">R$ {placedBet.potentialWin.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-muted-foreground/60 text-xs">
-                  {format(new Date(placedBet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}
-                </span>
-                <span className="text-muted-foreground/60 text-xs">
-                  ID: {placedBet.id.slice(0, 10).toUpperCase()}
-                </span>
-              </div>
+              )}
             </div>
-
-            <Button
-              className="w-full mt-4 bg-green-600 text-white hover:bg-green-700"
-              onClick={shareBetSlip}
-              data-testid="button-share-bet"
-            >
-              <Share2 className="w-4 h-4 mr-2" />
-              Compartilhar Bilhete
-            </Button>
 
             <Button 
               className="w-full mt-2" 
