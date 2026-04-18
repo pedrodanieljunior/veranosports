@@ -200,7 +200,6 @@ export default function Home() {
       if (user) {
         refreshUser();
       }
-      toast({ title: "Bilhete gerado com sucesso!", description: `Código: #${data.id.slice(0, 8).toUpperCase()}` });
     },
     onError: (error: Error) => {
       let description = error.message;
