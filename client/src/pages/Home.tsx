@@ -294,7 +294,7 @@ export default function Home() {
                     {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
                   </button>
                   <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs whitespace-nowrap transition-colors" data-testid="button-open-profile-mobile">
-                    <span className="text-yellow-400 text-[10px]">R${user.balance.toFixed(2).replace(".", ",")}</span>
+                    <span className="text-white text-[10px]">R${user.balance.toFixed(2).replace(".", ",")}</span>
                     <UserCircle className="w-4 h-4" />
                   </button>
                 </>
@@ -467,7 +467,7 @@ export default function Home() {
                       {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
                     </button>
                     <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors" data-testid="button-open-profile-desktop">
-                      <span className="text-yellow-400 text-xs">R${user.balance.toFixed(2).replace(".", ",")}</span>
+                      <span className="text-white text-xs">R${user.balance.toFixed(2).replace(".", ",")}</span>
                       <UserCircle className="w-5 h-5" />
                     </button>
                   </>
