@@ -41,14 +41,14 @@ export function Header({
             <>
               <button
                 onClick={onOpenRegister}
-                className="px-4 py-2 rounded-lg bg-transparent border border-white/60 text-white font-bold text-sm hover:bg-white/10 transition-colors"
+                className="px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
                 data-testid="button-register"
               >
                 Registre-se
               </button>
               <button
                 onClick={onOpenLogin}
-                className="px-4 py-2 rounded-lg bg-transparent border border-white/60 text-white font-bold text-sm hover:bg-white/10 transition-colors"
+                className="px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
                 data-testid="button-login"
               >
                 Login

@@ -280,10 +280,10 @@ export default function Home() {
             <div className="flex flex-row flex-nowrap items-center gap-2">
               {!user ? (
                 <>
-                  <button onClick={() => setAuthMode("register")} className="px-3 py-1.5 rounded-lg bg-transparent border border-white/60 text-white font-bold text-xs whitespace-nowrap hover:bg-white/10 transition-colors" data-testid="button-register-mobile">
+                  <button onClick={() => setAuthMode("register")} className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-700 text-white font-bold text-xs whitespace-nowrap hover:bg-gray-800 transition-colors" data-testid="button-register-mobile">
                     Registre-se
                   </button>
-                  <button onClick={() => setAuthMode("login")} className="px-3 py-1.5 rounded-lg bg-transparent border border-white/60 text-white font-bold text-xs whitespace-nowrap hover:bg-white/10 transition-colors" data-testid="button-login-mobile">
+                  <button onClick={() => setAuthMode("login")} className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-700 text-white font-bold text-xs whitespace-nowrap hover:bg-gray-800 transition-colors" data-testid="button-login-mobile">
                     Login
                   </button>
                 </>
