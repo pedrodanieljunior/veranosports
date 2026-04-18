@@ -175,7 +175,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Nome completo <span className="text-red-400">*</span></Label>
+              <Label className="text-zinc-300">Nome <span className="text-red-400">*</span></Label>
               <Input
                 placeholder="Seu nome"
                 value={regName}
