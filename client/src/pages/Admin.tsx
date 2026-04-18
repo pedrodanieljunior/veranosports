@@ -2933,6 +2933,8 @@ function BoostTab() {
 
 function UserWithdrawalsSection() {
   const { toast } = useToast();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: userWithdrawals = [], refetch } = useQuery<UserWithdrawal[]>({
     queryKey: ["/api/admin/user-withdrawals"],
@@ -2990,6 +2992,23 @@ function UserWithdrawalsSection() {
   const statusColor = (s: string) => s === "paid" ? "text-blue-400" : s === "approved" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-yellow-400";
   const statusLabel = (s: string) => s === "paid" ? "Pago" : s === "approved" ? "Aprovado" : s === "rejected" ? "Rejeitado" : "Pendente";
 
+  const filtered = userWithdrawals.filter(w => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || String(w.userId).toLowerCase().includes(q) || w.pixKey.toLowerCase().includes(q) || (w.userPhone ?? "").toLowerCase().includes(q);
+    const matchStatus = statusFilter === "all" || w.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const countByStatus = (s: string) => userWithdrawals.filter(w => w.status === s).length;
+
+  const statusFilters = [
+    { value: "all", label: "Todos", count: userWithdrawals.length },
+    { value: "pending", label: "Pendente", count: countByStatus("pending") },
+    { value: "approved", label: "Aprovado", count: countByStatus("approved") },
+    { value: "paid", label: "Pago", count: countByStatus("paid") },
+    { value: "rejected", label: "Rejeitado", count: countByStatus("rejected") },
+  ];
+
   const buildWhatsAppLink = (w: UserWithdrawal) => {
     if (!w.userPhone) return null;
     const phone = w.userPhone.replace(/\D/g, "");
@@ -3006,13 +3025,42 @@ function UserWithdrawalsSection() {
           {pending.length > 0 && <Badge className="bg-red-500 text-white border-0 ml-1">{pending.length} pendente{pending.length > 1 ? "s" : ""}</Badge>}
           <Button variant="ghost" size="sm" className="ml-auto" onClick={() => refetch()}><RefreshCw className="w-4 h-4" /></Button>
         </CardTitle>
+        {userWithdrawals.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <Input
+              placeholder="Buscar por CPF, PIX ou telefone..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="h-8 text-sm"
+              data-testid="input-search-withdrawals"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {statusFilters.map(f => (
+                <button
+                  key={f.value}
+                  onClick={() => setStatusFilter(f.value)}
+                  data-testid={`button-filter-withdrawal-${f.value}`}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors border ${
+                    statusFilter === f.value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  {f.label} {f.count > 0 && <span className="opacity-70">({f.count})</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {userWithdrawals.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma solicitação de saque.</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">Nenhum resultado encontrado.</p>
         ) : (
           <div className="space-y-2">
-            {userWithdrawals.map(w => (
+            {filtered.map(w => (
               <div key={w.id} className="flex items-center justify-between gap-3 border rounded-lg p-3 flex-wrap" data-testid={`row-user-withdrawal-${w.id}`}>
                 <div className="min-w-0">
                   <p className="font-semibold text-sm">R$ {w.amount.toFixed(2).replace(".", ",")}</p>
