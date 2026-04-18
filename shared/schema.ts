@@ -293,6 +293,31 @@ export const depositSchema = z.object({
 
 export type Deposit = z.infer<typeof depositSchema>;
 
+// ─── Transactions ─────────────────────────────────────────────────────────────
+export const transactionsTable = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => usersTable.cpf),
+  type: text("type").notNull(), // "deposit" | "bet" | "win" | "withdrawal" | "withdrawal_refund"
+  amount: real("amount").notNull(), // positive = credit, negative = debit
+  balanceAfter: real("balance_after").notNull(),
+  description: text("description").notNull().default(""),
+  referenceId: text("reference_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const transactionSchema = z.object({
+  id: z.number(),
+  userId: z.string(),
+  type: z.string(),
+  amount: z.number(),
+  balanceAfter: z.number(),
+  description: z.string(),
+  referenceId: z.string().nullable().optional(),
+  createdAt: z.string(),
+});
+
+export type Transaction = z.infer<typeof transactionSchema>;
+
 // ─── User Withdrawals ─────────────────────────────────────────────────────────
 export const userWithdrawalsTable = pgTable("user_withdrawals", {
   id: serial("id").primaryKey(),

@@ -883,6 +883,11 @@ export async function registerRoutes(
     res.json(deposits);
   });
 
+  app.get("/api/transactions/mine", requireAuth, async (req, res) => {
+    const transactions = await storage.getTransactionsByUser(req.session.userId!);
+    res.json(transactions);
+  });
+
   // ─── User Withdrawals ────────────────────────────────────────────────────────
   const createWithdrawalHandler = async (req: Request, res: Response) => {
     try {
@@ -896,6 +901,14 @@ export async function registerRoutes(
       const newBalance = Math.round((user.balance - amount) * 100) / 100;
       await storage.updateUserBalance(userId, newBalance);
       const withdrawal = await storage.createUserWithdrawal(userId, amount, pixKey);
+      await storage.createTransaction({
+        userId,
+        type: "withdrawal",
+        amount: -amount,
+        balanceAfter: newBalance,
+        description: `Saque PIX solicitado`,
+        referenceId: String(withdrawal.id),
+      });
       res.json(withdrawal);
     } catch {
       res.status(500).json({ message: "Erro ao criar solicitação de saque" });
@@ -969,6 +982,14 @@ export async function registerRoutes(
       if (user) {
         const refunded = Math.round((user.balance + withdrawal.amount) * 100) / 100;
         await storage.updateUserBalance(withdrawal.userId, refunded);
+        await storage.createTransaction({
+          userId: withdrawal.userId,
+          type: "withdrawal_refund",
+          amount: withdrawal.amount,
+          balanceAfter: refunded,
+          description: `Saque rejeitado - valor devolvido`,
+          referenceId: String(id),
+        });
       }
       const updated = await storage.updateUserWithdrawalStatus(id, "rejected");
       res.json(updated);
@@ -1066,6 +1087,17 @@ export async function registerRoutes(
       if (!user.firstDepositDone && deposit.bonusAmount > 0) {
         await storage.markFirstDeposit(deposit.userId);
       }
+      const description = deposit.bonusAmount > 0
+        ? `Depósito PIX confirmado (+R$${deposit.bonusAmount.toFixed(2)} bônus)`
+        : `Depósito PIX confirmado`;
+      await storage.createTransaction({
+        userId: deposit.userId,
+        type: "deposit",
+        amount: totalCredit,
+        balanceAfter: newBalance,
+        description,
+        referenceId: String(id),
+      });
       const updated = await storage.updateDepositStatus(id, "confirmed");
       res.json(updated);
     } catch {
@@ -2117,6 +2149,7 @@ export async function registerRoutes(
         }
         const newBalance = Math.round((betUser.balance - validatedData.stake) * 100) / 100;
         await storage.updateUserBalance(sessionUserId, newBalance);
+        (validatedData as any)._newBalanceAfterBet = newBalance;
       } else if (validatedData.userId) {
         // Corpo tem userId mas sem sessão — não permitir debitação sem autenticação
         return res.status(401).json({ error: "Autenticação necessária para usar saldo da conta" });
@@ -2135,6 +2168,21 @@ export async function registerRoutes(
           }
         }
         throw createErr;
+      }
+
+      if (sessionUserId && (validatedData as any)._newBalanceAfterBet !== undefined) {
+        const selCount = validatedData.selections.length;
+        const betDesc = selCount === 1
+          ? `Aposta simples - ${validatedData.selections[0].homeTeam} x ${validatedData.selections[0].awayTeam}`
+          : `Aposta múltipla (${selCount} seleções)`;
+        await storage.createTransaction({
+          userId: sessionUserId,
+          type: "bet",
+          amount: -validatedData.stake,
+          balanceAfter: (validatedData as any)._newBalanceAfterBet,
+          description: betDesc,
+          referenceId: betSlip.id,
+        });
       }
 
       const updatedBetSlip = { ...betSlip, potentialWin, totalOdds };
@@ -3115,6 +3163,14 @@ export async function registerRoutes(
             if (winUser && updatedBetAuto) {
               const credited = Math.round((winUser.balance + updatedBetAuto.potentialWin) * 100) / 100;
               await storage.updateUserBalance(bet.userId, credited);
+              await storage.createTransaction({
+                userId: bet.userId,
+                type: "win",
+                amount: updatedBetAuto.potentialWin,
+                balanceAfter: credited,
+                description: `Aposta ganha`,
+                referenceId: bet.id,
+              });
             }
           }
           updatedCount++;
@@ -3173,6 +3229,14 @@ export async function registerRoutes(
         if (winUser) {
           const credited = Math.round((winUser.balance + updated.potentialWin) * 100) / 100;
           await storage.updateUserBalance(existing.userId, credited);
+          await storage.createTransaction({
+            userId: existing.userId,
+            type: "win",
+            amount: updated.potentialWin,
+            balanceAfter: credited,
+            description: `Aposta ganha`,
+            referenceId: id,
+          });
         }
       }
       // Reembolsar stake se voltando para pending a partir de won

@@ -7,9 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Deposit, UserWithdrawal } from "@shared/schema";
+import { Deposit, UserWithdrawal, Transaction } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -17,7 +17,7 @@ const WHATSAPP_SUPPORT = "5592981128080";
 const PIX_KEY = "22580407000178";
 const PIX_NAME = "FW Sports";
 
-type View = "menu" | "deposit" | "withdraw" | "account";
+type View = "menu" | "deposit" | "withdraw" | "account" | "history";
 
 interface Props {
   open: boolean;
@@ -360,6 +360,78 @@ function AccountView({ onBack }: { onBack: () => void }) {
   );
 }
 
+function HistoryView({ onBack }: { onBack: () => void }) {
+  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
+    queryKey: ["/api/transactions/mine"],
+    queryFn: async () => {
+      const res = await fetch("/api/transactions/mine", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+  });
+
+  const typeIcon = (type: string) => {
+    if (type === "deposit") return <ArrowDownCircle className="w-4 h-4 text-green-400" />;
+    if (type === "win") return <TrendingUp className="w-4 h-4 text-green-400" />;
+    if (type === "withdrawal_refund") return <ArrowDownCircle className="w-4 h-4 text-blue-400" />;
+    return <ArrowUpCircle className="w-4 h-4 text-red-400" />;
+  };
+
+  const typeLabel = (type: string) => {
+    if (type === "deposit") return "Depósito";
+    if (type === "bet") return "Aposta";
+    if (type === "win") return "Ganho";
+    if (type === "withdrawal") return "Saque";
+    if (type === "withdrawal_refund") return "Reembolso";
+    return type;
+  };
+
+  const amountColor = (amount: number) => amount >= 0 ? "text-green-400" : "text-red-400";
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white" data-testid="button-history-back">
+        <ChevronLeft className="w-4 h-4" /> Voltar
+      </button>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-zinc-800 rounded-lg px-3 py-3 h-16 animate-pulse" />
+          ))}
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="bg-zinc-800 rounded-xl p-6 border border-zinc-700 text-center">
+          <History className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+          <p className="text-zinc-400 text-sm">Nenhuma transação encontrada</p>
+          <p className="text-zinc-500 text-xs mt-1">Suas movimentações de saldo aparecerão aqui</p>
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {transactions.map(t => (
+            <div key={t.id} className="bg-zinc-800 rounded-lg px-3 py-2.5 flex items-center justify-between" data-testid={`row-transaction-${t.id}`}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="shrink-0">{typeIcon(t.type)}</span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white">{typeLabel(t.type)}</p>
+                  <p className="text-xs text-zinc-400 truncate max-w-[160px]">{t.description}</p>
+                  <p className="text-xs text-zinc-500">{format(new Date(t.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                </div>
+              </div>
+              <div className="text-right shrink-0 ml-2">
+                <p className={`text-sm font-bold ${amountColor(t.amount)}`}>
+                  {t.amount >= 0 ? "+" : ""}R$ {Math.abs(t.amount).toFixed(2).replace(".", ",")}
+                </p>
+                <p className="text-xs text-zinc-500">Saldo: R$ {t.balanceAfter.toFixed(2).replace(".", ",")}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProfileModal({ open, onClose }: Props) {
   const { user, logout } = useAuth();
   const [view, setView] = useState<View>("menu");
@@ -369,6 +441,7 @@ export function ProfileModal({ open, onClose }: Props) {
   const menuItems = [
     { id: "deposit" as View, icon: <CreditCard className="w-5 h-5" />, label: "Depositar", desc: "Adicionar saldo via PIX" },
     { id: "withdraw" as View, icon: <Wallet className="w-5 h-5" />, label: "Sacar", desc: "Solicitar retirada" },
+    { id: "history" as View, icon: <History className="w-5 h-5" />, label: "Extrato", desc: "Histórico de movimentações" },
     { id: "account" as View, icon: <User className="w-5 h-5" />, label: "Minha Conta", desc: "Dados e senha" },
   ];
 
@@ -380,6 +453,7 @@ export function ProfileModal({ open, onClose }: Props) {
             {view === "menu" && "Perfil"}
             {view === "deposit" && "Depositar"}
             {view === "withdraw" && "Sacar"}
+            {view === "history" && "Extrato"}
             {view === "account" && "Minha Conta"}
           </DialogTitle>
         </DialogHeader>
@@ -419,6 +493,7 @@ export function ProfileModal({ open, onClose }: Props) {
 
         {view === "deposit" && <DepositView onBack={() => setView("menu")} />}
         {view === "withdraw" && <WithdrawView onBack={() => setView("menu")} />}
+        {view === "history" && <HistoryView onBack={() => setView("menu")} />}
         {view === "account" && <AccountView onBack={() => setView("menu")} />}
       </DialogContent>
     </Dialog>

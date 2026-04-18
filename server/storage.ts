@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -91,6 +91,9 @@ export interface IStorage {
   getAllUserWithdrawals(): Promise<UserWithdrawal[]>;
   updateUserWithdrawalStatus(id: number, status: string): Promise<UserWithdrawal | undefined>;
   markUserWithdrawalAsPaid(id: number): Promise<UserWithdrawal | undefined>;
+  // Transactions
+  createTransaction(data: { userId: string; type: string; amount: number; balanceAfter: number; description: string; referenceId?: string }): Promise<Transaction>;
+  getTransactionsByUser(userId: string): Promise<Transaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -720,10 +723,43 @@ export class DatabaseStorage implements IStorage {
     return this.mapUserWithdrawal(row);
   }
 
+<<<<<<< HEAD
   async markUserWithdrawalAsPaid(id: number): Promise<UserWithdrawal | undefined> {
     const [row] = await db.update(userWithdrawalsTable).set({ status: "paid", paidAt: new Date() }).where(eq(userWithdrawalsTable.id, id)).returning();
     if (!row) return undefined;
     return this.mapUserWithdrawal(row);
+=======
+  private mapTransaction(row: any): Transaction {
+    return {
+      id: row.id,
+      userId: row.userId,
+      type: row.type,
+      amount: row.amount,
+      balanceAfter: row.balanceAfter,
+      description: row.description,
+      referenceId: row.referenceId ?? null,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async createTransaction(data: { userId: string; type: string; amount: number; balanceAfter: number; description: string; referenceId?: string }): Promise<Transaction> {
+    const [row] = await db.insert(transactionsTable).values({
+      userId: data.userId,
+      type: data.type,
+      amount: data.amount,
+      balanceAfter: data.balanceAfter,
+      description: data.description,
+      referenceId: data.referenceId ?? null,
+    }).returning();
+    return this.mapTransaction(row);
+  }
+
+  async getTransactionsByUser(userId: string): Promise<Transaction[]> {
+    const rows = await db.select().from(transactionsTable)
+      .where(eq(transactionsTable.userId, userId))
+      .orderBy(desc(transactionsTable.createdAt));
+    return rows.map(r => this.mapTransaction(r));
+>>>>>>> a9efa1b (feat: Add transaction history so users can track balance changes)
   }
 }
 
