@@ -1,7 +1,24 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const [hashed, salt] = hash.split(".");
+  if (!hashed || !salt) return false;
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  const hashedBuf = Buffer.from(hashed, "hex");
+  return timingSafeEqual(buf, hashedBuf);
+}
 
 export interface GameSimpleBetTotal {
   gameId: string;
@@ -20,6 +37,7 @@ export interface IStorage {
   getAllBetSlips(): Promise<BetSlip[]>;
   getRecentBetSlips(hours: number): Promise<BetSlip[]>;
   getBetSlipsBySession(sessionId: string): Promise<BetSlip[]>;
+  getBetSlipsByUser(userId: string): Promise<BetSlip[]>;
   deleteBetSlip(id: string): Promise<boolean>;
   deleteAllBetSlips(): Promise<void>;
   updateBetSlipStatus(id: string, status: "pending" | "won" | "lost"): Promise<BetSlip | undefined>;
@@ -51,9 +69,42 @@ export interface IStorage {
   updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined>;
   resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }>;
   deleteBoostCard(id: number): Promise<boolean>;
+  // Users
+  createUser(data: { cpf: string; name: string; phone: string; referralCode?: string; passwordHash: string }): Promise<User>;
+  getUserByCpf(cpf: string): Promise<(User & { passwordHash: string }) | undefined>;
+  getAllUsers(): Promise<User[]>;
+  updateUserBalance(cpf: string, newBalance: number): Promise<User | undefined>;
+  updateUserPassword(cpf: string, passwordHash: string): Promise<boolean>;
+  updateUserData(cpf: string, data: { name?: string; phone?: string }): Promise<User | undefined>;
+  deleteUser(cpf: string): Promise<boolean>;
+  markFirstDeposit(cpf: string): Promise<void>;
+  getBetSlipsByUser(userId: string): Promise<BetSlip[]>;
+  // Deposits
+  createDeposit(userId: string, amount: number, bonusAmount: number): Promise<Deposit>;
+  getDepositsByUser(userId: string): Promise<Deposit[]>;
+  getAllDeposits(): Promise<Deposit[]>;
+  updateDepositStatus(id: number, status: string): Promise<Deposit | undefined>;
+  deleteDeposit(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
+  private mapBetSlip(result: any): BetSlip {
+    return {
+      id: result.id,
+      sessionId: result.sessionId,
+      userId: result.userId,
+      telegramChatId: result.telegramChatId,
+      pixKey: result.pixKey,
+      selections: result.selections as BetSlip["selections"],
+      stake: result.stake,
+      totalOdds: result.totalOdds,
+      potentialWin: result.potentialWin,
+      status: result.status as "pending" | "won" | "lost",
+      verified: result.verified,
+      createdAt: result.createdAt.toISOString(),
+    };
+  }
+
   async createBetSlip(data: InsertBetSlip): Promise<BetSlip> {
     const id = randomUUID();
     const totalOdds = data.selections.reduce((acc, sel) => acc * sel.odds, 1);
@@ -62,6 +113,7 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.insert(betSlipsTable).values({
       id,
       sessionId: data.sessionId ?? null,
+      userId: data.userId ?? null,
       selections: data.selections,
       stake: data.stake,
       totalOdds,
@@ -69,97 +121,39 @@ export class DatabaseStorage implements IStorage {
       status: "pending",
     }).returning();
     
-    return {
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(result);
   }
 
   async getBetSlip(id: string): Promise<BetSlip | undefined> {
     const [result] = await db.select().from(betSlipsTable).where(eq(betSlipsTable.id, id));
     if (!result) return undefined;
     
-    return {
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(result);
   }
 
   async getAllBetSlips(): Promise<BetSlip[]> {
     const results = await db.select().from(betSlipsTable).orderBy(desc(betSlipsTable.createdAt));
-    
-    return results.map(result => ({
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    }));
+    return results.map(r => this.mapBetSlip(r));
   }
 
   async getRecentBetSlips(hours: number): Promise<BetSlip[]> {
     const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
     const results = await db.select().from(betSlipsTable).orderBy(desc(betSlipsTable.createdAt));
-    
-    return results
-      .filter(result => new Date(result.createdAt) >= cutoffTime)
-      .map(result => ({
-        id: result.id,
-        sessionId: result.sessionId,
-        telegramChatId: result.telegramChatId,
-        pixKey: result.pixKey,
-        selections: result.selections as BetSlip["selections"],
-        stake: result.stake,
-        totalOdds: result.totalOdds,
-        potentialWin: result.potentialWin,
-        status: result.status as "pending" | "won" | "lost",
-        verified: result.verified,
-        createdAt: result.createdAt.toISOString(),
-      }));
+    return results.filter(r => new Date(r.createdAt) >= cutoffTime).map(r => this.mapBetSlip(r));
   }
 
   async getBetSlipsBySession(sessionId: string): Promise<BetSlip[]> {
     const results = await db.select().from(betSlipsTable)
       .where(eq(betSlipsTable.sessionId, sessionId))
       .orderBy(desc(betSlipsTable.createdAt));
+    return results.map(r => this.mapBetSlip(r));
+  }
 
-    return results.map(result => ({
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    }));
+  async getBetSlipsByUser(userId: string): Promise<BetSlip[]> {
+    const results = await db.select().from(betSlipsTable)
+      .where(eq(betSlipsTable.userId, userId))
+      .orderBy(desc(betSlipsTable.createdAt));
+    return results.map(r => this.mapBetSlip(r));
   }
 
   async deleteBetSlip(id: string): Promise<boolean> {
@@ -178,19 +172,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     if (!result) return undefined;
-    
-    return {
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(result);
   }
 
   async updateSelectionResult(betId: string, selectionId: string, result: "pending" | "won" | "lost"): Promise<BetSlip | undefined> {
@@ -222,20 +204,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     if (!updated) return undefined;
-
-    return {
-      id: updated.id,
-      sessionId: updated.sessionId,
-      telegramChatId: updated.telegramChatId,
-      pixKey: updated.pixKey,
-      selections: updated.selections as BetSlip["selections"],
-      stake: updated.stake,
-      totalOdds: updated.totalOdds,
-      potentialWin: updated.potentialWin,
-      status: updated.status as "pending" | "won" | "lost",
-      verified: updated.verified,
-      createdAt: updated.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(updated);
   }
 
   async updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined> {
@@ -245,20 +214,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     if (!result) return undefined;
-    
-    return {
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(result);
   }
 
   async updateBetSlipTelegramChatId(id: string, telegramChatId: string): Promise<BetSlip | undefined> {
@@ -268,20 +224,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     if (!result) return undefined;
-    
-    return {
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(result);
   }
 
   async updateBetSlipPixKey(id: string, pixKey: string): Promise<BetSlip | undefined> {
@@ -291,20 +234,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     if (!result) return undefined;
-
-    return {
-      id: result.id,
-      sessionId: result.sessionId,
-      telegramChatId: result.telegramChatId,
-      pixKey: result.pixKey,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    };
+    return this.mapBetSlip(result);
   }
 
   async getDailyBetSlips(): Promise<BetSlip[]> {
@@ -315,16 +245,7 @@ export class DatabaseStorage implements IStorage {
       .where(gte(betSlipsTable.createdAt, todayStart))
       .orderBy(desc(betSlipsTable.createdAt));
     
-    return results.map(result => ({
-      id: result.id,
-      selections: result.selections as BetSlip["selections"],
-      stake: result.stake,
-      totalOdds: result.totalOdds,
-      potentialWin: result.potentialWin,
-      status: result.status as "pending" | "won" | "lost",
-      verified: result.verified,
-      createdAt: result.createdAt.toISOString(),
-    }));
+    return results.map(r => this.mapBetSlip(r));
   }
 
   async getDailyTotalPotentialWin(): Promise<number> {
@@ -631,6 +552,118 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBoostCard(id: number): Promise<boolean> {
     const result = await db.delete(boostCardsTable).where(eq(boostCardsTable.id, id)).returning();
+    return result.length > 0;
+  }
+
+  private mapUser(row: any): User {
+    return {
+      cpf: row.cpf,
+      name: row.name,
+      phone: row.phone,
+      referralCode: row.referralCode ?? null,
+      balance: row.balance,
+      firstDepositDone: row.firstDepositDone,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async createUser(data: { cpf: string; name: string; phone: string; referralCode?: string; passwordHash: string }): Promise<User> {
+    const [row] = await db.insert(usersTable).values({
+      cpf: data.cpf,
+      name: data.name,
+      phone: data.phone,
+      referralCode: data.referralCode ?? null,
+      passwordHash: data.passwordHash,
+      balance: 0,
+      firstDepositDone: false,
+    }).returning();
+    return this.mapUser(row);
+  }
+
+  async getUserByCpf(cpf: string): Promise<(User & { passwordHash: string }) | undefined> {
+    const [row] = await db.select().from(usersTable).where(eq(usersTable.cpf, cpf));
+    if (!row) return undefined;
+    return { ...this.mapUser(row), passwordHash: row.passwordHash };
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    const rows = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
+    return rows.map(r => this.mapUser(r));
+  }
+
+  async updateUserBalance(cpf: string, newBalance: number): Promise<User | undefined> {
+    const [row] = await db.update(usersTable).set({ balance: newBalance }).where(eq(usersTable.cpf, cpf)).returning();
+    if (!row) return undefined;
+    return this.mapUser(row);
+  }
+
+  async updateUserPassword(cpf: string, passwordHash: string): Promise<boolean> {
+    const result = await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.cpf, cpf)).returning();
+    return result.length > 0;
+  }
+
+  async updateUserData(cpf: string, data: { name?: string; phone?: string }): Promise<User | undefined> {
+    const [row] = await db.update(usersTable).set(data).where(eq(usersTable.cpf, cpf)).returning();
+    if (!row) return undefined;
+    return this.mapUser(row);
+  }
+
+  async deleteUser(cpf: string): Promise<boolean> {
+    const result = await db.delete(usersTable).where(eq(usersTable.cpf, cpf)).returning();
+    return result.length > 0;
+  }
+
+  async markFirstDeposit(cpf: string): Promise<void> {
+    await db.update(usersTable).set({ firstDepositDone: true }).where(eq(usersTable.cpf, cpf));
+  }
+
+  async getBetSlipsByUser(userId: string): Promise<BetSlip[]> {
+    const results = await db.select().from(betSlipsTable)
+      .where(eq(betSlipsTable.userId, userId))
+      .orderBy(desc(betSlipsTable.createdAt));
+    return results.map(r => this.mapBetSlip(r));
+  }
+
+  private mapDeposit(row: any): Deposit {
+    return {
+      id: row.id,
+      userId: row.userId,
+      amount: row.amount,
+      bonusAmount: row.bonusAmount,
+      status: row.status,
+      pixReceipt: row.pixReceipt ?? null,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async createDeposit(userId: string, amount: number, bonusAmount: number): Promise<Deposit> {
+    const [row] = await db.insert(depositsTable).values({
+      userId,
+      amount,
+      bonusAmount,
+      status: "pending",
+    }).returning();
+    return this.mapDeposit(row);
+  }
+
+  async getDepositsByUser(userId: string): Promise<Deposit[]> {
+    const rows = await db.select().from(depositsTable).where(eq(depositsTable.userId, userId)).orderBy(desc(depositsTable.createdAt));
+    return rows.map(r => this.mapDeposit(r));
+  }
+
+  async getAllDeposits(): Promise<Deposit[]> {
+    const rows = await db.select().from(depositsTable).orderBy(desc(depositsTable.createdAt));
+    return rows.map(r => this.mapDeposit(r));
+  }
+
+  async updateDepositStatus(id: number, status: string): Promise<Deposit | undefined> {
+    const [row] = await db.update(depositsTable).set({ status }).where(eq(depositsTable.id, id)).returning();
+    if (!row) return undefined;
+    return this.mapDeposit(row);
+  }
+
+  async deleteDeposit(id: number): Promise<boolean> {
+    const result = await db.delete(depositsTable).where(eq(depositsTable.id, id)).returning();
     return result.length > 0;
   }
 }

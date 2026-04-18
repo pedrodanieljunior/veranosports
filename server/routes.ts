@@ -1,7 +1,7 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { insertBetSlipSchema } from "@shared/schema";
+import { storage, hashPassword, verifyPassword } from "./storage";
+import { insertBetSlipSchema, insertUserSchema } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
 import { z } from "zod";
 import { cache } from "./cache";
@@ -9,6 +9,11 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) return res.status(401).json({ message: "Não autenticado" });
+  next();
+}
 
 const bannerStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -804,6 +809,170 @@ export async function registerRoutes(
     10,            // Amistosos Internacionais
     34, 32, 31, 29, 30, 43, // Qualificatórias Copa do Mundo
   ]);
+
+  // ─── Auth Routes ──────────────────────────────────────────────────────────
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const data = insertUserSchema.parse(req.body);
+      const cpf = data.cpf.replace(/\D/g, "");
+      if (cpf.length !== 11) return res.status(400).json({ message: "CPF inválido" });
+      const existing = await storage.getUserByCpf(cpf);
+      if (existing) return res.status(409).json({ message: "CPF já cadastrado" });
+      const passwordHash = await hashPassword(data.password);
+      const user = await storage.createUser({ cpf, name: data.name, phone: data.phone, referralCode: data.referralCode, passwordHash });
+      req.session.userId = cpf;
+      res.json(user);
+    } catch (err: any) {
+      if (err?.issues) return res.status(400).json({ message: err.issues[0]?.message || "Dados inválidos" });
+      res.status(500).json({ message: "Erro ao cadastrar" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { cpf: cpfRaw, password } = req.body as { cpf: string; password: string };
+      if (!cpfRaw || !password) return res.status(400).json({ message: "CPF e senha obrigatórios" });
+      const cpf = cpfRaw.replace(/\D/g, "");
+      const user = await storage.getUserByCpf(cpf);
+      if (!user) return res.status(401).json({ message: "CPF ou senha incorretos" });
+      const valid = await verifyPassword(password, user.passwordHash);
+      if (!valid) return res.status(401).json({ message: "CPF ou senha incorretos" });
+      req.session.userId = cpf;
+      const { passwordHash: _ph, ...userPublic } = user;
+      res.json(userPublic);
+    } catch {
+      res.status(500).json({ message: "Erro ao fazer login" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy(() => res.json({ ok: true }));
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ message: "Não autenticado" });
+    const user = await storage.getUserByCpf(req.session.userId);
+    if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
+    const { passwordHash: _ph, ...userPublic } = user;
+    res.json(userPublic);
+  });
+
+  // ─── User Deposits ─────────────────────────────────────────────────────────
+  app.post("/api/deposits", requireAuth, async (req, res) => {
+    try {
+      const { amount } = req.body as { amount: number };
+      if (!amount || amount < 10) return res.status(400).json({ message: "Valor mínimo de depósito é R$10,00" });
+      const userId = req.session.userId!;
+      const user = await storage.getUserByCpf(userId);
+      if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
+      const bonusAmount = user.firstDepositDone ? 0 : Math.round(amount * 0.10 * 100) / 100;
+      const deposit = await storage.createDeposit(userId, amount, bonusAmount);
+      res.json(deposit);
+    } catch {
+      res.status(500).json({ message: "Erro ao criar depósito" });
+    }
+  });
+
+  app.get("/api/deposits/mine", requireAuth, async (req, res) => {
+    const deposits = await storage.getDepositsByUser(req.session.userId!);
+    res.json(deposits);
+  });
+
+  // ─── Admin: User Management ────────────────────────────────────────────────
+  app.get("/api/admin/users", async (_req, res) => {
+    const users = await storage.getAllUsers();
+    res.json(users);
+  });
+
+  app.get("/api/admin/users/:cpf", async (req, res) => {
+    const user = await storage.getUserByCpf(req.params.cpf);
+    if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
+    const { passwordHash: _ph, ...userPublic } = user;
+    res.json(userPublic);
+  });
+
+  app.patch("/api/admin/users/:cpf", async (req, res) => {
+    try {
+      const { name, phone, balance } = req.body as { name?: string; phone?: string; balance?: number };
+      const cpf = req.params.cpf;
+      if (balance !== undefined) {
+        await storage.updateUserBalance(cpf, balance);
+      }
+      if (name || phone) {
+        await storage.updateUserData(cpf, { name, phone });
+      }
+      const updated = await storage.getUserByCpf(cpf);
+      if (!updated) return res.status(404).json({ message: "Usuário não encontrado" });
+      const { passwordHash: _ph, ...pub } = updated;
+      res.json(pub);
+    } catch {
+      res.status(500).json({ message: "Erro ao atualizar" });
+    }
+  });
+
+  app.post("/api/admin/users/:cpf/reset-password", async (req, res) => {
+    try {
+      const { newPassword } = req.body as { newPassword: string };
+      if (!newPassword || newPassword.length < 6) return res.status(400).json({ message: "Senha mínima de 6 caracteres" });
+      const hash = await hashPassword(newPassword);
+      const ok = await storage.updateUserPassword(req.params.cpf, hash);
+      if (!ok) return res.status(404).json({ message: "Usuário não encontrado" });
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ message: "Erro ao resetar senha" });
+    }
+  });
+
+  app.delete("/api/admin/users/:cpf", async (req, res) => {
+    const ok = await storage.deleteUser(req.params.cpf);
+    if (!ok) return res.status(404).json({ message: "Usuário não encontrado" });
+    res.json({ ok: true });
+  });
+
+  app.get("/api/admin/users/:cpf/bets", async (req, res) => {
+    const bets = await storage.getBetSlipsByUser(req.params.cpf);
+    res.json(bets);
+  });
+
+  // ─── Admin: Deposits Management ────────────────────────────────────────────
+  app.get("/api/admin/deposits", async (_req, res) => {
+    const deposits = await storage.getAllDeposits();
+    res.json(deposits);
+  });
+
+  app.patch("/api/admin/deposits/:id/confirm", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deposit = (await storage.getAllDeposits()).find(d => d.id === id);
+      if (!deposit) return res.status(404).json({ message: "Depósito não encontrado" });
+      if (deposit.status === "confirmed") return res.status(400).json({ message: "Depósito já confirmado" });
+      const user = await storage.getUserByCpf(deposit.userId);
+      if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
+      const totalCredit = deposit.amount + deposit.bonusAmount;
+      const newBalance = Math.round((user.balance + totalCredit) * 100) / 100;
+      await storage.updateUserBalance(deposit.userId, newBalance);
+      if (!user.firstDepositDone && deposit.bonusAmount > 0) {
+        await storage.markFirstDeposit(deposit.userId);
+      }
+      const updated = await storage.updateDepositStatus(id, "confirmed");
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Erro ao confirmar depósito" });
+    }
+  });
+
+  app.patch("/api/admin/deposits/:id/reject", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const updated = await storage.updateDepositStatus(id, "rejected");
+    if (!updated) return res.status(404).json({ message: "Depósito não encontrado" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/deposits/:id", async (req, res) => {
+    const ok = await storage.deleteDeposit(parseInt(req.params.id));
+    if (!ok) return res.status(404).json({ message: "Depósito não encontrado" });
+    res.json({ ok: true });
+  });
 
   app.get("/api/sports", async (req, res) => {
     try {
@@ -1873,14 +2042,15 @@ export async function registerRoutes(
   // Bilhetes recentes para o site principal (últimos 10 minutos)
   app.get("/api/bets", async (req, res) => {
     try {
-      const { sessionId } = req.query;
-      // Se sessionId fornecido, retorna apenas apostas dessa sessão
-      // Garante isolamento entre usuários: cada um vê só seus próprios bilhetes
+      const { sessionId, userId } = req.query;
+      if (userId && typeof userId === "string") {
+        const betSlips = await storage.getBetSlipsByUser(userId);
+        return res.json(betSlips);
+      }
       if (sessionId && typeof sessionId === "string") {
         const betSlips = await storage.getBetSlipsBySession(sessionId);
         return res.json(betSlips);
       }
-      // Fallback sem sessionId: retorna apostas recentes (não deve ser usado em produção)
       const betSlips = await storage.getRecentBetSlips(10 / 60);
       res.json(betSlips);
     } catch (error) {

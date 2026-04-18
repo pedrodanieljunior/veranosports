@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { pgTable, text, real, timestamp, jsonb, boolean, serial, integer } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 
 export const bannersTable = pgTable("banners", {
   id: serial("id").primaryKey(),
@@ -33,6 +34,7 @@ export const marketSettingsTable = pgTable("market_settings", {
 export const betSlipsTable = pgTable("bet_slips", {
   id: text("id").primaryKey(),
   sessionId: text("session_id"),
+  userId: text("user_id"),
   selections: jsonb("selections").notNull(),
   stake: real("stake").notNull(),
   totalOdds: real("total_odds").notNull(),
@@ -114,6 +116,7 @@ export type Selection = z.infer<typeof selectionSchema>;
 export const betSlipSchema = z.object({
   id: z.string(),
   sessionId: z.string().optional().nullable(),
+  userId: z.string().optional().nullable(),
   selections: z.array(selectionSchema),
   stake: z.number(),
   totalOdds: z.number(),
@@ -129,6 +132,7 @@ export type BetSlip = z.infer<typeof betSlipSchema>;
 
 export const insertBetSlipSchema = z.object({
   sessionId: z.string().optional(),
+  userId: z.string().optional(),
   selections: z.array(selectionSchema).min(1, "Selecione pelo menos uma aposta"),
   stake: z.number().min(1, "Valor mínimo de R$1,00"),
 });
@@ -231,3 +235,60 @@ export const insertBoostCardSchema = z.object({
 });
 
 export type InsertBoostCard = z.infer<typeof insertBoostCardSchema>;
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+export const usersTable = pgTable("users", {
+  cpf: text("cpf").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  referralCode: text("referral_code"),
+  passwordHash: text("password_hash").notNull(),
+  balance: real("balance").notNull().default(0),
+  firstDepositDone: boolean("first_deposit_done").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const userSchema = z.object({
+  cpf: z.string(),
+  name: z.string(),
+  phone: z.string(),
+  referralCode: z.string().nullable().optional(),
+  balance: z.number(),
+  firstDepositDone: z.boolean(),
+  createdAt: z.string(),
+});
+
+export type User = z.infer<typeof userSchema>;
+
+export const insertUserSchema = z.object({
+  cpf: z.string().min(11).max(14),
+  name: z.string().min(2),
+  phone: z.string().min(10),
+  referralCode: z.string().optional(),
+  password: z.string().min(6),
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// ─── Deposits ─────────────────────────────────────────────────────────────────
+export const depositsTable = pgTable("deposits", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => usersTable.cpf),
+  amount: real("amount").notNull(),
+  bonusAmount: real("bonus_amount").notNull().default(0),
+  status: text("status").notNull().default("pending"),
+  pixReceipt: text("pix_receipt"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const depositSchema = z.object({
+  id: z.number(),
+  userId: z.string(),
+  amount: z.number(),
+  bonusAmount: z.number(),
+  status: z.string(),
+  pixReceipt: z.string().nullable().optional(),
+  createdAt: z.string(),
+});
+
+export type Deposit = z.infer<typeof depositSchema>;

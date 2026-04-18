@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import fs from "fs";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -16,6 +18,14 @@ declare module "http" {
   }
 }
 
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+  }
+}
+
+const PgStore = connectPgSimple(session);
+
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -25,6 +35,23 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+app.use(session({
+  store: new PgStore({
+    conString: process.env.DATABASE_URL,
+    tableName: "sessions",
+    createTableIfMissing: true,
+  }),
+  secret: process.env.SESSION_SECRET || "fw-sports-secret-key",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  },
+}));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

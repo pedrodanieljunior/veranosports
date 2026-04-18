@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,10 @@ import {
   MinusCircle,
   FileText,
   Plus,
+  Users,
+  Edit,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -632,6 +636,10 @@ export default function Admin() {
             <TabsTrigger value="boost" data-testid="tab-boost">
               <Zap className="w-4 h-4 mr-2" />
               Boost
+            </TabsTrigger>
+            <TabsTrigger value="usuarios" data-testid="tab-usuarios">
+              <Users className="w-4 h-4 mr-2" />
+              Usuários
             </TabsTrigger>
           </TabsList>
 
@@ -1855,6 +1863,10 @@ export default function Admin() {
           <TabsContent value="boost">
             <BoostTab />
           </TabsContent>
+
+          <TabsContent value="usuarios">
+            <UsersTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -2827,6 +2839,295 @@ function BoostTab() {
             </div>
           </CardContent>
         </Card>
+      )}
+    </div>
+  );
+}
+
+function UsersTab() {
+  const { toast } = useToast();
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editBalance, setEditBalance] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [view, setView] = useState<"users" | "deposits">("users");
+
+  const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return res.json();
+    },
+  });
+
+  const { data: deposits = [], isLoading: depositsLoading, refetch: refetchDeposits } = useQuery<Deposit[]>({
+    queryKey: ["/api/admin/deposits"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/deposits");
+      return res.json();
+    },
+  });
+
+  const { data: userBets = [] } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/bets", selectedUser?.cpf],
+    queryFn: async () => {
+      if (!selectedUser) return [];
+      const res = await fetch(`/api/bets?userId=${encodeURIComponent(selectedUser.cpf)}`);
+      return res.json();
+    },
+    enabled: !!selectedUser,
+  });
+
+  const updateBalanceMutation = useMutation({
+    mutationFn: async ({ cpf, balance }: { cpf: string; balance: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${encodeURIComponent(cpf)}`, { balance });
+      return res.json();
+    },
+    onSuccess: (updated: User) => {
+      toast({ title: "Saldo atualizado!" });
+      setSelectedUser(updated);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      refetchUsers();
+    },
+    onError: () => toast({ title: "Erro ao atualizar saldo", variant: "destructive" }),
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ cpf, password }: { cpf: string; password: string }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${encodeURIComponent(cpf)}/reset-password`, { newPassword: password });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Senha resetada com sucesso!" });
+      setNewPassword("");
+    },
+    onError: () => toast({ title: "Erro ao resetar senha", variant: "destructive" }),
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (cpf: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/users/${encodeURIComponent(cpf)}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Usuário deletado!" });
+      setSelectedUser(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: () => toast({ title: "Erro ao deletar usuário", variant: "destructive" }),
+  });
+
+  const confirmDepositMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/deposits/${id}/confirm`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Depósito confirmado e saldo creditado!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      refetchDeposits();
+    },
+    onError: () => toast({ title: "Erro ao confirmar depósito", variant: "destructive" }),
+  });
+
+  const rejectDepositMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/deposits/${id}/reject`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Depósito rejeitado." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      refetchDeposits();
+    },
+    onError: () => toast({ title: "Erro ao rejeitar depósito", variant: "destructive" }),
+  });
+
+  const pendingDeposits = deposits.filter(d => d.status === "pending");
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 mb-2">
+        <Button size="sm" variant={view === "users" ? "default" : "outline"} onClick={() => setView("users")}>
+          <Users className="w-4 h-4 mr-1" /> Usuários ({users.length})
+        </Button>
+        <Button size="sm" variant={view === "deposits" ? "default" : "outline"} onClick={() => setView("deposits")}>
+          <Wallet className="w-4 h-4 mr-1" /> Depósitos Pendentes
+          {pendingDeposits.length > 0 && <Badge className="ml-1 bg-red-500 text-white border-0">{pendingDeposits.length}</Badge>}
+        </Button>
+      </div>
+
+      {view === "deposits" && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Depósitos Pendentes</CardTitle></CardHeader>
+          <CardContent>
+            {depositsLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : pendingDeposits.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum depósito pendente.</p>
+            ) : (
+              <div className="space-y-3">
+                {pendingDeposits.map(dep => (
+                  <div key={dep.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-semibold text-sm">{dep.userId}</p>
+                      <p className="text-sm">R$ {dep.amount.toFixed(2).replace(".", ",")}
+                        {dep.bonusAmount > 0 && <span className="text-green-600 ml-1">(+R$ {dep.bonusAmount.toFixed(2).replace(".", ",")} bônus)</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{new Date(dep.createdAt).toLocaleString("pt-BR")}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => confirmDepositMutation.mutate(dep.id)} disabled={confirmDepositMutation.isPending}>
+                        <CheckCircle className="w-4 h-4 mr-1" /> Confirmar
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => rejectDepositMutation.mutate(dep.id)} disabled={rejectDepositMutation.isPending}>
+                        <XCircle className="w-4 h-4 mr-1" /> Rejeitar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {view === "users" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* User list */}
+          <Card className="md:col-span-1">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Lista de Usuários</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {usersLoading ? <p className="text-sm p-4 text-muted-foreground">Carregando...</p> : users.length === 0 ? (
+                <p className="text-sm p-4 text-muted-foreground">Nenhum usuário cadastrado.</p>
+              ) : (
+                <ScrollArea className="h-[500px]">
+                  {users.map(u => (
+                    <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setNewPassword(""); }}
+                      className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
+                      data-testid={`row-user-${u.cpf}`}>
+                      <p className="font-semibold text-sm">{u.name}</p>
+                      <p className="text-xs text-muted-foreground">{u.cpf}</p>
+                      <p className="text-xs text-green-600 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                    </button>
+                  ))}
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* User detail */}
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-2"><CardTitle className="text-base">{selectedUser ? selectedUser.name : "Selecione um usuário"}</CardTitle></CardHeader>
+            <CardContent>
+              {!selectedUser ? (
+                <p className="text-sm text-muted-foreground">Clique em um usuário para ver detalhes.</p>
+              ) : (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-muted-foreground">CPF:</span> {selectedUser.cpf}</div>
+                    <div><span className="text-muted-foreground">Telefone:</span> {selectedUser.phone}</div>
+                    <div><span className="text-muted-foreground">Saldo:</span> <span className="font-bold text-green-600">R$ {selectedUser.balance.toFixed(2).replace(".", ",")}</span></div>
+                    <div><span className="text-muted-foreground">1º depósito:</span> {selectedUser.firstDepositDone ? "Sim" : "Não"}</div>
+                    <div><span className="text-muted-foreground">Cadastrado:</span> {new Date(selectedUser.createdAt).toLocaleDateString("pt-BR")}</div>
+                    {selectedUser.referralCode && <div><span className="text-muted-foreground">Código:</span> {selectedUser.referralCode}</div>}
+                  </div>
+
+                  {/* Edit balance */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Ajustar Saldo</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={editBalance}
+                        onChange={e => setEditBalance(e.target.value)}
+                        className="w-36"
+                        data-testid="input-edit-balance"
+                      />
+                      <Button size="sm" onClick={() => updateBalanceMutation.mutate({ cpf: selectedUser.cpf, balance: parseFloat(editBalance) })}
+                        disabled={updateBalanceMutation.isPending || isNaN(parseFloat(editBalance))}>
+                        <Save className="w-4 h-4 mr-1" /> Salvar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Reset password */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Resetar Senha</p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1 max-w-xs">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          placeholder="Nova senha"
+                          data-testid="input-new-password"
+                        />
+                        <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <Button size="sm" onClick={() => resetPasswordMutation.mutate({ cpf: selectedUser.cpf, password: newPassword })}
+                        disabled={resetPasswordMutation.isPending || newPassword.length < 6}>
+                        Resetar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* User bets */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Apostas do Usuário ({userBets.length})</p>
+                    {userBets.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhuma aposta.</p>
+                    ) : (
+                      <ScrollArea className="h-48">
+                        <div className="space-y-2">
+                          {userBets.map(bet => (
+                            <div key={bet.id} className="p-2 border rounded text-xs">
+                              <div className="flex justify-between">
+                                <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
+                                <Badge variant={bet.status === "won" ? "default" : bet.status === "lost" ? "destructive" : "secondary"} className="text-[10px]">
+                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : "Pendente"}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between mt-1">
+                                <span>Stake: R$ {bet.stake.toFixed(2).replace(".", ",")}</span>
+                                <span className="text-green-600">Retorno: R$ {bet.potentialWin.toFixed(2).replace(".", ",")}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+
+                  {/* Delete user */}
+                  <div className="border-t pt-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" data-testid="button-delete-user">
+                          <Trash2 className="w-4 h-4 mr-1" /> Excluir Usuário
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir {selectedUser.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>Esta ação não pode ser desfeita. O usuário e todos os seus dados serão removidos.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteUserMutation.mutate(selectedUser.cpf)} className="bg-red-600 hover:bg-red-700">
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

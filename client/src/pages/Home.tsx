@@ -10,9 +10,12 @@ import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
 import { RulesModal } from "@/components/RulesModal";
 import { BoostCard } from "@/components/BoostCard";
 import { BoostCard as BoostCardType } from "@shared/schema";
+import { AuthModals } from "@/components/AuthModals";
+import { ProfileModal } from "@/components/ProfileModal";
+import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { History, Receipt, Search, X, BookOpen } from "lucide-react";
+import { History, Receipt, Search, X, BookOpen, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +27,10 @@ import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
+  const { user, refreshUser } = useAuth();
+  const [authMode, setAuthMode] = useState<"login" | "register" | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [selections, setSelections] = useState<Selection[]>([]);
@@ -147,9 +154,12 @@ export default function Home() {
   const sessionId = getSessionId();
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
-    queryKey: ["/api/bets", sessionId],
+    queryKey: ["/api/bets", user?.cpf ?? sessionId],
     queryFn: async () => {
-      const res = await fetch(`/api/bets?sessionId=${encodeURIComponent(sessionId)}`);
+      const url = user?.cpf
+        ? `/api/bets?userId=${encodeURIComponent(user.cpf)}`
+        : `/api/bets?sessionId=${encodeURIComponent(sessionId)}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Erro ao buscar histórico");
       return res.json();
     },
@@ -157,15 +167,18 @@ export default function Home() {
 
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number }) => {
-      const response = await apiRequest("POST", "/api/bets", { ...data, sessionId });
+      const response = await apiRequest("POST", "/api/bets", { ...data, sessionId, userId: user?.cpf });
       return response.json();
     },
     onSuccess: (data: BetSlipType) => {
       setPlacedBet(data);
       setSelections([]);
       setGameLimitRemaining(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/bets", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bets", user?.cpf ?? sessionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
+      if (user) {
+        refreshUser();
+      }
       toast({ title: "Bilhete gerado com sucesso!", description: `Código: #${data.id.slice(0, 8).toUpperCase()}` });
     },
     onError: (error: Error) => {
@@ -182,7 +195,12 @@ export default function Home() {
   });
 
   const handleSelectSport = (sportKey: string) => setSelectedSport(sportKey);
+  const handleGameClick = (game: Game) => {
+    if (!user) { setAuthMode("login"); return; }
+    setSelectedGame(game);
+  };
   const handleToggleSelection = (selection: Selection) => {
+    if (!user) { setAuthMode("login"); return; }
     if (placedBet) setPlacedBet(null);
     setGameLimitRemaining(null);
     setSelections((prev) => {
@@ -225,18 +243,35 @@ export default function Home() {
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
         <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-          {/* Row 1: Logo + Apostas/Bilhete */}
+          {/* Row 1: Logo + Auth buttons */}
           <div className="flex items-center justify-between">
             <img src={fwSportsLogo} alt="FW Sports" className="h-16 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
             <div className="flex flex-row flex-nowrap items-center gap-2">
-              <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
-                <History className="w-3.5 h-3.5" /><span>Apostas</span>
-                {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
-              </button>
-              <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
-                <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
-                {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
-              </button>
+              {!user ? (
+                <>
+                  <button onClick={() => setAuthMode("register")} className="px-3 py-1.5 rounded-lg bg-white/30 border border-white/60 text-gray-900 font-bold text-xs shadow-sm whitespace-nowrap" data-testid="button-register-mobile">
+                    Registre-se
+                  </button>
+                  <button onClick={() => setAuthMode("login")} className="px-3 py-1.5 rounded-lg bg-gray-900 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-login-mobile">
+                    Login
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
+                    <History className="w-3.5 h-3.5" /><span>Apostas</span>
+                    {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
+                  </button>
+                  <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-900 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-profile-mobile">
+                    <span className="text-yellow-400 text-[10px]">R${user.balance.toFixed(2).replace(".", ",")}</span>
+                    <UserCircle className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
+                    <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
+                    {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
+                  </button>
+                </>
+              )}
             </div>
           </div>
           {/* Row 2: League buttons + Search */}
@@ -301,7 +336,7 @@ export default function Home() {
           </div>
         )}
         <div className="flex-1">
-          <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
+          <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
         </div>
         {/* Mobile footer — Regras */}
         <div className="flex-shrink-0 py-4 px-4 text-center border-t border-white/10">
@@ -385,22 +420,39 @@ export default function Home() {
                     </button>
                   )}
                 </div>
-                <button
-                  onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-                  className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors"
-                  data-testid="button-open-history"
-                >
-                  <History className="w-4 h-4" /><span>Apostas</span>
-                  {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
-                </button>
-                <button
-                  onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }}
-                  className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
-                  data-testid="button-open-betslip"
-                >
-                  <Receipt className="w-4 h-4" /><span>Bilhete</span>
-                  {selections.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>}
-                </button>
+                {!user ? (
+                  <>
+                    <button onClick={() => setAuthMode("register")} className="px-4 py-2 rounded-lg bg-white/30 border border-gray-400 text-gray-900 font-bold text-sm shadow-sm hover:bg-white/60 transition-colors" data-testid="button-register-desktop">
+                      Registre-se
+                    </button>
+                    <button onClick={() => setAuthMode("login")} className="px-5 py-2 rounded-lg bg-gray-900 text-white font-bold text-sm shadow-sm hover:bg-gray-800 transition-colors" data-testid="button-login-desktop">
+                      Login
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+                      className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors"
+                      data-testid="button-open-history"
+                    >
+                      <History className="w-4 h-4" /><span>Apostas</span>
+                      {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
+                    </button>
+                    <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white font-bold text-sm shadow-sm hover:bg-gray-800 transition-colors" data-testid="button-open-profile-desktop">
+                      <span className="text-yellow-400 text-xs">R${user.balance.toFixed(2).replace(".", ",")}</span>
+                      <UserCircle className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }}
+                      className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
+                      data-testid="button-open-betslip"
+                    >
+                      <Receipt className="w-4 h-4" /><span>Bilhete</span>
+                      {selections.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -423,7 +475,7 @@ export default function Home() {
 
             {/* Games content */}
             <div className="pb-4" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-              <GamesList games={filteredGames} selections={selections} onGameClick={(game) => setSelectedGame(game)} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
+              <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
             </div>
 
             {/* Desktop footer — Regras */}
@@ -443,9 +495,18 @@ export default function Home() {
 
       {/* Modals */}
       <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} />
-      {showBetSlip && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
-      {showHistory && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
+      {showBetSlip && user && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
+      {showHistory && user && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
       <RulesModal open={showRules} onClose={() => setShowRules(false)} />
+      <AuthModals
+        mode={authMode}
+        onClose={() => setAuthMode(null)}
+        onSwitch={(m) => setAuthMode(m)}
+      />
+      <ProfileModal
+        open={showProfile}
+        onClose={() => { setShowProfile(false); refreshUser(); }}
+      />
     </div>
   );
 }
