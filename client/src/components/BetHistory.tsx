@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Share2, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { X, History, Receipt, Share2, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +21,7 @@ interface BetHistoryProps {
 function BetCard({ bet }: { bet: BetSlipType }) {
   const { toast } = useToast();
   const { getBoostPercent } = useMarketSettings();
+  const [expanded, setExpanded] = useState(false);
   const isCombo = checkIsComboBonus(bet.selections);
   const grouped: Record<string, Selection[]> = {};
   for (const sel of bet.selections) {
@@ -27,6 +29,8 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(sel);
   }
+  const distinctGames = Object.keys(grouped);
+  const firstGame = bet.selections[0];
 
   const shareBet = async () => {
     const gameGrouped: Record<string, Selection[]> = {};
@@ -94,97 +98,111 @@ function BetCard({ bet }: { bet: BetSlipType }) {
   const st = statusConfig[(bet.status as keyof typeof statusConfig)] ?? statusConfig.pending;
 
   return (
-    <div data-testid={`bet-history-item-${bet.id}`} className="space-y-3">
-      <div className={`border rounded-md px-4 py-3 ${bet.status === "won" ? "bg-green-500/10 border-green-500/40" : bet.status === "lost" ? "bg-red-500/10 border-red-500/40" : "bg-primary/10 border-primary"}`}>
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Código do Bilhete</p>
-            <p className={`font-mono text-base font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
+    <div data-testid={`bet-history-item-${bet.id}`} className="rounded-xl border overflow-hidden"
+      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}>
+
+      {/* ── Preview (sempre visível) ── */}
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left"
+        data-testid={`button-expand-bet-${bet.id}`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          {/* status dot */}
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${bet.status === "won" ? "bg-green-400" : bet.status === "lost" ? "bg-red-400" : "bg-yellow-400"}`} />
+          <div className="min-w-0">
+            <p className={`font-mono text-sm font-bold leading-none ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
               #{bet.id.slice(0, 8).toUpperCase()}
             </p>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${st.cls}`}>
-              {st.icon}{st.label}
-            </span>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-[160px]">
+              {distinctGames.length > 1
+                ? `${distinctGames.length} jogos`
+                : firstGame ? `${firstGame.homeTeam}${firstGame.awayTeam ? ` vs ${firstGame.awayTeam}` : ""}` : ""}
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        {Object.entries(grouped).map(([gameId, sels]) => {
-          const first = sels[0];
-          const gameOdds = fmtOdds(sels.reduce((a, s) => a * (isCombo ? (s.originalOdds ?? s.odds) : s.odds), 1));
-          return (
-            <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
-              <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-base">⚽</span>
-                  <span className="font-semibold text-foreground text-sm truncate">
-                    {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
-                  </span>
-                </div>
-                <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
-                  {gameOdds}
-                </span>
-              </div>
-
-              <div className="px-4 py-3">
-                <div className="relative pl-5">
-                  <div
-                    className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
-                    style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
-                  />
-                  {sels.map((sel, idx) => (
-                    <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
-                      <div className="flex items-center justify-between relative">
-                        <div>
-                          <div className="flex items-center gap-0 relative">
-                            <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
-                            <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
-                          </div>
-                          <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">{format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}</p>
+            <div className="flex items-center justify-end gap-1.5 mt-0.5">
+              <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${st.cls}`}>
+                {st.icon}{st.label}
+              </span>
+              <span className="text-yellow-400 font-bold text-xs">{fmtOdds(bet.totalOdds)}</span>
             </div>
-          );
-        })}
-      </div>
+          </div>
+          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </div>
+      </button>
 
-      <div className="rounded-xl bg-muted border border-border overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-muted-foreground text-sm">Odds total</span>
-          <span className="text-foreground font-bold text-lg">{fmtOdds(bet.totalOdds)}</span>
-        </div>
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-          <span className="text-muted-foreground text-sm">Valor Apostado</span>
-          <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-muted-foreground text-sm">
-            {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
-          </span>
-          <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
-            R$ {bet.potentialWin.toFixed(2)}
-          </span>
-        </div>
-      </div>
+      {/* ── Detalhe expandido ── */}
+      {expanded && (
+        <div className="border-t border-white/10 px-4 pb-4 pt-3 space-y-3 bg-muted/30">
+          <div className="space-y-3">
+            {Object.entries(grouped).map(([gameId, sels]) => {
+              const first = sels[0];
+              const gameOdds = fmtOdds(sels.reduce((a, s) => a * (isCombo ? (s.originalOdds ?? s.odds) : s.odds), 1));
+              return (
+                <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
+                  <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base">⚽</span>
+                      <span className="font-semibold text-foreground text-sm truncate">
+                        {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
+                      </span>
+                    </div>
+                    <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">{gameOdds}</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="relative pl-5">
+                      <div className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                        style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }} />
+                      {sels.map((sel, idx) => (
+                        <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
+                          <div className="flex items-center justify-between relative">
+                            <div>
+                              <div className="flex items-center gap-0 relative">
+                                <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
+                                <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                              </div>
+                              <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-      <Button
-        className="w-full bg-green-600 text-white hover:bg-green-700"
-        onClick={shareBet}
-        data-testid={`button-share-history-${bet.id}`}
-      >
-        <Share2 className="w-4 h-4 mr-2" />
-        Compartilhar Bilhete
-      </Button>
+          <div className="rounded-xl bg-muted border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+              <span className="text-muted-foreground text-sm">Odds total</span>
+              <span className="text-foreground font-bold">{fmtOdds(bet.totalOdds)}</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+              <span className="text-muted-foreground text-sm">Valor Apostado</span>
+              <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-muted-foreground text-sm">
+                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
+              </span>
+              <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
+                R$ {bet.potentialWin.toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          <Button className="w-full bg-green-600 text-white hover:bg-green-700" onClick={shareBet} data-testid={`button-share-history-${bet.id}`}>
+            <Share2 className="w-4 h-4 mr-2" />
+            Compartilhar Bilhete
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -228,7 +246,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 {bets.map((bet) => (
                   <BetCard key={bet.id} bet={bet} />
                 ))}
