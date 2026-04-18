@@ -1,10 +1,11 @@
 import { Game, Selection } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronRight } from "lucide-react";
+import { Clock, ChevronRight, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { useMarketSettings } from "@/hooks/use-market-settings";
 import { roundOdds } from "@/lib/formatOdds";
+import { useAuth } from "@/lib/auth";
 
 interface GameCardProps {
   game: Game;
@@ -13,10 +14,40 @@ interface GameCardProps {
   isDark?: boolean;
 }
 
+function OddWithLock({ value, isDark, locked }: { value: string; isDark: boolean; locked: boolean }) {
+  if (!locked) {
+    return (
+      <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
+        {value}
+      </span>
+    );
+  }
+
+  return (
+    <span className="relative group/odd ml-auto">
+      <span
+        className={`text-sm font-bold tabular-nums ${isDark ? "text-[#f5c518]/70" : "text-green-600/70"} inline-flex items-center gap-0.5`}
+        data-testid="span-locked-odd"
+      >
+        {value}
+        <Lock className={`w-2.5 h-2.5 ${isDark ? "text-white/40" : "text-gray-400"}`} />
+      </span>
+      <span
+        className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover/odd:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg"
+        role="tooltip"
+      >
+        Faça login para apostar
+      </span>
+    </span>
+  );
+}
+
 export function GameCard({ game, selections, onClick, isDark = false }: GameCardProps) {
+  const { user } = useAuth();
   const { getBoostMultiplier, hasBoosted } = useMarketSettings();
   const isBoosted = hasBoosted("h2h");
   const multiplier = getBoostMultiplier("h2h");
+  const isLoggedOut = !user;
 
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
@@ -36,12 +67,12 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
 
   return (
     <div 
-      className={`rounded-lg border cursor-pointer transition-all ${isDark ? 'bg-[#4a4a4a] hover:bg-[#505050]' : 'bg-white hover:shadow-md'} ${hasSelections ? 'border-yellow-400 ring-1 ring-yellow-400' : isDark ? 'border-[#5a5a5a]' : 'border-gray-200'}`}
+      className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-white hover:shadow-md"} ${hasSelections ? "border-yellow-400 ring-1 ring-yellow-400" : isDark ? "border-[#5a5a5a]" : "border-gray-200"}`}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
-      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? 'border-[#5a5a5a] bg-[#3d3d3d]' : 'border-gray-100 bg-gray-50'}`}>
-        <div className={`flex items-center gap-1 text-[11px] ${isDark ? 'text-[#aaaaaa]' : 'text-gray-500'}`}>
+      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? "border-[#5a5a5a] bg-[#3d3d3d]" : "border-gray-100 bg-gray-50"}`}>
+        <div className={`flex items-center gap-1 text-[11px] ${isDark ? "text-[#aaaaaa]" : "text-gray-500"}`}>
           <Clock className="w-3 h-3" />
           <span>{formattedDate}</span>
         </div>
@@ -51,7 +82,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
               {selectionsForGame.length}
             </Badge>
           )}
-          <ChevronRight className={`w-4 h-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`} />
+          <ChevronRight className={`w-4 h-4 ${isDark ? "text-white/40" : "text-gray-400"}`} />
         </div>
       </div>
       
@@ -60,22 +91,18 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
             <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
           </div>
-          <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-home-team-${game.id}`}>
+          <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-home-team-${game.id}`}>
             {game.homeTeam}
           </span>
           {homeOdd && (
-            <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
-              {displayOdd(homeOdd.price)}
-            </span>
+            <OddWithLock value={displayOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
 
         <div className="flex items-center gap-2 mb-1.5 pl-8">
-          <span className={`text-[11px] flex-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Empate</span>
+          <span className={`text-[11px] flex-1 ${isDark ? "text-white/40" : "text-gray-400"}`}>Empate</span>
           {drawOdd && (
-            <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
-              {displayOdd(drawOdd.price)}
-            </span>
+            <OddWithLock value={displayOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
         
@@ -83,18 +110,16 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
             <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
           </div>
-          <span className={`text-xs font-medium truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`} data-testid={`text-away-team-${game.id}`}>
+          <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-away-team-${game.id}`}>
             {game.awayTeam}
           </span>
           {awayOdd && (
-            <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? 'text-[#f5c518]' : 'text-green-600'}`}>
-              {displayOdd(awayOdd.price)}
-            </span>
+            <OddWithLock value={displayOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
         
         {!h2hMarket && (
-          <div className={`text-center pt-1.5 text-[10px] ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+          <div className={`text-center pt-1.5 text-[10px] ${isDark ? "text-white/30" : "text-gray-400"}`}>
             Clique para ver mercados
           </div>
         )}
