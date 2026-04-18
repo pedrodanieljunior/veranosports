@@ -16,6 +16,38 @@ import { ptBR } from "date-fns/locale";
 const WHATSAPP_SUPPORT = "5592981128080";
 const PIX_KEY = "22580407000178";
 const PIX_NAME = "FW Sports";
+const PIX_CITY = "Manaus";
+
+function emv(id: string, value: string): string {
+  const len = String(value.length).padStart(2, "0");
+  return `${id}${len}${value}`;
+}
+
+function crc16(str: string): string {
+  let crc = 0xffff;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+  }
+  return ((crc & 0xffff).toString(16).toUpperCase()).padStart(4, "0");
+}
+
+function buildPixCode(amount?: number): string {
+  const gui = emv("00", "br.gov.bcb.pix");
+  const key = emv("01", PIX_KEY);
+  const merchant = emv("26", gui + key);
+  const mcc = emv("52", "0000");
+  const currency = emv("53", "986");
+  const amountField = amount ? emv("54", amount.toFixed(2)) : "";
+  const country = emv("58", "BR");
+  const name = emv("59", PIX_NAME.substring(0, 25));
+  const city = emv("60", PIX_CITY);
+  const ref = emv("62", emv("05", "***"));
+  const payload = "000201" + merchant + mcc + currency + amountField + country + name + city + ref + "6304";
+  return payload + crc16(payload);
+}
 
 type View = "menu" | "deposit" | "withdraw" | "account" | "history";
 
@@ -65,8 +97,10 @@ function DepositView({ onBack }: { onBack: () => void }) {
   const isFirstDeposit = !user?.firstDepositDone;
   const bonus = isFirstDeposit && parsedAmount >= 10 ? Math.round(parsedAmount * 0.1 * 100) / 100 : 0;
 
+  const pixCode = step === "pix" && pendingDeposit ? buildPixCode(pendingDeposit.amount) : "";
+
   const copyPix = () => {
-    navigator.clipboard.writeText(PIX_KEY);
+    navigator.clipboard.writeText(pixCode || PIX_KEY);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -95,15 +129,23 @@ function DepositView({ onBack }: { onBack: () => void }) {
               <p className="text-sm text-green-400 font-semibold">+ R$ {pendingDeposit.bonusAmount.toFixed(2).replace(".", ",")} de bônus (1º depósito)</p>
             )}
           </div>
-          <div className="space-y-1">
-            <p className="text-xs text-zinc-400">Chave PIX (CNPJ)</p>
-            <div className="flex gap-2">
-              <Input readOnly value={PIX_KEY} className="bg-zinc-900 border-zinc-600 text-white font-mono text-sm" />
-              <Button variant="outline" onClick={copyPix} className="border-zinc-600 text-white hover:bg-zinc-700 shrink-0">
-                {copied ? "Copiado!" : "Copiar"}
-              </Button>
+          <div className="space-y-2">
+            <p className="text-xs text-zinc-400 font-medium">PIX Copia e Cola</p>
+            <div className="bg-zinc-900 border border-zinc-600 rounded-lg p-3 font-mono text-[11px] text-zinc-300 break-all leading-relaxed select-all">
+              {pixCode}
             </div>
-            <p className="text-xs text-zinc-500">Beneficiário: {PIX_NAME}</p>
+            <Button
+              onClick={copyPix}
+              className={`w-full font-bold transition-colors ${copied ? "bg-green-600 hover:bg-green-600 text-white" : "bg-yellow-500 hover:bg-yellow-400 text-black"}`}
+              data-testid="button-copy-pix"
+            >
+              <SiPix className="w-4 h-4 mr-2" />
+              {copied ? "✓ Código copiado!" : "Copiar código PIX"}
+            </Button>
+            <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1">
+              <span>Chave: {PIX_KEY}</span>
+              <span>Beneficiário: {PIX_NAME}</span>
+            </div>
           </div>
         </div>
         <Button
