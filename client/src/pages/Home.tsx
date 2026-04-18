@@ -289,17 +289,13 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/95 text-gray-800 font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
-                    <History className="w-3.5 h-3.5" /><span>Apostas</span>
-                    {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
-                  </button>
-                  <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-900 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-profile-mobile">
+                  <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs whitespace-nowrap transition-colors" data-testid="button-open-profile-mobile">
                     <span className="text-yellow-400 text-[10px]">R${user.balance.toFixed(2).replace(".", ",")}</span>
                     <UserCircle className="w-4 h-4" />
                   </button>
-                  <button onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-betslip-mobile">
-                    <Receipt className="w-3.5 h-3.5" /><span>Bilhete</span>
-                    {selections.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{selections.length}</Badge>}
+                  <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
+                    <History className="w-3.5 h-3.5" /><span>Apostas</span>
+                    {betHistory.length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.length}</Badge>}
                   </button>
                 </>
               )}
@@ -462,25 +458,17 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <button
-                      onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-                      className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors"
-                      data-testid="button-open-history"
-                    >
-                      <History className="w-4 h-4" /><span>Apostas</span>
-                      {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
-                    </button>
-                    <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white font-bold text-sm shadow-sm hover:bg-gray-800 transition-colors" data-testid="button-open-profile-desktop">
+                    <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors" data-testid="button-open-profile-desktop">
                       <span className="text-yellow-400 text-xs">R${user.balance.toFixed(2).replace(".", ",")}</span>
                       <UserCircle className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(false); }}
-                      className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
-                      data-testid="button-open-betslip"
+                      onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+                      className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
+                      data-testid="button-open-history"
                     >
-                      <Receipt className="w-4 h-4" /><span>Bilhete</span>
-                      {selections.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{selections.length}</Badge>}
+                      <History className="w-4 h-4" /><span>Apostas</span>
+                      {betHistory.length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.length}</Badge>}
                     </button>
                   </>
                 )}
