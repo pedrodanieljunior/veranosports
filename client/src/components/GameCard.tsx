@@ -14,24 +14,28 @@ interface GameCardProps {
   isDark?: boolean;
 }
 
-function OddWithLock({ value, isDark, locked }: { value: string; isDark: boolean; locked: boolean }) {
-  if (!locked) {
-    return (
-      <span className={`text-sm font-bold ml-auto tabular-nums ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
+function OddWithLock({ value, originalValue, isDark, locked }: { value: string; originalValue?: string; isDark: boolean; locked: boolean }) {
+  const inner = (
+    <span className="inline-flex flex-col items-end leading-tight">
+      {originalValue && (
+        <span className={`text-[10px] tabular-nums line-through ${isDark ? "text-white/40" : "text-gray-400"}`}>
+          {originalValue}
+        </span>
+      )}
+      <span className={`text-sm font-bold tabular-nums ${locked ? (isDark ? "text-[#f5c518]/70" : "text-green-600/70") : (isDark ? "text-[#f5c518]" : "text-green-600")} inline-flex items-center gap-0.5`}>
         {value}
+        {locked && <Lock className={`w-2.5 h-2.5 ${isDark ? "text-white/40" : "text-gray-400"}`} />}
       </span>
-    );
+    </span>
+  );
+
+  if (!locked) {
+    return <span className="ml-auto">{inner}</span>;
   }
 
   return (
     <span className="relative group/odd ml-auto">
-      <span
-        className={`text-sm font-bold tabular-nums ${isDark ? "text-[#f5c518]/70" : "text-green-600/70"} inline-flex items-center gap-0.5`}
-        data-testid="span-locked-odd"
-      >
-        {value}
-        <Lock className={`w-2.5 h-2.5 ${isDark ? "text-white/40" : "text-gray-400"}`} />
-      </span>
+      <span data-testid="span-locked-odd">{inner}</span>
       <span
         className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover/odd:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg"
         role="tooltip"
@@ -64,6 +68,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
   const formattedDate = isValidDate ? format(gameDate, "dd/MM HH:mm") : "A definir";
 
   const displayOdd = (price: number) => roundOdds(isBoosted ? price * multiplier : price).toFixed(2);
+  const originalOdd = (price: number) => isBoosted ? roundOdds(price).toFixed(2) : undefined;
 
   return (
     <div 
@@ -95,14 +100,14 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
             {game.homeTeam}
           </span>
           {homeOdd && (
-            <OddWithLock value={displayOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
+            <OddWithLock value={displayOdd(homeOdd.price)} originalValue={originalOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
 
         <div className="flex items-center gap-2 mb-1.5 pl-8">
           <span className={`text-[11px] flex-1 ${isDark ? "text-white/40" : "text-gray-400"}`}>Empate</span>
           {drawOdd && (
-            <OddWithLock value={displayOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
+            <OddWithLock value={displayOdd(drawOdd.price)} originalValue={originalOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
         
@@ -114,7 +119,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
             {game.awayTeam}
           </span>
           {awayOdd && (
-            <OddWithLock value={displayOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
+            <OddWithLock value={displayOdd(awayOdd.price)} originalValue={originalOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
         

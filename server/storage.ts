@@ -723,12 +723,12 @@ export class DatabaseStorage implements IStorage {
     return this.mapUserWithdrawal(row);
   }
 
-<<<<<<< HEAD
   async markUserWithdrawalAsPaid(id: number): Promise<UserWithdrawal | undefined> {
     const [row] = await db.update(userWithdrawalsTable).set({ status: "paid", paidAt: new Date() }).where(eq(userWithdrawalsTable.id, id)).returning();
     if (!row) return undefined;
     return this.mapUserWithdrawal(row);
-=======
+  }
+
   private mapTransaction(row: any): Transaction {
     return {
       id: row.id,
@@ -759,7 +759,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(transactionsTable.userId, userId))
       .orderBy(desc(transactionsTable.createdAt));
     return rows.map(r => this.mapTransaction(r));
->>>>>>> a9efa1b (feat: Add transaction history so users can track balance changes)
   }
 }
 
