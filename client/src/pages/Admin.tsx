@@ -176,6 +176,16 @@ export default function Admin() {
     enabled: !!adminMe?.isAdmin,
   });
 
+  const { data: allDeposits = [] } = useQuery<Deposit[]>({
+    queryKey: ["/api/admin/deposits"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/deposits");
+      return res.json();
+    },
+    enabled: !!adminMe?.isAdmin,
+    refetchInterval: adminMe?.isAdmin ? 30 * 1000 : false,
+  });
+
   const createWithdrawalMutation = useMutation({
     mutationFn: async ({ amount, description }: { amount: number; description: string }) => {
       return apiRequest("POST", "/api/admin/withdrawals", { amount, description });
@@ -998,7 +1008,8 @@ export default function Admin() {
                 const perdas = bets.filter(b => b.verified && b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
                 const totalSaques = withdrawals.reduce((s, w) => s + w.amount, 0);
-                const lucroOp = ganhos - perdas - totalSaques;
+                const totalDepositosConfirmados = allDeposits.filter(d => d.status === "confirmed").reduce((s, d) => s + d.amount, 0);
+                const lucroOp = ganhos + totalDepositosConfirmados - perdas - totalSaques;
                 // Saldo = capital inicial + resultado operacional − exposição pendente
                 // Quando lucroOp é negativo, o prejuízo já consumiu parte do capital inicial
                 const saldo = APORTE_INICIAL + lucroOp - exposicao;
@@ -1101,13 +1112,20 @@ export default function Admin() {
                       })()}
 
                       {/* Breakdown */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         <div className="bg-muted/50 rounded-lg p-3 text-center">
                           <Wallet className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                           <p className="text-base font-bold">
                             R$50.000,00
                           </p>
                           <p className="text-xs text-muted-foreground">Aporte inicial</p>
+                        </div>
+                        <div className="bg-blue-500/10 rounded-lg p-3 text-center">
+                          <ArrowUpCircle className="w-4 h-4 mx-auto mb-1 text-blue-400" />
+                          <p className="text-base font-bold text-blue-400">
+                            +R${totalDepositosConfirmados.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Depósitos validados</p>
                         </div>
                         <div className="bg-green-500/10 rounded-lg p-3 text-center">
                           <ArrowUpCircle className="w-4 h-4 mx-auto mb-1 text-green-500" />
@@ -1149,9 +1167,9 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
                     <p className="text-xl font-bold text-green-500">
-                      R${bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                      R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) + allDeposits.filter(d=>d.status==="confirmed").reduce((s,d)=>s+d.amount,0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
-                    <p className="text-xs text-muted-foreground">Entradas (PIX confirmados)</p>
+                    <p className="text-xs text-muted-foreground">Entradas (apostas + depósitos)</p>
                   </CardContent>
                 </Card>
                 <Card>
