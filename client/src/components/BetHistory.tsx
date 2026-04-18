@@ -1,7 +1,7 @@
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Share2 } from "lucide-react";
+import { X, History, Receipt, Share2, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -86,19 +86,31 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     }
   };
 
+  const statusConfig = {
+    won:     { label: "Ganhou",       icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-green-500/15 text-green-400 border-green-500/40" },
+    lost:    { label: "Perdeu",       icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-500/15 text-red-400 border-red-500/40" },
+    pending: { label: "Em Andamento", icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40" },
+  };
+  const st = statusConfig[(bet.status as keyof typeof statusConfig)] ?? statusConfig.pending;
+
   return (
     <div data-testid={`bet-history-item-${bet.id}`} className="space-y-3">
-      <div className="bg-primary/10 border border-primary rounded-md px-4 py-3">
-        <div className="flex items-center justify-between">
+      <div className={`border rounded-md px-4 py-3 ${bet.status === "won" ? "bg-green-500/10 border-green-500/40" : bet.status === "lost" ? "bg-red-500/10 border-red-500/40" : "bg-primary/10 border-primary"}`}>
+        <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">Código do Bilhete</p>
-            <p className="font-mono text-base font-bold text-primary" data-testid={`text-bet-id-${bet.id}`}>
+            <p className={`font-mono text-base font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
               #{bet.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {format(new Date(bet.createdAt), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
-          </p>
+          <div className="flex flex-col items-end gap-1">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${st.cls}`}>
+              {st.icon}{st.label}
+            </span>
+            <p className="text-xs text-muted-foreground">
+              {format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -156,8 +168,12 @@ function BetCard({ bet }: { bet: BetSlipType }) {
           <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
         </div>
         <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-muted-foreground text-sm">Retorno Potencial</span>
-          <span className="text-yellow-400 font-bold">R$ {bet.potentialWin.toFixed(2)}</span>
+          <span className="text-muted-foreground text-sm">
+            {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
+          </span>
+          <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
+            R$ {bet.potentialWin.toFixed(2)}
+          </span>
         </div>
       </div>
 
