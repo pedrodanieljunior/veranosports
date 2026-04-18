@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1128,12 +1128,15 @@ export default function Admin() {
           {/* ── SAQUES ────────────────────────────────────── */}
           <TabsContent value="saques">
             <div className="space-y-4">
+              {/* Solicitações de Saque dos Usuários */}
+              <UserWithdrawalsSection />
+
               {/* Formulário de novo saque */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
                     <MinusCircle className="w-5 h-5 text-red-400" />
-                    Registrar Saque
+                    Registrar Saque (Caixa)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -2841,6 +2844,91 @@ function BoostTab() {
         </Card>
       )}
     </div>
+  );
+}
+
+function UserWithdrawalsSection() {
+  const { toast } = useToast();
+
+  const { data: userWithdrawals = [], refetch } = useQuery<UserWithdrawal[]>({
+    queryKey: ["/api/admin/user-withdrawals"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/user-withdrawals");
+      return res.json();
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/user-withdrawals/${id}/approve`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Saque aprovado!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: () => toast({ title: "Erro ao aprovar", variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/user-withdrawals/${id}/reject`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Saque rejeitado. Saldo reembolsado." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: () => toast({ title: "Erro ao rejeitar", variant: "destructive" }),
+  });
+
+  const pending = userWithdrawals.filter(w => w.status === "pending");
+  const statusColor = (s: string) => s === "approved" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-yellow-400";
+  const statusLabel = (s: string) => s === "approved" ? "Aprovado" : s === "rejected" ? "Rejeitado" : "Pendente";
+
+  return (
+    <Card className={pending.length > 0 ? "border-yellow-500/40" : ""}>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Wallet className="w-5 h-5 text-yellow-400" />
+          Solicitações de Saque dos Usuários
+          {pending.length > 0 && <Badge className="bg-red-500 text-white border-0 ml-1">{pending.length} pendente{pending.length > 1 ? "s" : ""}</Badge>}
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => refetch()}><RefreshCw className="w-4 h-4" /></Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {userWithdrawals.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma solicitação de saque.</p>
+        ) : (
+          <div className="space-y-2">
+            {userWithdrawals.map(w => (
+              <div key={w.id} className="flex items-center justify-between gap-3 border rounded-lg p-3 flex-wrap" data-testid={`row-user-withdrawal-${w.id}`}>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm">R$ {w.amount.toFixed(2).replace(".", ",")}</p>
+                  <p className="text-xs text-muted-foreground">CPF: {w.userId} · PIX: {w.pixKey}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(w.createdAt).toLocaleString("pt-BR")}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-semibold ${statusColor(w.status)}`}>{statusLabel(w.status)}</span>
+                  {w.status === "pending" && (
+                    <>
+                      <Button size="sm" onClick={() => approveMutation.mutate(w.id)} disabled={approveMutation.isPending} data-testid={`button-approve-withdrawal-${w.id}`}>
+                        <CheckCircle className="w-4 h-4 mr-1" /> Aprovar
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate(w.id)} disabled={rejectMutation.isPending} data-testid={`button-reject-withdrawal-${w.id}`}>
+                        <XCircle className="w-4 h-4 mr-1" /> Rejeitar
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

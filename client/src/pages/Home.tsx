@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { GamesList } from "@/components/GamesList";
@@ -45,6 +45,9 @@ export default function Home() {
   const [now, setNow] = useState(() => Date.now());
   const { toast } = useToast();
 
+  const pendingGameRef = useRef<Game | null>(null);
+  const pendingSelectionRef = useRef<Selection | null>(null);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(t);
@@ -64,6 +67,24 @@ export default function Home() {
     }, 60_000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (pendingGameRef.current) {
+      setSelectedGame(pendingGameRef.current);
+      pendingGameRef.current = null;
+    }
+    if (pendingSelectionRef.current) {
+      const sel = pendingSelectionRef.current;
+      pendingSelectionRef.current = null;
+      setSelections(prev => {
+        const exists = prev.find(s => s.id === sel.id);
+        if (exists) return prev;
+        return [...prev, sel];
+      });
+      setShowBetSlip(true);
+    }
+  }, [user]);
 
   // A cada 5 minutos, resetar interface para o estado inicial (junto com a atualização dos dados)
   useEffect(() => {
@@ -196,11 +217,21 @@ export default function Home() {
 
   const handleSelectSport = (sportKey: string) => setSelectedSport(sportKey);
   const handleGameClick = (game: Game) => {
-    if (!user) { setAuthMode("login"); return; }
+    if (!user) {
+      pendingGameRef.current = game;
+      pendingSelectionRef.current = null;
+      setAuthMode("login");
+      return;
+    }
     setSelectedGame(game);
   };
   const handleToggleSelection = (selection: Selection) => {
-    if (!user) { setAuthMode("login"); return; }
+    if (!user) {
+      pendingSelectionRef.current = selection;
+      pendingGameRef.current = null;
+      setAuthMode("login");
+      return;
+    }
     if (placedBet) setPlacedBet(null);
     setGameLimitRemaining(null);
     setSelections((prev) => {

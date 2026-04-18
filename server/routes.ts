@@ -878,6 +878,67 @@ export async function registerRoutes(
     res.json(deposits);
   });
 
+  // ─── User Withdrawals ────────────────────────────────────────────────────────
+  app.post("/api/withdrawals/request", requireAuth, async (req, res) => {
+    try {
+      const { amount, pixKey } = req.body as { amount: number; pixKey: string };
+      if (!amount || amount < 20) return res.status(400).json({ message: "Valor mínimo para saque é R$20,00" });
+      if (!pixKey || pixKey.length < 5) return res.status(400).json({ message: "Chave PIX inválida" });
+      const userId = req.session.userId!;
+      const user = await storage.getUserByCpf(userId);
+      if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
+      if (user.balance < amount) return res.status(400).json({ message: `Saldo insuficiente. Seu saldo é R$${user.balance.toFixed(2).replace(".", ",")}` });
+      const newBalance = Math.round((user.balance - amount) * 100) / 100;
+      await storage.updateUserBalance(userId, newBalance);
+      const withdrawal = await storage.createUserWithdrawal(userId, amount, pixKey);
+      res.json(withdrawal);
+    } catch {
+      res.status(500).json({ message: "Erro ao criar solicitação de saque" });
+    }
+  });
+
+  app.get("/api/withdrawals/mine", requireAuth, async (req, res) => {
+    const withdrawals = await storage.getUserWithdrawalsByUser(req.session.userId!);
+    res.json(withdrawals);
+  });
+
+  app.get("/api/admin/user-withdrawals", async (_req, res) => {
+    const withdrawals = await storage.getAllUserWithdrawals();
+    res.json(withdrawals);
+  });
+
+  app.patch("/api/admin/user-withdrawals/:id/approve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const withdrawal = (await storage.getAllUserWithdrawals()).find(w => w.id === id);
+      if (!withdrawal) return res.status(404).json({ message: "Saque não encontrado" });
+      if (withdrawal.status !== "pending") return res.status(400).json({ message: "Saque já processado" });
+      const updated = await storage.updateUserWithdrawalStatus(id, "approved");
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Erro ao aprovar saque" });
+    }
+  });
+
+  app.patch("/api/admin/user-withdrawals/:id/reject", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const withdrawal = (await storage.getAllUserWithdrawals()).find(w => w.id === id);
+      if (!withdrawal) return res.status(404).json({ message: "Saque não encontrado" });
+      if (withdrawal.status !== "pending") return res.status(400).json({ message: "Saque já processado" });
+      // Reembolsar saldo
+      const user = await storage.getUserByCpf(withdrawal.userId);
+      if (user) {
+        const refunded = Math.round((user.balance + withdrawal.amount) * 100) / 100;
+        await storage.updateUserBalance(withdrawal.userId, refunded);
+      }
+      const updated = await storage.updateUserWithdrawalStatus(id, "rejected");
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Erro ao rejeitar saque" });
+    }
+  });
+
   // ─── Admin: User Management ────────────────────────────────────────────────
   app.get("/api/admin/users", async (_req, res) => {
     const users = await storage.getAllUsers();
@@ -1983,6 +2044,22 @@ export async function registerRoutes(
         cappedByDaily = true;
       }
 
+      // Debitar saldo do usuário se userId presente
+      if (validatedData.userId) {
+        const betUser = await storage.getUserByCpf(validatedData.userId);
+        if (!betUser) {
+          return res.status(400).json({ error: "Usuário não encontrado" });
+        }
+        if (betUser.balance < validatedData.stake) {
+          return res.status(400).json({
+            error: `Saldo insuficiente. Seu saldo é R$${betUser.balance.toFixed(2).replace(".", ",")} e o valor da aposta é R$${validatedData.stake.toFixed(2).replace(".", ",")}.`,
+            isInsufficientBalance: true,
+          });
+        }
+        const newBalance = Math.round((betUser.balance - validatedData.stake) * 100) / 100;
+        await storage.updateUserBalance(validatedData.userId, newBalance);
+      }
+
       const betSlip = await storage.createBetSlip(validatedData);
 
       const updatedBetSlip = { ...betSlip, potentialWin, totalOdds };
@@ -2357,11 +2434,21 @@ export async function registerRoutes(
       if (!["pending", "won", "lost"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
-      
+
+      const existing = await storage.getBetSlip(id);
       const updated = await storage.updateBetSlipStatus(id, status);
       
       if (!updated) {
         return res.status(404).json({ error: "Bet slip not found" });
+      }
+
+      // Creditar saldo ao usuário se ganhou
+      if (status === "won" && existing?.userId && existing.status !== "won") {
+        const winUser = await storage.getUserByCpf(existing.userId);
+        if (winUser) {
+          const credited = Math.round((winUser.balance + updated.potentialWin) * 100) / 100;
+          await storage.updateUserBalance(existing.userId, credited);
+        }
       }
 
       res.json(updated);
@@ -2953,6 +3040,14 @@ export async function registerRoutes(
         if (allSelectionsResolved) {
           const newStatus = allSelectionsWon ? "won" : "lost";
           const updatedBetAuto = await storage.updateBetSlipStatus(bet.id, newStatus);
+          // Creditar saldo ao usuário se ganhou
+          if (newStatus === "won" && bet.userId) {
+            const winUser = await storage.getUserByCpf(bet.userId);
+            if (winUser && updatedBetAuto) {
+              const credited = Math.round((winUser.balance + updatedBetAuto.potentialWin) * 100) / 100;
+              await storage.updateUserBalance(bet.userId, credited);
+            }
+          }
           updatedCount++;
           results.push({
             betId: bet.id,
@@ -2997,9 +3092,27 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Status inválido" });
       }
 
+      const existing = await storage.getBetSlip(id);
       const updated = await storage.updateBetSlipStatus(id, status);
       if (!updated) {
         return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      // Creditar saldo ao usuário se ganhou (evitar crédito duplo)
+      if (status === "won" && existing?.userId && existing.status !== "won") {
+        const winUser = await storage.getUserByCpf(existing.userId);
+        if (winUser) {
+          const credited = Math.round((winUser.balance + updated.potentialWin) * 100) / 100;
+          await storage.updateUserBalance(existing.userId, credited);
+        }
+      }
+      // Reembolsar stake se voltando para pending a partir de won
+      if (status === "pending" && existing?.status === "won" && existing?.userId) {
+        const winUser = await storage.getUserByCpf(existing.userId);
+        if (winUser) {
+          const refunded = Math.round((winUser.balance - existing.potentialWin) * 100) / 100;
+          await storage.updateUserBalance(existing.userId, Math.max(0, refunded));
+        }
       }
 
       res.json(updated);

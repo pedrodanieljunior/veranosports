@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -85,6 +85,11 @@ export interface IStorage {
   getAllDeposits(): Promise<Deposit[]>;
   updateDepositStatus(id: number, status: string): Promise<Deposit | undefined>;
   deleteDeposit(id: number): Promise<boolean>;
+  // User Withdrawals
+  createUserWithdrawal(userId: string, amount: number, pixKey: string): Promise<UserWithdrawal>;
+  getUserWithdrawalsByUser(userId: string): Promise<UserWithdrawal[]>;
+  getAllUserWithdrawals(): Promise<UserWithdrawal[]>;
+  updateUserWithdrawalStatus(id: number, status: string): Promise<UserWithdrawal | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -665,6 +670,38 @@ export class DatabaseStorage implements IStorage {
   async deleteDeposit(id: number): Promise<boolean> {
     const result = await db.delete(depositsTable).where(eq(depositsTable.id, id)).returning();
     return result.length > 0;
+  }
+
+  private mapUserWithdrawal(row: any): UserWithdrawal {
+    return {
+      id: row.id,
+      userId: row.userId,
+      amount: row.amount,
+      pixKey: row.pixKey,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async createUserWithdrawal(userId: string, amount: number, pixKey: string): Promise<UserWithdrawal> {
+    const [row] = await db.insert(userWithdrawalsTable).values({ userId, amount, pixKey, status: "pending" }).returning();
+    return this.mapUserWithdrawal(row);
+  }
+
+  async getUserWithdrawalsByUser(userId: string): Promise<UserWithdrawal[]> {
+    const rows = await db.select().from(userWithdrawalsTable).where(eq(userWithdrawalsTable.userId, userId)).orderBy(desc(userWithdrawalsTable.createdAt));
+    return rows.map(r => this.mapUserWithdrawal(r));
+  }
+
+  async getAllUserWithdrawals(): Promise<UserWithdrawal[]> {
+    const rows = await db.select().from(userWithdrawalsTable).orderBy(desc(userWithdrawalsTable.createdAt));
+    return rows.map(r => this.mapUserWithdrawal(r));
+  }
+
+  async updateUserWithdrawalStatus(id: number, status: string): Promise<UserWithdrawal | undefined> {
+    const [row] = await db.update(userWithdrawalsTable).set({ status }).where(eq(userWithdrawalsTable.id, id)).returning();
+    if (!row) return undefined;
+    return this.mapUserWithdrawal(row);
   }
 }
 

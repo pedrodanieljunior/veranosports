@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
 import { useMarketSettings } from "@/hooks/use-market-settings";
@@ -157,8 +158,11 @@ export function BetSlip({
     }
   };
   
+  const { user } = useAuth();
+
   const totalOdds = roundOdds(computeTotalOdds(selections));
   const stakeNum = parseFloat(stake || "0");
+  const isInsufficientBalance = user !== null && stakeNum > 0 && (user?.balance ?? 0) < stakeNum;
 
   const comboApplies = checkIsComboBonus(selections);
   const distinctGameCount = new Set(selections.map(s => s.gameId)).size;
@@ -721,11 +725,17 @@ export function BetSlip({
                 </div>
               </div>
               
+              {isInsufficientBalance && (
+                <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>Saldo insuficiente. Disponível: R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</span>
+                </div>
+              )}
               <Button 
                 className="w-full" 
                 size="lg"
                 onClick={handlePlaceBet}
-                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0 || isDailyLimitReached || isCappedAtMax}
+                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0 || isDailyLimitReached || isCappedAtMax || isInsufficientBalance}
                 data-testid="button-place-bet"
               >
                 {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}

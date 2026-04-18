@@ -7,9 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Deposit } from "@shared/schema";
+import { Deposit, UserWithdrawal } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -182,28 +182,117 @@ function DepositView({ onBack }: { onBack: () => void }) {
 }
 
 function WithdrawView({ onBack }: { onBack: () => void }) {
-  const { user } = useAuth();
-  const msg = `Olá! Gostaria de solicitar um saque de R$ da minha conta FW Sports. CPF: ${user?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}`;
+  const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
+  const [amount, setAmount] = useState("");
+  const [pixKey, setPixKey] = useState("");
+
+  const { data: withdrawals = [] } = useQuery<UserWithdrawal[]>({
+    queryKey: ["/api/withdrawals/mine"],
+    queryFn: async () => {
+      const res = await fetch("/api/withdrawals/mine", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+  });
+
+  const requestMutation = useMutation({
+    mutationFn: async ({ amount, pixKey }: { amount: number; pixKey: string }) => {
+      const res = await fetch("/api/withdrawals/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ amount, pixKey }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Erro ao solicitar saque");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Solicitação enviada!", description: "Seu saque está em análise e será processado em breve." });
+      setAmount("");
+      setPixKey("");
+      queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/mine"] });
+      refreshUser();
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const parsedAmount = parseFloat(amount.replace(",", "."));
+
+  const wdStatusColor = (s: string) => s === "approved" ? "text-green-400" : s === "rejected" ? "text-red-400" : "text-yellow-400";
+  const wdStatusLabel = (s: string) => s === "approved" ? "Aprovado" : s === "rejected" ? "Rejeitado" : "Pendente";
+  const wdStatusIcon = (s: string) => s === "approved" ? <CheckCircle2 className="w-3.5 h-3.5" /> : s === "rejected" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />;
 
   return (
     <div className="space-y-4">
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
+
       <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
         <p className="text-sm text-zinc-400 mb-1">Saldo disponível</p>
         <p className="text-2xl font-bold text-yellow-400">R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</p>
       </div>
+
       <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-3">
-        <p className="text-sm text-zinc-300">Para solicitar um saque, entre em contato com nosso suporte via WhatsApp.</p>
+        <p className="text-sm font-semibold text-white">Solicitar Saque</p>
+        <div className="space-y-2">
+          <Label className="text-xs text-zinc-400">Valor (mín. R$ 20,00)</Label>
+          <Input
+            type="number"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            className="bg-zinc-900 border-zinc-600 text-white"
+            data-testid="input-withdraw-amount"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-zinc-400">Chave PIX (CPF, e-mail, telefone ou chave aleatória)</Label>
+          <Input
+            type="text"
+            placeholder="Sua chave PIX"
+            value={pixKey}
+            onChange={e => setPixKey(e.target.value)}
+            className="bg-zinc-900 border-zinc-600 text-white"
+            data-testid="input-withdraw-pix-key"
+          />
+        </div>
         <Button
-          className="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold"
-          onClick={() => window.open(`https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent(msg)}`, "_blank")}
+          className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold"
+          onClick={() => requestMutation.mutate({ amount: parsedAmount, pixKey })}
+          disabled={!parsedAmount || parsedAmount < 20 || !pixKey || requestMutation.isPending || (user?.balance ?? 0) < parsedAmount}
+          data-testid="button-withdraw-submit"
         >
-          <SiWhatsapp className="w-5 h-5 mr-2" />
-          Solicitar Saque via WhatsApp
+          {requestMutation.isPending ? "Enviando..." : "Solicitar Saque"}
         </Button>
+        <p className="text-xs text-zinc-500 text-center">O saque será processado em até 24 horas úteis</p>
       </div>
+
+      {withdrawals.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-zinc-400">Histórico de saques</p>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {withdrawals.map(w => (
+              <div key={w.id} className="bg-zinc-800 rounded-lg px-3 py-2 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-sm">R$ {w.amount.toFixed(2).replace(".", ",")}</p>
+                  <p className="text-xs text-zinc-500">{w.pixKey}</p>
+                  <p className="text-xs text-zinc-500">{format(new Date(w.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                </div>
+                <div className={`flex items-center gap-1 text-xs font-semibold ${wdStatusColor(w.status)}`}>
+                  {wdStatusIcon(w.status)}
+                  {wdStatusLabel(w.status)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

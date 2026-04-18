@@ -292,3 +292,29 @@ export const depositSchema = z.object({
 });
 
 export type Deposit = z.infer<typeof depositSchema>;
+
+// ─── User Withdrawals ─────────────────────────────────────────────────────────
+export const userWithdrawalsTable = pgTable("user_withdrawals", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => usersTable.cpf),
+  amount: real("amount").notNull(),
+  pixKey: text("pix_key").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const userWithdrawalSchema = z.object({
+  id: z.number(),
+  userId: z.string(),
+  amount: z.number(),
+  pixKey: z.string(),
+  status: z.string(),
+  createdAt: z.string(),
+});
+
+export type UserWithdrawal = z.infer<typeof userWithdrawalSchema>;
+
+export const insertUserWithdrawalSchema = z.object({
+  amount: z.number().min(20, "Valor mínimo para saque é R$20,00"),
+  pixKey: z.string().min(5, "Chave PIX inválida"),
+});
