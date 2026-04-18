@@ -68,7 +68,6 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
   const formattedDate = isValidDate ? format(gameDate, "dd/MM HH:mm") : "A definir";
 
   const displayOdd = (price: number) => roundOdds(isBoosted ? price * multiplier : price).toFixed(2);
-  const originalOdd = (price: number) => isBoosted ? roundOdds(price).toFixed(2) : undefined;
 
   return (
     <div 
@@ -100,14 +99,14 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
             {game.homeTeam}
           </span>
           {homeOdd && (
-            <OddWithLock value={displayOdd(homeOdd.price)} originalValue={originalOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
+            <OddWithLock value={displayOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
 
         <div className="flex items-center gap-2 mb-1.5 pl-8">
           <span className={`text-[11px] flex-1 ${isDark ? "text-white/40" : "text-gray-400"}`}>Empate</span>
           {drawOdd && (
-            <OddWithLock value={displayOdd(drawOdd.price)} originalValue={originalOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
+            <OddWithLock value={displayOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
         
@@ -119,7 +118,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
             {game.awayTeam}
           </span>
           {awayOdd && (
-            <OddWithLock value={displayOdd(awayOdd.price)} originalValue={originalOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
+            <OddWithLock value={displayOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
           )}
         </div>
         
