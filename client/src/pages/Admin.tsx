@@ -2994,7 +2994,13 @@ function UserWithdrawalsSection() {
 
   const filtered = userWithdrawals.filter(w => {
     const q = search.toLowerCase();
-    const matchSearch = !q || String(w.userId).toLowerCase().includes(q) || w.pixKey.toLowerCase().includes(q) || (w.userPhone ?? "").toLowerCase().includes(q);
+    const qNormalized = q.replace(/\D/g, "");
+    const userIdNormalized = String(w.userId).replace(/\D/g, "");
+    const matchSearch = !q
+      || String(w.userId).toLowerCase().includes(q)
+      || (qNormalized.length > 0 && userIdNormalized.includes(qNormalized))
+      || w.pixKey.toLowerCase().includes(q)
+      || (w.userPhone ?? "").toLowerCase().includes(q);
     const matchStatus = statusFilter === "all" || w.status === statusFilter;
     return matchSearch && matchStatus;
   });
