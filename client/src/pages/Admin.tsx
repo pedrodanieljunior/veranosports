@@ -228,8 +228,8 @@ export default function Admin() {
 
   const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
     const db = periodBets.filter(b => new Date(b.createdAt).getDay() === idx);
-    const e = db.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
-    const s2 = db.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+    const e = db.reduce((s,b)=>s+b.stake,0);
+    const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
     return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
   }), [periodBets]);
 
@@ -243,9 +243,9 @@ export default function Admin() {
         if (bet.status==="won") cur.won++;
         else if (bet.status==="lost") cur.lost++;
         else cur.pending++;
-        if (bet.verified) cur.entrada += bet.stake;
-        if (bet.verified && bet.status==="won") cur.saida += bet.potentialWin;
-        if (bet.verified) cur.lucroEntrada += bet.stake;
+        cur.entrada += bet.stake;
+        if (bet.status==="won") cur.saida += bet.potentialWin;
+        cur.lucroEntrada += bet.stake;
         map.set(key, cur);
       });
     });
@@ -509,16 +509,11 @@ export default function Admin() {
     pending: bets.filter(b => b.status === "pending").length,
     won: bets.filter(b => b.status === "won").length,
     lost: bets.filter(b => b.status === "lost").length,
-    verified: bets.filter(b => b.verified).length,
-    notVerified: bets.filter(b => !b.verified).length,
     totalStake: bets.reduce((sum, b) => sum + b.stake, 0),
     totalPotential: bets.reduce((sum, b) => sum + b.potentialWin, 0),
   };
 
-  const getStatusBadge = (status: string, verified?: boolean) => {
-    if (!verified) {
-      return <Badge variant="secondary">Pendente</Badge>;
-    }
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "won":
         return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Ganhou</Badge>;
@@ -653,12 +648,6 @@ export default function Admin() {
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-green-500">{stats.verified}</p>
-              <p className="text-xs text-muted-foreground">Pagos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-yellow-500">{stats.pending}</p>
               <p className="text-xs text-muted-foreground">Pendentes</p>
             </CardContent>
@@ -698,10 +687,6 @@ export default function Admin() {
             <TabsTrigger value="limites" data-testid="tab-limites">
               <BarChart2 className="w-4 h-4 mr-2" />
               Limites por Jogo
-            </TabsTrigger>
-            <TabsTrigger value="validacao" data-testid="tab-validacao">
-              <ClipboardCheck className="w-4 h-4 mr-2" />
-              Validação
             </TabsTrigger>
             <TabsTrigger value="caixa" data-testid="tab-caixa">
               <Wallet className="w-4 h-4 mr-2" />
@@ -817,12 +802,10 @@ export default function Admin() {
           </TabsContent>
 
           {/* ── VALIDAÇÃO ─────────────────────────────────────── */}
-          <TabsContent value="validacao">
+          <TabsContent value="validacao-removed-placeholder" className="hidden">
             <div className="space-y-4">
-
-              {/* Painel de classificação por risco */}
               {(() => {
-                const pending = bets.filter(b => b.verified && b.status === "pending");
+                const pending = bets.filter(b => b.status === "pending");
                 const groups: { key: "low" | "mid" | "high"; label: string; range: string; dot: string; border: string; bg: string; badgeCls: string; textCls: string; bets: typeof pending }[] = [
                   {
                     key: "low", label: "Risco Baixo", range: "até R$5.000",
@@ -1004,8 +987,8 @@ export default function Admin() {
               {/* Painel central — Caixa acumulado */}
               {(() => {
                 const APORTE_INICIAL = 50000;
-                const ganhos = bets.filter(b => b.verified).reduce((s, b) => s + b.stake, 0);
-                const perdas = bets.filter(b => b.verified && b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
+                const ganhos = bets.reduce((s, b) => s + b.stake, 0);
+                const perdas = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
                 const totalSaques = withdrawals.reduce((s, w) => s + w.amount, 0);
                 const totalDepositosConfirmados = allDeposits.filter(d => d.status === "confirmed").reduce((s, d) => s + d.amount, 0);
@@ -1167,7 +1150,7 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
                     <p className="text-xl font-bold text-green-500">
-                      R${(bets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0) + allDeposits.filter(d=>d.status==="confirmed").reduce((s,d)=>s+d.amount,0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                      R${(bets.reduce((s,b)=>s+b.stake,0) + allDeposits.filter(d=>d.status==="confirmed").reduce((s,d)=>s+d.amount,0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Entradas (apostas + depósitos)</p>
                   </CardContent>
@@ -1192,38 +1175,6 @@ export default function Admin() {
                 </Card>
               </div>
 
-              {/* Bilhetes pendentes de recebimento */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Clock className="w-4 h-4 text-yellow-500" />
-                    Aguardando Pagamento PIX ({bets.filter(b=>!b.verified && b.status==="pending").length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {bets.filter(b=>!b.verified && b.status==="pending").length === 0 ? (
-                    <p className="text-center py-6 text-muted-foreground text-sm">Nenhum bilhete aguardando pagamento.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {bets.filter(b=>!b.verified && b.status==="pending").map(bet=>(
-                        <div key={bet.id} className="flex items-center justify-between text-sm border rounded p-3 flex-wrap gap-2">
-                          <span className="font-mono font-bold text-xs">#{bet.id.slice(0,8).toUpperCase()}</span>
-                          <span className="text-muted-foreground text-xs">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Apostado</p>
-                            <p className="font-bold">R${bet.stake.toFixed(2)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Retorno potencial</p>
-                            <p className="font-bold text-blue-400">R${bet.potentialWin.toFixed(2)}</p>
-                          </div>
-                          <Badge variant="secondary" className="text-yellow-500 border-yellow-500/30">Aguardando PIX</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
 
@@ -1372,8 +1323,8 @@ export default function Admin() {
           <TabsContent value="financeiro">
             {(() => {
 
-              const entrada      = periodBets.filter(b=>b.verified).reduce((s,b)=>s+b.stake,0);
-              const saida        = periodBets.filter(b=>b.verified && b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+              const entrada      = periodBets.reduce((s,b)=>s+b.stake,0);
+              const saida        = periodBets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
               const totalSaques  = withdrawals.reduce((s,w)=>s+w.amount,0);
               const lucro        = entrada - saida - totalSaques;
               const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
@@ -1623,22 +1574,7 @@ export default function Admin() {
                                 #{bet.id.slice(0, 8).toUpperCase()}
                                 <Copy className="w-3 h-3" />
                               </button>
-                              {getStatusBadge(bet.status, bet.verified)}
-                              <div 
-                                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs cursor-pointer transition-colors ${
-                                  bet.verified 
-                                    ? "bg-green-500/20 text-green-500 border border-green-500/30" 
-                                    : "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30"
-                                }`}
-                                onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: !bet.verified })}
-                                data-testid={`checkbox-verified-${bet.id}`}
-                              >
-                                <Checkbox 
-                                  checked={bet.verified} 
-                                  className="h-3.5 w-3.5 border-current"
-                                />
-                                <span>{bet.verified ? "Pago" : "Não pago"}</span>
-                              </div>
+                              {getStatusBadge(bet.status)}
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
@@ -1702,13 +1638,12 @@ export default function Admin() {
                                                   <Button
                                                     size="icon"
                                                     variant={sel.result === "won" ? "default" : "ghost"}
-                                                    className={`h-6 w-6 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                    className={`h-6 w-6 ${sel.result === "won" ? "bg-green-600 hover:bg-green-700" : "hover:bg-green-600/20"}`}
                                                     onClick={() => updateSelectionMutation.mutate({ 
                                                       betId: bet.id, 
                                                       selectionId: sel.id, 
                                                       result: sel.result === "won" ? "pending" : "won" 
                                                     })}
-                                                    disabled={!bet.verified}
                                                     data-testid={`button-sel-won-${sel.id}`}
                                                   >
                                                     <CheckCircle className={`w-3.5 h-3.5 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
@@ -1716,13 +1651,12 @@ export default function Admin() {
                                                   <Button
                                                     size="icon"
                                                     variant={sel.result === "lost" ? "default" : "ghost"}
-                                                    className={`h-6 w-6 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"} ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                    className={`h-6 w-6 ${sel.result === "lost" ? "bg-red-600 hover:bg-red-700" : "hover:bg-red-600/20"}`}
                                                     onClick={() => updateSelectionMutation.mutate({ 
                                                       betId: bet.id, 
                                                       selectionId: sel.id, 
                                                       result: sel.result === "lost" ? "pending" : "lost" 
                                                     })}
-                                                    disabled={!bet.verified}
                                                     data-testid={`button-sel-lost-${sel.id}`}
                                                   >
                                                     <XCircle className={`w-3.5 h-3.5 ${sel.result === "lost" ? "text-white" : "text-red-500"}`} />
@@ -1760,9 +1694,8 @@ export default function Admin() {
                               onValueChange={(value: BetStatus) => 
                                 updateStatusMutation.mutate({ id: bet.id, status: value })
                               }
-                              disabled={!bet.verified}
                             >
-                              <SelectTrigger className={`w-32 ${!bet.verified ? "opacity-40 cursor-not-allowed" : ""}`} data-testid={`select-status-${bet.id}`}>
+                              <SelectTrigger className="w-32" data-testid={`select-status-${bet.id}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
