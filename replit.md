@@ -47,6 +47,23 @@ The server handles:
 - **ORM**: Drizzle ORM configured for PostgreSQL (schema defined but database may not be provisioned)
 - **Shared Types**: Common schemas in `shared/schema.ts` shared between frontend and backend
 
+### Admin Authentication
+- Admin panel is at `/painel-gm7x9k2` and requires a password to access
+- Server-side: `POST /api/admin/login` validates the password and sets `req.session.isAdmin = true`
+- All `/api/admin/*` routes are protected by the `requireAdmin` middleware (except login/logout/me)
+- Admin password is set via the `ADMIN_PASSWORD` environment variable (defaults to `admin123` for development)
+- Frontend shows a login gate (password form) before rendering any admin content
+- Session-based: admin session persists until logout or session expiry
+
+### User Balance Management
+- Balance is deducted from the user's account when a bet is placed (POST /api/bets)
+- Server always uses `req.session.userId` for balance operations (never trusts body userId)
+- Insufficient balance returns HTTP 400 with `isInsufficientBalance: true`
+- If bet slip creation fails after balance deduction, the stake is automatically refunded
+- When admin marks a bet as "won" (PATCH /api/admin/bets/:id/status), `potentialWin` is credited
+- Duplicate credit protection: won credit only applies if previous status was not "won"
+- No balance change when admin marks as "lost"
+
 ### Super Boost Cards
 - Admin tab "Boost" at `/painel-gm7x9k2` → guia **Boost**
 - Admin can create cards with: event name, match title, description, up to 3 manual selections, original odds, boosted odds, start/end datetime, active toggle

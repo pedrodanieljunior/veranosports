@@ -15,6 +15,11 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.isAdmin) return res.status(403).json({ message: "Acesso restrito a administradores" });
+  next();
+}
+
 const bannerStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     const dir = path.join(process.cwd(), "uploads", "banners");
@@ -901,6 +906,37 @@ export async function registerRoutes(
     const withdrawals = await storage.getUserWithdrawalsByUser(req.session.userId!);
     res.json(withdrawals);
   });
+
+  // Warn on startup if ADMIN_PASSWORD is not configured in production
+  if (process.env.NODE_ENV === "production" && !process.env.ADMIN_PASSWORD) {
+    console.error("[SECURITY] ADMIN_PASSWORD environment variable is not set. Admin access is disabled until it is configured.");
+  }
+
+  // Admin authentication endpoints (public — no requireAdmin)
+  app.post("/api/admin/login", async (req, res) => {
+    const { password } = req.body as { password?: string };
+    if (process.env.NODE_ENV === "production" && !process.env.ADMIN_PASSWORD) {
+      return res.status(503).json({ message: "Painel administrativo indisponível: ADMIN_PASSWORD não configurada no servidor." });
+    }
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    if (!password || password !== adminPassword) {
+      return res.status(401).json({ message: "Senha de administrador incorreta" });
+    }
+    req.session.isAdmin = true;
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/admin/logout", (req, res) => {
+    req.session.isAdmin = false;
+    res.json({ ok: true });
+  });
+
+  app.get("/api/admin/me", (req, res) => {
+    res.json({ isAdmin: !!req.session.isAdmin });
+  });
+
+  // Apply admin auth guard to all subsequent /api/admin/* routes
+  app.use("/api/admin", requireAdmin);
 
   app.get("/api/admin/user-withdrawals", async (_req, res) => {
     const withdrawals = await storage.getAllUserWithdrawals();
@@ -2044,9 +2080,17 @@ export async function registerRoutes(
         cappedByDaily = true;
       }
 
-      // Debitar saldo do usuário se userId presente
-      if (validatedData.userId) {
-        const betUser = await storage.getUserByCpf(validatedData.userId);
+      // Debitar saldo do usuário se autenticado via sessão
+      // Usar sempre req.session.userId para evitar spoofing pelo corpo da requisição
+      const sessionUserId = req.session.userId as string | undefined;
+      if (sessionUserId) {
+        // Garantir que o userId do corpo corresponde ao usuário da sessão
+        if (validatedData.userId && validatedData.userId !== sessionUserId) {
+          return res.status(403).json({ error: "Usuário não autorizado" });
+        }
+        // Forçar userId da sessão no bilhete
+        validatedData.userId = sessionUserId;
+        const betUser = await storage.getUserByCpf(sessionUserId);
         if (!betUser) {
           return res.status(400).json({ error: "Usuário não encontrado" });
         }
@@ -2057,10 +2101,26 @@ export async function registerRoutes(
           });
         }
         const newBalance = Math.round((betUser.balance - validatedData.stake) * 100) / 100;
-        await storage.updateUserBalance(validatedData.userId, newBalance);
+        await storage.updateUserBalance(sessionUserId, newBalance);
+      } else if (validatedData.userId) {
+        // Corpo tem userId mas sem sessão — não permitir debitação sem autenticação
+        return res.status(401).json({ error: "Autenticação necessária para usar saldo da conta" });
       }
 
-      const betSlip = await storage.createBetSlip(validatedData);
+      let betSlip;
+      try {
+        betSlip = await storage.createBetSlip(validatedData);
+      } catch (createErr) {
+        // Rollback: reembolsar saldo caso a criação do bilhete falhe
+        if (sessionUserId) {
+          const currentUser = await storage.getUserByCpf(sessionUserId);
+          if (currentUser) {
+            const refunded = Math.round((currentUser.balance + validatedData.stake) * 100) / 100;
+            await storage.updateUserBalance(sessionUserId, refunded);
+          }
+        }
+        throw createErr;
+      }
 
       const updatedBetSlip = { ...betSlip, potentialWin, totalOdds };
       if (betSlip.potentialWin !== potentialWin || betSlip.totalOdds !== totalOdds) {
@@ -2435,20 +2495,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid status" });
       }
 
-      const existing = await storage.getBetSlip(id);
+      if (status === "won" || status === "lost") {
+        return res.status(403).json({ error: "Apenas administradores podem marcar bilhetes como ganhos ou perdidos" });
+      }
+
       const updated = await storage.updateBetSlipStatus(id, status);
       
       if (!updated) {
         return res.status(404).json({ error: "Bet slip not found" });
-      }
-
-      // Creditar saldo ao usuário se ganhou
-      if (status === "won" && existing?.userId && existing.status !== "won") {
-        const winUser = await storage.getUserByCpf(existing.userId);
-        if (winUser) {
-          const credited = Math.round((winUser.balance + updated.potentialWin) * 100) / 100;
-          await storage.updateUserBalance(existing.userId, credited);
-        }
       }
 
       res.json(updated);

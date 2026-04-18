@@ -136,14 +136,44 @@ export default function Admin() {
   const [marketBoosts, setMarketBoosts] = useState<Record<string, number>>({});
   const [withdrawalAmount, setWithdrawalAmount] = useState<string>("");
   const [withdrawalDesc, setWithdrawalDesc] = useState<string>("");
+  const [adminPassword, setAdminPassword] = useState<string>("");
+  const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
+
+  const { data: adminMe, isLoading: adminMeLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/me"],
+    retry: false,
+  });
+
+  const loginAdminMutation = useMutation({
+    mutationFn: async (password: string) => {
+      return apiRequest("POST", "/api/admin/login", { password });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      setAdminPassword("");
+    },
+    onError: () => {
+      toast({ title: "Senha incorreta", description: "A senha de administrador está incorreta.", variant: "destructive" });
+    },
+  });
+
+  const logoutAdminMutation = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/admin/logout", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/me"] });
+    },
+  });
 
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
-    refetchInterval: 5 * 1000,
+    refetchInterval: adminMe?.isAdmin ? 5 * 1000 : false,
+    enabled: !!adminMe?.isAdmin,
   });
 
   const { data: withdrawals = [], refetch: refetchWithdrawals } = useQuery<Withdrawal[]>({
     queryKey: ["/api/admin/withdrawals"],
+    enabled: !!adminMe?.isAdmin,
   });
 
   const createWithdrawalMutation = useMutation({
@@ -217,6 +247,7 @@ export default function Admin() {
   const { data: marketSettings = [], isLoading: marketSettingsLoading } = useQuery<MarketSetting[]>({
     queryKey: ["/api/admin/market-settings"],
     staleTime: 30 * 1000,
+    enabled: !!adminMe?.isAdmin,
   });
 
   useEffect(() => {
@@ -244,6 +275,7 @@ export default function Admin() {
   const { data: gameLimitsData, isLoading: gameLimitsLoading, refetch: refetchGameLimits } = useQuery<{ totals: GameLimitEntry[]; limit: number }>({
     queryKey: ["/api/admin/game-limits"],
     refetchInterval: 30 * 1000,
+    enabled: !!adminMe?.isAdmin,
   });
 
   const { data: limitsData, refetch: refetchLimits } = useQuery<{
@@ -487,6 +519,55 @@ export default function Admin() {
     }
   };
 
+  if (adminMeLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!adminMe?.isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-4">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Painel de Administração</h1>
+            <p className="text-muted-foreground mt-1">Digite a senha para continuar</p>
+          </div>
+          <div className="space-y-3">
+            <div className="relative">
+              <Input
+                type={showAdminPassword ? "text" : "password"}
+                placeholder="Senha de administrador"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") loginAdminMutation.mutate(adminPassword); }}
+                data-testid="input-admin-password"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                onClick={() => setShowAdminPassword((v) => !v)}
+                data-testid="button-toggle-admin-password"
+              >
+                {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => loginAdminMutation.mutate(adminPassword)}
+              disabled={loginAdminMutation.isPending || !adminPassword}
+              data-testid="button-admin-login"
+            >
+              {loginAdminMutation.isPending ? "Entrando..." : "Entrar"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -519,6 +600,9 @@ export default function Admin() {
             <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-admin">
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => logoutAdminMutation.mutate()} data-testid="button-admin-logout">
+              Sair
             </Button>
             {bets.length > 0 && (
               <AlertDialog>
