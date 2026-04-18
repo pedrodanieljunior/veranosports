@@ -688,6 +688,10 @@ export default function Admin() {
               <BarChart2 className="w-4 h-4 mr-2" />
               Limites por Jogo
             </TabsTrigger>
+            <TabsTrigger value="riscos" data-testid="tab-riscos">
+              <ShieldAlert className="w-4 h-4 mr-2" />
+              Riscos
+            </TabsTrigger>
             <TabsTrigger value="caixa" data-testid="tab-caixa">
               <Wallet className="w-4 h-4 mr-2" />
               Caixa
@@ -801,8 +805,8 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          {/* ── VALIDAÇÃO ─────────────────────────────────────── */}
-          <TabsContent value="validacao-removed-placeholder" className="hidden">
+          {/* ── RISCOS ─────────────────────────────────────────── */}
+          <TabsContent value="riscos">
             <div className="space-y-4">
               {(() => {
                 const pending = bets.filter(b => b.status === "pending");
@@ -903,80 +907,6 @@ export default function Admin() {
                 );
               })()}
 
-              {/* Lista de bilhetes */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <CardTitle className="flex items-center gap-2">
-                      <ClipboardCheck className="w-5 h-5 text-blue-500" />
-                      Validação de Pagamentos
-                    </CardTitle>
-                    <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-validacao">
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Recarregar
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Bilhetes pendentes aguardando confirmação de pagamento via PIX.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-3">{[1,2,3].map(i=><Skeleton key={i} className="h-16 w-full"/>)}</div>
-                  ) : bets.filter(b => !b.verified && b.status === "pending").length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <CheckCircle className="w-12 h-12 mx-auto mb-4 opacity-30 text-green-500" />
-                      <p>Nenhum bilhete aguardando validação.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {bets.filter(b => !b.verified && b.status === "pending").map(bet => {
-                        return (
-                          <div key={bet.id} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 p-4 flex-wrap">
-                            <div className="flex items-center gap-3">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-mono text-sm font-bold">#{bet.id.slice(0,8).toUpperCase()}</span>
-                                  <Badge variant="secondary">Pendente</Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {bet.selections.map(s=>`${s.homeTeam} vs ${s.awayTeam}`).join(" · ")}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3 mt-1 sm:mt-0">
-                              <div className="whitespace-nowrap">
-                                <p className="text-xs text-muted-foreground">Apostado</p>
-                                <p className="font-bold text-sm">R$&nbsp;{bet.stake.toFixed(2)}</p>
-                              </div>
-                              <div className="text-right whitespace-nowrap">
-                                <p className="text-xs text-muted-foreground">Retorno</p>
-                                <p className="font-bold text-sm">
-                                  R$&nbsp;{bet.potentialWin.toFixed(2)}
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                                onClick={() => updateVerifiedMutation.mutate({ id: bet.id, verified: true })}
-                                disabled={updateVerifiedMutation.isPending}
-                                data-testid={`button-validate-${bet.id}`}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Confirmar Pago
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
 
