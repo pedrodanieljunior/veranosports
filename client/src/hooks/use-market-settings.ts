@@ -7,15 +7,17 @@ export function useMarketSettings() {
     staleTime: 60 * 1000,
   });
 
+  const DEFAULT_BOOST: Record<string, number> = { h2h: 20 };
+
   const getBoostMultiplier = (marketKey: string): number => {
     const setting = settings.find(s => s.marketKey === marketKey);
-    if (!setting) return 1;
+    if (!setting) return 1 + (DEFAULT_BOOST[marketKey] ?? 0) / 100;
     return 1 + setting.boostPercent / 100;
   };
 
   const getBoostPercent = (marketKey: string): number => {
     const setting = settings.find(s => s.marketKey === marketKey);
-    return setting?.boostPercent ?? 0;
+    return setting?.boostPercent ?? (DEFAULT_BOOST[marketKey] ?? 0);
   };
 
   const hasBoosted = (marketKey: string): boolean => {
