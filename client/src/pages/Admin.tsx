@@ -176,14 +176,14 @@ export default function Admin() {
     enabled: !!adminMe?.isAdmin,
   });
 
-  const { data: allDeposits = [] } = useQuery<Deposit[]>({
+  const { data: allDeposits = [], refetch: refetchAllDeposits } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/deposits");
       return res.json();
     },
     enabled: !!adminMe?.isAdmin,
-    refetchInterval: adminMe?.isAdmin ? 30 * 1000 : false,
+    refetchInterval: adminMe?.isAdmin ? 5 * 1000 : false,
   });
 
   const createWithdrawalMutation = useMutation({
@@ -1038,7 +1038,7 @@ export default function Admin() {
                             {isPositive ? <CheckCircle className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
                             {isPositive ? "POSITIVO" : "NEGATIVO"}
                           </Badge>
-                          <Button variant="outline" size="sm" onClick={() => refetchLimits()} data-testid="button-refresh-caixa">
+                          <Button variant="outline" size="sm" onClick={() => { refetchLimits(); refetch(); refetchWithdrawals(); refetchAllDeposits(); }} data-testid="button-refresh-caixa">
                             <RefreshCw className="w-4 h-4" />
                           </Button>
                         </div>
@@ -3232,6 +3232,19 @@ function UsersTab() {
 
   const pendingDeposits = deposits.filter(d => d.status === "pending");
 
+  const deleteDepositMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/deposits/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      refetchDeposits();
+      toast({ title: "Depósito removido", description: "Removido do caixa." });
+    },
+    onError: () => toast({ title: "Erro ao remover depósito", variant: "destructive" }),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 mb-2">
@@ -3239,35 +3252,54 @@ function UsersTab() {
           <Users className="w-4 h-4 mr-1" /> Usuários ({users.length})
         </Button>
         <Button size="sm" variant={view === "deposits" ? "default" : "outline"} onClick={() => setView("deposits")}>
-          <Wallet className="w-4 h-4 mr-1" /> Depósitos Pendentes
+          <Wallet className="w-4 h-4 mr-1" /> Depósitos
           {pendingDeposits.length > 0 && <Badge className="ml-1 bg-red-500 text-white border-0">{pendingDeposits.length}</Badge>}
         </Button>
       </div>
 
       {view === "deposits" && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Depósitos Pendentes</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Depósitos ({deposits.length})</CardTitle></CardHeader>
           <CardContent>
-            {depositsLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : pendingDeposits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum depósito pendente.</p>
+            {depositsLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : deposits.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum depósito registrado.</p>
             ) : (
               <div className="space-y-3">
-                {pendingDeposits.map(dep => (
-                  <div key={dep.id} className="flex items-center justify-between p-3 border rounded-lg">
+                {[...deposits].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dep => (
+                  <div key={dep.id} className={`flex items-center justify-between p-3 border rounded-lg ${dep.status === "confirmed" ? "border-green-500/30 bg-green-500/5" : dep.status === "rejected" ? "border-red-500/20 opacity-60" : ""}`}>
                     <div>
-                      <p className="font-semibold text-sm">{dep.userId}</p>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-semibold text-sm">{dep.userId}</p>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${dep.status === "confirmed" ? "bg-green-500/20 text-green-400" : dep.status === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                          {dep.status === "confirmed" ? "CONFIRMADO" : dep.status === "rejected" ? "REJEITADO" : "PENDENTE"}
+                        </span>
+                      </div>
                       <p className="text-sm">R$ {dep.amount.toFixed(2).replace(".", ",")}
                         {dep.bonusAmount > 0 && <span className="text-green-600 ml-1">(+R$ {dep.bonusAmount.toFixed(2).replace(".", ",")} bônus)</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">{new Date(dep.createdAt).toLocaleString("pt-BR")}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => confirmDepositMutation.mutate(dep.id)} disabled={confirmDepositMutation.isPending}>
-                        <CheckCircle className="w-4 h-4 mr-1" /> Confirmar
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => rejectDepositMutation.mutate(dep.id)} disabled={rejectDepositMutation.isPending}>
-                        <XCircle className="w-4 h-4 mr-1" /> Rejeitar
-                      </Button>
+                      {dep.status === "pending" && (
+                        <>
+                          <Button size="sm" onClick={() => confirmDepositMutation.mutate(dep.id)} disabled={confirmDepositMutation.isPending}>
+                            <CheckCircle className="w-4 h-4 mr-1" /> Confirmar
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => rejectDepositMutation.mutate(dep.id)} disabled={rejectDepositMutation.isPending}>
+                            <XCircle className="w-4 h-4 mr-1" /> Rejeitar
+                          </Button>
+                        </>
+                      )}
+                      {dep.status === "confirmed" && (
+                        <Button size="sm" variant="destructive" onClick={() => { if (confirm("Remover este depósito do caixa? O saldo do usuário não será alterado.")) deleteDepositMutation.mutate(dep.id); }} disabled={deleteDepositMutation.isPending}>
+                          <Trash2 className="w-4 h-4 mr-1" /> Remover
+                        </Button>
+                      )}
+                      {dep.status === "rejected" && (
+                        <Button size="sm" variant="ghost" className="text-red-400" onClick={() => deleteDepositMutation.mutate(dep.id)} disabled={deleteDepositMutation.isPending}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
