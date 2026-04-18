@@ -222,9 +222,9 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
 
   const parsedAmount = parseFloat(amount.replace(",", "."));
 
-  const wdStatusColor = (s: string) => s === "approved" ? "text-green-400" : s === "rejected" ? "text-red-400" : "text-yellow-400";
-  const wdStatusLabel = (s: string) => s === "approved" ? "Aprovado" : s === "rejected" ? "Rejeitado" : "Pendente";
-  const wdStatusIcon = (s: string) => s === "approved" ? <CheckCircle2 className="w-3.5 h-3.5" /> : s === "rejected" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />;
+  const wdStatusColor = (s: string) => s === "paid" ? "text-blue-400" : s === "approved" ? "text-green-400" : s === "rejected" ? "text-red-400" : "text-yellow-400";
+  const wdStatusLabel = (s: string) => s === "paid" ? "Pago" : s === "approved" ? "Aprovado" : s === "rejected" ? "Rejeitado" : "Pendente";
+  const wdStatusIcon = (s: string) => s === "paid" ? <CheckCircle2 className="w-3.5 h-3.5" /> : s === "approved" ? <CheckCircle2 className="w-3.5 h-3.5" /> : s === "rejected" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />;
 
   return (
     <div className="space-y-4">

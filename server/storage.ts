@@ -90,6 +90,7 @@ export interface IStorage {
   getUserWithdrawalsByUser(userId: string): Promise<UserWithdrawal[]>;
   getAllUserWithdrawals(): Promise<UserWithdrawal[]>;
   updateUserWithdrawalStatus(id: number, status: string): Promise<UserWithdrawal | undefined>;
+  markUserWithdrawalAsPaid(id: number): Promise<UserWithdrawal | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -672,7 +673,7 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  private mapUserWithdrawal(row: any): UserWithdrawal {
+  private mapUserWithdrawal(row: any, userPhone?: string | null): UserWithdrawal {
     return {
       id: row.id,
       userId: row.userId,
@@ -680,6 +681,8 @@ export class DatabaseStorage implements IStorage {
       pixKey: row.pixKey,
       status: row.status,
       createdAt: row.createdAt.toISOString(),
+      paidAt: row.paidAt ? row.paidAt.toISOString() : null,
+      userPhone: userPhone ?? null,
     };
   }
 
@@ -694,12 +697,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUserWithdrawals(): Promise<UserWithdrawal[]> {
-    const rows = await db.select().from(userWithdrawalsTable).orderBy(desc(userWithdrawalsTable.createdAt));
-    return rows.map(r => this.mapUserWithdrawal(r));
+    const rows = await db
+      .select({
+        id: userWithdrawalsTable.id,
+        userId: userWithdrawalsTable.userId,
+        amount: userWithdrawalsTable.amount,
+        pixKey: userWithdrawalsTable.pixKey,
+        status: userWithdrawalsTable.status,
+        createdAt: userWithdrawalsTable.createdAt,
+        paidAt: userWithdrawalsTable.paidAt,
+        userPhone: usersTable.phone,
+      })
+      .from(userWithdrawalsTable)
+      .leftJoin(usersTable, eq(userWithdrawalsTable.userId, usersTable.cpf))
+      .orderBy(desc(userWithdrawalsTable.createdAt));
+    return rows.map(r => this.mapUserWithdrawal(r, r.userPhone));
   }
 
   async updateUserWithdrawalStatus(id: number, status: string): Promise<UserWithdrawal | undefined> {
     const [row] = await db.update(userWithdrawalsTable).set({ status }).where(eq(userWithdrawalsTable.id, id)).returning();
+    if (!row) return undefined;
+    return this.mapUserWithdrawal(row);
+  }
+
+  async markUserWithdrawalAsPaid(id: number): Promise<UserWithdrawal | undefined> {
+    const [row] = await db.update(userWithdrawalsTable).set({ status: "paid", paidAt: new Date() }).where(eq(userWithdrawalsTable.id, id)).returning();
     if (!row) return undefined;
     return this.mapUserWithdrawal(row);
   }

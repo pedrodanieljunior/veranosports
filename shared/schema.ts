@@ -301,6 +301,7 @@ export const userWithdrawalsTable = pgTable("user_withdrawals", {
   pixKey: text("pix_key").notNull(),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  paidAt: timestamp("paid_at"),
 });
 
 export const userWithdrawalSchema = z.object({
@@ -310,6 +311,8 @@ export const userWithdrawalSchema = z.object({
   pixKey: z.string(),
   status: z.string(),
   createdAt: z.string(),
+  paidAt: z.string().nullable().optional(),
+  userPhone: z.string().nullable().optional(),
 });
 
 export type UserWithdrawal = z.infer<typeof userWithdrawalSchema>;

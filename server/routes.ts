@@ -884,7 +884,7 @@ export async function registerRoutes(
   });
 
   // ─── User Withdrawals ────────────────────────────────────────────────────────
-  app.post("/api/withdrawals/request", requireAuth, async (req, res) => {
+  const createWithdrawalHandler = async (req: Request, res: Response) => {
     try {
       const { amount, pixKey } = req.body as { amount: number; pixKey: string };
       if (!amount || amount < 20) return res.status(400).json({ message: "Valor mínimo para saque é R$20,00" });
@@ -900,7 +900,9 @@ export async function registerRoutes(
     } catch {
       res.status(500).json({ message: "Erro ao criar solicitação de saque" });
     }
-  });
+  };
+  app.post("/api/withdrawals", requireAuth, createWithdrawalHandler);
+  app.post("/api/withdrawals/request", requireAuth, createWithdrawalHandler);
 
   app.get("/api/withdrawals/mine", requireAuth, async (req, res) => {
     const withdrawals = await storage.getUserWithdrawalsByUser(req.session.userId!);
@@ -972,6 +974,19 @@ export async function registerRoutes(
       res.json(updated);
     } catch {
       res.status(500).json({ message: "Erro ao rejeitar saque" });
+    }
+  });
+
+  app.patch("/api/admin/user-withdrawals/:id/mark-paid", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const withdrawal = (await storage.getAllUserWithdrawals()).find(w => w.id === id);
+      if (!withdrawal) return res.status(404).json({ message: "Saque não encontrado" });
+      if (withdrawal.status !== "approved") return res.status(400).json({ message: "Saque precisa estar aprovado antes de marcar como pago" });
+      const updated = await storage.markUserWithdrawalAsPaid(id);
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Erro ao marcar saque como pago" });
     }
   });
 
