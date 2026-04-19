@@ -60,6 +60,7 @@ import {
   Edit,
   Eye,
   EyeOff,
+  Gift,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -184,6 +185,26 @@ export default function Admin() {
     },
     enabled: !!adminMe?.isAdmin,
     refetchInterval: adminMe?.isAdmin ? 5 * 1000 : false,
+  });
+
+  const { data: allUsers = [], refetch: refetchAllUsers } = useQuery<{ cpf: string; name: string; balance: number }[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return res.json();
+    },
+    enabled: !!adminMe?.isAdmin,
+    refetchInterval: adminMe?.isAdmin ? 10 * 1000 : false,
+  });
+
+  const { data: allUserWithdrawals = [], refetch: refetchUserWithdrawals } = useQuery<UserWithdrawal[]>({
+    queryKey: ["/api/admin/user-withdrawals"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/user-withdrawals");
+      return res.json();
+    },
+    enabled: !!adminMe?.isAdmin,
+    refetchInterval: adminMe?.isAdmin ? 10 * 1000 : false,
   });
 
   const createWithdrawalMutation = useMutation({
@@ -914,33 +935,58 @@ export default function Admin() {
           <TabsContent value="caixa">
             <div className="space-y-4">
 
-              {/* Painel central — Caixa acumulado */}
+              {/* Painel central — Caixa */}
               {(() => {
                 const APORTE_INICIAL = 50000;
-                const ganhos = bets.reduce((s, b) => s + b.stake, 0);
-                const perdas = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
+                // Entradas reais de PIX (sem o bônus que é artificial)
+                const confirmedDeposits = allDeposits.filter(d => d.status === "confirmed");
+                const entradasPix = confirmedDeposits.reduce((s, d) => s + d.amount, 0);
+                // Bônus concedidos = dinheiro artificial criado pela casa
+                const bonusConcedidos = confirmedDeposits.reduce((s, d) => s + (d.bonusAmount ?? 0), 0);
+                // Provisionamento: saldos atuais dos clientes (o que a casa deve aos usuários)
+                const saldosClientes = allUsers.reduce((s, u) => s + u.balance, 0);
+                // Provisionamento: ganhos potenciais (apostas pendentes)
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
-                const totalSaques = withdrawals.reduce((s, w) => s + w.amount, 0);
-                const totalDepositosConfirmados = allDeposits.filter(d => d.status === "confirmed").reduce((s, d) => s + d.amount, 0);
-                const lucroOp = ganhos + totalDepositosConfirmados - perdas - totalSaques;
-                // Saldo = capital inicial + resultado operacional − exposição pendente
-                // Quando lucroOp é negativo, o prejuízo já consumiu parte do capital inicial
-                const saldo = APORTE_INICIAL + lucroOp - exposicao;
-                const lucroLivre = Math.max(0, lucroOp - exposicao);
-                // Capital reservado = quanto do aporte inicial está comprometido
-                // (cobre o prejuízo operacional + a exposição pendente que excede o lucro)
-                const capitalReservado = Math.min(APORTE_INICIAL, Math.max(0, exposicao - lucroOp));
-                const capitalDisponivel = APORTE_INICIAL - capitalReservado;
-                const isPositive = saldo >= APORTE_INICIAL;
+                // Saques do caixa (retiradas administrativas)
+                const totalSaquesAdmin = withdrawals.reduce((s, w) => s + w.amount, 0);
+                // Pagamentos feitos a usuários (saques pagos via PIX)
+                const pagamentosUsuarios = allUserWithdrawals
+                  .filter(w => w.status === "paid" || w.status === "approved")
+                  .reduce((s, w) => s + w.amount, 0);
+
+                // Fórmula principal
+                const caixa = APORTE_INICIAL
+                  + entradasPix
+                  - saldosClientes
+                  - exposicao
+                  - totalSaquesAdmin
+                  - pagamentosUsuarios
+                  - bonusConcedidos;
+
+                const isPositive = caixa >= 0;
+
+                const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                // Barra de saúde do caixa — referência = aporte
+                const caixaPct = Math.max(0, Math.min(200, (caixa / APORTE_INICIAL) * 100));
+                const barColor = caixa > APORTE_INICIAL * 0.8
+                  ? "bg-gradient-to-r from-green-600 to-emerald-400"
+                  : caixa > APORTE_INICIAL * 0.4
+                  ? "bg-gradient-to-r from-yellow-600 to-amber-400"
+                  : "bg-gradient-to-r from-red-600 to-rose-400";
+
                 return (
                   <Card className={`border-2 ${isPositive ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}>
                     <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+                      {/* Cabeçalho */}
+                      <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
                         <div className="flex items-center gap-3">
                           <Wallet className="w-7 h-7 text-primary" />
                           <div>
                             <p className="text-lg font-bold">Caixa</p>
-                            <p className="text-xs text-muted-foreground">Aporte inicial: R$50.000,00 + operações acumuladas</p>
+                            <p className="text-xs text-muted-foreground">
+                              Aporte + Entradas − Obrigações − Saídas
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -951,122 +997,86 @@ export default function Admin() {
                             {isPositive ? <CheckCircle className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
                             {isPositive ? "POSITIVO" : "NEGATIVO"}
                           </Badge>
-                          <Button variant="outline" size="sm" onClick={() => { refetchLimits(); refetch(); refetchWithdrawals(); refetchAllDeposits(); }} data-testid="button-refresh-caixa">
+                          <Button
+                            variant="outline" size="sm"
+                            onClick={() => { refetch(); refetchWithdrawals(); refetchAllDeposits(); refetchAllUsers(); refetchUserWithdrawals(); refetchLimits(); }}
+                            data-testid="button-refresh-caixa"
+                          >
                             <RefreshCw className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
 
                       {/* Saldo principal */}
-                      <div className="text-center mb-4">
-                        <p className="text-xs text-muted-foreground mb-1">Saldo atual do Caixa</p>
-                        <p className={`text-4xl font-bold ${isPositive ? "text-green-500" : "text-red-400"}`}
-                          data-testid="text-caixa-saldo">
-                          {isPositive ? "+" : ""}R${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <div className="text-center mb-5">
+                        <p className="text-xs text-muted-foreground mb-1">Saldo líquido do Caixa</p>
+                        <p className={`text-4xl font-bold ${isPositive ? "text-green-500" : "text-red-400"}`} data-testid="text-caixa-saldo">
+                          {isPositive ? "+" : ""}R${fmt(caixa)}
                         </p>
                       </div>
 
-                      {/* Barras de disponível + lucro */}
-                      {(() => {
-                        // Barra 1 — capital disponível (após reservar exposição que excede o lucro)
-                        const capitalPct = Math.max(0, Math.min(100, (capitalDisponivel / APORTE_INICIAL) * 100));
-                        const capitalColor = capitalDisponivel > 40000 ? "bg-gradient-to-r from-green-600 to-emerald-400" : capitalDisponivel > 20000 ? "bg-gradient-to-r from-yellow-600 to-amber-400" : "bg-gradient-to-r from-red-600 to-rose-400";
-                        // Barra 2 — lucro livre (depois de cobrir a exposição com o lucro)
-                        const lucroLivrePct = Math.max(0, Math.min(100, (lucroLivre / APORTE_INICIAL) * 100));
-                        const lucroOpNegativo = lucroOp < 0;
-                        const lucroOpPct = Math.max(0, Math.min(100, (Math.abs(lucroOp) / APORTE_INICIAL) * 100));
-                        return (
-                          <div className="mb-6 space-y-2">
-                            {/* Barra 1 — Capital disponível */}
-                            <div>
-                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                <span>Capital disponível</span>
-                                <span className={`font-semibold ${capitalDisponivel > 40000 ? "text-green-400" : capitalDisponivel > 20000 ? "text-yellow-400" : "text-red-400"}`}>
-                                  {capitalPct.toFixed(1)}% · R${capitalDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                              <div className="w-full h-3 bg-muted rounded-t-full overflow-hidden">
-                                <div
-                                  className={`h-full transition-all duration-500 ${capitalColor}`}
-                                  style={{ width: `${capitalPct}%` }}
-                                />
-                              </div>
-                            </div>
+                      {/* Barra de saúde */}
+                      <div className="mb-6">
+                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                          <span>Saúde do caixa</span>
+                          <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                            {caixaPct.toFixed(1)}% do aporte inicial
+                          </span>
+                        </div>
+                        <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, caixaPct)}%` }} />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                          <span>R$0</span>
+                          <span>R$50.000 (aporte)</span>
+                        </div>
+                      </div>
 
-                            {/* Barra 2 — Lucro operacional (livre de exposição) */}
-                            <div>
-                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                <span>Lucro operacional</span>
-                                <span className={`font-semibold ${lucroOpNegativo ? "text-red-400" : lucroLivre > 0 ? "text-violet-400" : lucroOp > 0 ? "text-yellow-400" : "text-muted-foreground"}`}>
-                                  {lucroOpNegativo
-                                    ? `-R$${Math.abs(lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                    : lucroLivre > 0
-                                    ? `+R$${lucroLivre.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} livre`
-                                    : lucroOp > 0
-                                    ? `+R$${lucroOp.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (reservado pela exposição)`
-                                    : `R$0,00`}
-                                </span>
-                              </div>
-                              <div className="w-full h-3 bg-muted rounded-b-full overflow-hidden">
-                                <div
-                                  className={`h-full transition-all duration-500 ${lucroOpNegativo ? "bg-red-500" : lucroLivre > 0 ? "bg-gradient-to-r from-purple-600 to-violet-400" : "bg-gradient-to-r from-yellow-600 to-amber-400"}`}
-                                  style={{ width: `${lucroOpNegativo ? lucroOpPct : lucroLivre > 0 ? lucroLivrePct : lucroOpPct}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Legenda compartilhada */}
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>R$0</span>
-                              <span>R$50.000</span>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Breakdown */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {/* Grid de componentes */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                        {/* Aporte */}
                         <div className="bg-muted/50 rounded-lg p-3 text-center">
                           <Wallet className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
-                          <p className="text-base font-bold">
-                            R$50.000,00
-                          </p>
+                          <p className="text-sm font-bold">+R${fmt(APORTE_INICIAL)}</p>
                           <p className="text-xs text-muted-foreground">Aporte inicial</p>
                         </div>
+                        {/* Entradas PIX */}
                         <div className="bg-blue-500/10 rounded-lg p-3 text-center">
                           <ArrowUpCircle className="w-4 h-4 mx-auto mb-1 text-blue-400" />
-                          <p className="text-base font-bold text-blue-400">
-                            +R${totalDepositosConfirmados.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Depósitos validados</p>
+                          <p className="text-sm font-bold text-blue-400">+R${fmt(entradasPix)}</p>
+                          <p className="text-xs text-muted-foreground">Entradas PIX</p>
                         </div>
-                        <div className="bg-green-500/10 rounded-lg p-3 text-center">
-                          <ArrowUpCircle className="w-4 h-4 mx-auto mb-1 text-green-500" />
-                          <p className="text-base font-bold text-green-500">
-                            +R${ganhos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Apostas perdidas</p>
+                        {/* Saldos dos clientes */}
+                        <div className="bg-purple-500/10 rounded-lg p-3 text-center">
+                          <Users className="w-4 h-4 mx-auto mb-1 text-purple-400" />
+                          <p className="text-sm font-bold text-purple-400">−R${fmt(saldosClientes)}</p>
+                          <p className="text-xs text-muted-foreground">Saldos clientes</p>
                         </div>
-                        <div className="bg-red-500/10 rounded-lg p-3 text-center">
-                          <ArrowDownCircle className="w-4 h-4 mx-auto mb-1 text-red-400" />
-                          <p className="text-base font-bold text-red-400">
-                            -R${perdas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Prêmios pagos</p>
-                        </div>
-                        <div className="bg-orange-500/10 rounded-lg p-3 text-center">
-                          <MinusCircle className="w-4 h-4 mx-auto mb-1 text-orange-400" />
-                          <p className="text-base font-bold text-orange-400">
-                            -R${totalSaques.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Saques</p>
-                        </div>
+                        {/* Exposição potencial */}
                         <div className="bg-yellow-500/10 rounded-lg p-3 text-center">
                           <ShieldAlert className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
-                          <p className="text-base font-bold text-yellow-400">
-                            -R${exposicao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Exposição reservada</p>
+                          <p className="text-sm font-bold text-yellow-400">−R${fmt(exposicao)}</p>
+                          <p className="text-xs text-muted-foreground">Ganhos potenciais</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {/* Saques admin */}
+                        <div className="bg-orange-500/10 rounded-lg p-3 text-center">
+                          <MinusCircle className="w-4 h-4 mx-auto mb-1 text-orange-400" />
+                          <p className="text-sm font-bold text-orange-400">−R${fmt(totalSaquesAdmin)}</p>
+                          <p className="text-xs text-muted-foreground">Saques (caixa)</p>
+                        </div>
+                        {/* Pagamentos usuários */}
+                        <div className="bg-red-500/10 rounded-lg p-3 text-center">
+                          <ArrowDownCircle className="w-4 h-4 mx-auto mb-1 text-red-400" />
+                          <p className="text-sm font-bold text-red-400">−R${fmt(pagamentosUsuarios)}</p>
+                          <p className="text-xs text-muted-foreground">Pagamentos usuários</p>
+                        </div>
+                        {/* Bônus concedidos */}
+                        <div className="bg-pink-500/10 rounded-lg p-3 text-center">
+                          <Gift className="w-4 h-4 mx-auto mb-1 text-pink-400" />
+                          <p className="text-sm font-bold text-pink-400">−R${fmt(bonusConcedidos)}</p>
+                          <p className="text-xs text-muted-foreground">Bônus concedidos</p>
                         </div>
                       </div>
                     </CardContent>
@@ -1080,9 +1090,9 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <ArrowUpCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
                     <p className="text-xl font-bold text-green-500">
-                      R${(bets.reduce((s,b)=>s+b.stake,0) + allDeposits.filter(d=>d.status==="confirmed").reduce((s,d)=>s+d.amount,0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                      R${allDeposits.filter(d=>d.status==="confirmed").reduce((s,d)=>s+d.amount,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
-                    <p className="text-xs text-muted-foreground">Entradas (apostas + depósitos)</p>
+                    <p className="text-xs text-muted-foreground">Total de depósitos confirmados</p>
                   </CardContent>
                 </Card>
                 <Card>
