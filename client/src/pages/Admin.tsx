@@ -967,10 +967,8 @@ export default function Admin() {
 
                 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                // Lucro operacional = arrecadação das apostas − prêmios pagos
-                const receitaApostas = bets.reduce((s, b) => s + b.stake, 0);
-                const premiosPagos = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
-                const lucroOp = receitaApostas - premiosPagos;
+                // Lucro operacional = entradas PIX − saldos dos clientes
+                const lucroOp = entradasPix - saldosClientes;
                 const lucroOpPositivo = lucroOp >= 0;
                 // Barra de lucro — referência = 20% do aporte (meta razoável)
                 const lucroMeta = APORTE_INICIAL * 0.2;
@@ -1054,7 +1052,7 @@ export default function Admin() {
                             <span>Lucro operacional</span>
                             <span className={`font-semibold ${lucroOpPositivo ? "text-violet-400" : "text-red-400"}`}>
                               {lucroOpPositivo ? "+" : "−"}R${fmt(Math.abs(lucroOp))}
-                              <span className="text-muted-foreground font-normal ml-1">(receita − prêmios pagos)</span>
+                              <span className="text-muted-foreground font-normal ml-1">(entradas PIX − saldos clientes)</span>
                             </span>
                           </div>
                           <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
