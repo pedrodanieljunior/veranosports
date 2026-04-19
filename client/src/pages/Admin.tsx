@@ -746,6 +746,10 @@ export default function Admin() {
               <Zap className="w-4 h-4 mr-2" />
               Boost
             </TabsTrigger>
+            <TabsTrigger value="depositos" data-testid="tab-depositos">
+              <Wallet className="w-4 h-4 mr-2" />
+              Depósitos
+            </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">
               <Users className="w-4 h-4 mr-2" />
               Usuários
@@ -1883,6 +1887,10 @@ export default function Admin() {
 
           <TabsContent value="boost">
             <BoostTab />
+          </TabsContent>
+
+          <TabsContent value="depositos">
+            <DepositsTab />
           </TabsContent>
 
           <TabsContent value="usuarios">
@@ -3056,20 +3064,11 @@ function UsersTab() {
   const [editBalance, setEditBalance] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [view, setView] = useState<"users" | "deposits">("users");
 
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/users");
-      return res.json();
-    },
-  });
-
-  const { data: deposits = [], isLoading: depositsLoading, refetch: refetchDeposits } = useQuery<Deposit[]>({
-    queryKey: ["/api/admin/deposits"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/deposits");
       return res.json();
     },
   });
@@ -3123,114 +3122,9 @@ function UsersTab() {
     onError: () => toast({ title: "Erro ao deletar usuário", variant: "destructive" }),
   });
 
-  const confirmDepositMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("PATCH", `/api/admin/deposits/${id}/confirm`);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Depósito confirmado e saldo creditado!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      refetchDeposits();
-    },
-    onError: () => toast({ title: "Erro ao confirmar depósito", variant: "destructive" }),
-  });
-
-  const rejectDepositMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("PATCH", `/api/admin/deposits/${id}/reject`);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Depósito rejeitado." });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
-      refetchDeposits();
-    },
-    onError: () => toast({ title: "Erro ao rejeitar depósito", variant: "destructive" }),
-  });
-
-  const pendingDeposits = deposits.filter(d => d.status === "pending");
-
-  const deleteDepositMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/admin/deposits/${id}`);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
-      refetchDeposits();
-      toast({ title: "Depósito removido", description: "Removido do caixa." });
-    },
-    onError: () => toast({ title: "Erro ao remover depósito", variant: "destructive" }),
-  });
-
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 mb-2">
-        <Button size="sm" variant={view === "users" ? "default" : "outline"} onClick={() => setView("users")}>
-          <Users className="w-4 h-4 mr-1" /> Usuários ({users.length})
-        </Button>
-        <Button size="sm" variant={view === "deposits" ? "default" : "outline"} onClick={() => setView("deposits")}>
-          <Wallet className="w-4 h-4 mr-1" /> Depósitos
-          {pendingDeposits.length > 0 && <Badge className="ml-1 bg-red-500 text-white border-0">{pendingDeposits.length}</Badge>}
-        </Button>
-      </div>
-
-      {view === "deposits" && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Depósitos ({deposits.length})</CardTitle></CardHeader>
-          <CardContent>
-            {depositsLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : deposits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum depósito registrado.</p>
-            ) : (
-              <div className="space-y-3">
-                {[...deposits].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dep => (
-                  <div key={dep.id} className={`flex items-center justify-between p-3 border rounded-lg ${dep.status === "confirmed" ? "border-green-500/30 bg-green-500/5" : dep.status === "rejected" ? "border-red-500/20 opacity-60" : ""}`}>
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-sm">{dep.userId}</p>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${dep.status === "confirmed" ? "bg-green-500/20 text-green-400" : dep.status === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>
-                          {dep.status === "confirmed" ? "CONFIRMADO" : dep.status === "rejected" ? "REJEITADO" : "PENDENTE"}
-                        </span>
-                      </div>
-                      <p className="text-sm">R$ {dep.amount.toFixed(2).replace(".", ",")}
-                        {dep.bonusAmount > 0 && <span className="text-green-600 ml-1">(+R$ {dep.bonusAmount.toFixed(2).replace(".", ",")} bônus)</span>}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{new Date(dep.createdAt).toLocaleString("pt-BR")}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {dep.status === "pending" && (
-                        <>
-                          <Button size="sm" onClick={() => confirmDepositMutation.mutate(dep.id)} disabled={confirmDepositMutation.isPending}>
-                            <CheckCircle className="w-4 h-4 mr-1" /> Confirmar
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => rejectDepositMutation.mutate(dep.id)} disabled={rejectDepositMutation.isPending}>
-                            <XCircle className="w-4 h-4 mr-1" /> Rejeitar
-                          </Button>
-                        </>
-                      )}
-                      {dep.status === "confirmed" && (
-                        <Button size="sm" variant="destructive" onClick={() => { if (confirm("Remover este depósito do caixa? O saldo do usuário não será alterado.")) deleteDepositMutation.mutate(dep.id); }} disabled={deleteDepositMutation.isPending}>
-                          <Trash2 className="w-4 h-4 mr-1" /> Remover
-                        </Button>
-                      )}
-                      {dep.status === "rejected" && (
-                        <Button size="sm" variant="ghost" className="text-red-400" onClick={() => deleteDepositMutation.mutate(dep.id)} disabled={deleteDepositMutation.isPending}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {view === "users" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* User list */}
           <Card className="md:col-span-1">
             <CardHeader className="pb-2"><CardTitle className="text-base">Lista de Usuários</CardTitle></CardHeader>
@@ -3366,8 +3260,126 @@ function UsersTab() {
             </CardContent>
           </Card>
         </div>
-      )}
     </div>
+  );
+}
+
+function DepositsTab() {
+  const { toast } = useToast();
+
+  const { data: deposits = [], isLoading: depositsLoading, refetch: refetchDeposits } = useQuery<Deposit[]>({
+    queryKey: ["/api/admin/deposits"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/deposits");
+      return res.json();
+    },
+  });
+
+  const confirmDepositMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/deposits/${id}/confirm`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Depósito confirmado e saldo creditado!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      refetchDeposits();
+    },
+    onError: () => toast({ title: "Erro ao confirmar depósito", variant: "destructive" }),
+  });
+
+  const rejectDepositMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/deposits/${id}/reject`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Depósito rejeitado." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      refetchDeposits();
+    },
+    onError: () => toast({ title: "Erro ao rejeitar depósito", variant: "destructive" }),
+  });
+
+  const deleteDepositMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/deposits/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      refetchDeposits();
+      toast({ title: "Depósito removido", description: "Removido do caixa." });
+    },
+    onError: () => toast({ title: "Erro ao remover depósito", variant: "destructive" }),
+  });
+
+  const pendingDeposits = deposits.filter(d => d.status === "pending");
+  const sorted = [...deposits].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-yellow-500" />
+            Depósitos ({deposits.length})
+          </CardTitle>
+          {pendingDeposits.length > 0 && (
+            <Badge className="bg-red-500 text-white border-0">{pendingDeposits.length} pendente{pendingDeposits.length > 1 ? "s" : ""}</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {depositsLoading ? (
+          <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
+        ) : sorted.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum depósito registrado.</p>
+        ) : (
+          <div className="space-y-3">
+            {sorted.map(dep => (
+              <div key={dep.id} className={`flex items-center justify-between p-3 border rounded-lg ${dep.status === "confirmed" ? "border-green-500/30 bg-green-500/5" : dep.status === "rejected" ? "border-red-500/20 opacity-60" : "border-yellow-500/30 bg-yellow-500/5"}`} data-testid={`row-deposit-${dep.id}`}>
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="font-semibold text-sm">{dep.userId}</p>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${dep.status === "confirmed" ? "bg-green-500/20 text-green-400" : dep.status === "rejected" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                      {dep.status === "confirmed" ? "CONFIRMADO" : dep.status === "rejected" ? "REJEITADO" : "PENDENTE"}
+                    </span>
+                  </div>
+                  <p className="text-sm">R$ {dep.amount.toFixed(2).replace(".", ",")}
+                    {dep.bonusAmount > 0 && <span className="text-green-600 ml-1">(+R$ {dep.bonusAmount.toFixed(2).replace(".", ",")} bônus)</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{new Date(dep.createdAt).toLocaleString("pt-BR")}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  {dep.status === "pending" && (
+                    <>
+                      <Button size="sm" onClick={() => confirmDepositMutation.mutate(dep.id)} disabled={confirmDepositMutation.isPending} data-testid={`button-confirm-deposit-${dep.id}`}>
+                        <CheckCircle className="w-4 h-4 mr-1" /> Confirmar
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => rejectDepositMutation.mutate(dep.id)} disabled={rejectDepositMutation.isPending} data-testid={`button-reject-deposit-${dep.id}`}>
+                        <XCircle className="w-4 h-4 mr-1" /> Rejeitar
+                      </Button>
+                    </>
+                  )}
+                  {dep.status === "confirmed" && (
+                    <Button size="sm" variant="destructive" onClick={() => { if (confirm("Remover este depósito do caixa? O saldo do usuário não será alterado.")) deleteDepositMutation.mutate(dep.id); }} disabled={deleteDepositMutation.isPending} data-testid={`button-delete-deposit-${dep.id}`}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Remover
+                    </Button>
+                  )}
+                  {dep.status === "rejected" && (
+                    <Button size="sm" variant="ghost" className="text-red-400" onClick={() => deleteDepositMutation.mutate(dep.id)} disabled={deleteDepositMutation.isPending}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
