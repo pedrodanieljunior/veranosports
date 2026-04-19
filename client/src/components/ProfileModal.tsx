@@ -643,10 +643,15 @@ export function ProfileModal({ open, onClose }: Props) {
               <p className="text-sm text-zinc-400">Olá, <span className="text-white font-semibold">{user.name.split(" ")[0]}</span></p>
               <p className="text-xs text-zinc-500 mt-0.5">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
               <div className="mt-3 pt-3 border-t border-zinc-700">
-                <p className="text-xs text-zinc-400">Saldo</p>
-                <p className="text-2xl font-bold text-yellow-400">R$ {user.balance.toFixed(2).replace(".", ",")}</p>
+                <p className="text-xs text-zinc-400">Saldo total</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  R$ {(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}
+                </p>
                 {(user.bonusBalance ?? 0) > 0 && (
-                  <p className="text-sm text-green-400 mt-0.5 font-semibold">🎁 Bônus: R$ {(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
+                  <div className="mt-1.5 flex gap-3 text-xs text-zinc-400">
+                    <span>💰 Principal: <span className="text-white font-semibold">R$ {user.balance.toFixed(2).replace(".", ",")}</span></span>
+                    <span>🎁 Bônus: <span className="text-green-400 font-semibold">R$ {(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></span>
+                  </div>
                 )}
               </div>
             </div>
