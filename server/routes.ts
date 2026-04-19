@@ -1089,10 +1089,9 @@ export async function registerRoutes(
 
   app.get("/api/admin/referrals", requireAdmin, async (_req, res) => {
     const allUsers = await storage.getAllUsers();
-    const allDeposits = await storage.getAllDeposits();
-    // Set of CPFs who made at least one confirmed deposit
+    // Use firstDepositDone flag as source of truth (balance may be set manually or via confirmed deposit)
     const depositedCpfs = new Set(
-      allDeposits.filter(d => d.status === "confirmed").map(d => d.userId)
+      allUsers.filter(u => u.firstDepositDone).map(u => u.cpf)
     );
     // Build referral map: referralCode -> list of referred users who deposited
     const referralMap = new Map<string, { user: (typeof allUsers)[number]; deposited: boolean }[]>();
