@@ -59,7 +59,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await res.json();
       if (!res.ok) return toast({ title: data.message || "Erro ao entrar", variant: "destructive" });
       login(data);
-      toast({ title: `Bem-vindo, ${data.name}!` });
+      toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000 });
       onClose();
     } catch {
       toast({ title: "Erro de conexão", variant: "destructive" });
