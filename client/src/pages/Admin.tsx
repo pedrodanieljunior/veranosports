@@ -62,6 +62,7 @@ import {
   EyeOff,
   Gift,
   UserCheck,
+  Search,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -3064,6 +3065,7 @@ function UsersTab() {
   const [editBalance, setEditBalance] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
 
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -3127,21 +3129,43 @@ function UsersTab() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* User list */}
           <Card className="md:col-span-1">
-            <CardHeader className="pb-2"><CardTitle className="text-base">Lista de Usuários</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Lista de Usuários</CardTitle>
+              <div className="relative mt-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome ou CPF..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md bg-muted border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                  data-testid="input-search-users"
+                />
+              </div>
+            </CardHeader>
             <CardContent className="p-0">
               {usersLoading ? <p className="text-sm p-4 text-muted-foreground">Carregando...</p> : users.length === 0 ? (
                 <p className="text-sm p-4 text-muted-foreground">Nenhum usuário cadastrado.</p>
               ) : (
                 <ScrollArea className="h-[500px]">
-                  {users.map(u => (
-                    <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setNewPassword(""); }}
-                      className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
-                      data-testid={`row-user-${u.cpf}`}>
-                      <p className="font-semibold text-sm">{u.name}</p>
-                      <p className="text-xs text-muted-foreground">{u.cpf}</p>
-                      <p className="text-xs text-green-600 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
-                    </button>
-                  ))}
+                  {(() => {
+                    const q = userSearch.toLowerCase().trim();
+                    const filtered = users.filter(u =>
+                      !q || u.name.toLowerCase().includes(q) || u.cpf.includes(q)
+                    );
+                    if (filtered.length === 0) return (
+                      <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado para "{userSearch}".</p>
+                    );
+                    return filtered.map(u => (
+                      <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setNewPassword(""); }}
+                        className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
+                        data-testid={`row-user-${u.cpf}`}>
+                        <p className="font-semibold text-sm">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.cpf}</p>
+                        <p className="text-xs text-green-600 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                      </button>
+                    ));
+                  })()}
                 </ScrollArea>
               )}
             </CardContent>
