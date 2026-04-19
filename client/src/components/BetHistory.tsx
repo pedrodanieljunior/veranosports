@@ -129,7 +129,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${st.cls}`}>
                 {st.icon}{st.label}
               </span>
-              <span className="text-yellow-400 font-bold text-xs">{fmtOdds(bet.totalOdds)}</span>
+              <span className="text-yellow-400 font-bold text-xs">R$ {bet.potentialWin.toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
