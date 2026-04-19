@@ -257,7 +257,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
-  const showH2h = activeTab === "todos" || activeTab === "gols";
+  const showH2h = activeTab === "todos";
   const filteredExtraMarkets = extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? [];
   const hasContent = (showH2h && !!h2hMarket) || filteredExtraMarkets.length > 0;
 
