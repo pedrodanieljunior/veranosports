@@ -1148,6 +1148,7 @@ export async function registerRoutes(
       const user = await storage.getUserByCpf(deposit.userId);
       if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
       const newBalance = Math.round((user.balance + deposit.amount) * 100) / 100;
+      const totalCredit = Math.round((deposit.amount + deposit.bonusAmount) * 100) / 100;
       await storage.updateUserBalance(deposit.userId, newBalance);
       if (deposit.bonusAmount > 0) {
         const newBonusBalance = Math.round((user.bonusBalance + deposit.bonusAmount) * 100) / 100;
