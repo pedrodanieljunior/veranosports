@@ -1096,9 +1096,16 @@ export async function registerRoutes(
     );
     // Build referral map: referralCode -> list of referred users who deposited
     const referralMap = new Map<string, { user: (typeof allUsers)[number]; deposited: boolean }[]>();
+    // Build a lookup: referralCode -> owner cpf
+    const codeOwner = new Map<string, string>();
+    for (const u of allUsers) {
+      if (u.referralCode) codeOwner.set(u.referralCode.toUpperCase(), u.cpf);
+    }
     for (const u of allUsers) {
       if (u.referredByCode) {
         const code = u.referredByCode.toUpperCase();
+        // Skip if this user is the owner of that code (self-referral artifact)
+        if (codeOwner.get(code) === u.cpf) continue;
         if (!referralMap.has(code)) referralMap.set(code, []);
         referralMap.get(code)!.push({ user: u, deposited: depositedCpfs.has(u.cpf) });
       }
