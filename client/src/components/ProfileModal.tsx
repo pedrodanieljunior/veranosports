@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -505,6 +505,11 @@ function InviteView({ onBack }: { onBack: () => void }) {
   const { toast } = useToast();
   const [code, setCode] = useState(user?.referralCode ?? "");
   const [copied, setCopied] = useState(false);
+
+  // Sync with current user's code whenever the user changes
+  useEffect(() => {
+    setCode(user?.referralCode ?? "");
+  }, [user?.cpf, user?.referralCode]);
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://fwsports.com";
   const inviteLink = `${siteUrl}?ref=${code}`;
