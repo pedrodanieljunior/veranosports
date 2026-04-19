@@ -76,7 +76,7 @@ export interface IStorage {
   updateUserBalance(cpf: string, newBalance: number): Promise<User | undefined>;
   updateUserBonusBalance(cpf: string, newBonusBalance: number): Promise<User | undefined>;
   updateUserPassword(cpf: string, passwordHash: string): Promise<boolean>;
-  updateUserData(cpf: string, data: { name?: string; phone?: string }): Promise<User | undefined>;
+  updateUserData(cpf: string, data: { name?: string; phone?: string; referralCode?: string }): Promise<User | undefined>;
   deleteUser(cpf: string): Promise<boolean>;
   markFirstDeposit(cpf: string): Promise<void>;
   getBetSlipsByUser(userId: string): Promise<BetSlip[]>;
@@ -619,7 +619,7 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async updateUserData(cpf: string, data: { name?: string; phone?: string }): Promise<User | undefined> {
+  async updateUserData(cpf: string, data: { name?: string; phone?: string; referralCode?: string }): Promise<User | undefined> {
     const [row] = await db.update(usersTable).set(data).where(eq(usersTable.cpf, cpf)).returning();
     if (!row) return undefined;
     return this.mapUser(row);

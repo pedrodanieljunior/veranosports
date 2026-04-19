@@ -9,7 +9,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Deposit, UserWithdrawal, Transaction } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -49,7 +49,7 @@ function buildPixCode(amount?: number): string {
   return payload + crc16(payload);
 }
 
-type View = "menu" | "deposit" | "withdraw" | "account" | "history";
+type View = "menu" | "deposit" | "withdraw" | "account" | "history" | "invite";
 
 interface Props {
   open: boolean;
@@ -500,6 +500,110 @@ function HistoryView({ onBack }: { onBack: () => void }) {
   );
 }
 
+function InviteView({ onBack }: { onBack: () => void }) {
+  const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
+  const [code, setCode] = useState(user?.referralCode ?? "");
+  const [copied, setCopied] = useState(false);
+
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://fwsports.com";
+  const inviteLink = `${siteUrl}?ref=${code}`;
+
+  const saveMutation = useMutation({
+    mutationFn: async (referralCode: string) => {
+      const res = await fetch("/api/auth/referral-code", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ referralCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Erro ao salvar");
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: "Código salvo!" });
+      refreshUser();
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareWhatsApp = () => {
+    const msg = encodeURIComponent(`🏆 Aposte comigo na FW Sports! Use meu código *${code}* e comece a ganhar: ${inviteLink}`);
+    window.open(`https://wa.me/?text=${msg}`, "_blank");
+  };
+
+  const hasCode = !!(user?.referralCode);
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+        <ChevronLeft className="w-4 h-4" /> Voltar
+      </button>
+
+      <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-1">
+        <p className="text-sm font-semibold text-white flex items-center gap-2"><Gift className="w-4 h-4 text-yellow-400" /> Como funciona</p>
+        <p className="text-xs text-zinc-400">Cadastre um código único, compartilhe com amigos e eles usam ao se registrar. Futuros benefícios serão vinculados ao seu código.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs text-zinc-400">Seu código de convite (3–12 letras/números)</Label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="EX: PEDRO10"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))}
+            className="bg-zinc-900 border-zinc-600 text-white font-mono tracking-widest uppercase"
+            data-testid="input-referral-code"
+          />
+          <Button
+            onClick={() => saveMutation.mutate(code)}
+            disabled={!code || code.length < 3 || saveMutation.isPending}
+            className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold shrink-0"
+            data-testid="button-save-referral-code"
+          >
+            {saveMutation.isPending ? "..." : "Salvar"}
+          </Button>
+        </div>
+      </div>
+
+      {hasCode && (
+        <div className="space-y-3">
+          <div className="bg-zinc-800 rounded-xl p-3 border border-zinc-700">
+            <p className="text-xs text-zinc-400 mb-1">Link de convite</p>
+            <p className="text-xs font-mono text-yellow-300 break-all">{inviteLink}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1 border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+              onClick={copyLink}
+              data-testid="button-copy-invite-link"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              {copied ? "Copiado!" : "Copiar link"}
+            </Button>
+            <Button
+              className="flex-1 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold"
+              onClick={shareWhatsApp}
+              data-testid="button-share-invite-whatsapp"
+            >
+              <SiWhatsapp className="w-4 h-4 mr-2" />
+              Compartilhar
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProfileModal({ open, onClose }: Props) {
   const { user, logout } = useAuth();
   const [view, setView] = useState<View>("menu");
@@ -511,6 +615,7 @@ export function ProfileModal({ open, onClose }: Props) {
     { id: "withdraw" as View, icon: <Wallet className="w-5 h-5" />, label: "Sacar", desc: "Solicitar retirada" },
     { id: "history" as View, icon: <History className="w-5 h-5" />, label: "Extrato", desc: "Histórico de movimentações" },
     { id: "account" as View, icon: <User className="w-5 h-5" />, label: "Minha Conta", desc: "Dados e senha" },
+    { id: "invite" as View, icon: <Gift className="w-5 h-5" />, label: "Convite", desc: "Seu código de indicação" },
   ];
 
   return (
@@ -523,6 +628,7 @@ export function ProfileModal({ open, onClose }: Props) {
             {view === "withdraw" && "Sacar"}
             {view === "history" && "Extrato"}
             {view === "account" && "Minha Conta"}
+            {view === "invite" && "Convite"}
           </DialogTitle>
         </DialogHeader>
 
@@ -566,6 +672,7 @@ export function ProfileModal({ open, onClose }: Props) {
         {view === "withdraw" && <WithdrawView onBack={() => setView("menu")} />}
         {view === "history" && <HistoryView onBack={() => setView("menu")} />}
         {view === "account" && <AccountView onBack={() => setView("menu")} />}
+        {view === "invite" && <InviteView onBack={() => setView("menu")} />}
       </DialogContent>
     </Dialog>
   );

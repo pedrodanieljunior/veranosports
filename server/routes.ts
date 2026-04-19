@@ -862,6 +862,25 @@ export async function registerRoutes(
     res.json(userPublic);
   });
 
+  app.patch("/api/auth/referral-code", requireAuth, async (req, res) => {
+    try {
+      const { referralCode } = req.body as { referralCode: string };
+      const code = referralCode?.trim().toUpperCase();
+      if (!code) return res.status(400).json({ message: "Código inválido" });
+      if (!/^[A-Z0-9]{3,12}$/.test(code)) return res.status(400).json({ message: "Código deve ter 3-12 letras ou números" });
+      // Check uniqueness
+      const allUsers = await storage.getAllUsers();
+      const taken = allUsers.find(u => u.referralCode?.toUpperCase() === code && u.cpf !== req.session.userId);
+      if (taken) return res.status(400).json({ message: "Esse código já está em uso. Escolha outro." });
+      const updated = await storage.updateUserData(req.session.userId!, { referralCode: code });
+      if (!updated) return res.status(404).json({ message: "Usuário não encontrado" });
+      const { passwordHash: _ph, ...userPublic } = { ...updated, passwordHash: "" };
+      res.json(userPublic);
+    } catch {
+      res.status(500).json({ message: "Erro ao salvar código" });
+    }
+  });
+
   // ─── User Deposits ─────────────────────────────────────────────────────────
   app.post("/api/deposits", requireAuth, async (req, res) => {
     try {
