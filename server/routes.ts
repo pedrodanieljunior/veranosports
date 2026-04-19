@@ -824,7 +824,7 @@ export async function registerRoutes(
       const existing = await storage.getUserByCpf(cpf);
       if (existing) return res.status(409).json({ message: "CPF já cadastrado" });
       const passwordHash = await hashPassword(data.password);
-      const user = await storage.createUser({ cpf, name: data.name, phone: data.phone, referralCode: data.referralCode, passwordHash });
+      const user = await storage.createUser({ cpf, name: data.name, phone: data.phone, referredByCode: data.referralCode, passwordHash });
       req.session.userId = cpf;
       res.json(user);
     } catch (err: any) {

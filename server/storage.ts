@@ -70,7 +70,7 @@ export interface IStorage {
   resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }>;
   deleteBoostCard(id: number): Promise<boolean>;
   // Users
-  createUser(data: { cpf: string; name: string; phone: string; referralCode?: string; passwordHash: string }): Promise<User>;
+  createUser(data: { cpf: string; name: string; phone: string; referredByCode?: string; passwordHash: string }): Promise<User>;
   getUserByCpf(cpf: string): Promise<(User & { passwordHash: string }) | undefined>;
   getAllUsers(): Promise<User[]>;
   updateUserBalance(cpf: string, newBalance: number): Promise<User | undefined>;
@@ -571,6 +571,7 @@ export class DatabaseStorage implements IStorage {
       name: row.name,
       phone: row.phone,
       referralCode: row.referralCode ?? null,
+      referredByCode: row.referredByCode ?? null,
       balance: row.balance,
       bonusBalance: row.bonusBalance ?? 0,
       firstDepositDone: row.firstDepositDone,
@@ -578,12 +579,12 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createUser(data: { cpf: string; name: string; phone: string; referralCode?: string; passwordHash: string }): Promise<User> {
+  async createUser(data: { cpf: string; name: string; phone: string; referredByCode?: string; passwordHash: string }): Promise<User> {
     const [row] = await db.insert(usersTable).values({
       cpf: data.cpf,
       name: data.name,
       phone: data.phone,
-      referralCode: data.referralCode ?? null,
+      referredByCode: data.referredByCode ?? null,
       passwordHash: data.passwordHash,
       balance: 0,
       firstDepositDone: false,
