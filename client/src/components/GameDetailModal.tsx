@@ -42,7 +42,7 @@ const TABS: { id: MarketTab; label: string }[] = [
   { id: "intervalos", label: "Intervalos" },
 ];
 
-const GOLS_MARKETS = ["Goals Over/Under", "Both Teams Score", "Team To Score First"];
+const GOLS_MARKETS = ["Goals Over/Under", "Both Teams Score", "Team To Score First", "Exact Score"];
 const ESCANTEIOS_MARKETS = ["Corners Over Under", "Total Corners"];
 const CARTOES_MARKETS = ["Red Card"];
 const INTERVALOS_MARKETS = ["HT/FT Double"];
