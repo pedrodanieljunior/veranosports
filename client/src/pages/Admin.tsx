@@ -1162,9 +1162,6 @@ export default function Admin() {
 
           <TabsContent value="saques">
             <div className="space-y-4">
-              {/* Solicitações de Saque dos Usuários */}
-              <UserWithdrawalsSection />
-
               {/* Formulário de novo saque */}
               <Card>
                 <CardHeader className="pb-3">
