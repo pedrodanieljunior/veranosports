@@ -1147,6 +1147,8 @@ export async function registerRoutes(
       if (deposit.status === "confirmed") return res.status(400).json({ message: "Depósito já confirmado" });
       const user = await storage.getUserByCpf(deposit.userId);
       if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
+      // Mark as confirmed FIRST to prevent double-credit on retry
+      const updated = await storage.updateDepositStatus(id, "confirmed");
       const newBalance = Math.round((user.balance + deposit.amount) * 100) / 100;
       const totalCredit = Math.round((deposit.amount + deposit.bonusAmount) * 100) / 100;
       await storage.updateUserBalance(deposit.userId, newBalance);
@@ -1168,7 +1170,6 @@ export async function registerRoutes(
         description,
         referenceId: String(id),
       });
-      const updated = await storage.updateDepositStatus(id, "confirmed");
       res.json(updated);
     } catch {
       res.status(500).json({ message: "Erro ao confirmar depósito" });
