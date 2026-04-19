@@ -967,6 +967,20 @@ export default function Admin() {
 
                 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+                // Lucro operacional = arrecadação das apostas − prêmios pagos
+                const receitaApostas = bets.reduce((s, b) => s + b.stake, 0);
+                const premiosPagos = bets.filter(b => b.status === "won").reduce((s, b) => s + b.potentialWin, 0);
+                const lucroOp = receitaApostas - premiosPagos;
+                const lucroOpPositivo = lucroOp >= 0;
+                // Barra de lucro — referência = 20% do aporte (meta razoável)
+                const lucroMeta = APORTE_INICIAL * 0.2;
+                const lucroPct = lucroMeta > 0 ? Math.max(0, Math.min(100, (Math.abs(lucroOp) / lucroMeta) * 100)) : 0;
+                const lucroBarColor = !lucroOpPositivo
+                  ? "bg-gradient-to-r from-red-600 to-rose-400"
+                  : lucroOp > lucroMeta * 0.5
+                  ? "bg-gradient-to-r from-violet-600 to-purple-400"
+                  : "bg-gradient-to-r from-yellow-600 to-amber-400";
+
                 // Barra de saúde do caixa — referência = aporte
                 const caixaPct = Math.max(0, Math.min(200, (caixa / APORTE_INICIAL) * 100));
                 const barColor = caixa > APORTE_INICIAL * 0.8
@@ -1015,20 +1029,41 @@ export default function Admin() {
                         </p>
                       </div>
 
-                      {/* Barra de saúde */}
-                      <div className="mb-6">
-                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                          <span>Saúde do caixa</span>
-                          <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
-                            {caixaPct.toFixed(1)}% do aporte inicial
-                          </span>
+                      {/* Barras */}
+                      <div className="mb-6 space-y-3">
+                        {/* Barra 1 — Saúde do caixa */}
+                        <div>
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>Saúde do caixa</span>
+                            <span className={`font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                              {caixaPct.toFixed(1)}% do aporte · {isPositive ? "+" : ""}R${fmt(caixa)}
+                            </span>
+                          </div>
+                          <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, caixaPct)}%` }} />
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                            <span>R$0</span>
+                            <span>R$50.000 (aporte)</span>
+                          </div>
                         </div>
-                        <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                          <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, caixaPct)}%` }} />
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                          <span>R$0</span>
-                          <span>R$50.000 (aporte)</span>
+
+                        {/* Barra 2 — Lucro operacional (apostas) */}
+                        <div>
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>Lucro operacional</span>
+                            <span className={`font-semibold ${lucroOpPositivo ? "text-violet-400" : "text-red-400"}`}>
+                              {lucroOpPositivo ? "+" : "−"}R${fmt(Math.abs(lucroOp))}
+                              <span className="text-muted-foreground font-normal ml-1">(receita − prêmios pagos)</span>
+                            </span>
+                          </div>
+                          <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full transition-all duration-500 ${lucroBarColor}`} style={{ width: `${lucroPct}%` }} />
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                            <span>{lucroOpPositivo ? "R$0" : "Prejuízo"}</span>
+                            <span>Meta: R${fmt(lucroMeta)}</span>
+                          </div>
                         </div>
                       </div>
 
