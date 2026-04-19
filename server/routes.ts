@@ -867,6 +867,7 @@ export async function registerRoutes(
     try {
       const { amount } = req.body as { amount: number };
       if (!amount || amount < 10) return res.status(400).json({ message: "Valor mínimo de depósito é R$10,00" });
+      if (amount > 5000) return res.status(400).json({ message: "Valor máximo por depósito é R$5.000,00" });
       const userId = req.session.userId!;
       const user = await storage.getUserByCpf(userId);
       if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
@@ -1081,9 +1082,12 @@ export async function registerRoutes(
       if (deposit.status === "confirmed") return res.status(400).json({ message: "Depósito já confirmado" });
       const user = await storage.getUserByCpf(deposit.userId);
       if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-      const totalCredit = deposit.amount + deposit.bonusAmount;
-      const newBalance = Math.round((user.balance + totalCredit) * 100) / 100;
+      const newBalance = Math.round((user.balance + deposit.amount) * 100) / 100;
       await storage.updateUserBalance(deposit.userId, newBalance);
+      if (deposit.bonusAmount > 0) {
+        const newBonusBalance = Math.round((user.bonusBalance + deposit.bonusAmount) * 100) / 100;
+        await storage.updateUserBonusBalance(deposit.userId, newBonusBalance);
+      }
       if (!user.firstDepositDone && deposit.bonusAmount > 0) {
         await storage.markFirstDeposit(deposit.userId);
       }
@@ -2141,15 +2145,31 @@ export async function registerRoutes(
         if (!betUser) {
           return res.status(400).json({ error: "Usuário não encontrado" });
         }
-        if (betUser.balance < validatedData.stake) {
-          return res.status(400).json({
-            error: `Saldo insuficiente. Seu saldo é R$${betUser.balance.toFixed(2).replace(".", ",")} e o valor da aposta é R$${validatedData.stake.toFixed(2).replace(".", ",")}.`,
-            isInsufficientBalance: true,
-          });
+        const useBonus = !!(req.body as any).useBonus;
+        if (useBonus) {
+          // Deduct from bonus balance
+          if (betUser.bonusBalance < validatedData.stake) {
+            return res.status(400).json({
+              error: `Saldo de bônus insuficiente. Seu bônus é R$${betUser.bonusBalance.toFixed(2).replace(".", ",")} e o valor da aposta é R$${validatedData.stake.toFixed(2).replace(".", ",")}.`,
+              isInsufficientBalance: true,
+            });
+          }
+          const newBonusBalance = Math.round((betUser.bonusBalance - validatedData.stake) * 100) / 100;
+          await storage.updateUserBonusBalance(sessionUserId, newBonusBalance);
+          (validatedData as any)._newBalanceAfterBet = betUser.balance;
+          (validatedData as any)._usedBonus = true;
+        } else {
+          // Deduct from real balance
+          if (betUser.balance < validatedData.stake) {
+            return res.status(400).json({
+              error: `Saldo insuficiente. Seu saldo é R$${betUser.balance.toFixed(2).replace(".", ",")} e o valor da aposta é R$${validatedData.stake.toFixed(2).replace(".", ",")}.`,
+              isInsufficientBalance: true,
+            });
+          }
+          const newBalance = Math.round((betUser.balance - validatedData.stake) * 100) / 100;
+          await storage.updateUserBalance(sessionUserId, newBalance);
+          (validatedData as any)._newBalanceAfterBet = newBalance;
         }
-        const newBalance = Math.round((betUser.balance - validatedData.stake) * 100) / 100;
-        await storage.updateUserBalance(sessionUserId, newBalance);
-        (validatedData as any)._newBalanceAfterBet = newBalance;
       } else if (validatedData.userId) {
         // Corpo tem userId mas sem sessão — não permitir debitação sem autenticação
         return res.status(401).json({ error: "Autenticação necessária para usar saldo da conta" });
@@ -2163,8 +2183,13 @@ export async function registerRoutes(
         if (sessionUserId) {
           const currentUser = await storage.getUserByCpf(sessionUserId);
           if (currentUser) {
-            const refunded = Math.round((currentUser.balance + validatedData.stake) * 100) / 100;
-            await storage.updateUserBalance(sessionUserId, refunded);
+            if ((validatedData as any)._usedBonus) {
+              const refunded = Math.round((currentUser.bonusBalance + validatedData.stake) * 100) / 100;
+              await storage.updateUserBonusBalance(sessionUserId, refunded);
+            } else {
+              const refunded = Math.round((currentUser.balance + validatedData.stake) * 100) / 100;
+              await storage.updateUserBalance(sessionUserId, refunded);
+            }
           }
         }
         throw createErr;

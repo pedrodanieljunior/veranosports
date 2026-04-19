@@ -38,7 +38,7 @@ interface BetSlipProps {
   onRemoveSelection: (selectionId: string) => void;
   onClearAll: () => void;
   onClose: () => void;
-  onPlaceBet: (stake: number) => void;
+  onPlaceBet: (stake: number, useBonus: boolean) => void;
   placedBet: PlacedBetWithPix | null;
   isPlacing: boolean;
   isMinimized: boolean;
@@ -59,6 +59,7 @@ export function BetSlip({
   gameLimitRemaining,
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
+  const [useBonus, setUseBonus] = useState(false);
   const { toast } = useToast();
   const { getBoostPercent, getBoostMultiplier } = useMarketSettings();
 
@@ -162,7 +163,10 @@ export function BetSlip({
 
   const totalOdds = roundOdds(computeTotalOdds(selections));
   const stakeNum = parseFloat(stake || "0");
-  const isInsufficientBalance = user !== null && stakeNum > 0 && (user?.balance ?? 0) < stakeNum;
+  const hasBonusBalance = (user?.bonusBalance ?? 0) > 0;
+  const isInsufficientBalance = user !== null && stakeNum > 0 && (
+    useBonus ? (user?.bonusBalance ?? 0) < stakeNum : (user?.balance ?? 0) < stakeNum
+  );
 
   const comboApplies = checkIsComboBonus(selections);
   const distinctGameCount = new Set(selections.map(s => s.gameId)).size;
@@ -191,7 +195,7 @@ export function BetSlip({
   const handlePlaceBet = () => {
     const stakeValue = parseFloat(stake);
     if (stakeValue > 0 && selections.length > 0) {
-      onPlaceBet(stakeValue);
+      onPlaceBet(stakeValue, useBonus);
     }
   };
 
@@ -564,10 +568,29 @@ export function BetSlip({
                 </div>
               </div>
               
+              {hasBonusBalance && (
+                <label className="flex items-center gap-2 cursor-pointer bg-green-950/40 border border-green-700/40 rounded-lg px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={useBonus}
+                    onChange={e => setUseBonus(e.target.checked)}
+                    className="w-4 h-4 accent-yellow-400"
+                    data-testid="checkbox-use-bonus"
+                  />
+                  <span className="text-sm text-green-300 font-semibold">
+                    🎁 Usar bônus (R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")} disponível)
+                  </span>
+                </label>
+              )}
+
               {isInsufficientBalance && (
                 <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <span>Saldo insuficiente. Disponível: R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</span>
+                  <span>
+                    {useBonus
+                      ? `Bônus insuficiente. Disponível: R$ ${(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")}`
+                      : `Saldo insuficiente. Disponível: R$ ${(user?.balance ?? 0).toFixed(2).replace(".", ",")}`}
+                  </span>
                 </div>
               )}
               <Button 

@@ -244,6 +244,7 @@ export const usersTable = pgTable("users", {
   referralCode: text("referral_code"),
   passwordHash: text("password_hash").notNull(),
   balance: real("balance").notNull().default(0),
+  bonusBalance: real("bonus_balance").notNull().default(0),
   firstDepositDone: boolean("first_deposit_done").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -254,6 +255,7 @@ export const userSchema = z.object({
   phone: z.string(),
   referralCode: z.string().nullable().optional(),
   balance: z.number(),
+  bonusBalance: z.number(),
   firstDepositDone: z.boolean(),
   createdAt: z.string(),
 });

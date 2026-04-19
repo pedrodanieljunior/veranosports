@@ -167,8 +167,11 @@ function DepositView({ onBack }: { onBack: () => void }) {
       </button>
       <div className="space-y-3">
         <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-          <p className="text-sm text-zinc-400 mb-1">Saldo atual</p>
+          <p className="text-sm text-zinc-400 mb-1">Saldo real</p>
           <p className="text-2xl font-bold text-yellow-400">R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</p>
+          {(user?.bonusBalance ?? 0) > 0 && (
+            <p className="text-sm text-green-400 mt-1 font-semibold">🎁 Bônus: R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
+          )}
         </div>
         {isFirstDeposit && (
           <div className="bg-green-900/40 border border-green-700 rounded-xl p-3">
@@ -176,7 +179,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
           </div>
         )}
         <div className="space-y-2">
-          <Label className="text-zinc-300">Valor do depósito (R$)</Label>
+          <Label className="text-zinc-300">Valor do depósito (R$) — mín. R$10 / máx. R$5.000</Label>
           <Input
             placeholder="Ex: 100,00"
             value={amount}
@@ -184,14 +187,17 @@ function DepositView({ onBack }: { onBack: () => void }) {
             className="bg-zinc-800 border-zinc-600 text-white"
             data-testid="input-deposit-amount"
           />
-          {bonus > 0 && (
+          {parsedAmount > 5000 && (
+            <p className="text-sm text-red-400">Valor máximo por depósito é R$5.000,00</p>
+          )}
+          {bonus > 0 && parsedAmount <= 5000 && (
             <p className="text-sm text-green-400">Você receberá +R$ {bonus.toFixed(2).replace(".", ",")} de bônus</p>
           )}
         </div>
         <Button
           className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold"
           onClick={() => createMutation.mutate(parsedAmount)}
-          disabled={!parsedAmount || parsedAmount < 10 || createMutation.isPending}
+          disabled={!parsedAmount || parsedAmount < 10 || parsedAmount > 5000 || createMutation.isPending}
           data-testid="button-deposit-continue"
         >
           {createMutation.isPending ? "Aguarde..." : "Continuar"}
@@ -277,8 +283,11 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
       </button>
 
       <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-        <p className="text-sm text-zinc-400 mb-1">Saldo disponível</p>
+        <p className="text-sm text-zinc-400 mb-1">Saldo disponível para saque</p>
         <p className="text-2xl font-bold text-yellow-400">R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</p>
+        {(user?.bonusBalance ?? 0) > 0 && (
+          <p className="text-xs text-zinc-500 mt-1">🎁 Bônus R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")} — não disponível para saque</p>
+        )}
       </div>
 
       <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-3">
@@ -523,8 +532,11 @@ export function ProfileModal({ open, onClose }: Props) {
               <p className="text-sm text-zinc-400">Olá, <span className="text-white font-semibold">{user.name.split(" ")[0]}</span></p>
               <p className="text-xs text-zinc-500 mt-0.5">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
               <div className="mt-3 pt-3 border-t border-zinc-700">
-                <p className="text-xs text-zinc-400">Saldo disponível</p>
+                <p className="text-xs text-zinc-400">Saldo</p>
                 <p className="text-2xl font-bold text-yellow-400">R$ {user.balance.toFixed(2).replace(".", ",")}</p>
+                {(user.bonusBalance ?? 0) > 0 && (
+                  <p className="text-sm text-green-400 mt-0.5 font-semibold">🎁 Bônus: R$ {(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2">

@@ -74,6 +74,7 @@ export interface IStorage {
   getUserByCpf(cpf: string): Promise<(User & { passwordHash: string }) | undefined>;
   getAllUsers(): Promise<User[]>;
   updateUserBalance(cpf: string, newBalance: number): Promise<User | undefined>;
+  updateUserBonusBalance(cpf: string, newBonusBalance: number): Promise<User | undefined>;
   updateUserPassword(cpf: string, passwordHash: string): Promise<boolean>;
   updateUserData(cpf: string, data: { name?: string; phone?: string }): Promise<User | undefined>;
   deleteUser(cpf: string): Promise<boolean>;
@@ -571,6 +572,7 @@ export class DatabaseStorage implements IStorage {
       phone: row.phone,
       referralCode: row.referralCode ?? null,
       balance: row.balance,
+      bonusBalance: row.bonusBalance ?? 0,
       firstDepositDone: row.firstDepositDone,
       createdAt: row.createdAt.toISOString(),
     };
@@ -602,6 +604,12 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserBalance(cpf: string, newBalance: number): Promise<User | undefined> {
     const [row] = await db.update(usersTable).set({ balance: newBalance }).where(eq(usersTable.cpf, cpf)).returning();
+    if (!row) return undefined;
+    return this.mapUser(row);
+  }
+
+  async updateUserBonusBalance(cpf: string, newBonusBalance: number): Promise<User | undefined> {
+    const [row] = await db.update(usersTable).set({ bonusBalance: newBonusBalance }).where(eq(usersTable.cpf, cpf)).returning();
     if (!row) return undefined;
     return this.mapUser(row);
   }

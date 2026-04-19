@@ -188,7 +188,7 @@ export default function Home() {
   });
 
   const placeBetMutation = useMutation({
-    mutationFn: async (data: { selections: Selection[]; stake: number }) => {
+    mutationFn: async (data: { selections: Selection[]; stake: number; useBonus: boolean }) => {
       const response = await apiRequest("POST", "/api/bets", { ...data, sessionId, userId: user?.cpf });
       return response.json();
     },
@@ -267,7 +267,7 @@ export default function Home() {
   };
   const handleRemoveSelection = (selectionId: string) => setSelections((prev) => prev.filter((s) => s.id !== selectionId));
   const handleClearAll = () => { setSelections([]); setPlacedBet(null); };
-  const handlePlaceBet = (stake: number) => placeBetMutation.mutate({ selections, stake });
+  const handlePlaceBet = (stake: number, useBonus: boolean) => placeBetMutation.mutate({ selections, stake, useBonus });
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -294,7 +294,10 @@ export default function Home() {
                     {betHistory.filter(b => b.status === "pending").length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.filter(b => b.status === "pending").length}</Badge>}
                   </button>
                   <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs whitespace-nowrap transition-colors" data-testid="button-open-profile-mobile">
-                    <span className="text-white text-[10px]">R${user.balance.toFixed(2).replace(".", ",")}</span>
+                    <span className="text-white text-[10px]">
+                      R${user.balance.toFixed(2).replace(".", ",")}
+                      {(user.bonusBalance ?? 0) > 0 && <span className="text-green-300"> +B{(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span>}
+                    </span>
                     <UserCircle className="w-4 h-4" />
                   </button>
                 </>
@@ -467,7 +470,10 @@ export default function Home() {
                       {betHistory.filter(b => b.status === "pending").length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.filter(b => b.status === "pending").length}</Badge>}
                     </button>
                     <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors" data-testid="button-open-profile-desktop">
-                      <span className="text-white text-xs">R${user.balance.toFixed(2).replace(".", ",")}</span>
+                      <span className="text-white text-xs">
+                        R${user.balance.toFixed(2).replace(".", ",")}
+                        {(user.bonusBalance ?? 0) > 0 && <span className="text-green-300"> +B{(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span>}
+                      </span>
                       <UserCircle className="w-5 h-5" />
                     </button>
                   </>
