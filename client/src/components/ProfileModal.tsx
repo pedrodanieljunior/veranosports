@@ -617,7 +617,7 @@ export function ProfileModal({ open, onClose }: Props) {
 
   const menuItems = [
     { id: "deposit" as View, icon: <CreditCard className="w-5 h-5" />, label: "Depositar", desc: "Adicionar saldo via PIX" },
-    { id: "withdraw" as View, icon: <Wallet className="w-5 h-5" />, label: "Sacar", desc: "Solicitar retirada" },
+    { id: "withdraw" as View, icon: <Wallet className="w-5 h-5" />, label: "Saques", desc: "Solicitar retirada" },
     { id: "history" as View, icon: <History className="w-5 h-5" />, label: "Extrato", desc: "Histórico de movimentações" },
     { id: "account" as View, icon: <User className="w-5 h-5" />, label: "Minha Conta", desc: "Dados e senha" },
     { id: "invite" as View, icon: <Gift className="w-5 h-5" />, label: "Convite", desc: "Seu código de indicação" },
@@ -630,7 +630,7 @@ export function ProfileModal({ open, onClose }: Props) {
           <DialogTitle className="text-lg font-bold">
             {view === "menu" && "Perfil"}
             {view === "deposit" && "Depositar"}
-            {view === "withdraw" && "Sacar"}
+            {view === "withdraw" && "Saques"}
             {view === "history" && "Extrato"}
             {view === "account" && "Minha Conta"}
             {view === "invite" && "Convite"}
