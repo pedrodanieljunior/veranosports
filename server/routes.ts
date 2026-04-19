@@ -3350,12 +3350,21 @@ export async function registerRoutes(
           });
         }
       }
-      // Reembolsar stake se voltando para pending a partir de won
-      if (status === "pending" && existing?.status === "won" && existing?.userId) {
+      // Reverter crédito se mudando de "won" para qualquer outro status (pending ou lost)
+      if ((status === "pending" || status === "lost") && existing?.status === "won" && existing?.userId) {
         const winUser = await storage.getUserByCpf(existing.userId);
         if (winUser) {
-          const refunded = Math.round((winUser.balance - existing.potentialWin) * 100) / 100;
-          await storage.updateUserBalance(existing.userId, Math.max(0, refunded));
+          const reversed = Math.round((winUser.balance - existing.potentialWin) * 100) / 100;
+          const newBalance = Math.max(0, reversed);
+          await storage.updateUserBalance(existing.userId, newBalance);
+          await storage.createTransaction({
+            userId: existing.userId,
+            type: "adjustment",
+            amount: -existing.potentialWin,
+            balanceAfter: newBalance,
+            description: `Estorno de ganho — aposta marcada como ${status === "lost" ? "perdida" : "pendente"}`,
+            referenceId: id,
+          });
         }
       }
 
