@@ -61,6 +61,7 @@ import {
   Eye,
   EyeOff,
   Gift,
+  UserCheck,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -748,6 +749,10 @@ export default function Admin() {
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">
               <Users className="w-4 h-4 mr-2" />
               Usuários
+            </TabsTrigger>
+            <TabsTrigger value="indicacoes" data-testid="tab-indicacoes">
+              <UserCheck className="w-4 h-4 mr-2" />
+              Indicações
             </TabsTrigger>
           </TabsList>
 
@@ -1882,6 +1887,10 @@ export default function Admin() {
 
           <TabsContent value="usuarios">
             <UsersTab />
+          </TabsContent>
+
+          <TabsContent value="indicacoes">
+            <ReferralsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -3358,6 +3367,105 @@ function UsersTab() {
           </Card>
         </div>
       )}
+    </div>
+  );
+}
+
+type ReferralEntry = {
+  user: User;
+  referralCode: string;
+  totalReferred: number;
+  depositedCount: number;
+  referredUsers: { name: string; cpf: string; deposited: boolean; createdAt: string }[];
+};
+
+function ReferralsTab() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const { data: rows = [], isLoading } = useQuery<ReferralEntry[]>({
+    queryKey: ["/api/admin/referrals"],
+  });
+
+  if (isLoading) return <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>;
+
+  if (!rows.length) return (
+    <Card>
+      <CardContent className="p-8 text-center text-muted-foreground">
+        <UserCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
+        <p>Nenhum usuário criou um código de convite ainda.</p>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm text-muted-foreground">
+          {rows.length} usuário(s) com código ativo · {rows.reduce((s, r) => s + r.depositedCount, 0)} indicação(ões) convertida(s)
+        </p>
+      </div>
+
+      {rows.map(row => (
+        <Card key={row.user.cpf} className="overflow-hidden" data-testid={`card-referral-${row.user.cpf}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-yellow-400/10 flex items-center justify-center shrink-0">
+                  <UserCheck className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">{row.user.name}</p>
+                  <p className="text-xs text-muted-foreground">{row.user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 shrink-0">
+                <div className="text-center">
+                  <p className="font-mono text-xs font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded">{row.referralCode}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">código</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold">{row.totalReferred}</p>
+                  <p className="text-xs text-muted-foreground">cadastros</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-green-400">{row.depositedCount}</p>
+                  <p className="text-xs text-muted-foreground">c/ depósito</p>
+                </div>
+                {row.totalReferred > 0 && (
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    onClick={() => setExpanded(expanded === row.user.cpf ? null : row.user.cpf)}
+                    data-testid={`button-expand-referral-${row.user.cpf}`}
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expanded === row.user.cpf ? "rotate-180" : ""}`} />
+                    {expanded === row.user.cpf ? "Ocultar" : "Ver"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {expanded === row.user.cpf && row.referredUsers.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border space-y-2">
+                {row.referredUsers.map(ru => (
+                  <div key={ru.cpf} className="flex items-center justify-between text-sm" data-testid={`row-referred-${ru.cpf}`}>
+                    <div>
+                      <span className="font-medium">{ru.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{ru.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{format(new Date(ru.createdAt), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      {ru.deposited
+                        ? <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">Depositou</Badge>
+                        : <Badge variant="outline" className="text-xs text-muted-foreground">Sem depósito</Badge>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

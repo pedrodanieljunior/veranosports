@@ -1087,6 +1087,45 @@ export async function registerRoutes(
     res.json(bets);
   });
 
+  app.get("/api/admin/referrals", requireAdmin, async (_req, res) => {
+    const allUsers = await storage.getAllUsers();
+    const allDeposits = await storage.getAllDeposits();
+    // Set of CPFs who made at least one confirmed deposit
+    const depositedCpfs = new Set(
+      allDeposits.filter(d => d.status === "confirmed").map(d => d.userId)
+    );
+    // Build referral map: referralCode -> list of referred users who deposited
+    const referralMap = new Map<string, { user: (typeof allUsers)[number]; deposited: boolean }[]>();
+    for (const u of allUsers) {
+      if (u.referredByCode) {
+        const code = u.referredByCode.toUpperCase();
+        if (!referralMap.has(code)) referralMap.set(code, []);
+        referralMap.get(code)!.push({ user: u, deposited: depositedCpfs.has(u.cpf) });
+      }
+    }
+    // Build result: only users who have a referralCode set
+    const result = allUsers
+      .filter(u => u.referralCode)
+      .map(u => {
+        const code = u.referralCode!.toUpperCase();
+        const referred = referralMap.get(code) ?? [];
+        return {
+          user: u,
+          referralCode: u.referralCode,
+          totalReferred: referred.length,
+          depositedCount: referred.filter(r => r.deposited).length,
+          referredUsers: referred.map(r => ({
+            name: r.user.name,
+            cpf: r.user.cpf,
+            deposited: r.deposited,
+            createdAt: r.user.createdAt,
+          })),
+        };
+      })
+      .sort((a, b) => b.depositedCount - a.depositedCount);
+    res.json(result);
+  });
+
   // ─── Admin: Deposits Management ────────────────────────────────────────────
   app.get("/api/admin/deposits", async (_req, res) => {
     const deposits = await storage.getAllDeposits();
