@@ -59,7 +59,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await res.json();
       if (!res.ok) return toast({ title: data.message || "Erro ao entrar", variant: "destructive" });
       login(data);
-      toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, className: "!bg-zinc-900 !border-zinc-700 !text-white [&>div]:!text-white" });
+      toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
       onClose();
     } catch {
       toast({ title: "Erro de conexão", variant: "destructive" });
@@ -89,7 +89,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await res.json();
       if (!res.ok) return toast({ title: data.message || "Erro ao cadastrar", variant: "destructive" });
       login(data);
-      toast({ title: "Cadastro realizado!", description: `Bem-vindo, ${data.name}!`, className: "!bg-zinc-900 !border-zinc-700 !text-white [&>div]:!text-white" });
+      toast({ title: "Cadastro realizado!", description: `Bem-vindo, ${data.name}!`, variant: "welcome" } as any);
       onClose();
     } catch {
       toast({ title: "Erro de conexão", variant: "destructive" });
