@@ -228,6 +228,7 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
   const { toast } = useToast();
   const [amount, setAmount] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [useCpfAsKey, setUseCpfAsKey] = useState(false);
 
   const { data: withdrawals = [] } = useQuery<UserWithdrawal[]>({
     queryKey: ["/api/withdrawals/mine"],
@@ -256,6 +257,7 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
       toast({ title: "Solicitação enviada!", description: "Seu saque está em análise e será processado em breve." });
       setAmount("");
       setPixKey("");
+      setUseCpfAsKey(false);
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/mine"] });
       refreshUser();
     },
@@ -295,12 +297,27 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
         </div>
         <div className="space-y-2">
           <Label className="text-xs text-zinc-400">Chave PIX (CPF, e-mail, telefone ou chave aleatória)</Label>
+          <label className="flex items-center gap-2 cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={useCpfAsKey}
+              onChange={e => {
+                setUseCpfAsKey(e.target.checked);
+                if (e.target.checked) setPixKey(user?.cpf ?? "");
+                else setPixKey("");
+              }}
+              className="w-4 h-4 accent-yellow-400"
+              data-testid="checkbox-pix-same-cpf"
+            />
+            <span className="text-xs text-zinc-400">O mesmo do CPF de cadastro</span>
+          </label>
           <Input
             type="text"
             placeholder="Sua chave PIX"
             value={pixKey}
-            onChange={e => setPixKey(e.target.value)}
-            className="bg-zinc-900 border-zinc-600 text-white"
+            onChange={e => { if (!useCpfAsKey) setPixKey(e.target.value); }}
+            readOnly={useCpfAsKey}
+            className={`bg-zinc-900 border-zinc-600 text-white ${useCpfAsKey ? "opacity-60 cursor-not-allowed" : ""}`}
             data-testid="input-withdraw-pix-key"
           />
         </div>
