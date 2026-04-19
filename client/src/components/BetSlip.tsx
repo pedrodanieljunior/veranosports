@@ -164,8 +164,9 @@ export function BetSlip({
   const totalOdds = roundOdds(computeTotalOdds(selections));
   const stakeNum = parseFloat(stake || "0");
   const hasBonusBalance = (user?.bonusBalance ?? 0) > 0;
+  const totalAvailableWithBonus = (user?.balance ?? 0) + (user?.bonusBalance ?? 0);
   const isInsufficientBalance = user !== null && stakeNum > 0 && (
-    useBonus ? (user?.bonusBalance ?? 0) < stakeNum : (user?.balance ?? 0) < stakeNum
+    useBonus ? totalAvailableWithBonus < stakeNum : (user?.balance ?? 0) < stakeNum
   );
 
   const comboApplies = checkIsComboBonus(selections);
@@ -578,7 +579,10 @@ export function BetSlip({
                     data-testid="checkbox-use-bonus"
                   />
                   <span className="text-sm text-green-300 font-semibold">
-                    🎁 Usar bônus (R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")} disponível)
+                    🎁 Usar bônus (R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")}
+                    {stakeNum > (user?.bonusBalance ?? 0) && stakeNum > 0
+                      ? <span className="text-zinc-400 font-normal"> + R$ {Math.max(0, stakeNum - (user?.bonusBalance ?? 0)).toFixed(2).replace(".", ",")} do saldo</span>
+                      : null})
                   </span>
                 </label>
               )}
@@ -588,7 +592,7 @@ export function BetSlip({
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   <span>
                     {useBonus
-                      ? `Bônus insuficiente. Disponível: R$ ${(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")}`
+                      ? `Saldo insuficiente. Total disponível: R$ ${totalAvailableWithBonus.toFixed(2).replace(".", ",")}`
                       : `Saldo insuficiente. Disponível: R$ ${(user?.balance ?? 0).toFixed(2).replace(".", ",")}`}
                   </span>
                 </div>

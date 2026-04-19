@@ -2214,16 +2214,28 @@ export async function registerRoutes(
         }
         const useBonus = !!(req.body as any).useBonus;
         if (useBonus) {
-          // Deduct from bonus balance
-          if (betUser.bonusBalance < validatedData.stake) {
+          // Use all available bonus first, then fill remainder from main balance
+          const bonusToUse = Math.min(betUser.bonusBalance, validatedData.stake);
+          const mainToUse = Math.round((validatedData.stake - bonusToUse) * 100) / 100;
+          const totalAvailable = Math.round((betUser.bonusBalance + betUser.balance) * 100) / 100;
+          if (totalAvailable < validatedData.stake) {
             return res.status(400).json({
-              error: `Saldo de bônus insuficiente. Seu bônus é R$${betUser.bonusBalance.toFixed(2).replace(".", ",")} e o valor da aposta é R$${validatedData.stake.toFixed(2).replace(".", ",")}.`,
+              error: `Saldo insuficiente. Disponível: R$${totalAvailable.toFixed(2).replace(".", ",")} (inclui bônus).`,
               isInsufficientBalance: true,
             });
           }
-          const newBonusBalance = Math.round((betUser.bonusBalance - validatedData.stake) * 100) / 100;
-          await storage.updateUserBonusBalance(sessionUserId, newBonusBalance);
-          (validatedData as any)._newBalanceAfterBet = betUser.balance;
+          if (bonusToUse > 0) {
+            const newBonusBalance = Math.round((betUser.bonusBalance - bonusToUse) * 100) / 100;
+            await storage.updateUserBonusBalance(sessionUserId, newBonusBalance);
+          }
+          let newMainBalance = betUser.balance;
+          if (mainToUse > 0) {
+            newMainBalance = Math.round((betUser.balance - mainToUse) * 100) / 100;
+            await storage.updateUserBalance(sessionUserId, newMainBalance);
+          }
+          (validatedData as any)._newBalanceAfterBet = newMainBalance;
+          (validatedData as any)._usedBonusAmt = bonusToUse;
+          (validatedData as any)._usedMainAmt = mainToUse;
           (validatedData as any)._usedBonus = true;
         } else {
           // Deduct from real balance
@@ -2251,8 +2263,16 @@ export async function registerRoutes(
           const currentUser = await storage.getUserByCpf(sessionUserId);
           if (currentUser) {
             if ((validatedData as any)._usedBonus) {
-              const refunded = Math.round((currentUser.bonusBalance + validatedData.stake) * 100) / 100;
-              await storage.updateUserBonusBalance(sessionUserId, refunded);
+              const bonusAmt = (validatedData as any)._usedBonusAmt ?? validatedData.stake;
+              const mainAmt = (validatedData as any)._usedMainAmt ?? 0;
+              if (bonusAmt > 0) {
+                const refundedBonus = Math.round((currentUser.bonusBalance + bonusAmt) * 100) / 100;
+                await storage.updateUserBonusBalance(sessionUserId, refundedBonus);
+              }
+              if (mainAmt > 0) {
+                const refundedMain = Math.round((currentUser.balance + mainAmt) * 100) / 100;
+                await storage.updateUserBalance(sessionUserId, refundedMain);
+              }
             } else {
               const refunded = Math.round((currentUser.balance + validatedData.stake) * 100) / 100;
               await storage.updateUserBalance(sessionUserId, refunded);
