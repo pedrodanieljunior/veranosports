@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Game, Selection } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -31,13 +32,42 @@ interface GameDetailModalProps {
   onToggleSelection: (selection: Selection) => void;
 }
 
+type MarketTab = "todos" | "gols" | "escanteios" | "cartoes" | "intervalos";
+
+const TABS: { id: MarketTab; label: string }[] = [
+  { id: "todos", label: "Todos" },
+  { id: "gols", label: "Gols" },
+  { id: "escanteios", label: "Escanteios" },
+  { id: "cartoes", label: "Cartões" },
+  { id: "intervalos", label: "Intervalos" },
+];
+
+const GOLS_MARKETS = ["Goals Over/Under", "Both Teams Score", "Team To Score First"];
+const ESCANTEIOS_MARKETS = ["Corners Over Under", "Total Corners"];
+const CARTOES_MARKETS = ["Red Card"];
+const INTERVALOS_MARKETS = ["HT/FT Double"];
+
+function matchesTab(marketName: string, tab: MarketTab): boolean {
+  if (tab === "todos") return true;
+  if (tab === "gols") return GOLS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
+  if (tab === "escanteios") return ESCANTEIOS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
+  if (tab === "cartoes") return CARTOES_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
+  if (tab === "intervalos") return INTERVALOS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
+  return false;
+}
+
 export function GameDetailModal({ game, open, onClose, selections, onToggleSelection }: GameDetailModalProps) {
   const { getBoostMultiplier, hasBoosted, getBoostPercent } = useMarketSettings();
+  const [activeTab, setActiveTab] = useState<MarketTab>("todos");
 
-  const extraMarketsQueryKey = game ? 
-    `/api/football/extra-markets?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&commenceTime=${encodeURIComponent(game.commenceTime)}&gameId=${encodeURIComponent(game.id)}` : 
+  useEffect(() => {
+    if (open) setActiveTab("todos");
+  }, [open]);
+
+  const extraMarketsQueryKey = game ?
+    `/api/football/extra-markets?homeTeam=${encodeURIComponent(game.homeTeam)}&awayTeam=${encodeURIComponent(game.awayTeam)}&commenceTime=${encodeURIComponent(game.commenceTime)}&gameId=${encodeURIComponent(game.id)}` :
     null;
-  
+
   const { data: extraMarkets, isLoading: loadingExtra, isError: errorExtra } = useQuery<ExtraMarketsResponse>({
     queryKey: [extraMarketsQueryKey],
     enabled: open && !!game && !!extraMarketsQueryKey,
@@ -46,29 +76,22 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   });
 
   if (!game) return null;
-  
+
   const gameDate = new Date(game.commenceTime);
-  
+
   const allMarkets: Record<string, { outcomes: any[]; bookmaker: string }> = {};
-  
   game.bookmakers.forEach((bookmaker) => {
     bookmaker.markets.forEach((market) => {
       if (!allMarkets[market.key]) {
-        allMarkets[market.key] = {
-          outcomes: market.outcomes,
-          bookmaker: bookmaker.title
-        };
+        allMarkets[market.key] = { outcomes: market.outcomes, bookmaker: bookmaker.title };
       }
     });
   });
-  
+
   const h2hMarket = allMarkets["h2h"];
-  
-  const isSelected = (outcomeName: string, marketKey: string) => {
-    return selections.some(
-      s => s.gameId === game.id && s.outcome === outcomeName && s.marketKey === marketKey
-    );
-  };
+
+  const isSelected = (outcomeName: string, marketKey: string) =>
+    selections.some(s => s.gameId === game.id && s.outcome === outcomeName && s.marketKey === marketKey);
 
   const selectionsForThisGame = selections.filter(s => s.gameId === game.id);
   const gameSelectionLimitReached = selectionsForThisGame.length >= 3;
@@ -136,16 +159,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       bookmaker,
       outcome: outcomeName,
       odds: finalOdds,
-      originalOdds: originalOdds,
+      originalOdds,
       result: "pending",
     };
     onToggleSelection(selection);
-  };
-
-  const marketLabels: Record<string, string> = {
-    h2h: "Resultado Final (1X2)",
-    spreads: "Handicap Asiático",
-    totals: "Total de Gols"
   };
 
   const renderExtraMarket = (market: ExtraMarket) => {
@@ -154,37 +171,34 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     const boostKey = marketKeyToBoostKey(marketKey);
     const isBoosted = hasBoosted(boostKey);
     const boostPct = getBoostPercent(boostKey);
-    
+
+    const filteredValues = market.values.filter((value) => {
+      if (market.name === "Team To Score First") {
+        return !["Draw", "No Goal", "Nenhum Gol", "Nenhum"].includes(value.value);
+      }
+      if (market.name === "Corners Over Under" || market.name === "Total Corners") {
+        return ["Over 8.5", "Under 8.5", "Over 9.5", "Under 9.5", "Over 10.5", "Under 10.5"].includes(value.value);
+      }
+      return true;
+    });
+
+    const colClass = filteredValues.length <= 2 ? 'grid-cols-2' : filteredValues.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3';
+
+    const translateHalf = (part: string) => {
+      if (part === "Home") return "Casa";
+      if (part === "Away") return "Fora";
+      if (part === "Draw") return "Empate";
+      return part;
+    };
+
     return (
       <div key={market.id} className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-200">{market.label}</span>
-        </div>
-        {(() => {
-          const filteredValues = market.values.filter((value) => {
-            if (market.name === "Team To Score First") {
-              return !["Draw", "No Goal", "Nenhum Gol", "Nenhum"].includes(value.value);
-            }
-            if (market.name === "Corners Over Under" || market.name === "Total Corners") {
-              return ["Over 8.5", "Under 8.5", "Over 9.5", "Under 9.5", "Over 10.5", "Under 10.5"].includes(value.value);
-            }
-            return true;
-          });
-          const colClass = filteredValues.length <= 2 ? 'grid-cols-2' : filteredValues.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3';
-          return (
+        <span className="text-sm font-semibold text-gray-200">{market.label}</span>
         <div className={`grid gap-2 ${colClass}`}>
           {filteredValues.map((value) => {
             const outcomeKey = `${market.name}-${value.value}`;
             const selected = isSelected(outcomeKey, marketKey);
             const displayOdd = isBoosted ? value.odd * getBoostMultiplier(boostKey) : value.odd;
-            
-            const translateHalf = (part: string) => {
-              if (part === "Home") return "Casa";
-              if (part === "Away") return "Fora";
-              if (part === "Draw") return "Empate";
-              return part;
-            };
-
             const isTeamToScoreFirst = market.name === "Team To Score First";
             let displayLabel = value.value;
             if (value.value === "Yes") displayLabel = "Sim";
@@ -201,10 +215,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               const parts = value.value.split("/");
               displayLabel = parts.map(translateHalf).join("/");
             }
-            
+
             const disabled = isButtonDisabled(outcomeKey, marketKey);
             const correlatedLocked = !selected && isCorrelatedLocked(boostKey);
-            const showLock = correlatedLocked;
             return (
               <button
                 key={value.value}
@@ -212,7 +225,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 disabled={disabled}
                 className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
                   disabled
-                    ? showLock
+                    ? correlatedLocked
                       ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
                       : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
                     : selected
@@ -221,18 +234,14 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 }`}
                 data-testid={`button-modal-extra-${market.id}-${value.value}`}
               >
-                {showLock && (
+                {correlatedLocked && !selected && (
                   <span className="absolute top-1 right-1">
                     <Lock className="w-3 h-3 text-gray-400" />
                   </span>
                 )}
-                <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">
-                  {displayLabel}
-                </span>
+                <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">{displayLabel}</span>
                 <div className="flex flex-col items-center">
-                  <span className="font-bold text-base text-[#f5c518]">
-                    {displayOdd.toFixed(2)}
-                  </span>
+                  <span className="font-bold text-base text-[#f5c518]">{displayOdd.toFixed(2)}</span>
                   {isBoosted && (
                     <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
                       {value.odd.toFixed(2)}
@@ -244,20 +253,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             );
           })}
         </div>
-          );
-        })()}
       </div>
     );
   };
 
-  const hasMainMarkets = !!h2hMarket;
-  const hasExtraMarkets = extraMarkets?.markets && extraMarkets.markets.length > 0;
-  const isLoadingAny = loadingExtra;
+  const showH2h = activeTab === "todos" || activeTab === "gols";
+  const filteredExtraMarkets = extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? [];
+  const hasContent = (showH2h && !!h2hMarket) || filteredExtraMarkets.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-[#333333] to-[#282828] text-gray-100 border-[#444]">
-        <DialogHeader className="p-4 border-b border-[#444] bg-[#333333]">
+        <DialogHeader className="p-4 pb-0 border-b border-[#444] bg-[#333333]">
           <div className="flex items-center gap-2 mb-2">
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <Clock className="w-3.5 h-3.5" />
@@ -270,19 +277,37 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
           <DialogTitle className="text-lg text-gray-100">
             {game.homeTeam} vs {game.awayTeam}
           </DialogTitle>
-          <DialogDescription className="text-xs text-gray-400">
+          <DialogDescription className="text-xs text-gray-400 mb-3">
             Selecione uma odd para adicionar ao bilhete
           </DialogDescription>
+
+          {/* Tab bar */}
+          <div className="flex gap-1 overflow-x-auto pb-0 -mx-4 px-4 scrollbar-none">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-yellow-400 text-yellow-400 bg-[#282828]"
+                    : "border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#2a2a2a]"
+                }`}
+                data-testid={`tab-market-${tab.id}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </DialogHeader>
-        
-        <ScrollArea className="max-h-[60vh]">
+
+        <ScrollArea className="max-h-[55vh]">
           <div className="p-4 space-y-6">
-            {h2hMarket && (
+
+            {/* H2H market — shown on Todos and Gols */}
+            {showH2h && h2hMarket && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-200">
-                    {marketLabels.h2h}
-                  </span>
+                  <span className="text-sm font-semibold text-gray-200">Resultado Final (1X2)</span>
                   <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-amber-500/40">
                     <Zap className="w-2.5 h-2.5 fill-black" />
                     Super Aumento Apostas simples
@@ -296,12 +321,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                     const displayOdd = Math.round((h2hBoosted ? outcome.price * getBoostMultiplier("h2h") : outcome.price) * 100) / 100;
                     const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
                     const isHome = outcome.name === game.homeTeam;
-                    const displayName = isDraw ? "Empate" : 
-                                        isHome ? game.homeTeam.substring(0, 10) : 
-                                        game.awayTeam.substring(0, 10);
+                    const displayName = isDraw ? "Empate" : isHome ? game.homeTeam.substring(0, 10) : game.awayTeam.substring(0, 10);
                     const disabled = isButtonDisabled(outcome.name, "h2h");
                     const correlatedLocked = !selected && isCorrelatedLocked("h2h");
-                    const showLock = correlatedLocked;
                     return (
                       <button
                         key={outcome.name}
@@ -309,7 +331,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         disabled={disabled}
                         className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
                           disabled
-                            ? showLock
+                            ? correlatedLocked
                               ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
                               : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
                             : selected
@@ -318,24 +340,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         }`}
                         data-testid={`button-modal-h2h-${outcome.name}`}
                       >
-                        {showLock && (
+                        {correlatedLocked && !selected && (
                           <span className="absolute top-1.5 right-1.5">
                             <Lock className="w-3 h-3 text-gray-400" />
                           </span>
                         )}
-                        <span className="text-xs text-gray-400 mb-1">
-                          {displayName}
-                        </span>
+                        <span className="text-xs text-gray-400 mb-1">{displayName}</span>
                         <div className="flex items-center gap-1">
-                          <span className="font-bold text-lg text-[#f5c518]">
-                            {displayOdd.toFixed(2)}
-                          </span>
+                          <span className="font-bold text-lg text-[#f5c518]">{displayOdd.toFixed(2)}</span>
                           {h2hBoosted && (h2hBoostPct > 0 ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />)}
                         </div>
                         {h2hBoosted && (
-                          <span className="text-[10px] text-gray-500 line-through">
-                            {outcome.price.toFixed(2)}
-                          </span>
+                          <span className="text-[10px] text-gray-500 line-through">{outcome.price.toFixed(2)}</span>
                         )}
                       </button>
                     );
@@ -343,44 +359,44 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 </div>
               </div>
             )}
-            
 
-            {/* Separator for API-Football extra markets */}
-            {hasMainMarkets && (hasExtraMarkets || loadingExtra) && (
-              <div className="flex items-center gap-3 py-2">
+            {/* Divider between main and extra markets */}
+            {showH2h && h2hMarket && filteredExtraMarkets.length > 0 && (
+              <div className="flex items-center gap-3 py-1">
                 <div className="flex-1 h-px bg-[#4a4a4a]" />
                 <span className="text-xs text-gray-400 font-medium">Mercados Extras</span>
                 <div className="flex-1 h-px bg-[#4a4a4a]" />
               </div>
             )}
 
-            {/* Loading state for extra markets */}
+            {/* Loading state */}
             {loadingExtra && (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                <span className="ml-2 text-sm text-gray-400">Carregando mercados extras...</span>
+                <span className="ml-2 text-sm text-gray-400">Carregando mercados...</span>
               </div>
             )}
 
-            {/* Error state for extra markets */}
-            {errorExtra && !isLoadingAny && (
+            {/* Error state */}
+            {errorExtra && !loadingExtra && (
               <div className="text-center py-4 text-gray-400">
-                <p className="text-sm">Alguns mercados extras não puderam ser carregados</p>
+                <p className="text-sm">Alguns mercados não puderam ser carregados</p>
               </div>
             )}
 
-            {/* Extra markets from API-Football */}
-            {hasExtraMarkets && extraMarkets.markets.map(renderExtraMarket)}
-            
-            {!hasMainMarkets && !hasExtraMarkets && !isLoadingAny && (
+            {/* Filtered extra markets */}
+            {filteredExtraMarkets.map(renderExtraMarket)}
+
+            {/* Empty state */}
+            {!loadingExtra && !hasContent && (
               <div className="text-center py-8 text-gray-400">
-                <p>Nenhum mercado disponível para este jogo</p>
+                <p className="text-sm">Nenhum mercado disponível nesta categoria</p>
               </div>
             )}
           </div>
         </ScrollArea>
-        
-        <div className="p-3 border-t border-[#444] bg-[#282828] space-y-1">
+
+        <div className="p-3 border-t border-[#444] bg-[#282828]">
           {gameSelectionLimitReached && (
             <p className="text-xs text-yellow-400 text-center font-semibold">
               Limite de 3 mercados por jogo atingido
