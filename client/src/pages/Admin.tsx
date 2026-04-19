@@ -721,6 +721,10 @@ export default function Admin() {
               <PieChart className="w-4 h-4 mr-2" />
               Financeiro
             </TabsTrigger>
+            <TabsTrigger value="pagamentos" data-testid="tab-pagamentos">
+              <Banknote className="w-4 h-4 mr-2" />
+              Pagamentos
+            </TabsTrigger>
             <TabsTrigger value="saques" data-testid="tab-saques">
               <MinusCircle className="w-4 h-4 mr-2" />
               Saques
@@ -1151,11 +1155,13 @@ export default function Admin() {
             </div>
           </TabsContent>
 
-          {/* ── SAQUES ────────────────────────────────────── */}
+          {/* ── PAGAMENTOS ─────────────────────────────────────── */}
+          <TabsContent value="pagamentos">
+            <UserWithdrawalsSection />
+          </TabsContent>
+
           <TabsContent value="saques">
             <div className="space-y-4">
-              {/* Solicitações de Saque dos Usuários */}
-              <UserWithdrawalsSection />
 
               {/* Formulário de novo saque */}
               <Card>
