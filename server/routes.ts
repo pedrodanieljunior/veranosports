@@ -761,6 +761,194 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
   ];
 }
 
+async function runCheckResults() {
+  const cornerStatsCache = new Map<number, number>();
+  const firstGoalCache   = new Map<number, string | null>();
+  const redCardCache     = new Map<number, boolean>();
+
+  const allBets = await storage.getAllBetSlips();
+  const pendingBets = allBets.filter(bet => bet.status === "pending");
+
+  if (pendingBets.length === 0) {
+    return { message: "Nenhum bilhete pendente", totalPending: 0, updated: 0, fixturesChecked: 0, results: [] };
+  }
+
+  const today = new Date();
+  let oldestGameDate = today;
+  let newestGameDate = new Date(0);
+
+  for (const bet of pendingBets) {
+    for (const selection of bet.selections) {
+      if (selection.commenceTime) {
+        const gameDate = new Date(selection.commenceTime);
+        if (gameDate < oldestGameDate) oldestGameDate = gameDate;
+        if (gameDate > newestGameDate) newestGameDate = gameDate;
+      }
+    }
+  }
+
+  if (newestGameDate.getTime() === 0) {
+    newestGameDate = today;
+    oldestGameDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  const fromDate = toManausDateStr(oldestGameDate.getTime() - 24 * 60 * 60 * 1000);
+  const toDate = toManausDateStr(Math.min(newestGameDate.getTime() + 24 * 60 * 60 * 1000, today.getTime()));
+
+  console.log(`[CheckResults] Buscando resultados de ${fromDate} até ${toDate}`);
+
+  const oldestYear = oldestGameDate.getFullYear();
+  const oldestMonth = oldestGameDate.getMonth();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const oldEuropeanSeason = oldestMonth < 7 ? oldestYear - 1 : oldestYear;
+  const currentEuropeanSeason = currentMonth < 7 ? currentYear - 1 : currentYear;
+  const oldBrazilianSeason = oldestYear;
+  const currentBrazilianSeason = currentYear;
+
+  const leaguesToCheck: { id: number; season: number }[] = [];
+  const addedPairs = new Set<string>();
+
+  for (const leagueId of Object.values(LEAGUE_MAPPING)) {
+    const isCalendar = CALENDAR_YEAR_LEAGUES.has(leagueId);
+    const mainSeason = isCalendar ? currentBrazilianSeason : currentEuropeanSeason;
+    const oldSeason  = isCalendar ? oldBrazilianSeason     : oldEuropeanSeason;
+    const mainKey = `${leagueId}-${mainSeason}`;
+    if (!addedPairs.has(mainKey)) { leaguesToCheck.push({ id: leagueId, season: mainSeason }); addedPairs.add(mainKey); }
+    if (oldSeason !== mainSeason) {
+      const oldKey = `${leagueId}-${oldSeason}`;
+      if (!addedPairs.has(oldKey)) { leaguesToCheck.push({ id: leagueId, season: oldSeason }); addedPairs.add(oldKey); }
+    }
+  }
+
+  let allFinishedFixtures: any[] = [];
+  for (const league of leaguesToCheck) {
+    try {
+      const response = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${fromDate}&to=${toDate}&status=FT`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY! } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.response) allFinishedFixtures = [...allFinishedFixtures, ...data.response];
+      }
+    } catch (err) {
+      console.log(`[CheckResults] Erro ao buscar liga ${league.id}:`, err);
+    }
+  }
+
+  let updatedCount = 0;
+  const results: any[] = [];
+
+  for (const bet of pendingBets) {
+    let allSelectionsResolved = true;
+    let allSelectionsWon = true;
+    let selectionsUpdated = false;
+
+    for (const selection of bet.selections) {
+      if (selection.result && selection.result !== "pending") {
+        if (selection.result === "lost") allSelectionsWon = false;
+        continue;
+      }
+
+      const matchingFixture = allFinishedFixtures.find((fixture: any) =>
+        teamsMatch(fixture.teams.home.name, selection.homeTeam) &&
+        teamsMatch(fixture.teams.away.name, selection.awayTeam)
+      );
+
+      if (!matchingFixture) { allSelectionsResolved = false; continue; }
+
+      const homeGoals = matchingFixture.goals.home;
+      const awayGoals = matchingFixture.goals.away;
+      const totalGoals = homeGoals + awayGoals;
+      const htHomeGoals = matchingFixture.score?.halftime?.home ?? null;
+      const htAwayGoals = matchingFixture.score?.halftime?.away ?? null;
+      const mk = selection.marketKey?.toLowerCase() || "";
+
+      const isCornerSelection =
+        mk.includes("corner") ||
+        selection.outcome?.toLowerCase().includes("corner") ||
+        selection.marketName?.toLowerCase().includes("escanteio") ||
+        selection.marketName?.toLowerCase().includes("corner");
+
+      let totalCorners: number | null = null;
+      if (isCornerSelection) {
+        const fixtureId = matchingFixture.fixture.id;
+        if (!cornerStatsCache.has(fixtureId)) {
+          try {
+            const statsRes = await fetch(`${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY! } });
+            if (statsRes.ok) {
+              const statsData = await statsRes.json();
+              let homeCorners = 0; let awayCorners = 0;
+              for (const teamStat of statsData.response || []) {
+                const cornerStat = (teamStat.statistics || []).find((s: any) => s.type === "Corner Kicks");
+                if (cornerStat) {
+                  const val = parseInt(cornerStat.value) || 0;
+                  if (teamsMatch(teamStat.team.name, matchingFixture.teams.home.name)) homeCorners = val; else awayCorners = val;
+                }
+              }
+              cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
+            }
+          } catch (err) { console.log(`[CheckResults] Erro escanteios fixture ${fixtureId}:`, err); }
+        }
+        totalCorners = cornerStatsCache.get(fixtureId) ?? null;
+      }
+
+      const isFirstScorerSelection = mk.includes("team to score first") || mk.includes("score first");
+      const isRedCardSelection = mk.includes("red card");
+      let firstScorerTeam: string | null = null;
+      let hasRedCard: boolean | null = null;
+
+      if (isFirstScorerSelection || isRedCardSelection) {
+        const fixtureId = matchingFixture.fixture.id;
+        if (!firstGoalCache.has(fixtureId)) {
+          try {
+            const evRes = await fetch(`${API_FOOTBALL_BASE}/fixtures/events?fixture=${fixtureId}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY! } });
+            if (evRes.ok) {
+              const evData = await evRes.json();
+              const events = evData.response || [];
+              const goalEvents = events.filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty").sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
+              firstGoalCache.set(fixtureId, goalEvents[0]?.team?.name ?? "");
+              redCardCache.set(fixtureId, events.some((e: any) => e.type === "Card" && e.detail === "Red Card"));
+            }
+          } catch (err) { firstGoalCache.set(matchingFixture.fixture.id, null); redCardCache.set(matchingFixture.fixture.id, false); }
+        }
+        firstScorerTeam = firstGoalCache.get(matchingFixture.fixture.id) ?? null;
+        hasRedCard = redCardCache.get(matchingFixture.fixture.id) ?? null;
+      }
+
+      const selectionWon = checkSelectionResult(selection, homeGoals, awayGoals, totalGoals, matchingFixture.teams.home.name, matchingFixture.teams.away.name, htHomeGoals, htAwayGoals, totalCorners, firstScorerTeam, hasRedCard);
+
+      if (selectionWon === null) {
+        allSelectionsWon = false;
+      } else {
+        await storage.updateSelectionResult(bet.id, selection.id, selectionWon ? "won" : "lost");
+        selectionsUpdated = true;
+        if (!selectionWon) allSelectionsWon = false;
+      }
+    }
+
+    if (allSelectionsResolved) {
+      const newStatus = allSelectionsWon ? "won" : "lost";
+      const updatedBetAuto = await storage.updateBetSlipStatus(bet.id, newStatus);
+      if (newStatus === "won" && bet.userId) {
+        const winUser = await storage.getUserByCpf(bet.userId);
+        if (winUser && updatedBetAuto) {
+          const credited = Math.round((winUser.balance + updatedBetAuto.potentialWin) * 100) / 100;
+          await storage.updateUserBalance(bet.userId, credited);
+          await storage.createTransaction({ userId: bet.userId, type: "win", amount: updatedBetAuto.potentialWin, balanceAfter: credited, description: `Aposta ganha`, referenceId: bet.id });
+        }
+      }
+      updatedCount++;
+      results.push({ betId: bet.id, oldStatus: "pending", newStatus, stake: bet.stake, potentialWin: bet.potentialWin });
+    } else if (selectionsUpdated) {
+      results.push({ betId: bet.id, oldStatus: "pending", newStatus: "pending (parcial)", stake: bet.stake, potentialWin: bet.potentialWin, note: "Algumas seleções atualizadas, aguardando outros jogos" });
+    }
+  }
+
+  return { message: "Verificação concluída", totalPending: pendingBets.length, updated: updatedCount, fixturesChecked: allFinishedFixtures.length, results };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -3005,322 +3193,33 @@ export async function registerRoutes(
   });
 
   // Admin: Verificar resultados e atualizar bilhetes automaticamente
-  app.post("/api/admin/check-results", async (req, res) => {
-    const cornerStatsCache = new Map<number, number>();       // fixtureId → totalCorners
-    const firstGoalCache   = new Map<number, string | null>(); // fixtureId → team que marcou primeiro (null = sem gol)
-    const redCardCache     = new Map<number, boolean>();       // fixtureId → houve cartão vermelho
+  app.post("/api/admin/check-results", async (_req, res) => {
     try {
       if (!API_FOOTBALL_KEY) {
         return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
-
-      // Buscar todos os bilhetes pendentes
-      const allBets = await storage.getAllBetSlips();
-      const pendingBets = allBets.filter(bet => bet.status === "pending");
-
-      if (pendingBets.length === 0) {
-        return res.json({ message: "Nenhum bilhete pendente", updated: 0 });
-      }
-
-      // Encontrar a data mais antiga e mais recente dos jogos nos bilhetes pendentes
-      const today = new Date();
-      let oldestGameDate = today;
-      let newestGameDate = new Date(0);
-      
-      for (const bet of pendingBets) {
-        for (const selection of bet.selections) {
-          if (selection.commenceTime) {
-            const gameDate = new Date(selection.commenceTime);
-            if (gameDate < oldestGameDate) oldestGameDate = gameDate;
-            if (gameDate > newestGameDate) newestGameDate = gameDate;
-          }
-        }
-      }
-      
-      // Se não encontrou datas válidas, usa os últimos 30 dias
-      if (newestGameDate.getTime() === 0) {
-        newestGameDate = today;
-        oldestGameDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-      }
-      
-      // Adicionar margem de 1 dia antes e depois
-      const fromDate = toManausDateStr(oldestGameDate.getTime() - 24 * 60 * 60 * 1000);
-      const toDate = toManausDateStr(Math.min(newestGameDate.getTime() + 24 * 60 * 60 * 1000, today.getTime()));
-      
-      console.log(`Buscando resultados de ${fromDate} até ${toDate}`);
-      
-      // Determinar a temporada com base na data mais antiga do jogo
-      const oldestYear = oldestGameDate.getFullYear();
-      const oldestMonth = oldestGameDate.getMonth();
-      const currentYear = today.getFullYear();
-      const currentMonth = today.getMonth();
-      
-      // Temporada europeia começa em agosto
-      const oldEuropeanSeason = oldestMonth < 7 ? oldestYear - 1 : oldestYear;
-      const currentEuropeanSeason = currentMonth < 7 ? currentYear - 1 : currentYear;
-      
-      // Para o Brasileirão usar o ano correto (temporada = ano do calendário)
-      const oldBrazilianSeason = oldestYear;
-      const currentBrazilianSeason = currentYear;
-
-      // Buscar resultados de TODAS as ligas ofertadas no site
-      const leaguesToCheck: {id: number, season: number}[] = [];
-      const addedPairs = new Set<string>();
-
-      for (const leagueId of Object.values(LEAGUE_MAPPING)) {
-        const isCalendar = CALENDAR_YEAR_LEAGUES.has(leagueId);
-        const mainSeason   = isCalendar ? currentBrazilianSeason   : currentEuropeanSeason;
-        const oldSeason    = isCalendar ? oldBrazilianSeason        : oldEuropeanSeason;
-
-        const mainKey = `${leagueId}-${mainSeason}`;
-        if (!addedPairs.has(mainKey)) {
-          leaguesToCheck.push({ id: leagueId, season: mainSeason });
-          addedPairs.add(mainKey);
-        }
-
-        if (oldSeason !== mainSeason) {
-          const oldKey = `${leagueId}-${oldSeason}`;
-          if (!addedPairs.has(oldKey)) {
-            leaguesToCheck.push({ id: leagueId, season: oldSeason });
-            addedPairs.add(oldKey);
-          }
-        }
-      }
-
-      const leagues = leaguesToCheck;
-      
-      let allFinishedFixtures: any[] = [];
-      
-      for (const league of leagues) {
-        try {
-          const response = await fetch(
-            `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${fromDate}&to=${toDate}&status=FT`,
-            { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-          );
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log(`Liga ${league.id} temporada ${league.season}: ${data.response?.length || 0} jogos`);
-            if (data.response) {
-              allFinishedFixtures = [...allFinishedFixtures, ...data.response];
-            }
-          }
-        } catch (err) {
-          console.log(`Erro ao buscar liga ${league.id}:`, err);
-        }
-      }
-
-      let updatedCount = 0;
-      const results: any[] = [];
-
-      // Verificar cada bilhete pendente
-      for (const bet of pendingBets) {
-        let allSelectionsResolved = true;
-        let allSelectionsWon = true;
-        let selectionsUpdated = false;
-        
-        console.log(`Processando bilhete ${bet.id} com ${bet.selections.length} seleções`);
-
-        for (const selection of bet.selections) {
-          console.log(`  Seleção: ${selection.homeTeam} vs ${selection.awayTeam} - resultado atual: ${selection.result}`);
-          
-          // Pular seleções que já têm resultado definido
-          if (selection.result && selection.result !== "pending") {
-            if (selection.result === "lost") allSelectionsWon = false;
-            continue;
-          }
-
-          // Tentar encontrar o jogo correspondente nos resultados
-          const matchingFixture = allFinishedFixtures.find((fixture: any) => {
-            const homeMatch = teamsMatch(fixture.teams.home.name, selection.homeTeam);
-            const awayMatch = teamsMatch(fixture.teams.away.name, selection.awayTeam);
-            
-            if (homeMatch && awayMatch) {
-              console.log(`    Match encontrado: ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${fixture.goals.home}-${fixture.goals.away})`);
-            }
-            return homeMatch && awayMatch;
-          });
-
-          if (!matchingFixture) {
-            // Jogo ainda não terminou ou não encontrado
-            console.log(`    Nenhum match encontrado para ${selection.homeTeam} vs ${selection.awayTeam}`);
-            allSelectionsResolved = false;
-            continue;
-          }
-
-          const homeGoals = matchingFixture.goals.home;
-          const awayGoals = matchingFixture.goals.away;
-          const totalGoals = homeGoals + awayGoals;
-          
-          // Dados do primeiro tempo (halftime)
-          const htHomeGoals = matchingFixture.score?.halftime?.home ?? null;
-          const htAwayGoals = matchingFixture.score?.halftime?.away ?? null;
-
-          // Buscar estatísticas de escanteios se necessário
-          const mk = selection.marketKey?.toLowerCase() || "";
-          const isCornerSelection =
-            mk.includes("corner") ||
-            selection.outcome?.toLowerCase().includes("corner") ||
-            selection.marketName?.toLowerCase().includes("escanteio") ||
-            selection.marketName?.toLowerCase().includes("corner");
-
-          let totalCorners: number | null = null;
-          if (isCornerSelection) {
-            const fixtureId = matchingFixture.fixture.id;
-            if (!cornerStatsCache.has(fixtureId)) {
-              try {
-                const statsRes = await fetch(
-                  `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fixtureId}`,
-                  { headers: { "x-apisports-key": API_FOOTBALL_KEY! } }
-                );
-                if (statsRes.ok) {
-                  const statsData = await statsRes.json();
-                  let homeCorners = 0;
-                  let awayCorners = 0;
-                  for (const teamStat of statsData.response || []) {
-                    const cornerStat = (teamStat.statistics || []).find(
-                      (s: any) => s.type === "Corner Kicks"
-                    );
-                    if (cornerStat) {
-                      const val = parseInt(cornerStat.value) || 0;
-                      if (teamsMatch(teamStat.team.name, matchingFixture.teams.home.name)) {
-                        homeCorners = val;
-                      } else {
-                        awayCorners = val;
-                      }
-                    }
-                  }
-                  cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
-                  console.log(`    Escanteios fixture ${fixtureId}: ${homeCorners}+${awayCorners}=${homeCorners + awayCorners}`);
-                }
-              } catch (err) {
-                console.log(`    Erro ao buscar stats de escanteios fixture ${fixtureId}:`, err);
-              }
-            }
-            totalCorners = cornerStatsCache.get(fixtureId) ?? null;
-          }
-
-          // Buscar eventos (primeiro gol + cartão vermelho) se necessário
-          const isFirstScorerSelection = mk.includes("team to score first") || mk.includes("score first");
-          const isRedCardSelection = mk.includes("red card");
-          const needsEvents = isFirstScorerSelection || isRedCardSelection;
-          let firstScorerTeam: string | null = null;
-          let hasRedCard: boolean | null = null;
-
-          if (needsEvents) {
-            const fixtureId = matchingFixture.fixture.id;
-            if (!firstGoalCache.has(fixtureId)) {
-              try {
-                const evRes = await fetch(
-                  `${API_FOOTBALL_BASE}/fixtures/events?fixture=${fixtureId}`,
-                  { headers: { "x-apisports-key": API_FOOTBALL_KEY! } }
-                );
-                if (evRes.ok) {
-                  const evData = await evRes.json();
-                  const events = evData.response || [];
-                  // Primeiro gol — "" = buscou mas não houve gol (0x0), null = falha de fetch
-                  const goalEvents = events
-                    .filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty")
-                    .sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
-                  firstGoalCache.set(fixtureId, goalEvents[0]?.team?.name ?? "");
-                  // Cartão vermelho
-                  const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
-                  redCardCache.set(fixtureId, redCards.length > 0);
-                  console.log(`    Eventos fixture ${fixtureId}: 1ºgol=${firstGoalCache.get(fixtureId) || "nenhum"}, redCard=${redCardCache.get(fixtureId)}`);
-                }
-              } catch (err) {
-                console.log(`    Erro ao buscar eventos fixture ${matchingFixture.fixture.id}:`, err);
-                firstGoalCache.set(matchingFixture.fixture.id, null);
-                redCardCache.set(matchingFixture.fixture.id, false);
-              }
-            }
-            firstScorerTeam = firstGoalCache.get(matchingFixture.fixture.id) ?? null;
-            hasRedCard = redCardCache.get(matchingFixture.fixture.id) ?? null;
-          }
-
-          // Verificar se a seleção ganhou baseado no tipo de mercado
-          // null = indeterminado (dados insuficientes) — não marcar, mantém pendente
-          const selectionWon = checkSelectionResult(
-            selection,
-            homeGoals,
-            awayGoals,
-            totalGoals,
-            matchingFixture.teams.home.name,
-            matchingFixture.teams.away.name,
-            htHomeGoals,
-            htAwayGoals,
-            totalCorners,
-            firstScorerTeam,
-            hasRedCard
-          );
-
-          if (selectionWon === null) {
-            console.log(`Seleção ${selection.homeTeam} vs ${selection.awayTeam}: indeterminada (dados insuficientes), permanece pendente`);
-            allSelectionsWon = false;
-          } else {
-            const selectionResult = selectionWon ? "won" : "lost";
-            await storage.updateSelectionResult(bet.id, selection.id, selectionResult);
-            selectionsUpdated = true;
-            console.log(`Seleção ${selection.homeTeam} vs ${selection.awayTeam}: ${selectionResult} (${homeGoals}-${awayGoals})`);
-            if (!selectionWon) {
-              allSelectionsWon = false;
-            }
-          }
-        }
-
-        // Se todos os jogos terminaram, atualizar o status do bilhete
-        if (allSelectionsResolved) {
-          const newStatus = allSelectionsWon ? "won" : "lost";
-          const updatedBetAuto = await storage.updateBetSlipStatus(bet.id, newStatus);
-          // Creditar saldo ao usuário se ganhou
-          if (newStatus === "won" && bet.userId) {
-            const winUser = await storage.getUserByCpf(bet.userId);
-            if (winUser && updatedBetAuto) {
-              const credited = Math.round((winUser.balance + updatedBetAuto.potentialWin) * 100) / 100;
-              await storage.updateUserBalance(bet.userId, credited);
-              await storage.createTransaction({
-                userId: bet.userId,
-                type: "win",
-                amount: updatedBetAuto.potentialWin,
-                balanceAfter: credited,
-                description: `Aposta ganha`,
-                referenceId: bet.id,
-              });
-            }
-          }
-          updatedCount++;
-          results.push({
-            betId: bet.id,
-            oldStatus: "pending",
-            newStatus,
-            stake: bet.stake,
-            potentialWin: bet.potentialWin
-          });
-        } else if (selectionsUpdated) {
-          // Mesmo que nem todos os jogos terminaram, registrar que houve atualização parcial
-          results.push({
-            betId: bet.id,
-            oldStatus: "pending",
-            newStatus: "pending (parcial)",
-            stake: bet.stake,
-            potentialWin: bet.potentialWin,
-            note: "Algumas seleções atualizadas, aguardando outros jogos"
-          });
-        }
-      }
-
-      res.json({
-        message: `Verificação concluída`,
-        totalPending: pendingBets.length,
-        updated: updatedCount,
-        fixturesChecked: allFinishedFixtures.length,
-        results
-      });
+      const result = await runCheckResults();
+      res.json(result);
     } catch (error) {
       console.error("Error checking results:", error);
       res.status(500).json({ error: "Erro ao verificar resultados" });
     }
   });
+
+  // Verificação automática a cada 5 minutos
+  const AUTO_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+  setInterval(async () => {
+    if (!API_FOOTBALL_KEY) return;
+    try {
+      log("[Auto] Verificando resultados pendentes...", "express");
+      const result = await runCheckResults();
+      if (result.updated > 0 || result.totalPending > 0) {
+        log(`[Auto] ${result.updated} bilhete(s) atualizado(s) de ${result.totalPending} pendente(s)`, "express");
+      }
+    } catch (err) {
+      log(`[Auto] Erro na verificação automática: ${err}`, "express");
+    }
+  }, AUTO_CHECK_INTERVAL_MS);
 
   // Admin: Atualizar status de um bilhete manualmente
   app.patch("/api/admin/bets/:id/status", async (req, res) => {
