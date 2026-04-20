@@ -492,7 +492,7 @@ export function BetSlip({
                 <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">
                   <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-orange-700 dark:text-orange-400">
-                    Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")} (saldo disponível no caixa)
+                    Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")}
                   </p>
                 </div>
               )}
