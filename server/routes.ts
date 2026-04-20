@@ -2270,6 +2270,28 @@ export async function registerRoutes(
     try {
       const dailyTotal = await storage.getDailyTotalPotentialWin();
       const dailyRemaining = Math.max(0, DAILY_LIMIT - dailyTotal);
+
+      // Calcular saldo do caixa (mesmo cálculo do painel admin)
+      const [allDeposits, allUsers, allBets, adminWithdrawals, userWithdrawals] = await Promise.all([
+        storage.getAllDeposits(),
+        storage.getAllUsers(),
+        storage.getAllBetSlips(),
+        storage.getWithdrawals(),
+        storage.getAllUserWithdrawals(),
+      ]);
+      const confirmedDeposits = allDeposits.filter((d: any) => d.status === "confirmed");
+      const entradasPix = confirmedDeposits.reduce((s: number, d: any) => s + d.amount, 0);
+      const bonusConcedidos = confirmedDeposits.reduce((s: number, d: any) => s + (d.bonusAmount ?? 0), 0);
+      const saldosClientes = allUsers.reduce((s: number, u: any) => s + u.balance + u.bonusBalance, 0);
+      const exposicao = allBets.filter((b: any) => b.status === "pending").reduce((s: number, b: any) => s + b.potentialWin, 0);
+      const totalSaquesAdmin = adminWithdrawals.reduce((s: number, w: any) => s + w.amount, 0);
+      const pagamentosUsuarios = userWithdrawals
+        .filter((w: any) => w.status === "paid" || w.status === "approved")
+        .reduce((s: number, w: any) => s + w.amount, 0);
+      const caixaBalance = Math.max(0,
+        DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios - bonusConcedidos
+      );
+
       res.json({
         dailyTotal,
         dailyLimit: DAILY_LIMIT,
@@ -2277,6 +2299,7 @@ export async function registerRoutes(
         maxBetPayout: MAX_BET_PAYOUT,
         maxMarketsPerGame: MAX_MARKETS_PER_GAME,
         isDailyLimitReached: dailyTotal >= DAILY_LIMIT,
+        caixaBalance,
       });
     } catch (error) {
       console.error("Error fetching limits:", error);

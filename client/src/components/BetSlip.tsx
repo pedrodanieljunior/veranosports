@@ -31,6 +31,7 @@ interface LimitsData {
   maxBetPayout: number;
   maxSelections: number;
   isDailyLimitReached: boolean;
+  caixaBalance: number;
 }
 
 interface BetSlipProps {
@@ -454,7 +455,12 @@ export function BetSlip({
               )}
 
               {gameLimitRemaining != null && gameLimitRemaining > 0 && selections.length === 1 && (() => {
-                const maxStake = Math.floor(gameLimitRemaining / totalOdds * 100) / 100;
+                const maxPayout = Math.min(
+                  MAX_BET_PAYOUT,
+                  gameLimitRemaining,
+                  limits?.caixaBalance != null ? limits.caixaBalance : Infinity
+                );
+                const maxStake = Math.floor(maxPayout / totalOdds * 100) / 100;
                 if (maxStake <= 0) return null;
                 return (
                   <div className="bg-amber-500/10 border border-amber-500/50 rounded-md p-3 flex items-center gap-3" data-testid="alert-game-limit-suggestion">
