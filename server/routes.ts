@@ -3211,13 +3211,12 @@ export async function registerRoutes(
   setInterval(async () => {
     if (!API_FOOTBALL_KEY) return;
     try {
-      log("[Auto] Verificando resultados pendentes...", "express");
       const result = await runCheckResults();
-      if (result.updated > 0 || result.totalPending > 0) {
-        log(`[Auto] ${result.updated} bilhete(s) atualizado(s) de ${result.totalPending} pendente(s)`, "express");
+      if (result.updated > 0) {
+        console.log(`[Auto] ${result.updated} bilhete(s) atualizado(s) de ${result.totalPending} pendente(s)`);
       }
     } catch (err) {
-      log(`[Auto] Erro na verificação automática: ${err}`, "express");
+      console.error(`[Auto] Erro na verificação automática:`, err);
     }
   }, AUTO_CHECK_INTERVAL_MS);
 
