@@ -129,6 +129,40 @@ interface GameLimitEntry {
 
 const SIMPLE_BET_GAME_LIMIT = 15000;
 
+function computeBetPayout(bet: { stake: number; selections: any[] }) {
+  const isCombo = checkIsComboBonus(bet.selections);
+  const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
+  const comboPct = isCombo ? getComboBonus(dc) : 0;
+  const baseOdds = computeTotalOdds(bet.selections);
+  const displayTotalOdds = isCombo
+    ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
+    : baseOdds;
+  const displayPotentialWin = Math.round(bet.stake * displayTotalOdds * 100) / 100;
+
+  const isSingleBoosted = !isCombo && bet.selections.length === 1 &&
+    bet.selections[0].originalOdds !== undefined &&
+    Math.abs((bet.selections[0].originalOdds ?? 0) - bet.selections[0].odds) > 0.001;
+
+  let baseReturn: number | null = null;
+  let bonusReturn: number | null = null;
+
+  if (isCombo && comboPct > 0) {
+    const baseOddsRounded = Math.round(baseOdds * 100) / 100;
+    baseReturn = Math.round(bet.stake * baseOddsRounded * 100) / 100;
+    bonusReturn = Math.round((displayPotentialWin - baseReturn) * 100) / 100;
+  } else if (isSingleBoosted) {
+    const origOdds = bet.selections[0].originalOdds as number;
+    baseReturn = Math.round(bet.stake * origOdds * 100) / 100;
+    bonusReturn = Math.round((displayPotentialWin - baseReturn) * 100) / 100;
+  }
+
+  return { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct };
+}
+
+function fmtBRL(n: number) {
+  return n.toFixed(2).replace(".", ",");
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -926,7 +960,17 @@ export default function Admin() {
                                   </div>
                                   <div className="text-right whitespace-nowrap">
                                     <p className="text-xs text-muted-foreground">Retorno</p>
-                                    <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{bet.potentialWin.toFixed(2)}</p>
+                                    {(() => {
+                                      const { displayPotentialWin, baseReturn, bonusReturn } = computeBetPayout(bet);
+                                      return (
+                                        <>
+                                          <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{fmtBRL(displayPotentialWin)}</p>
+                                          {baseReturn !== null && bonusReturn !== null && (
+                                            <p className="text-[10px] text-muted-foreground">R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}</p>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                   <Badge className={`${activeGroup.badgeCls} text-xs`}>
                                     Pago ✓
@@ -1666,22 +1710,26 @@ export default function Admin() {
                                 <DollarSign className="w-4 h-4 text-muted-foreground" />
                                 Aposta: <span className="font-bold">R$&nbsp;{bet.stake.toFixed(2)}</span>
                               </span>
-                              <span className="flex items-center gap-1 whitespace-nowrap">
-                                <TrendingUp className="w-4 h-4 text-primary" />
-                                Retorno: <span className="font-bold text-primary">R$&nbsp;{bet.potentialWin.toFixed(2)}</span>
-                              </span>
-                              <span className="text-muted-foreground whitespace-nowrap">
-                                {(() => {
-                                  if (checkIsComboBonus(bet.selections)) {
-                                    const base = bet.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
-                                    const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
-                                    const pct = getComboBonus(dc);
-                                    const pctStr = (pct * 100) % 1 === 0 ? `${(pct*100).toFixed(0)}%` : `${(pct*100).toFixed(1)}%`;
-                                    return <><span>Odd:&nbsp;{fmtOdds(base)}</span><span className="text-green-400 text-xs ml-1">(+{pctStr} combo)</span></>;
-                                  }
-                                  return <>Odd:&nbsp;{fmtOdds(bet.totalOdds)}</>;
-                                })()}
-                              </span>
+                              {(() => {
+                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct } = computeBetPayout(bet);
+                                const pctStr = comboPct > 0 ? ((comboPct * 100) % 1 === 0 ? `${(comboPct*100).toFixed(0)}%` : `${(comboPct*100).toFixed(1)}%`) : "";
+                                return (
+                                  <>
+                                    <span className="flex items-center gap-1 whitespace-nowrap">
+                                      <TrendingUp className="w-4 h-4 text-primary" />
+                                      Retorno:&nbsp;
+                                      <span className="font-bold text-primary">R$&nbsp;{fmtBRL(displayPotentialWin)}</span>
+                                      {baseReturn !== null && bonusReturn !== null && (
+                                        <span className="text-green-400 text-xs">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)})</span>
+                                      )}
+                                    </span>
+                                    <span className="text-muted-foreground whitespace-nowrap">
+                                      Odd:&nbsp;{fmtOdds(baseOdds)}
+                                      {isCombo && pctStr && <span className="text-green-400 text-xs ml-1">(+{pctStr} combo)</span>}
+                                    </span>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
 
@@ -3255,9 +3303,19 @@ function UsersTab() {
                                   {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : "Pendente"}
                                 </Badge>
                               </div>
-                              <div className="flex justify-between mt-1">
+                              <div className="flex justify-between mt-1 flex-wrap gap-1">
                                 <span>Stake: R$ {bet.stake.toFixed(2).replace(".", ",")}</span>
-                                <span className="text-green-600">Retorno: R$ {bet.potentialWin.toFixed(2).replace(".", ",")}</span>
+                                {(() => {
+                                  const { displayPotentialWin, baseReturn, bonusReturn } = computeBetPayout(bet);
+                                  return (
+                                    <span className="text-green-600">
+                                      Retorno: R$ {fmtBRL(displayPotentialWin)}
+                                      {baseReturn !== null && bonusReturn !== null && (
+                                        <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)})</span>
+                                      )}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             </div>
                           ))}
