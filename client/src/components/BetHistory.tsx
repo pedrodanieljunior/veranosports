@@ -194,16 +194,16 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className="text-muted-foreground text-sm">Odds total</span>
               <span className="text-foreground font-bold">{fmtOdds(baseOdds)}</span>
             </div>
-            {isCombo && comboPct > 0 && (
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
-                <span className="text-green-400 font-medium">+R$ {Math.max(0, bet.potentialWin - bet.stake * baseOdds).toFixed(2)}</span>
-              </div>
-            )}
             <div className="flex items-center justify-between px-4 py-2 border-b border-border">
               <span className="text-muted-foreground text-sm">Valor Apostado</span>
               <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
             </div>
+            {isCombo && comboPct > 0 && (
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
+                <span className="text-green-400 font-medium">+R$ {(bet.stake * baseOdds * comboPct).toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-muted-foreground text-sm">
                 {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
