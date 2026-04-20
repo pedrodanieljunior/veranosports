@@ -126,10 +126,6 @@ export function BetSlip({
     if (includePixCode && bet.pixCode) {
       lines.push(`\n📱 Código PIX:\n${bet.pixCode}`);
     }
-    if (includeFooter) {
-      lines.push(`\n📱 FW SPORTS`);
-      lines.push(`Caso sua aposta seja vencedora, entraremos em contato para informar o pagamento. Boa sorte!`);
-    }
     return lines;
   };
 
