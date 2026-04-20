@@ -156,7 +156,13 @@ function computeBetPayout(bet: { stake: number; selections: any[] }) {
     bonusReturn = Math.round((displayPotentialWin - baseReturn) * 100) / 100;
   }
 
-  return { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct };
+  const bonusLabel = isCombo && comboPct > 0
+    ? "bônus combinada"
+    : baseReturn !== null
+      ? "bônus super aumentada"
+      : "";
+
+  return { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct, bonusLabel };
 }
 
 function fmtBRL(n: number) {
@@ -961,12 +967,12 @@ export default function Admin() {
                                   <div className="text-right whitespace-nowrap">
                                     <p className="text-xs text-muted-foreground">Retorno</p>
                                     {(() => {
-                                      const { displayPotentialWin, baseReturn, bonusReturn } = computeBetPayout(bet);
+                                      const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet);
                                       return (
                                         <>
                                           <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{fmtBRL(displayPotentialWin)}</p>
                                           {baseReturn !== null && bonusReturn !== null && (
-                                            <p className="text-[10px] text-muted-foreground">R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}</p>
+                                            <p className="text-[10px] text-muted-foreground">R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel}</p>
                                           )}
                                         </>
                                       );
@@ -1711,7 +1717,7 @@ export default function Admin() {
                                 Aposta: <span className="font-bold">R$&nbsp;{bet.stake.toFixed(2)}</span>
                               </span>
                               {(() => {
-                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct } = computeBetPayout(bet);
+                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct, bonusLabel } = computeBetPayout(bet);
                                 const pctStr = comboPct > 0 ? ((comboPct * 100) % 1 === 0 ? `${(comboPct*100).toFixed(0)}%` : `${(comboPct*100).toFixed(1)}%`) : "";
                                 return (
                                   <>
@@ -1720,7 +1726,7 @@ export default function Admin() {
                                       Retorno:&nbsp;
                                       <span className="font-bold text-primary">R$&nbsp;{fmtBRL(displayPotentialWin)}</span>
                                       {baseReturn !== null && bonusReturn !== null && (
-                                        <span className="text-green-400 text-xs">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)})</span>
+                                        <span className="text-green-400 text-xs">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel})</span>
                                       )}
                                     </span>
                                     <span className="text-muted-foreground whitespace-nowrap">
@@ -3306,12 +3312,12 @@ function UsersTab() {
                               <div className="flex justify-between mt-1 flex-wrap gap-1">
                                 <span>Stake: R$ {bet.stake.toFixed(2).replace(".", ",")}</span>
                                 {(() => {
-                                  const { displayPotentialWin, baseReturn, bonusReturn } = computeBetPayout(bet);
+                                  const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet);
                                   return (
                                     <span className="text-green-600">
                                       Retorno: R$ {fmtBRL(displayPotentialWin)}
                                       {baseReturn !== null && bonusReturn !== null && (
-                                        <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)})</span>
+                                        <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel})</span>
                                       )}
                                     </span>
                                   );
