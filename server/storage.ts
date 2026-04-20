@@ -115,10 +115,12 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createBetSlip(data: InsertBetSlip): Promise<BetSlip> {
+  async createBetSlip(data: InsertBetSlip & { _totalOdds?: number; _potentialWin?: number }): Promise<BetSlip> {
     const id = randomUUID();
-    const totalOdds = data.selections.reduce((acc, sel) => acc * sel.odds, 1);
-    const potentialWin = data.stake * totalOdds;
+    // Use pre-calculated values from routes (which correctly handle combo/boost logic)
+    // Fallback to simple multiply only if not provided
+    const totalOdds = (data as any)._totalOdds ?? data.selections.reduce((acc, sel) => acc * sel.odds, 1);
+    const potentialWin = (data as any)._potentialWin ?? data.stake * totalOdds;
     
     const [result] = await db.insert(betSlipsTable).values({
       id,

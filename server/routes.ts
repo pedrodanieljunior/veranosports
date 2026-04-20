@@ -2255,7 +2255,7 @@ export async function registerRoutes(
 
       let betSlip;
       try {
-        betSlip = await storage.createBetSlip({ ...validatedData, verified: true });
+        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin } as any);
       } catch (createErr) {
         // Rollback: reembolsar saldo caso a criação do bilhete falhe
         if (sessionUserId) {
