@@ -2266,31 +2266,35 @@ export async function registerRoutes(
     }, autoCheckIntervalMs);
   }
 
+  async function computeCaixaBalance(): Promise<number> {
+    const [allDeposits, allUsers, allBets, adminWithdrawals, userWithdrawals] = await Promise.all([
+      storage.getAllDeposits(),
+      storage.getAllUsers(),
+      storage.getAllBetSlips(),
+      storage.getWithdrawals(),
+      storage.getAllUserWithdrawals(),
+    ]);
+    const confirmedDeposits = allDeposits.filter((d: any) => d.status === "confirmed");
+    const entradasPix = confirmedDeposits.reduce((s: number, d: any) => s + d.amount, 0);
+    const bonusConcedidos = confirmedDeposits.reduce((s: number, d: any) => s + (d.bonusAmount ?? 0), 0);
+    const saldosClientes = allUsers.reduce((s: number, u: any) => s + u.balance + u.bonusBalance, 0);
+    const exposicao = allBets.filter((b: any) => b.status === "pending").reduce((s: number, b: any) => s + b.potentialWin, 0);
+    const totalSaquesAdmin = adminWithdrawals.reduce((s: number, w: any) => s + w.amount, 0);
+    const pagamentosUsuarios = userWithdrawals
+      .filter((w: any) => w.status === "paid" || w.status === "approved")
+      .reduce((s: number, w: any) => s + w.amount, 0);
+    return Math.max(0,
+      DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios - bonusConcedidos
+    );
+  }
+
   app.get("/api/limits", async (req, res) => {
     try {
-      const dailyTotal = await storage.getDailyTotalPotentialWin();
-      const dailyRemaining = Math.max(0, DAILY_LIMIT - dailyTotal);
-
-      // Calcular saldo do caixa (mesmo cálculo do painel admin)
-      const [allDeposits, allUsers, allBets, adminWithdrawals, userWithdrawals] = await Promise.all([
-        storage.getAllDeposits(),
-        storage.getAllUsers(),
-        storage.getAllBetSlips(),
-        storage.getWithdrawals(),
-        storage.getAllUserWithdrawals(),
+      const [dailyTotal, caixaBalance] = await Promise.all([
+        storage.getDailyTotalPotentialWin(),
+        computeCaixaBalance(),
       ]);
-      const confirmedDeposits = allDeposits.filter((d: any) => d.status === "confirmed");
-      const entradasPix = confirmedDeposits.reduce((s: number, d: any) => s + d.amount, 0);
-      const bonusConcedidos = confirmedDeposits.reduce((s: number, d: any) => s + (d.bonusAmount ?? 0), 0);
-      const saldosClientes = allUsers.reduce((s: number, u: any) => s + u.balance + u.bonusBalance, 0);
-      const exposicao = allBets.filter((b: any) => b.status === "pending").reduce((s: number, b: any) => s + b.potentialWin, 0);
-      const totalSaquesAdmin = adminWithdrawals.reduce((s: number, w: any) => s + w.amount, 0);
-      const pagamentosUsuarios = userWithdrawals
-        .filter((w: any) => w.status === "paid" || w.status === "approved")
-        .reduce((s: number, w: any) => s + w.amount, 0);
-      const caixaBalance = Math.max(0,
-        DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios - bonusConcedidos
-      );
+      const dailyRemaining = Math.max(0, DAILY_LIMIT - dailyTotal);
 
       res.json({
         dailyTotal,
@@ -2298,7 +2302,7 @@ export async function registerRoutes(
         dailyRemaining,
         maxBetPayout: MAX_BET_PAYOUT,
         maxMarketsPerGame: MAX_MARKETS_PER_GAME,
-        isDailyLimitReached: dailyTotal >= DAILY_LIMIT,
+        isDailyLimitReached: caixaBalance <= 0,
         caixaBalance,
       });
     } catch (error) {
@@ -2400,9 +2404,9 @@ export async function registerRoutes(
         }
       }
 
-      const dailyTotal = await storage.getDailyTotalPotentialWin();
+      const caixaAtual = await computeCaixaBalance();
 
-      if (dailyTotal >= DAILY_LIMIT) {
+      if (caixaAtual <= 0) {
         return res.status(400).json({
           error: "Para assegurar os pagamentos das apostas já feitas, o painel retomará em algumas horas.",
           isDailyLimitReached: true,
@@ -2430,10 +2434,9 @@ export async function registerRoutes(
         });
       }
 
-      const dailyRemaining = DAILY_LIMIT - dailyTotal;
       let cappedByDaily = false;
-      if (potentialWin > dailyRemaining) {
-        potentialWin = dailyRemaining;
+      if (potentialWin > caixaAtual) {
+        potentialWin = caixaAtual;
         cappedByDaily = true;
       }
 

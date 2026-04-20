@@ -187,8 +187,9 @@ export function BetSlip({
     ? returnWithoutBonus * (1 + comboBonusPct) > MAX_BET_PAYOUT
     : stakeNum * totalOdds > MAX_BET_PAYOUT;
 
-  const isNearDailyLimit = limits && displayPotentialWin > limits.dailyRemaining && limits.dailyRemaining > 0;
-  const isDailyLimitReached = limits?.isDailyLimitReached ?? false;
+  const caixaBalance = limits?.caixaBalance ?? Infinity;
+  const isNearCaixaLimit = limits != null && caixaBalance < Infinity && displayPotentialWin > caixaBalance && caixaBalance > 0;
+  const isDailyLimitReached = (limits?.isDailyLimitReached ?? false) || (limits != null && caixaBalance <= 0);
   
   const handlePlaceBet = () => {
     const stakeValue = parseFloat(stake);
@@ -487,11 +488,11 @@ export function BetSlip({
                 );
               })()}
 
-              {isNearDailyLimit && !isCappedAtMax && (
+              {isNearCaixaLimit && !isCappedAtMax && (
                 <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">
                   <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-orange-700 dark:text-orange-400">
-                    Os ganhos máximos desta aposta são de R$ {limits!.dailyRemaining.toFixed(2)} (limite diário restante)
+                    Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")} (saldo disponível no caixa)
                   </p>
                 </div>
               )}
