@@ -31,6 +31,14 @@ function BetCard({ bet }: { bet: BetSlipType }) {
   }
   const distinctGames = Object.keys(grouped);
   const firstGame = bet.selections[0];
+  const distinctGameCount = new Set(bet.selections.map(s => s.gameId)).size;
+  const comboPct = isCombo ? getComboBonus(distinctGameCount) : 0;
+  const baseOdds = isCombo
+    ? bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
+    : bet.totalOdds;
+  const comboBonusPctStr = (comboPct * 100) % 1 === 0
+    ? `${(comboPct * 100).toFixed(0)}%`
+    : `${(comboPct * 100).toFixed(1)}%`;
 
   const shareBet = async () => {
     const gameGrouped: Record<string, Selection[]> = {};
@@ -57,7 +65,10 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       }
       lines.push("");
     }
-    lines.push(`📊 Odds Total: ${fmtOdds(bet.totalOdds)}`);
+    const shareBaseOdds = isCombo
+      ? bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
+      : bet.totalOdds;
+    lines.push(`📊 Odds Total: ${fmtOdds(shareBaseOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     const isSingleH2H = bet.selections.length === 1 &&
       (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
@@ -181,8 +192,14 @@ function BetCard({ bet }: { bet: BetSlipType }) {
           <div className="rounded-xl bg-muted border border-border overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
               <span className="text-muted-foreground text-sm">Odds total</span>
-              <span className="text-foreground font-bold">{fmtOdds(bet.totalOdds)}</span>
+              <span className="text-foreground font-bold">{fmtOdds(baseOdds)}</span>
             </div>
+            {isCombo && comboPct > 0 && (
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
+                <span className="text-green-400 font-medium">+R$ {Math.max(0, bet.potentialWin - bet.stake * baseOdds).toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between px-4 py-2 border-b border-border">
               <span className="text-muted-foreground text-sm">Valor Apostado</span>
               <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal } from "@shared/schema";
-import { computeTotalOdds, checkIsComboBonus } from "@shared/oddsUtils";
+import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1671,7 +1671,16 @@ export default function Admin() {
                                 Retorno: <span className="font-bold text-primary">R$&nbsp;{bet.potentialWin.toFixed(2)}</span>
                               </span>
                               <span className="text-muted-foreground whitespace-nowrap">
-                                Odd:&nbsp;{fmtOdds(bet.totalOdds)}
+                                {(() => {
+                                  if (checkIsComboBonus(bet.selections)) {
+                                    const base = bet.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
+                                    const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
+                                    const pct = getComboBonus(dc);
+                                    const pctStr = (pct * 100) % 1 === 0 ? `${(pct*100).toFixed(0)}%` : `${(pct*100).toFixed(1)}%`;
+                                    return <><span>Odd:&nbsp;{fmtOdds(base)}</span><span className="text-green-400 text-xs ml-1">(+{pctStr} combo)</span></>;
+                                  }
+                                  return <>Odd:&nbsp;{fmtOdds(bet.totalOdds)}</>;
+                                })()}
                               </span>
                             </div>
                           </div>
