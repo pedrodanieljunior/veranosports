@@ -50,9 +50,11 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     const isCombo = checkIsComboBonus(bet.selections);
     const distinctGames = new Set(bet.selections.map(s => s.gameId)).size;
     const comboPct = isCombo ? getComboBonus(distinctGames) : 0;
-    const baseReturn = isCombo
-      ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
+    const rawShareBaseOdds = isCombo
+      ? bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
+    const displayedShareBaseOdds = Math.round(rawShareBaseOdds * 100) / 100;
+    const baseReturn = isCombo ? bet.stake * displayedShareBaseOdds : 0;
     const bonusPctStr = (comboPct * 100) % 1 === 0
       ? `${(comboPct * 100).toFixed(0)}%`
       : `${(comboPct * 100).toFixed(1)}%`;
@@ -198,12 +200,16 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className="text-muted-foreground text-sm">Valor Apostado</span>
               <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
             </div>
-            {isCombo && comboPct > 0 && (
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
-                <span className="text-green-400 font-medium">+R$ {(bet.potentialWin - Math.round(bet.stake * baseOdds * 100) / 100).toFixed(2)}</span>
-              </div>
-            )}
+            {isCombo && comboPct > 0 && (() => {
+              const displayedBaseOdds = Math.round(baseOdds * 100) / 100;
+              const bonusAmt = (bet.potentialWin - bet.stake * displayedBaseOdds).toFixed(2);
+              return (
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                  <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
+                  <span className="text-green-400 font-medium">+R$ {bonusAmt}</span>
+                </div>
+              );
+            })()}
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-muted-foreground text-sm">
                 {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}

@@ -2180,9 +2180,9 @@ export async function registerRoutes(
         const bonusPct = getComboBonus(distinctGameCount);
         const baseOdds = validatedData.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
         const rawTotalOdds = baseOdds * (1 + bonusPct);
-        totalOdds = Math.round(rawTotalOdds * 100) / 100;
-        // Use rawTotalOdds (not rounded) so potentialWin = stake×baseOdds + bonus without rounding loss
-        potentialWin = Math.round(validatedData.stake * rawTotalOdds * 100) / 100;
+        // Use floor so totalOdds truncates (not rounds up) — potentialWin = stake × floor(totalOdds)
+        totalOdds = Math.floor(rawTotalOdds * 100) / 100;
+        potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
       } else {
         totalOdds = Math.round(computeTotalOdds(validatedData.selections) * 100) / 100;
         potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
