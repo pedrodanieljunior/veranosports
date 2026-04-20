@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
-import { checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
+import { checkIsComboBonus, getComboBonus, computeTotalOdds } from "@shared/oddsUtils";
 import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface BetHistoryProps {
@@ -33,9 +33,12 @@ function BetCard({ bet }: { bet: BetSlipType }) {
   const firstGame = bet.selections[0];
   const distinctGameCount = new Set(bet.selections.map(s => s.gameId)).size;
   const comboPct = isCombo ? getComboBonus(distinctGameCount) : 0;
-  const baseOdds = isCombo
-    ? bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
-    : bet.totalOdds;
+  // Always compute odds from selections (correct for multi-market h2h originalOdds, combo, single boost)
+  const baseOdds = computeTotalOdds(bet.selections);
+  const displayTotalOdds = isCombo
+    ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
+    : baseOdds;
+  const displayPotentialWin = Math.round(bet.stake * displayTotalOdds * 100) / 100;
   const comboBonusPctStr = (comboPct * 100) % 1 === 0
     ? `${(comboPct * 100).toFixed(0)}%`
     : `${(comboPct * 100).toFixed(1)}%`;
@@ -50,10 +53,9 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     const isCombo = checkIsComboBonus(bet.selections);
     const distinctGames = new Set(bet.selections.map(s => s.gameId)).size;
     const comboPct = isCombo ? getComboBonus(distinctGames) : 0;
-    const rawShareBaseOdds = isCombo
-      ? bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
-      : 0;
-    const displayedShareBaseOdds = Math.round(rawShareBaseOdds * 100) / 100;
+    // computeTotalOdds correctly handles combo (originalOdds), multi-market h2h (originalOdds), single boost
+    const shareComputedBaseOdds = computeTotalOdds(bet.selections);
+    const displayedShareBaseOdds = Math.round(shareComputedBaseOdds * 100) / 100;
     const baseReturn = isCombo ? bet.stake * displayedShareBaseOdds : 0;
     const bonusPctStr = (comboPct * 100) % 1 === 0
       ? `${(comboPct * 100).toFixed(0)}%`
@@ -67,10 +69,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       }
       lines.push("");
     }
-    const shareBaseOdds = isCombo
-      ? bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
-      : bet.totalOdds;
-    lines.push(`📊 Odds Total: ${fmtOdds(shareBaseOdds)}`);
+    lines.push(`📊 Odds Total: ${fmtOdds(shareComputedBaseOdds)}`);
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     const isSingleH2H = bet.selections.length === 1 &&
       (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
@@ -85,9 +84,9 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     if (isCombo && comboPct > 0) {
       lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${distinctGames} jogos)`);
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
-      lines.push(`  Com bônus: R$ ${bet.potentialWin.toFixed(2)}`);
+      lines.push(`  Com bônus: R$ ${displayPotentialWin.toFixed(2)}`);
     }
-    lines.push(`🏆 Retorno: R$ ${bet.potentialWin.toFixed(2)}`);
+    lines.push(`🏆 Retorno: R$ ${displayPotentialWin.toFixed(2)}`);
     lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
     lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
     lines.push(`\n📱 FW SPORTS`);
@@ -142,7 +141,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${st.cls}`}>
                 {st.icon}{st.label}
               </span>
-              <span className="text-yellow-400 font-bold text-xs">R$ {bet.potentialWin.toFixed(2).replace(".", ",")}</span>
+              <span className="text-yellow-400 font-bold text-xs">R$ {displayPotentialWin.toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -155,7 +154,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
           <div className="space-y-3">
             {Object.entries(grouped).map(([gameId, sels]) => {
               const first = sels[0];
-              const gameOdds = fmtOdds(sels.reduce((a, s) => a * (isCombo ? (s.originalOdds ?? s.odds) : s.odds), 1));
+              const gameOdds = fmtOdds(computeTotalOdds(sels, isCombo));
               return (
                 <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
                   <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
@@ -202,7 +201,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
             </div>
             {isCombo && comboPct > 0 && (() => {
               const displayedBaseOdds = Math.round(baseOdds * 100) / 100;
-              const bonusAmt = (bet.potentialWin - bet.stake * displayedBaseOdds).toFixed(2);
+              const bonusAmt = (displayPotentialWin - bet.stake * displayedBaseOdds).toFixed(2);
               return (
                 <div className="flex items-center justify-between px-4 py-2 border-b border-border">
                   <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
@@ -215,7 +214,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
                 {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
               </span>
               <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
-                R$ {bet.potentialWin.toFixed(2)}
+                R$ {displayPotentialWin.toFixed(2)}
               </span>
             </div>
           </div>
