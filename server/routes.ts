@@ -2174,15 +2174,19 @@ export async function registerRoutes(
       }
 
       let totalOdds: number;
+      let potentialWin: number;
       if (checkIsComboBonus(validatedData.selections)) {
         const distinctGameCount = new Set(validatedData.selections.map((s: any) => s.gameId)).size;
         const bonusPct = getComboBonus(distinctGameCount);
         const baseOdds = validatedData.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
-        totalOdds = Math.round(baseOdds * (1 + bonusPct) * 100) / 100;
+        const rawTotalOdds = baseOdds * (1 + bonusPct);
+        totalOdds = Math.round(rawTotalOdds * 100) / 100;
+        // Use rawTotalOdds (not rounded) so potentialWin = stake×baseOdds + bonus without rounding loss
+        potentialWin = Math.round(validatedData.stake * rawTotalOdds * 100) / 100;
       } else {
         totalOdds = Math.round(computeTotalOdds(validatedData.selections) * 100) / 100;
+        potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
       }
-      let potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
 
       if (potentialWin > MAX_BET_PAYOUT) {
         return res.status(400).json({

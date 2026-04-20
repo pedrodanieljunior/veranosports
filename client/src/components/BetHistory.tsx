@@ -201,7 +201,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
             {isCombo && comboPct > 0 && (
               <div className="flex items-center justify-between px-4 py-2 border-b border-border">
                 <span className="text-green-400 text-sm">⚡ Bônus Combinada (+{comboBonusPctStr})</span>
-                <span className="text-green-400 font-medium">+R$ {(bet.stake * baseOdds * comboPct).toFixed(2)}</span>
+                <span className="text-green-400 font-medium">+R$ {(bet.potentialWin - Math.round(bet.stake * baseOdds * 100) / 100).toFixed(2)}</span>
               </div>
             )}
             <div className="flex items-center justify-between px-4 py-2">
