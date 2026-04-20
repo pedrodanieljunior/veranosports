@@ -248,7 +248,7 @@ export function BetSlip({
                 <div className="bg-orange-500/10 border border-orange-500 rounded-md p-3 flex items-start gap-2 text-left w-full" data-testid="alert-capped-daily">
                   <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-orange-700 dark:text-orange-400">
-                    Ganhos limitados ao valor restante do limite diário: R$ {placedBet.potentialWin.toFixed(2)}
+                    Ganhos ajustados ao saldo disponível: R$ {placedBet.potentialWin.toFixed(2).replace(".", ",")}
                   </p>
                 </div>
               )}

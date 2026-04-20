@@ -2563,7 +2563,6 @@ export async function registerRoutes(
         pixQrCode: qrCodeDataUrl,
         cappedAtMax: betSlip.potentialWin !== potentialWin && potentialWin === MAX_BET_PAYOUT,
         cappedByDaily,
-        dailyRemaining: dailyRemaining - potentialWin,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
