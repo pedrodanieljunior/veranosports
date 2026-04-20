@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Game, Selection } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { TeamBadge } from "@/components/TeamBadge";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, TrendingUp, TrendingDown, Loader2, Zap, Lock } from "lucide-react";
@@ -274,8 +275,14 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               {game.sportTitle}
             </Badge>
           </div>
-          <DialogTitle className="text-lg text-gray-100">
-            {game.homeTeam} vs {game.awayTeam}
+          <DialogTitle className="text-base text-gray-100">
+            <div className="flex items-center gap-2 flex-wrap">
+              <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
+              <span>{game.homeTeam}</span>
+              <span className="text-gray-400 font-normal text-sm">vs</span>
+              <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
+              <span>{game.awayTeam}</span>
+            </div>
           </DialogTitle>
           <DialogDescription className="text-xs text-gray-400 mb-3">
             Selecione uma odd para adicionar ao bilhete
