@@ -1717,8 +1717,7 @@ export default function Admin() {
                                 Aposta: <span className="font-bold">R$&nbsp;{bet.stake.toFixed(2)}</span>
                               </span>
                               {(() => {
-                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, isCombo, comboPct, bonusLabel } = computeBetPayout(bet);
-                                const pctStr = comboPct > 0 ? ((comboPct * 100) % 1 === 0 ? `${(comboPct*100).toFixed(0)}%` : `${(comboPct*100).toFixed(1)}%`) : "";
+                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, bonusLabel } = computeBetPayout(bet);
                                 return (
                                   <>
                                     <span className="flex items-center gap-1 whitespace-nowrap">
@@ -1731,7 +1730,6 @@ export default function Admin() {
                                     </span>
                                     <span className="text-muted-foreground whitespace-nowrap">
                                       Odd:&nbsp;{fmtOdds(baseOdds)}
-                                      {isCombo && pctStr && <span className="text-green-400 text-xs ml-1">(+{pctStr} combo)</span>}
                                     </span>
                                   </>
                                 );
