@@ -190,6 +190,10 @@ export function BetSlip({
   const caixaBalance = limits?.caixaBalance ?? Infinity;
   const isNearCaixaLimit = limits != null && caixaBalance < Infinity && displayPotentialWin > caixaBalance && caixaBalance > 0;
   const isDailyLimitReached = (limits?.isDailyLimitReached ?? false) || (limits != null && caixaBalance <= 0);
+
+  const maxSuggestedStake = totalOdds > 0 && caixaBalance < Infinity
+    ? Math.floor(Math.min(caixaBalance / totalOdds, MAX_BET_PAYOUT / totalOdds) * 100) / 100
+    : 0;
   
   const handlePlaceBet = () => {
     const stakeValue = parseFloat(stake);
@@ -491,9 +495,21 @@ export function BetSlip({
               {isNearCaixaLimit && !isCappedAtMax && (
                 <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">
                   <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-orange-700 dark:text-orange-400">
-                    Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")}
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-orange-700 dark:text-orange-400">
+                      Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")}
+                    </p>
+                    {maxSuggestedStake > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setStake(maxSuggestedStake.toFixed(2))}
+                        className="text-xs text-orange-600 dark:text-orange-300 underline text-left hover:text-orange-500"
+                        data-testid="button-use-max-stake"
+                      >
+                        Usar valor máximo: R$ {maxSuggestedStake.toFixed(2).replace(".", ",")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
               
