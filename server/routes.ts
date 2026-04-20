@@ -1376,6 +1376,15 @@ export async function registerRoutes(
     res.json({ ok: true });
   });
 
+  app.post("/api/admin/reset-caixa", async (_req, res) => {
+    try {
+      await storage.resetCaixa();
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message ?? "Erro ao zerar caixa" });
+    }
+  });
+
   app.get("/api/sports", async (req, res) => {
     try {
       // Lista estática — sem chamada à API externa, sem consumir cota

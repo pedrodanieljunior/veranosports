@@ -66,6 +66,7 @@ import {
   UserCheck,
   Search,
   Settings,
+  RotateCcw,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -543,6 +544,24 @@ export default function Admin() {
         description: "Não foi possível atualizar a verificação.",
         variant: "destructive",
       });
+    },
+  });
+
+  const resetCaixaMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/admin/reset-caixa");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
+      refetch(); refetchWithdrawals(); refetchAllDeposits(); refetchAllUsers(); refetchUserWithdrawals(); refetchLimits();
+      toast({ title: "Caixa zerado", description: "Todos os movimentos foram apagados. Caixa retornou ao aporte inicial." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível zerar o caixa.", variant: "destructive" });
     },
   });
 
@@ -1091,6 +1110,36 @@ export default function Admin() {
                             {isPositive ? <CheckCircle className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
                             {isPositive ? "POSITIVO" : "NEGATIVO"}
                           </Badge>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline" size="sm"
+                                className="border-red-500/40 text-red-400 hover:bg-red-500/10"
+                                disabled={resetCaixaMutation.isPending}
+                                data-testid="button-reset-caixa"
+                              >
+                                <RotateCcw className="w-4 h-4 mr-1" />
+                                Zerar
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Zerar o Caixa?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação irá apagar <strong>todas as apostas, depósitos, saques, pagamentos e bônus</strong>, e zerar o saldo de todos os usuários. O caixa voltará ao aporte inicial de R$50.000. Essa operação <strong>não pode ser desfeita</strong>.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-red-600 hover:bg-red-700"
+                                  onClick={() => resetCaixaMutation.mutate()}
+                                >
+                                  Confirmar — Zerar Caixa
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                           <Button
                             variant="outline" size="sm"
                             onClick={() => { refetch(); refetchWithdrawals(); refetchAllDeposits(); refetchAllUsers(); refetchUserWithdrawals(); refetchLimits(); }}

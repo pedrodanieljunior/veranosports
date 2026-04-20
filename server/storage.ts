@@ -86,6 +86,7 @@ export interface IStorage {
   getAllDeposits(): Promise<Deposit[]>;
   updateDepositStatus(id: number, status: string): Promise<Deposit | undefined>;
   deleteDeposit(id: number): Promise<boolean>;
+  resetCaixa(): Promise<void>;
   // User Withdrawals
   createUserWithdrawal(userId: string, amount: number, pixKey: string): Promise<UserWithdrawal>;
   getUserWithdrawalsByUser(userId: string): Promise<UserWithdrawal[]>;
@@ -685,6 +686,14 @@ export class DatabaseStorage implements IStorage {
   async deleteDeposit(id: number): Promise<boolean> {
     const result = await db.delete(depositsTable).where(eq(depositsTable.id, id)).returning();
     return result.length > 0;
+  }
+
+  async resetCaixa(): Promise<void> {
+    await db.delete(betSlipsTable);
+    await db.delete(depositsTable);
+    await db.delete(userWithdrawalsTable);
+    await db.delete(transactionsTable);
+    await db.update(usersTable).set({ balance: 0, bonusBalance: 0, firstDepositDone: false });
   }
 
   private mapUserWithdrawal(row: any, userPhone?: string | null): UserWithdrawal {
