@@ -33,6 +33,8 @@ import {
   Trophy,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   FileDown,
   Target,
   CalendarDays,
@@ -174,6 +176,9 @@ export default function Admin() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<"today" | "week" | "month" | "all">("all");
+  const [betSearch, setBetSearch] = useState<string>("");
+  const [betPage, setBetPage] = useState<number>(1);
+  const BETS_PER_PAGE = 15;
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
   const [finPeriod, setFinPeriod] = useState<"all" | "month" | "week" | "today">("month");
@@ -551,6 +556,11 @@ export default function Admin() {
 
   const filteredBets = bets.filter(bet => {
     if (statusFilter !== "all" && bet.status !== statusFilter) return false;
+    if (betSearch.trim()) {
+      const q = betSearch.trim().toLowerCase().replace(/#/g, "");
+      const shortId = bet.id.replace(/-/g, "").substring(0, 8).toLowerCase();
+      if (!shortId.includes(q) && !bet.id.toLowerCase().includes(q)) return false;
+    }
     if (periodFilter !== "all") {
       const created = new Date(bet.createdAt);
       const now = new Date();
@@ -567,6 +577,9 @@ export default function Admin() {
     }
     return true;
   });
+
+  const betTotalPages = Math.max(1, Math.ceil(filteredBets.length / BETS_PER_PAGE));
+  const paginatedBets = filteredBets.slice((betPage - 1) * BETS_PER_PAGE, betPage * BETS_PER_PAGE);
 
   const stats = {
     total: bets.length,
@@ -1562,11 +1575,22 @@ export default function Admin() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <CardTitle>Bilhetes ({filteredBets.length})</CardTitle>
               <div className="flex items-center gap-2 flex-wrap">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar bilhete..."
+                    value={betSearch}
+                    onChange={e => { setBetSearch(e.target.value); setBetPage(1); }}
+                    data-testid="input-bet-search"
+                    className="pl-8 pr-3 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-44"
+                  />
+                </div>
                 <div className="flex rounded-md overflow-hidden border border-border text-xs">
                   {(["today","week","month","all"] as const).map(p => (
                     <button
                       key={p}
-                      onClick={() => setPeriodFilter(p)}
+                      onClick={() => { setPeriodFilter(p); setBetPage(1); }}
                       data-testid={`btn-period-${p}`}
                       className={`px-3 py-1.5 transition-colors ${periodFilter === p ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
                     >
@@ -1574,7 +1598,7 @@ export default function Admin() {
                     </button>
                   ))}
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setBetPage(1); }}>
                   <SelectTrigger className="w-36" data-testid="select-status-filter">
                     <SelectValue placeholder="Filtrar status" />
                   </SelectTrigger>
@@ -1603,7 +1627,7 @@ export default function Admin() {
             ) : (
               <ScrollArea className="h-auto max-h-none">
                 <div className="space-y-4">
-                  {filteredBets.map((bet) => (
+                  {paginatedBets.map((bet) => (
                     <Card key={bet.id} className="border border-gray-500/30">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -1828,6 +1852,79 @@ export default function Admin() {
                     </Card>
                   ))}
                 </div>
+                {betTotalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                    <span className="text-xs text-muted-foreground">
+                      Página {betPage} de {betTotalPages} — {filteredBets.length} bilhetes
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setBetPage(1)}
+                        disabled={betPage === 1}
+                        data-testid="btn-page-first"
+                      >
+                        <ChevronLeft className="w-3 h-3" />
+                        <ChevronLeft className="w-3 h-3 -ml-2" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setBetPage(p => Math.max(1, p - 1))}
+                        disabled={betPage === 1}
+                        data-testid="btn-page-prev"
+                      >
+                        <ChevronLeft className="w-3 h-3" />
+                      </Button>
+                      {Array.from({ length: betTotalPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === betTotalPages || Math.abs(p - betPage) <= 1)
+                        .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                          if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((p, i) => p === "..." ? (
+                          <span key={`ellipsis-${i}`} className="text-xs text-muted-foreground px-1">…</span>
+                        ) : (
+                          <Button
+                            key={p}
+                            variant={betPage === p ? "default" : "outline"}
+                            size="icon"
+                            className="h-7 w-7 text-xs"
+                            onClick={() => setBetPage(p as number)}
+                            data-testid={`btn-page-${p}`}
+                          >
+                            {p}
+                          </Button>
+                        ))
+                      }
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setBetPage(p => Math.min(betTotalPages, p + 1))}
+                        disabled={betPage === betTotalPages}
+                        data-testid="btn-page-next"
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setBetPage(betTotalPages)}
+                        disabled={betPage === betTotalPages}
+                        data-testid="btn-page-last"
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                        <ChevronRight className="w-3 h-3 -ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </ScrollArea>
             )}
           </CardContent>
