@@ -139,7 +139,11 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ duration = 2000, ...props }: Toast) {
+function toast({ duration, ...props }: Toast) {
+  const effectiveDuration = duration ?? (() => {
+    const stored = typeof localStorage !== "undefined" ? localStorage.getItem("toasterDurationMs") : null;
+    return stored ? parseInt(stored, 10) : 3000;
+  })();
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -153,7 +157,7 @@ function toast({ duration = 2000, ...props }: Toast) {
     type: "ADD_TOAST",
     toast: {
       ...props,
-      duration,
+      duration: effectiveDuration,
       id,
       open: true,
       onOpenChange: (open) => {

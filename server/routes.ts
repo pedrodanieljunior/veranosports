@@ -2238,8 +2238,33 @@ export async function registerRoutes(
   });
 
   const MAX_BET_PAYOUT = 15000;
-  const DAILY_LIMIT = 50000;
   const MAX_MARKETS_PER_GAME = 3;
+
+  // --- Configurações dinâmicas ---
+  let DAILY_LIMIT = 50000;
+  let autoCheckIntervalMs = 5 * 60 * 1000;
+  let autoCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+  // Carrega configurações salvas do banco
+  const savedAporte = await storage.getSetting("aporteInicial");
+  if (savedAporte) DAILY_LIMIT = parseInt(savedAporte, 10) || 50000;
+  const savedInterval = await storage.getSetting("checkIntervalMinutes");
+  if (savedInterval) autoCheckIntervalMs = (parseInt(savedInterval, 10) || 5) * 60 * 1000;
+
+  function startAutoCheckTimer() {
+    if (autoCheckTimer) clearInterval(autoCheckTimer);
+    autoCheckTimer = setInterval(async () => {
+      if (!API_FOOTBALL_KEY) return;
+      try {
+        const result = await runCheckResults();
+        if (result.updated > 0) {
+          console.log(`[Auto] ${result.updated} bilhete(s) atualizado(s) de ${result.totalPending} pendente(s)`);
+        }
+      } catch (err) {
+        console.error(`[Auto] Erro na verificação automática:`, err);
+      }
+    }, autoCheckIntervalMs);
+  }
 
   app.get("/api/limits", async (req, res) => {
     try {
@@ -3206,19 +3231,55 @@ export async function registerRoutes(
     }
   });
 
-  // Verificação automática a cada 5 minutos
-  const AUTO_CHECK_INTERVAL_MS = 5 * 60 * 1000;
-  setInterval(async () => {
-    if (!API_FOOTBALL_KEY) return;
+  // Verificação automática (intervalo dinâmico)
+  startAutoCheckTimer();
+
+  // Admin: Configurações do sistema
+  app.get("/api/admin/settings", requireAdmin, async (req, res) => {
     try {
-      const result = await runCheckResults();
-      if (result.updated > 0) {
-        console.log(`[Auto] ${result.updated} bilhete(s) atualizado(s) de ${result.totalPending} pendente(s)`);
-      }
+      const aporteInicial = parseInt((await storage.getSetting("aporteInicial")) || "50000", 10);
+      const checkIntervalMinutes = parseInt((await storage.getSetting("checkIntervalMinutes")) || "5", 10);
+      const toasterDurationSeconds = parseInt((await storage.getSetting("toasterDurationSeconds")) || "3", 10);
+      res.json({ aporteInicial, checkIntervalMinutes, toasterDurationSeconds });
     } catch (err) {
-      console.error(`[Auto] Erro na verificação automática:`, err);
+      res.status(500).json({ error: "Erro ao buscar configurações" });
     }
-  }, AUTO_CHECK_INTERVAL_MS);
+  });
+
+  app.patch("/api/admin/settings", requireAdmin, async (req, res) => {
+    try {
+      const { aporteInicial, checkIntervalMinutes, toasterDurationSeconds } = req.body;
+      if (aporteInicial !== undefined) {
+        const val = parseInt(String(aporteInicial), 10);
+        if (!isNaN(val) && val > 0) {
+          DAILY_LIMIT = val;
+          await storage.setSetting("aporteInicial", String(val));
+        }
+      }
+      if (checkIntervalMinutes !== undefined) {
+        const val = parseInt(String(checkIntervalMinutes), 10);
+        if (!isNaN(val) && val > 0) {
+          autoCheckIntervalMs = val * 60 * 1000;
+          await storage.setSetting("checkIntervalMinutes", String(val));
+          startAutoCheckTimer();
+        }
+      }
+      if (toasterDurationSeconds !== undefined) {
+        const val = parseInt(String(toasterDurationSeconds), 10);
+        if (!isNaN(val) && val > 0) {
+          await storage.setSetting("toasterDurationSeconds", String(val));
+        }
+      }
+      const updated = {
+        aporteInicial: DAILY_LIMIT,
+        checkIntervalMinutes: autoCheckIntervalMs / 60000,
+        toasterDurationSeconds: parseInt((await storage.getSetting("toasterDurationSeconds")) || "3", 10),
+      };
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao salvar configurações" });
+    }
+  });
 
   // Admin: Atualizar status de um bilhete manualmente
   app.patch("/api/admin/bets/:id/status", async (req, res) => {

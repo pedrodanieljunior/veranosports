@@ -63,6 +63,7 @@ import {
   Gift,
   UserCheck,
   Search,
+  Settings,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -798,6 +799,10 @@ export default function Admin() {
             <TabsTrigger value="indicacoes" data-testid="tab-indicacoes">
               <UserCheck className="w-4 h-4 mr-2" />
               Indicações
+            </TabsTrigger>
+            <TabsTrigger value="configuracoes" data-testid="tab-configuracoes">
+              <Settings className="w-4 h-4 mr-2" />
+              Configurações
             </TabsTrigger>
           </TabsList>
 
@@ -1961,6 +1966,9 @@ export default function Admin() {
 
           <TabsContent value="indicacoes">
             <ReferralsTab />
+          </TabsContent>
+          <TabsContent value="configuracoes">
+            <SettingsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -3574,5 +3582,90 @@ function ReferralsTab() {
         </Card>
       ))}
     </div>
+  );
+}
+
+function SettingsTab() {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ aporteInicial: 50000, checkIntervalMinutes: 5, toasterDurationSeconds: 3 });
+  const [initialized, setInitialized] = useState(false);
+
+  const { data: settings } = useQuery<{ aporteInicial: number; checkIntervalMinutes: number; toasterDurationSeconds: number }>({
+    queryKey: ["/api/admin/settings"],
+  });
+
+  useEffect(() => {
+    if (settings && !initialized) {
+      setForm(settings);
+      setInitialized(true);
+    }
+  }, [settings, initialized]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      await apiRequest("PATCH", "/api/admin/settings", data);
+    },
+    onSuccess: () => {
+      localStorage.setItem("toasterDurationMs", String(form.toasterDurationSeconds * 1000));
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      toast({ title: "Configurações salvas", description: "As alterações foram aplicadas com sucesso." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível salvar as configurações.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Settings className="w-5 h-5 text-yellow-500" />
+          Configurações do Sistema
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6 max-w-md">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Aporte Inicial (R$)</label>
+          <p className="text-xs text-muted-foreground">Limite diário de exposição para novas apostas.</p>
+          <Input
+            type="number"
+            min={1}
+            data-testid="input-aporte-inicial"
+            value={form.aporteInicial}
+            onChange={e => setForm(f => ({ ...f, aporteInicial: parseInt(e.target.value) || 50000 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Atualização de Resultados (minutos)</label>
+          <p className="text-xs text-muted-foreground">Com que frequência o servidor verifica resultados pendentes automaticamente.</p>
+          <Input
+            type="number"
+            min={1}
+            data-testid="input-check-interval"
+            value={form.checkIntervalMinutes}
+            onChange={e => setForm(f => ({ ...f, checkIntervalMinutes: parseInt(e.target.value) || 5 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Duração das Notificações (segundos)</label>
+          <p className="text-xs text-muted-foreground">Por quanto tempo as notificações ficam visíveis na tela.</p>
+          <Input
+            type="number"
+            min={1}
+            data-testid="input-toaster-duration"
+            value={form.toasterDurationSeconds}
+            onChange={e => setForm(f => ({ ...f, toasterDurationSeconds: parseInt(e.target.value) || 3 }))}
+          />
+        </div>
+        <Button
+          data-testid="button-save-settings"
+          onClick={() => saveMutation.mutate(form)}
+          disabled={saveMutation.isPending}
+          className="w-full"
+        >
+          {saveMutation.isPending ? "Salvando..." : "Salvar Configurações"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
