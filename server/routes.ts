@@ -2877,13 +2877,34 @@ export async function registerRoutes(
   app.delete("/api/bets/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteBetSlip(id);
-      
-      if (!deleted) {
+
+      // Buscar bilhete antes de deletar para poder reembolsar
+      const bet = await storage.getBetSlip(id);
+      if (!bet) {
         return res.status(404).json({ error: "Bet slip not found" });
       }
-      
-      res.json({ success: true });
+
+      // Reembolsar stake se o bilhete estava pendente e pertence a um usuário
+      let refunded = false;
+      if (bet.status === "pending" && bet.userId) {
+        const betUser = await storage.getUserByCpf(bet.userId);
+        if (betUser) {
+          const newBalance = Math.round((betUser.balance + bet.stake) * 100) / 100;
+          await storage.updateUserBalance(bet.userId, newBalance);
+          await storage.createTransaction({
+            userId: bet.userId,
+            type: "withdrawal_refund",
+            amount: bet.stake,
+            balanceAfter: newBalance,
+            description: `Reembolso - bilhete #${id.replace(/-/g, "").substring(0, 8).toUpperCase()} cancelado pelo admin`,
+            referenceId: id,
+          });
+          refunded = true;
+        }
+      }
+
+      await storage.deleteBetSlip(id);
+      res.json({ success: true, refunded });
     } catch (error) {
       console.error("Error deleting bet:", error);
       res.status(500).json({ error: "Failed to delete bet" });
