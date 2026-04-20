@@ -276,12 +276,16 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             </Badge>
           </div>
           <DialogTitle className="text-base text-gray-100">
-            <div className="flex items-center gap-2 flex-wrap">
-              <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
-              <span>{game.homeTeam}</span>
-              <span className="text-gray-400 font-normal text-sm">vs</span>
-              <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
-              <span>{game.awayTeam}</span>
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
+                <span className="truncate">{game.homeTeam}</span>
+              </div>
+              <span className="text-gray-400 font-normal text-sm shrink-0">vs</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
+                <span className="truncate">{game.awayTeam}</span>
+              </div>
             </div>
           </DialogTitle>
           <DialogDescription className="text-xs text-gray-400 mb-3">
