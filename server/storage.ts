@@ -319,9 +319,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seedMarketSettings(): Promise<void> {
-    const existing = await db.select().from(marketSettingsTable);
-    if (existing.length > 0) return;
-
     const defaults = [
       { marketKey: "h2h", marketName: "Resultado Final (1X2)", boostPercent: 15 },
       { marketKey: "totals", marketName: "Total de Gols", boostPercent: 0 },
@@ -331,12 +328,19 @@ export class DatabaseStorage implements IStorage {
       { marketKey: "first_to_score", marketName: "Primeira Equipe a Marcar", boostPercent: 0 },
       { marketKey: "red_card", marketName: "Cartão Vermelho no Jogo", boostPercent: 0 },
       { marketKey: "exact_score", marketName: "Placar Exato", boostPercent: 0 },
+      { marketKey: "first_half_goals", marketName: "Gols 1º Tempo", boostPercent: 0 },
+      { marketKey: "team_goals", marketName: "Gols por Time", boostPercent: 0 },
+      { marketKey: "first_half_result", marketName: "Resultado 1º Tempo", boostPercent: 0 },
+      { marketKey: "cards", marketName: "Total de Cartões", boostPercent: 0 },
+      { marketKey: "corners_winner", marketName: "Vencedor Escanteios", boostPercent: 0 },
+      { marketKey: "first_corner", marketName: "Primeiro Escanteio", boostPercent: 0 },
+      { marketKey: "first_half_corners", marketName: "Escanteios 1º Tempo", boostPercent: 0 },
     ];
 
     for (const d of defaults) {
-      await db.insert(marketSettingsTable).values(d);
+      await db.insert(marketSettingsTable).values(d).onConflictDoNothing();
     }
-    console.log("Market settings seeded with 8 default markets");
+    console.log("Market settings seeded/updated");
   }
 
   async getMarketSettings(): Promise<MarketSetting[]> {

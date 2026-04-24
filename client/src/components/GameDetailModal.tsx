@@ -43,10 +43,16 @@ const TABS: { id: MarketTab; label: string }[] = [
   { id: "intervalos", label: "Intervalos" },
 ];
 
-const GOLS_MARKETS = ["Goals Over/Under", "Both Teams Score", "Team To Score First", "Exact Score"];
-const ESCANTEIOS_MARKETS = ["Corners Over Under", "Total Corners"];
-const CARTOES_MARKETS = ["Red Card"];
-const INTERVALOS_MARKETS = ["HT/FT Double"];
+const GOLS_MARKETS = [
+  "Goals Over/Under", "Both Teams Score", "Team To Score First", "Exact Score",
+  "Goals Over/Under First Half", "Total - Home", "Total - Away",
+];
+const ESCANTEIOS_MARKETS = [
+  "Corners Over Under", "Total Corners",
+  "Corners 1x2", "First Corner", "Corners Over Under First Half",
+];
+const CARTOES_MARKETS = ["Red Card", "Cards Over/Under"];
+const INTERVALOS_MARKETS = ["HT/FT Double", "First Half Winner"];
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
   if (tab === "todos") return true;
@@ -103,11 +109,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "Both Teams Score": "btts",
       "HT/FT Double": "ht_ft",
       "Goals Over/Under": "totals",
-      "Goals Over/Under First Half": "totals",
+      "Goals Over/Under First Half": "first_half_goals",
+      "Total - Home": "team_goals",
+      "Total - Away": "team_goals",
       "Exact Score": "exact_score",
       "Team To Score First": "first_to_score",
       "Corners Over Under": "corners",
       "Total Corners": "corners",
+      "Corners 1x2": "corners_winner",
+      "First Corner": "first_corner",
+      "Corners Over Under First Half": "first_half_corners",
+      "Cards Over/Under": "cards",
+      "First Half Winner": "first_half_result",
       "Red Card": "red_card",
     };
     if (nameToBoostKey[mk]) return nameToBoostKey[mk];
@@ -180,6 +193,18 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       if (market.name === "Corners Over Under" || market.name === "Total Corners") {
         return ["Over 8.5", "Under 8.5", "Over 9.5", "Under 9.5", "Over 10.5", "Under 10.5"].includes(value.value);
       }
+      if (market.name === "Corners Over Under First Half") {
+        return ["Over 4.5", "Under 4.5", "Over 5.5", "Under 5.5", "Over 6.5", "Under 6.5"].includes(value.value);
+      }
+      if (market.name === "Cards Over/Under") {
+        return ["Over 2.5", "Under 2.5", "Over 3.5", "Under 3.5", "Over 4.5", "Under 4.5"].includes(value.value);
+      }
+      if (market.name === "Goals Over/Under First Half") {
+        return ["Over 0.5", "Under 0.5", "Over 1.5", "Under 1.5", "Over 2.5", "Under 2.5"].includes(value.value);
+      }
+      if (market.name === "Total - Home" || market.name === "Total - Away") {
+        return ["Over 0.5", "Under 0.5", "Over 1.5", "Under 1.5", "Over 2.5", "Under 2.5"].includes(value.value);
+      }
       return true;
     });
 
@@ -208,6 +233,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             else if (value.value === "Away") displayLabel = game.awayTeam.substring(0, 10);
             else if (value.value === "Draw" || value.value === "No Goal" || value.value === "Nenhum Gol") displayLabel = isTeamToScoreFirst ? "Nenhum" : "Empate";
             else if (value.value === "Nenhum") displayLabel = "Nenhum";
+            else if (value.value === "No Corner") displayLabel = "Sem Escanteio";
             else if (value.value === "Odd") displayLabel = "Ímpar";
             else if (value.value === "Even") displayLabel = "Par";
             else if (value.value.includes("Over")) displayLabel = value.value.replace("Over", "Mais ");

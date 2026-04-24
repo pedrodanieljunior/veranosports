@@ -474,7 +474,9 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards Over/Under": "Total de Cartões",
     "First Corner": "Primeiro Escanteio",
     "Last Corner": "Último Escanteio",
-    "To Qualify": "Classificação"
+    "To Qualify": "Classificação",
+    "Corners Over Under First Half": "Escanteios 1º Tempo",
+    "First Half Winner": "Resultado 1º Tempo"
   };
 
   const allowedMarkets = new Set([
@@ -482,9 +484,17 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "HT/FT Double",
     "Exact Score",
     "Goals Over/Under",
+    "Goals Over/Under First Half",
+    "Total - Home",
+    "Total - Away",
     "Team To Score First",
     "Corners Over Under",
     "Total Corners",
+    "Corners 1x2",
+    "First Corner",
+    "Corners Over Under First Half",
+    "Cards Over/Under",
+    "First Half Winner",
   ]);
 
   // Para cada mercado permitido, usar o bookmaker de MAIOR PRIORIDADE que o tenha.
@@ -531,7 +541,11 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     return decimal === 0.5;
   }
 
-  const overUnderMarkets = new Set(["Goals Over/Under", "Goals Over/Under First Half", "Goals Over/Under - Second Half", "Corners Over Under", "Total Corners"]);
+  const overUnderMarkets = new Set([
+    "Goals Over/Under", "Goals Over/Under First Half", "Goals Over/Under - Second Half",
+    "Corners Over Under", "Total Corners", "Corners Over Under First Half",
+    "Total - Home", "Total - Away", "Cards Over/Under",
+  ]);
 
   function sortOverUnder(values: { value: string; odd: number }[]) {
     return [...values].sort((a, b) => {
@@ -548,13 +562,21 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
 
   const marketOrder: Record<string, number> = {
     "Goals Over/Under": 1,
-    "HT/FT Double": 2,
-    "Both Teams Score": 3,
-    "Corners Over Under": 4,
-    "Total Corners": 4,
-    "Team To Score First": 5,
-    "Red Card": 6,
-    "Exact Score": 7,
+    "Goals Over/Under First Half": 2,
+    "Total - Home": 3,
+    "Total - Away": 4,
+    "HT/FT Double": 5,
+    "First Half Winner": 6,
+    "Both Teams Score": 7,
+    "Corners Over Under": 8,
+    "Total Corners": 8,
+    "Corners 1x2": 9,
+    "First Corner": 10,
+    "Corners Over Under First Half": 11,
+    "Cards Over/Under": 12,
+    "Team To Score First": 13,
+    "Red Card": 14,
+    "Exact Score": 15,
   };
 
   const markets = Object.values(grouped).map((g) => {
@@ -571,8 +593,33 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       ];
       label = "Total de Gols mais de 2,5";
     } else if (g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
-      values = values.filter((v) => isStandardGoalLine(v.value));
-      if (overUnderMarkets.has(g.name)) values = sortOverUnder(values);
+      values = values.filter(v => {
+        const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return true;
+        return [0.5, 1.5, 2.5].includes(parseFloat(m[2]));
+      });
+      values = sortOverUnder(values);
+    } else if (g.name === "Total - Home" || g.name === "Total - Away") {
+      values = values.filter(v => {
+        const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return true;
+        return [0.5, 1.5, 2.5].includes(parseFloat(m[2]));
+      });
+      values = sortOverUnder(values);
+    } else if (g.name === "Cards Over/Under") {
+      values = values.filter(v => {
+        const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return true;
+        return [2.5, 3.5, 4.5].includes(parseFloat(m[2]));
+      });
+      values = sortOverUnder(values);
+    } else if (g.name === "Corners Over Under First Half") {
+      values = values.filter(v => {
+        const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return true;
+        return [4.5, 5.5, 6.5].includes(parseFloat(m[2]));
+      });
+      values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under" || g.name === "Total Corners") {
       // Para cada linha obrigatória (8.5, 9.5, 10.5), usar o bookmaker de maior prioridade que a tenha.
       // Se o bookmaker principal (ex: Bet365) não tiver a linha, busca no próximo da lista.
@@ -657,8 +704,91 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         { value: "Não", odd: 1.24 }
       ]
     });
-    markets.sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
   }
+
+  // Fallbacks sintéticos para novos mercados
+  if (!markets.some(m => m.name === "Goals Over/Under First Half")) {
+    markets.push({
+      id: 1001, name: "Goals Over/Under First Half", label: "Gols 1º Tempo",
+      values: [
+        { value: "Over 0.5", odd: 1.25 }, { value: "Under 0.5", odd: 3.80 },
+        { value: "Over 1.5", odd: 2.55 }, { value: "Under 1.5", odd: 1.49 },
+        { value: "Over 2.5", odd: 5.50 }, { value: "Under 2.5", odd: 1.14 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Total - Home")) {
+    markets.push({
+      id: 1002, name: "Total - Home", label: "Total Gols Casa",
+      values: [
+        { value: "Over 0.5", odd: 1.57 }, { value: "Under 0.5", odd: 2.25 },
+        { value: "Over 1.5", odd: 2.90 }, { value: "Under 1.5", odd: 1.42 },
+        { value: "Over 2.5", odd: 5.50 }, { value: "Under 2.5", odd: 1.14 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Total - Away")) {
+    markets.push({
+      id: 1003, name: "Total - Away", label: "Total Gols Visitante",
+      values: [
+        { value: "Over 0.5", odd: 1.72 }, { value: "Under 0.5", odd: 2.10 },
+        { value: "Over 1.5", odd: 3.40 }, { value: "Under 1.5", odd: 1.31 },
+        { value: "Over 2.5", odd: 7.00 }, { value: "Under 2.5", odd: 1.10 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "First Half Winner")) {
+    markets.push({
+      id: 1004, name: "First Half Winner", label: "Resultado 1º Tempo",
+      values: [
+        { value: "Home", odd: 2.50 },
+        { value: "Draw", odd: 2.20 },
+        { value: "Away", odd: 3.50 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Cards Over/Under")) {
+    markets.push({
+      id: 1005, name: "Cards Over/Under", label: "Total de Cartões",
+      values: [
+        { value: "Over 2.5", odd: 2.10 }, { value: "Under 2.5", odd: 1.62 },
+        { value: "Over 3.5", odd: 2.80 }, { value: "Under 3.5", odd: 1.35 },
+        { value: "Over 4.5", odd: 4.20 }, { value: "Under 4.5", odd: 1.18 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Corners 1x2")) {
+    markets.push({
+      id: 1006, name: "Corners 1x2", label: "Escanteios 1x2",
+      values: [
+        { value: "Home", odd: 2.10 },
+        { value: "Draw", odd: 3.80 },
+        { value: "Away", odd: 2.60 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "First Corner")) {
+    markets.push({
+      id: 1007, name: "First Corner", label: "Primeiro Escanteio",
+      values: [
+        { value: "Home", odd: 1.90 },
+        { value: "Away", odd: 2.20 },
+        { value: "No Corner", odd: 15.00 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Corners Over Under First Half")) {
+    markets.push({
+      id: 1008, name: "Corners Over Under First Half", label: "Escanteios 1º Tempo",
+      values: [
+        { value: "Over 4.5", odd: 2.00 }, { value: "Under 4.5", odd: 1.73 },
+        { value: "Over 5.5", odd: 2.80 }, { value: "Under 5.5", odd: 1.43 },
+        { value: "Over 6.5", odd: 4.20 }, { value: "Under 6.5", odd: 1.20 },
+      ]
+    });
+  }
+
+  markets.sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
 
   return {
     homeTeam,
@@ -727,6 +857,46 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
       ]
     },
     {
+      id: 1001,
+      name: "Goals Over/Under First Half",
+      label: "Gols 1º Tempo",
+      values: [
+        { value: "Over 0.5", odd: r(1.20, 1.30) }, { value: "Under 0.5", odd: r(3.50, 4.20) },
+        { value: "Over 1.5", odd: r(2.40, 2.70) }, { value: "Under 1.5", odd: r(1.44, 1.55) },
+        { value: "Over 2.5", odd: r(5.00, 6.00) }, { value: "Under 2.5", odd: r(1.10, 1.18) },
+      ]
+    },
+    {
+      id: 1002,
+      name: "Total - Home",
+      label: "Total Gols Casa",
+      values: [
+        { value: "Over 0.5", odd: r(1.50, 1.65) }, { value: "Under 0.5", odd: r(2.10, 2.40) },
+        { value: "Over 1.5", odd: r(2.80, 3.00) }, { value: "Under 1.5", odd: r(1.38, 1.46) },
+        { value: "Over 2.5", odd: r(5.00, 6.00) }, { value: "Under 2.5", odd: r(1.10, 1.18) },
+      ]
+    },
+    {
+      id: 1003,
+      name: "Total - Away",
+      label: "Total Gols Visitante",
+      values: [
+        { value: "Over 0.5", odd: r(1.65, 1.80) }, { value: "Under 0.5", odd: r(2.00, 2.20) },
+        { value: "Over 1.5", odd: r(3.20, 3.60) }, { value: "Under 1.5", odd: r(1.28, 1.35) },
+        { value: "Over 2.5", odd: r(6.50, 7.50) }, { value: "Under 2.5", odd: r(1.08, 1.12) },
+      ]
+    },
+    {
+      id: 1004,
+      name: "First Half Winner",
+      label: "Resultado 1º Tempo",
+      values: [
+        { value: "Home", odd: r(2.30, 2.70) },
+        { value: "Draw", odd: r(2.00, 2.40) },
+        { value: "Away", odd: r(3.20, 3.80) },
+      ]
+    },
+    {
       id: 6,
       name: "Team To Score First",
       label: "Primeiro a Marcar",
@@ -747,6 +917,46 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Under 9.5", odd: 1.73 },
         { value: "Over 10.5", odd: 2.45 },
         { value: "Under 10.5",odd: 1.52 },
+      ]
+    },
+    {
+      id: 1006,
+      name: "Corners 1x2",
+      label: "Escanteios 1x2",
+      values: [
+        { value: "Home", odd: r(1.95, 2.25) },
+        { value: "Draw", odd: r(3.50, 4.20) },
+        { value: "Away", odd: r(2.40, 2.80) },
+      ]
+    },
+    {
+      id: 1007,
+      name: "First Corner",
+      label: "Primeiro Escanteio",
+      values: [
+        { value: "Home", odd: r(1.80, 2.00) },
+        { value: "Away", odd: r(2.10, 2.30) },
+        { value: "No Corner", odd: r(13.00, 18.00) },
+      ]
+    },
+    {
+      id: 1008,
+      name: "Corners Over Under First Half",
+      label: "Escanteios 1º Tempo",
+      values: [
+        { value: "Over 4.5", odd: r(1.90, 2.10) }, { value: "Under 4.5", odd: r(1.68, 1.78) },
+        { value: "Over 5.5", odd: r(2.60, 2.90) }, { value: "Under 5.5", odd: r(1.38, 1.48) },
+        { value: "Over 6.5", odd: r(4.00, 4.50) }, { value: "Under 6.5", odd: r(1.16, 1.24) },
+      ]
+    },
+    {
+      id: 1005,
+      name: "Cards Over/Under",
+      label: "Total de Cartões",
+      values: [
+        { value: "Over 2.5", odd: r(1.95, 2.25) }, { value: "Under 2.5", odd: r(1.55, 1.70) },
+        { value: "Over 3.5", odd: r(2.60, 3.00) }, { value: "Under 3.5", odd: r(1.30, 1.42) },
+        { value: "Over 4.5", odd: r(4.00, 4.80) }, { value: "Under 4.5", odd: r(1.14, 1.22) },
       ]
     },
     {
