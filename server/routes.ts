@@ -969,6 +969,7 @@ async function runCheckResults() {
   const cornerStatsCache = new Map<number, number>();
   const firstGoalCache   = new Map<number, string | null>();
   const redCardCache     = new Map<number, boolean>();
+  const redCard1HCache   = new Map<number, boolean>();
 
   const allBets = await storage.getAllBetSlips();
   const pendingBets = allBets.filter(bet => bet.status === "pending");
@@ -1102,6 +1103,7 @@ async function runCheckResults() {
       const isRedCardSelection = mk.includes("red card");
       let firstScorerTeam: string | null = null;
       let hasRedCard: boolean | null = null;
+      let hasRedCard1H: boolean | null = null;
 
       if (isFirstScorerSelection || isRedCardSelection) {
         const fixtureId = matchingFixture.fixture.id;
@@ -1113,15 +1115,18 @@ async function runCheckResults() {
               const events = evData.response || [];
               const goalEvents = events.filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty").sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
               firstGoalCache.set(fixtureId, goalEvents[0]?.team?.name ?? "");
-              redCardCache.set(fixtureId, events.some((e: any) => e.type === "Card" && e.detail === "Red Card"));
+              const rcEvents = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
+              redCardCache.set(fixtureId, rcEvents.length > 0);
+              redCard1HCache.set(fixtureId, rcEvents.some((e: any) => (e.time?.elapsed ?? 999) <= 45));
             }
-          } catch (err) { firstGoalCache.set(matchingFixture.fixture.id, null); redCardCache.set(matchingFixture.fixture.id, false); }
+          } catch (err) { firstGoalCache.set(matchingFixture.fixture.id, null); redCardCache.set(matchingFixture.fixture.id, false); redCard1HCache.set(matchingFixture.fixture.id, false); }
         }
         firstScorerTeam = firstGoalCache.get(matchingFixture.fixture.id) ?? null;
         hasRedCard = redCardCache.get(matchingFixture.fixture.id) ?? null;
+        hasRedCard1H = redCard1HCache.get(matchingFixture.fixture.id) ?? null;
       }
 
-      const selectionWon = checkSelectionResult(selection, homeGoals, awayGoals, totalGoals, matchingFixture.teams.home.name, matchingFixture.teams.away.name, htHomeGoals, htAwayGoals, totalCorners, firstScorerTeam, hasRedCard);
+      const selectionWon = checkSelectionResult(selection, homeGoals, awayGoals, totalGoals, matchingFixture.teams.home.name, matchingFixture.teams.away.name, htHomeGoals, htAwayGoals, totalCorners, firstScorerTeam, hasRedCard, hasRedCard1H);
 
       if (selectionWon === null) {
         allSelectionsWon = false;
@@ -3703,9 +3708,10 @@ export async function registerRoutes(
       }
 
       // Resolver cada seleção (loop async para suportar busca de escanteios e eventos)
-      const arCornerCache   = new Map<string, number>();         // fid → totalCorners
+      const arCornerCache    = new Map<string, number>();         // fid → totalCorners
       const arFirstGoalCache = new Map<string, string | null>(); // fid → team name que marcou primeiro
-      const arRedCardCache   = new Map<string, boolean>();       // fid → houve cartão vermelho
+      const arRedCardCache   = new Map<string, boolean>();       // fid → houve cartão vermelho (jogo inteiro)
+      const arRedCard1HCache = new Map<string, boolean>();       // fid → houve cartão vermelho (1º tempo)
       const resolvedSelections: any[] = [];
 
       for (const sel of bet.selections) {
@@ -3731,6 +3737,24 @@ export async function registerRoutes(
             selResult = awayGoals > homeGoals ? "won" : "lost";
           } else {
             resolved = false;
+          }
+
+        } else if (mk === "results/both teams score") {
+          // Resultado + Ambas Marcam (mercado combinado) — deve vir ANTES do BTTS genérico
+          const raw = oc.replace(/^results\/both teams score-?/i, "").trim();
+          const slash = raw.lastIndexOf("/");
+          if (slash === -1) {
+            resolved = false;
+          } else {
+            const resultPick = raw.slice(0, slash).toLowerCase().trim();
+            const bttsPick   = raw.slice(slash + 1).toLowerCase().trim();
+            const btts = homeGoals > 0 && awayGoals > 0;
+            const bttsWon = bttsPick.includes("yes") || bttsPick.includes("sim") ? btts : !btts;
+            let resultWon: boolean;
+            if (resultPick === "home" || resultPick === "casa") resultWon = homeGoals > awayGoals;
+            else if (resultPick === "away" || resultPick === "fora") resultWon = awayGoals > homeGoals;
+            else resultWon = homeGoals === awayGoals;
+            selResult = resultWon && bttsWon ? "won" : "lost";
           }
 
         } else if (mk.includes("both") || mk.includes("btts") || sel.marketKey === "Both Teams Score") {
@@ -3860,14 +3884,18 @@ export async function registerRoutes(
                 arFirstGoalCache.set(fid, goalEvents[0]?.team?.name ?? "");
                 const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
                 arRedCardCache.set(fid, redCards.length > 0);
-                console.log(`    [auto-resolve] eventos fixture ${fid}: 1ºgol=${arFirstGoalCache.get(fid) || "nenhum"}, redCard=${arRedCardCache.get(fid)}`);
+                const redCards1H = redCards.filter((e: any) => (e.time?.elapsed ?? 999) <= 45);
+                arRedCard1HCache.set(fid, redCards1H.length > 0);
+                console.log(`    [auto-resolve] eventos fixture ${fid}: 1ºgol=${arFirstGoalCache.get(fid) || "nenhum"}, redCard=${arRedCardCache.get(fid)}, redCard1H=${arRedCard1HCache.get(fid)}`);
               } else {
                 arFirstGoalCache.set(fid, null);
                 arRedCardCache.set(fid, false);
+                arRedCard1HCache.set(fid, false);
               }
             } catch (e) {
               arFirstGoalCache.set(fid, null);
               arRedCardCache.set(fid, false);
+              arRedCard1HCache.set(fid, false);
             }
           }
 
@@ -3894,8 +3922,11 @@ export async function registerRoutes(
               }
             }
           } else {
-            // Red Card
-            const hadRedCard = arRedCardCache.get(fid) ?? false;
+            // Red Card (jogo inteiro ou 1º tempo)
+            const is1H = mk.includes("1st half") || mk.includes("first half");
+            const hadRedCard = is1H
+              ? (arRedCard1HCache.get(fid) ?? false)
+              : (arRedCardCache.get(fid) ?? false);
             const outcomeLC = sel.outcome?.toLowerCase() ?? "";
             const pickedSim = outcomeLC.includes("sim") || outcomeLC.includes("yes");
             const pickedNao = outcomeLC.includes("não") || outcomeLC.includes("nao") || outcomeLC.includes("no");
@@ -4047,7 +4078,8 @@ function checkSelectionResult(
   htAwayGoals: number | null = null,
   totalCorners: number | null = null,
   firstScorerTeam: string | null = null,
-  hasRedCard: boolean | null = null
+  hasRedCard: boolean | null = null,
+  hasRedCard1H: boolean | null = null
 ): boolean | null {
   const outcome   = selection.outcome?.toLowerCase() ?? "";
   const marketKey = selection.marketKey?.toLowerCase() ?? "";
@@ -4147,6 +4179,24 @@ function checkSelectionResult(
     return false;
   }
 
+  // ── Resultado + Ambas Marcam (mercado combinado) ─────────────────────────
+  if (marketKey === "results/both teams score") {
+    // outcome: "Results/Both Teams Score-Home/Yes" → strip prefix → "home/yes"
+    const raw = outcome.replace(/^results\/both teams score-?/i, "").trim();
+    const slash = raw.lastIndexOf("/");
+    if (slash === -1) { console.log(`    Resultado+BTTS: slash não encontrado em "${raw}"`); return false; }
+    const resultPick = raw.slice(0, slash).toLowerCase().trim();
+    const bttsPick   = raw.slice(slash + 1).toLowerCase().trim();
+    const btts = homeGoals > 0 && awayGoals > 0;
+    const bttsWon = bttsPick.includes("yes") || bttsPick.includes("sim") ? btts : !btts;
+    let resultWon: boolean;
+    if (resultPick === "home" || resultPick === "casa") resultWon = homeGoals > awayGoals;
+    else if (resultPick === "away" || resultPick === "fora") resultWon = awayGoals > homeGoals;
+    else resultWon = homeGoals === awayGoals; // draw/empate
+    console.log(`    Resultado+BTTS: pick="${resultPick}/${bttsPick}", placar=${homeGoals}-${awayGoals}, btts=${btts}, resultWon=${resultWon}, bttsWon=${bttsWon}`);
+    return resultWon && bttsWon;
+  }
+
   // ── Ambas Marcam (BTTS, 1º tempo, 2º tempo) ──────────────────────────────
   if (marketKey.includes("both teams score") || marketKey.includes("both teams to score") || marketKey.includes("btts")) {
     let hG: number, aG: number;
@@ -4176,16 +4226,18 @@ function checkSelectionResult(
     return false;
   }
 
-  // ── Cartão Vermelho no Jogo ───────────────────────────────────────────────
+  // ── Cartão Vermelho (jogo inteiro ou 1º tempo) ────────────────────────────
   if (marketKey.includes("red card")) {
-    if (hasRedCard === null) {
-      console.log(`    Red Card: dados de eventos não disponíveis`);
+    const is1H = marketKey.includes("1st half") || marketKey.includes("first half");
+    const rcValue = is1H ? hasRedCard1H : hasRedCard;
+    if (rcValue === null) {
+      console.log(`    Red Card${is1H ? " 1ºT" : ""}: dados de eventos não disponíveis`);
       return null;
     }
     const pickedSim = outcome.includes("sim") || outcome.includes("yes");
     const pickedNao = outcome.includes("não") || outcome.includes("nao") || outcome.includes("no");
-    if (pickedSim) { console.log(`    Red Card: apostou Sim, houve cartão: ${hasRedCard}`); return hasRedCard; }
-    if (pickedNao) { console.log(`    Red Card: apostou Não, houve cartão: ${hasRedCard}`); return !hasRedCard; }
+    if (pickedSim) { console.log(`    Red Card${is1H ? " 1ºT" : ""}: apostou Sim, houve cartão: ${rcValue}`); return rcValue; }
+    if (pickedNao) { console.log(`    Red Card${is1H ? " 1ºT" : ""}: apostou Não, houve cartão: ${rcValue}`); return !rcValue; }
     return false;
   }
 
