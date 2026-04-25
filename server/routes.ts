@@ -777,36 +777,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       ]
     });
   }
-  if (!markets.some(m => m.name === "Cards Over/Under")) {
-    markets.push({
-      id: 1005, name: "Cards Over/Under", label: "Total de Cartões",
-      values: [
-        { value: "Over 2.5", odd: 1.80 }, { value: "Under 2.5", odd: 1.92 },
-        { value: "Over 3.5", odd: 2.40 }, { value: "Under 3.5", odd: 1.52 },
-        { value: "Over 4.5", odd: 3.90 }, { value: "Under 4.5", odd: 1.19 },
-      ]
-    });
-  }
-  if (!markets.some(m => m.name === "Cards - Home")) {
-    markets.push({
-      id: 1009, name: "Cards - Home", label: "Cartões - Casa",
-      values: [
-        { value: "Over 0.5", odd: 1.42 }, { value: "Under 0.5", odd: 2.70 },
-        { value: "Over 1.5", odd: 2.15 }, { value: "Under 1.5", odd: 1.65 },
-        { value: "Over 2.5", odd: 4.10 }, { value: "Under 2.5", odd: 1.20 },
-      ]
-    });
-  }
-  if (!markets.some(m => m.name === "Cards - Away")) {
-    markets.push({
-      id: 1010, name: "Cards - Away", label: "Cartões - Fora",
-      values: [
-        { value: "Over 0.5", odd: 1.42 }, { value: "Under 0.5", odd: 2.70 },
-        { value: "Over 1.5", odd: 2.15 }, { value: "Under 1.5", odd: 1.65 },
-        { value: "Over 2.5", odd: 4.10 }, { value: "Under 2.5", odd: 1.20 },
-      ]
-    });
-  }
   if (!markets.some(m => m.name === "Corners 1x2")) {
     markets.push({
       id: 1006, name: "Corners 1x2", label: "Escanteios 1x2",
@@ -997,36 +967,6 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Over 4.5", odd: r(1.90, 2.10) }, { value: "Under 4.5", odd: r(1.68, 1.78) },
         { value: "Over 5.5", odd: r(2.60, 2.90) }, { value: "Under 5.5", odd: r(1.38, 1.48) },
         { value: "Over 6.5", odd: r(4.00, 4.50) }, { value: "Under 6.5", odd: r(1.16, 1.24) },
-      ]
-    },
-    {
-      id: 1005,
-      name: "Cards Over/Under",
-      label: "Total de Cartões",
-      values: [
-        { value: "Over 2.5", odd: r(1.72, 1.88) }, { value: "Under 2.5", odd: r(1.85, 2.00) },
-        { value: "Over 3.5", odd: r(2.25, 2.55) }, { value: "Under 3.5", odd: r(1.45, 1.58) },
-        { value: "Over 4.5", odd: r(3.70, 4.20) }, { value: "Under 4.5", odd: r(1.17, 1.22) },
-      ]
-    },
-    {
-      id: 1009,
-      name: "Cards - Home",
-      label: "Cartões - Casa",
-      values: [
-        { value: "Over 0.5", odd: r(1.36, 1.48) }, { value: "Under 0.5", odd: r(2.55, 2.80) },
-        { value: "Over 1.5", odd: r(2.05, 2.25) }, { value: "Under 1.5", odd: r(1.58, 1.72) },
-        { value: "Over 2.5", odd: r(3.90, 4.30) }, { value: "Under 2.5", odd: r(1.17, 1.22) },
-      ]
-    },
-    {
-      id: 1010,
-      name: "Cards - Away",
-      label: "Cartões - Fora",
-      values: [
-        { value: "Over 0.5", odd: r(1.36, 1.48) }, { value: "Under 0.5", odd: r(2.55, 2.80) },
-        { value: "Over 1.5", odd: r(2.05, 2.25) }, { value: "Under 1.5", odd: r(1.58, 1.72) },
-        { value: "Over 2.5", odd: r(3.90, 4.30) }, { value: "Under 2.5", odd: r(1.17, 1.22) },
       ]
     },
     {
