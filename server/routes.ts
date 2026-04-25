@@ -498,8 +498,16 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards Over/Under",
     "Cards - Home",
     "Cards - Away",
+    "Home Team Total Cards",
+    "Away Team Total Cards",
     "First Half Winner",
   ]);
+
+  // Normaliza nomes alternativos da API para os nomes internos
+  const marketNameAliases: Record<string, string> = {
+    "Home Team Total Cards": "Cards - Home",
+    "Away Team Total Cards": "Cards - Away",
+  };
 
   // Para cada mercado permitido, usar o bookmaker de MAIOR PRIORIDADE que o tenha.
   // Os bookmakers já chegam ordenados por prioridade (Bet365 primeiro).
@@ -509,17 +517,19 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
   for (const bk of bookmakers) {
     const bets: any[] = bk.bets || [];
     bets
-      .filter((bet: any) => allowedMarkets.has(bet.name) && !grouped[bet.name])
+      .filter((bet: any) => allowedMarkets.has(bet.name))
       .forEach((bet: any) => {
+        const internalName = marketNameAliases[bet.name] || bet.name;
+        if (grouped[internalName]) return; // já temos esse mercado de bookmaker mais prioritário
         const vals: { value: string; odd: number }[] = (bet.values || []).map((v: any) => ({
           value: String(v.value),
           odd: parseFloat(v.odd)
         }));
         if (vals.length > 0) {
-          grouped[bet.name] = {
+          grouped[internalName] = {
             id: bet.id,
-            name: bet.name,
-            label: marketLabels[bet.name] || bet.name,
+            name: internalName,
+            label: marketLabels[internalName] || marketLabels[bet.name] || bet.name,
             values: vals
           };
         }
