@@ -631,7 +631,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
         if (!m) return false;
         const line = parseFloat(m[2]);
-        return line >= 1.5 && line <= 9.5 && (line * 2) % 1 === 0;
+        return line % 1 === 0.5 && line >= 1.5 && line <= 9.5;
       });
       values = sortOverUnder(values);
     } else if (g.name === "Cards - Home" || g.name === "Cards - Away") {
@@ -639,7 +639,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
         if (!m) return false;
         const line = parseFloat(m[2]);
-        return line >= 0.5 && line <= 6.5 && (line * 2) % 1 === 0;
+        return line % 1 === 0.5 && line >= 0.5 && line <= 6.5;
       });
       values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under First Half") {
