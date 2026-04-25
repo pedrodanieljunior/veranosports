@@ -49,7 +49,7 @@ const GOLS_MARKETS = [
 ];
 const ESCANTEIOS_MARKETS = [
   "Corners Over Under", "Total Corners",
-  "Corners 1x2", "First Corner", "Corners Over Under First Half",
+  "Corners 1x2", "Corners Over Under First Half",
 ];
 const CARTOES_MARKETS = ["Red Card", "Cards Over/Under", "Cards - Home", "Cards - Away"];
 const INTERVALOS_MARKETS = ["First Half Winner", "HT/FT Double"];
@@ -117,7 +117,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "Corners Over Under": "corners",
       "Total Corners": "corners",
       "Corners 1x2": "corners_winner",
-      "First Corner": "first_corner",
       "Corners Over Under First Half": "first_half_corners",
       "Cards Over/Under": "cards",
       "Cards - Home": "cards_home",

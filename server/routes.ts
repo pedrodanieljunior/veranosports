@@ -474,7 +474,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards Over/Under": "Total de Cartões",
     "Cards - Home": "Cartões - Casa",
     "Cards - Away": "Cartões - Fora",
-    "First Corner": "Primeiro Escanteio",
     "Last Corner": "Último Escanteio",
     "To Qualify": "Classificação",
     "Corners Over Under First Half": "Escanteios 1º Tempo",
@@ -493,7 +492,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Corners Over Under",
     "Total Corners",
     "Corners 1x2",
-    "First Corner",
     "Corners Over Under First Half",
     "Cards Over/Under",
     "Cards - Home",
@@ -501,7 +499,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Home Team Total Cards",
     "Away Team Total Cards",
     "Total Corners (1st Half)",
-    "Corners. First Corner (3 way)",
     "First Half Winner",
   ]);
 
@@ -510,7 +507,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Home Team Total Cards":          "Cards - Home",
     "Away Team Total Cards":          "Cards - Away",
     "Total Corners (1st Half)":       "Corners Over Under First Half",
-    "Corners. First Corner (3 way)":  "First Corner",
   };
 
   // Para cada mercado permitido, usar o bookmaker de MAIOR PRIORIDADE que o tenha.
@@ -589,8 +585,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Corners Over Under": 8,
     "Total Corners": 8,
     "Corners 1x2": 9,
-    "First Corner": 10,
-    "Corners Over Under First Half": 11,
+    "Corners Over Under First Half": 10,
     "Cards Over/Under": 12,
     "Cards - Home": 13,
     "Cards - Away": 13,
@@ -787,16 +782,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       ]
     });
   }
-  if (!markets.some(m => m.name === "First Corner")) {
-    markets.push({
-      id: 1007, name: "First Corner", label: "Primeiro Escanteio",
-      values: [
-        { value: "Home", odd: 1.72 },
-        { value: "Away", odd: 2.00 },
-        { value: "No Corner", odd: 32.00 },
-      ]
-    });
-  }
   if (!markets.some(m => m.name === "Corners Over Under First Half")) {
     markets.push({
       id: 1008, name: "Corners Over Under First Half", label: "Escanteios 1º Tempo",
@@ -947,16 +932,6 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Home", odd: r(1.95, 2.25) },
         { value: "Draw", odd: r(3.50, 4.20) },
         { value: "Away", odd: r(2.40, 2.80) },
-      ]
-    },
-    {
-      id: 1007,
-      name: "First Corner",
-      label: "Primeiro Escanteio",
-      values: [
-        { value: "Home", odd: r(1.65, 1.78) },
-        { value: "Away", odd: r(1.90, 2.10) },
-        { value: "No Corner", odd: r(28.00, 38.00) },
       ]
     },
     {
