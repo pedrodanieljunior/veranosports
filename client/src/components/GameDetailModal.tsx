@@ -52,7 +52,7 @@ const ESCANTEIOS_MARKETS = [
   "Corners 1x2", "First Corner", "Corners Over Under First Half",
 ];
 const CARTOES_MARKETS = ["Red Card", "Cards Over/Under", "Cards - Home", "Cards - Away"];
-const INTERVALOS_MARKETS = ["HT/FT Double", "First Half Winner"];
+const INTERVALOS_MARKETS = ["First Half Winner", "HT/FT Double"];
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
   if (tab === "todos") return true;
@@ -297,7 +297,12 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   };
 
   const showH2h = activeTab === "todos";
-  const filteredExtraMarkets = extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? [];
+  const filteredExtraMarkets = (extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? []).sort((a, b) => {
+    if (activeTab === "intervalos") {
+      return INTERVALOS_MARKETS.indexOf(a.name) - INTERVALOS_MARKETS.indexOf(b.name);
+    }
+    return 0;
+  });
   const hasContent = (showH2h && !!h2hMarket) || filteredExtraMarkets.length > 0;
 
   return (
