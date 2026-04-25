@@ -472,6 +472,8 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Corners 1x2": "Escanteios 1x2",
     "Corners Asian Handicap": "Escanteios Handicap Asiático",
     "Cards Over/Under": "Total de Cartões",
+    "Cards - Home": "Cartões - Casa",
+    "Cards - Away": "Cartões - Fora",
     "First Corner": "Primeiro Escanteio",
     "Last Corner": "Último Escanteio",
     "To Qualify": "Classificação",
@@ -494,6 +496,8 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "First Corner",
     "Corners Over Under First Half",
     "Cards Over/Under",
+    "Cards - Home",
+    "Cards - Away",
     "First Half Winner",
   ]);
 
@@ -574,9 +578,11 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "First Corner": 10,
     "Corners Over Under First Half": 11,
     "Cards Over/Under": 12,
-    "Team To Score First": 13,
-    "Red Card": 14,
-    "Exact Score": 15,
+    "Cards - Home": 13,
+    "Cards - Away": 13,
+    "Team To Score First": 14,
+    "Red Card": 15,
+    "Exact Score": 16,
   };
 
   const markets = Object.values(grouped).map((g) => {
@@ -611,6 +617,13 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
         if (!m) return true;
         return [2.5, 3.5, 4.5].includes(parseFloat(m[2]));
+      });
+      values = sortOverUnder(values);
+    } else if (g.name === "Cards - Home" || g.name === "Cards - Away") {
+      values = values.filter(v => {
+        const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return true;
+        return [0.5, 1.5, 2.5].includes(parseFloat(m[2]));
       });
       values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under First Half") {
@@ -755,6 +768,26 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
         { value: "Over 2.5", odd: 2.10 }, { value: "Under 2.5", odd: 1.62 },
         { value: "Over 3.5", odd: 2.80 }, { value: "Under 3.5", odd: 1.35 },
         { value: "Over 4.5", odd: 4.20 }, { value: "Under 4.5", odd: 1.18 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Cards - Home")) {
+    markets.push({
+      id: 1009, name: "Cards - Home", label: "Cartões - Casa",
+      values: [
+        { value: "Over 0.5", odd: 1.55 }, { value: "Under 0.5", odd: 2.20 },
+        { value: "Over 1.5", odd: 2.40 }, { value: "Under 1.5", odd: 1.52 },
+        { value: "Over 2.5", odd: 4.50 }, { value: "Under 2.5", odd: 1.18 },
+      ]
+    });
+  }
+  if (!markets.some(m => m.name === "Cards - Away")) {
+    markets.push({
+      id: 1010, name: "Cards - Away", label: "Cartões - Fora",
+      values: [
+        { value: "Over 0.5", odd: 1.55 }, { value: "Under 0.5", odd: 2.20 },
+        { value: "Over 1.5", odd: 2.40 }, { value: "Under 1.5", odd: 1.52 },
+        { value: "Over 2.5", odd: 4.50 }, { value: "Under 2.5", odd: 1.18 },
       ]
     });
   }
@@ -958,6 +991,26 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Over 2.5", odd: r(1.95, 2.25) }, { value: "Under 2.5", odd: r(1.55, 1.70) },
         { value: "Over 3.5", odd: r(2.60, 3.00) }, { value: "Under 3.5", odd: r(1.30, 1.42) },
         { value: "Over 4.5", odd: r(4.00, 4.80) }, { value: "Under 4.5", odd: r(1.14, 1.22) },
+      ]
+    },
+    {
+      id: 1009,
+      name: "Cards - Home",
+      label: "Cartões - Casa",
+      values: [
+        { value: "Over 0.5", odd: r(1.48, 1.62) }, { value: "Under 0.5", odd: r(2.10, 2.35) },
+        { value: "Over 1.5", odd: r(2.25, 2.60) }, { value: "Under 1.5", odd: r(1.45, 1.58) },
+        { value: "Over 2.5", odd: r(4.20, 4.80) }, { value: "Under 2.5", odd: r(1.14, 1.22) },
+      ]
+    },
+    {
+      id: 1010,
+      name: "Cards - Away",
+      label: "Cartões - Fora",
+      values: [
+        { value: "Over 0.5", odd: r(1.48, 1.62) }, { value: "Under 0.5", odd: r(2.10, 2.35) },
+        { value: "Over 1.5", odd: r(2.25, 2.60) }, { value: "Under 1.5", odd: r(1.45, 1.58) },
+        { value: "Over 2.5", odd: r(4.20, 4.80) }, { value: "Under 2.5", odd: r(1.14, 1.22) },
       ]
     },
     {

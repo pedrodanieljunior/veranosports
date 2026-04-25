@@ -51,7 +51,7 @@ const ESCANTEIOS_MARKETS = [
   "Corners Over Under", "Total Corners",
   "Corners 1x2", "First Corner", "Corners Over Under First Half",
 ];
-const CARTOES_MARKETS = ["Red Card", "Cards Over/Under"];
+const CARTOES_MARKETS = ["Red Card", "Cards Over/Under", "Cards - Home", "Cards - Away"];
 const INTERVALOS_MARKETS = ["HT/FT Double", "First Half Winner"];
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
@@ -120,6 +120,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "First Corner": "first_corner",
       "Corners Over Under First Half": "first_half_corners",
       "Cards Over/Under": "cards",
+      "Cards - Home": "cards_home",
+      "Cards - Away": "cards_away",
       "First Half Winner": "first_half_result",
       "Red Card": "red_card",
     };
@@ -198,6 +200,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       }
       if (market.name === "Cards Over/Under") {
         return ["Over 2.5", "Under 2.5", "Over 3.5", "Under 3.5", "Over 4.5", "Under 4.5"].includes(value.value);
+      }
+      if (market.name === "Cards - Home" || market.name === "Cards - Away") {
+        return ["Over 0.5", "Under 0.5", "Over 1.5", "Under 1.5", "Over 2.5", "Under 2.5"].includes(value.value);
       }
       if (market.name === "Goals Over/Under First Half") {
         return ["Over 0.5", "Under 0.5", "Over 1.5", "Under 1.5", "Over 2.5", "Under 2.5"].includes(value.value);
