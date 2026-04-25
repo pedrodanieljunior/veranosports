@@ -337,6 +337,9 @@ export class DatabaseStorage implements IStorage {
       { marketKey: "cards_home", marketName: "Cartões - Casa", boostPercent: 0 },
       { marketKey: "cards_away", marketName: "Cartões - Fora", boostPercent: 0 },
       { marketKey: "red_card_1h", marketName: "Cartão Vermelho 1º Tempo", boostPercent: 0 },
+      { marketKey: "result_btts", marketName: "Resultado + Ambas Marcam", boostPercent: 0 },
+      { marketKey: "btts_1h", marketName: "Ambas Marcam 1º Tempo", boostPercent: 0 },
+      { marketKey: "btts_2h", marketName: "Ambas Marcam 2º Tempo", boostPercent: 0 },
     ];
 
     for (const d of defaults) {

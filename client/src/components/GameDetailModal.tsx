@@ -44,7 +44,7 @@ const TABS: { id: MarketTab; label: string }[] = [
 ];
 
 const GOLS_MARKETS = [
-  "Goals Over/Under", "Both Teams Score", "Team To Score First", "Exact Score",
+  "Goals Over/Under", "Both Teams Score", "Results/Both Teams Score", "Team To Score First", "Exact Score",
   "Goals Over/Under First Half", "Total - Home", "Total - Away",
 ];
 const ESCANTEIOS_MARKETS = [
@@ -52,7 +52,7 @@ const ESCANTEIOS_MARKETS = [
   "Corners 1x2", "Corners Over Under First Half",
 ];
 const CARTOES_MARKETS = ["Red Card", "Red Card In The Match (1st Half)", "Cards Over/Under", "Cards - Home", "Cards - Away"];
-const INTERVALOS_MARKETS = ["First Half Winner", "HT/FT Double"];
+const INTERVALOS_MARKETS = ["First Half Winner", "Both Teams Score - First Half", "HT/FT Double", "Both Teams To Score - Second Half"];
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
   if (tab === "todos") return true;
@@ -124,6 +124,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "First Half Winner": "first_half_result",
       "Red Card": "red_card",
       "Red Card In The Match (1st Half)": "red_card_1h",
+      "Results/Both Teams Score": "result_btts",
+      "Both Teams Score - First Half": "btts_1h",
+      "Both Teams To Score - Second Half": "btts_2h",
     };
     if (nameToBoostKey[mk]) return nameToBoostKey[mk];
     if (mk.startsWith("extra-")) {

@@ -502,6 +502,9 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Total Corners (1st Half)",
     "First Half Winner",
     "Red Card In The Match (1st Half)",
+    "Results/Both Teams Score",
+    "Both Teams Score - First Half",
+    "Both Teams To Score - Second Half",
   ]);
 
   // Normaliza nomes alternativos da API para os nomes internos
@@ -594,6 +597,9 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Team To Score First": 14,
     "Red Card": 15,
     "Red Card In The Match (1st Half)": 15,
+    "Results/Both Teams Score": 3,
+    "Both Teams Score - First Half": 5,
+    "Both Teams To Score - Second Half": 6,
     "Exact Score": 16,
   };
 
