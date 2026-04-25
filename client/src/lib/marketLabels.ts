@@ -77,6 +77,8 @@ function translateHalf(part: string, homeTeam?: string, awayTeam?: string): stri
   if (part === "Home") return homeTeam || "Casa";
   if (part === "Away") return awayTeam || "Fora";
   if (part === "Draw") return "Empate";
+  if (part === "Yes") return "Sim";
+  if (part === "No") return "Não";
   return part;
 }
 
