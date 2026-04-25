@@ -665,13 +665,14 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
       values = sortOverUnder(values);
     }
 
+    if (values.length === 0) return null;
     return {
       id: g.id,
       name: g.name,
       label,
       values,
     };
-  }).sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
+  }).filter(Boolean).sort((a, b) => (marketOrder[a!.name] ?? 99) - (marketOrder[b!.name] ?? 99)) as { id: number; name: string; label: string; values: { value: string; odd: number }[] }[];
 
   // Garantir mercado de Escanteios sempre presente com as 3 linhas obrigatórias
   const hasCorners = markets.some(m => m.name === "Corners Over Under" || m.name === "Total Corners");

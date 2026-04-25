@@ -208,6 +208,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       return true;
     });
 
+    if (filteredValues.length === 0) return null;
     const colClass = filteredValues.length <= 2 ? 'grid-cols-2' : filteredValues.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3';
 
     const translateHalf = (part: string) => {
