@@ -474,6 +474,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards Over/Under": "Total de Cartões",
     "Cards - Home": "Cartões - Casa",
     "Cards - Away": "Cartões - Fora",
+    "Red Card In The Match (1st Half)": "Cartão Vermelho 1º Tempo",
     "Last Corner": "Último Escanteio",
     "To Qualify": "Classificação",
     "Corners Over Under First Half": "Escanteios 1º Tempo",
@@ -500,6 +501,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Away Team Total Cards",
     "Total Corners (1st Half)",
     "First Half Winner",
+    "Red Card In The Match (1st Half)",
   ]);
 
   // Normaliza nomes alternativos da API para os nomes internos
@@ -591,6 +593,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards - Away": 13,
     "Team To Score First": 14,
     "Red Card": 15,
+    "Red Card In The Match (1st Half)": 15,
     "Exact Score": 16,
   };
 

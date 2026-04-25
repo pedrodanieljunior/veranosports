@@ -51,7 +51,7 @@ const ESCANTEIOS_MARKETS = [
   "Corners Over Under", "Total Corners",
   "Corners 1x2", "Corners Over Under First Half",
 ];
-const CARTOES_MARKETS = ["Red Card", "Cards Over/Under", "Cards - Home", "Cards - Away"];
+const CARTOES_MARKETS = ["Red Card", "Red Card In The Match (1st Half)", "Cards Over/Under", "Cards - Home", "Cards - Away"];
 const INTERVALOS_MARKETS = ["First Half Winner", "HT/FT Double"];
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
@@ -123,6 +123,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "Cards - Away": "cards_away",
       "First Half Winner": "first_half_result",
       "Red Card": "red_card",
+      "Red Card In The Match (1st Half)": "red_card_1h",
     };
     if (nameToBoostKey[mk]) return nameToBoostKey[mk];
     if (mk.startsWith("extra-")) {
