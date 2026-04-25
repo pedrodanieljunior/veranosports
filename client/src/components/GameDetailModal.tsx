@@ -336,7 +336,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               </div>
             </div>
           </DialogTitle>
-          <DialogDescription className="text-xs text-gray-400 mb-3">
+          <DialogDescription className="text-xs text-gray-400 mt-2 mb-3">
             Selecione uma odd para adicionar ao bilhete
           </DialogDescription>
 
