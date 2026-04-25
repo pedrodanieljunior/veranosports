@@ -229,6 +229,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       if (part === "Home") return "Casa";
       if (part === "Away") return "Fora";
       if (part === "Draw") return "Empate";
+      if (part === "Yes") return "Sim";
+      if (part === "No") return "Não";
       return part;
     };
 
