@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -96,6 +96,10 @@ export interface IStorage {
   // Transactions
   createTransaction(data: { userId: string; type: string; amount: number; balanceAfter: number; description: string; referenceId?: string }): Promise<Transaction>;
   getTransactionsByUser(userId: string): Promise<Transaction[]>;
+  // Fixture Halftime Stats
+  upsertFixtureHalftimeStats(fixtureId: number, homeCorners: number, awayCorners: number): Promise<void>;
+  getFixtureHalftimeStats(fixtureId: number): Promise<{ homeCorners: number; awayCorners: number } | null>;
+  getFixtureHalftimeStatsBatch(fixtureIds: number[]): Promise<Map<number, { homeCorners: number; awayCorners: number }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -788,6 +792,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(transactionsTable.userId, userId))
       .orderBy(desc(transactionsTable.createdAt));
     return rows.map(r => this.mapTransaction(r));
+  }
+
+  async upsertFixtureHalftimeStats(fixtureId: number, homeCorners: number, awayCorners: number): Promise<void> {
+    await db.insert(fixtureHalftimeStatsTable)
+      .values({ fixtureId, homeCorners, awayCorners })
+      .onConflictDoUpdate({
+        target: fixtureHalftimeStatsTable.fixtureId,
+        set: { homeCorners, awayCorners, capturedAt: new Date() },
+      });
+  }
+
+  async getFixtureHalftimeStats(fixtureId: number): Promise<{ homeCorners: number; awayCorners: number } | null> {
+    const [row] = await db.select().from(fixtureHalftimeStatsTable).where(eq(fixtureHalftimeStatsTable.fixtureId, fixtureId));
+    if (!row) return null;
+    return { homeCorners: row.homeCorners, awayCorners: row.awayCorners };
+  }
+
+  async getFixtureHalftimeStatsBatch(fixtureIds: number[]): Promise<Map<number, { homeCorners: number; awayCorners: number }>> {
+    if (fixtureIds.length === 0) return new Map();
+    const rows = await db.select().from(fixtureHalftimeStatsTable)
+      .where(sql`${fixtureHalftimeStatsTable.fixtureId} = ANY(${fixtureIds})`);
+    const result = new Map<number, { homeCorners: number; awayCorners: number }>();
+    for (const row of rows) result.set(row.fixtureId, { homeCorners: row.homeCorners, awayCorners: row.awayCorners });
+    return result;
   }
 }
 

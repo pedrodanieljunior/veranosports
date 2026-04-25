@@ -350,3 +350,11 @@ export const insertUserWithdrawalSchema = z.object({
   amount: z.number().min(20, "Valor mínimo para saque é R$20,00"),
   pixKey: z.string().min(5, "Chave PIX inválida"),
 });
+
+// ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
+export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
+  fixtureId: integer("fixture_id").primaryKey(),
+  homeCorners: integer("home_corners").notNull(),
+  awayCorners: integer("away_corners").notNull(),
+  capturedAt: timestamp("captured_at").notNull().defaultNow(),
+});

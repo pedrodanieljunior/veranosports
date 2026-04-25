@@ -6,6 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { captureHalftimeStats } from "./halftime-capture";
 
 import { storage } from "./storage";
 
@@ -101,6 +102,11 @@ app.use((req, res, next) => {
   await storage.seedMarketSettings();
 
   await registerRoutes(httpServer, app);
+
+  // Job de captura de escanteios 1º tempo (ao vivo no intervalo — a cada 5 min)
+  setInterval(async () => {
+    try { await captureHalftimeStats(); } catch (e) { /* silencioso */ }
+  }, 5 * 60 * 1000);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

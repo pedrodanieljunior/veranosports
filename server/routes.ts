@@ -1103,6 +1103,15 @@ async function runCheckResults() {
         totalCorners = cornerStatsCache.get(fixtureId) ?? null;
       }
 
+      // Para escanteios 1º tempo: buscar do banco (capturado ao vivo no HT)
+      let homeCorners1H: number | null = null;
+      let awayCorners1H: number | null = null;
+      if (mk.includes("corner") && mk.includes("first half")) {
+        const fixtureId = matchingFixture.fixture.id;
+        const ht = await storage.getFixtureHalftimeStats(fixtureId);
+        if (ht) { homeCorners1H = ht.homeCorners; awayCorners1H = ht.awayCorners; }
+      }
+
       const isFirstScorerSelection = mk.includes("team to score first") || mk.includes("score first");
       const isRedCardSelection = mk.includes("red card");
       let firstScorerTeam: string | null = null;
@@ -3718,6 +3727,8 @@ export async function registerRoutes(
       const arCornerCache    = new Map<string, number>();         // fid → totalCorners
       const arCornerHomeCache = new Map<string, number>();        // fid → escanteios casa
       const arCornerAwayCache = new Map<string, number>();        // fid → escanteios visitante
+      const arCorner1HHomeCache = new Map<string, number | null>(); // fid → escanteios casa 1ºT (do DB)
+      const arCorner1HAwayCache = new Map<string, number | null>(); // fid → escanteios visitante 1ºT (do DB)
       const arFirstGoalCache = new Map<string, string | null>(); // fid → team name que marcou primeiro
       const arRedCardCache   = new Map<string, boolean>();       // fid → houve cartão vermelho (jogo inteiro)
       const arRedCard1HCache = new Map<string, boolean>();       // fid → houve cartão vermelho (1º tempo)
@@ -3856,9 +3867,54 @@ export async function registerRoutes(
             }
           }
 
-          // Escanteios 1º Tempo — API não fornece por período
+          // Escanteios 1º Tempo — busca da tabela fixture_halftime_stats
           if (mk.includes("first half")) {
-            resolved = false;
+            // Só busca do DB se ainda não tiver no cache
+            if (!arCorner1HHomeCache.has(fid)) {
+              try {
+                const htStats = await storage.getFixtureHalftimeStats(parseInt(fid));
+                if (htStats) {
+                  arCorner1HHomeCache.set(fid, htStats.homeCorners);
+                  arCorner1HAwayCache.set(fid, htStats.awayCorners);
+                  console.log(`    [auto-resolve] Escanteios 1ºT fixture ${fid} (DB): casa=${htStats.homeCorners}, fora=${htStats.awayCorners}`);
+                } else {
+                  arCorner1HHomeCache.set(fid, null);
+                  arCorner1HAwayCache.set(fid, null);
+                  console.log(`    [auto-resolve] Sem registro 1ºT para fixture ${fid} no banco`);
+                }
+              } catch (e) {
+                arCorner1HHomeCache.set(fid, null);
+                arCorner1HAwayCache.set(fid, null);
+                console.log(`    [auto-resolve] Erro ao buscar halftime stats fixture ${fid}:`, e);
+              }
+            }
+            const hc1H = arCorner1HHomeCache.get(fid) ?? null;
+            const ac1H = arCorner1HAwayCache.get(fid) ?? null;
+            if (hc1H === null || ac1H === null) {
+              // Dados não disponíveis — mantém pendente
+              resolved = false;
+            } else if (mk.includes("1x2")) {
+              // Corners 1x2 1ºT
+              const ocTrim = oc.toLowerCase().trim();
+              if (ocTrim === "home" || ocTrim === "casa") selResult = hc1H > ac1H ? "won" : "lost";
+              else if (ocTrim === "away" || ocTrim === "fora" || ocTrim === "visitante") selResult = ac1H > hc1H ? "won" : "lost";
+              else if (ocTrim === "draw" || ocTrim === "empate" || ocTrim === "x") selResult = hc1H === ac1H ? "won" : "lost";
+              else resolved = false;
+            } else {
+              // Corners Over/Under 1ºT
+              const total1H = hc1H + ac1H;
+              const overMatch = oc.match(/over\s*(\d+\.?\d*)/i);
+              const underMatch = oc.match(/under\s*(\d+\.?\d*)/i);
+              if (overMatch) {
+                selResult = total1H > parseFloat(overMatch[1]) ? "won" : "lost";
+                console.log(`    [auto-resolve] Corners 1ºT Over ${overMatch[1]}: total=${total1H} → ${selResult}`);
+              } else if (underMatch) {
+                selResult = total1H < parseFloat(underMatch[1]) ? "won" : "lost";
+                console.log(`    [auto-resolve] Corners 1ºT Under ${underMatch[1]}: total=${total1H} → ${selResult}`);
+              } else {
+                resolved = false;
+              }
+            }
           // Mercados complexos não resolvíveis automaticamente
           } else if (mk.includes("asian handicap") || mk.includes("last corner")) {
             resolved = false;
@@ -4118,7 +4174,9 @@ function checkSelectionResult(
   hasRedCard: boolean | null = null,
   hasRedCard1H: boolean | null = null,
   homeCorners: number | null = null,
-  awayCorners: number | null = null
+  awayCorners: number | null = null,
+  homeCorners1H: number | null = null,
+  awayCorners1H: number | null = null
 ): boolean | null {
   const outcome   = selection.outcome?.toLowerCase() ?? "";
   const marketKey = selection.marketKey?.toLowerCase() ?? "";
@@ -4181,10 +4239,18 @@ function checkSelectionResult(
     selection.marketName?.toLowerCase().includes("corner");
 
   if (isCornerMkt) {
-    // 1º tempo — API não fornece escanteios por período, manter pendente
+    // 1º tempo — usa stats capturadas ao vivo no intervalo
     if (marketKey.includes("first half")) {
-      console.log(`    Corners 1ºT: dados de escanteios por período não disponíveis via API`);
-      return null;
+      if (homeCorners1H === null || awayCorners1H === null) {
+        console.log(`    Corners 1ºT: aguardando captura ao vivo no intervalo (jogo ainda não chegou ao HT ou não capturado)`);
+        return null;
+      }
+      const total1H = homeCorners1H + awayCorners1H;
+      const overMatch  = outcome.match(/over\s*([\d.]+)/i);
+      const underMatch = outcome.match(/under\s*([\d.]+)/i);
+      if (overMatch)  { const l = parseFloat(overMatch[1]); console.log(`    Corners 1ºT: Over ${l} — ${total1H}>${l}=${total1H>l}`);  return total1H > l; }
+      if (underMatch) { const l = parseFloat(underMatch[1]); console.log(`    Corners 1ºT: Under ${l} — ${total1H}<${l}=${total1H<l}`); return total1H < l; }
+      return false;
     }
     // Mercados complexos (Handicap Asiático, Último Escanteio) — não resolvíveis automaticamente
     if (marketKey.includes("asian handicap") || marketKey.includes("last corner")) {
