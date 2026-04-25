@@ -629,15 +629,17 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     } else if (g.name === "Cards Over/Under") {
       values = values.filter(v => {
         const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
-        if (!m) return true;
-        return [2.5, 3.5, 4.5, 5.5].includes(parseFloat(m[2]));
+        if (!m) return false;
+        const line = parseFloat(m[2]);
+        return line >= 1.5 && line <= 9.5 && (line * 2) % 1 === 0;
       });
       values = sortOverUnder(values);
     } else if (g.name === "Cards - Home" || g.name === "Cards - Away") {
       values = values.filter(v => {
         const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
-        if (!m) return true;
-        return [0.5, 1.5, 2.5, 3.5].includes(parseFloat(m[2]));
+        if (!m) return false;
+        const line = parseFloat(m[2]);
+        return line >= 0.5 && line <= 6.5 && (line * 2) % 1 === 0;
       });
       values = sortOverUnder(values);
     } else if (g.name === "Corners Over Under First Half") {
