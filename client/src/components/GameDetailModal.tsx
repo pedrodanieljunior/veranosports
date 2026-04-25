@@ -52,14 +52,14 @@ const ESCANTEIOS_MARKETS = [
   "Corners 1x2", "Corners Over Under First Half",
 ];
 const CARTOES_MARKETS = ["Red Card", "Red Card In The Match (1st Half)", "Cards Over/Under", "Cards - Home", "Cards - Away"];
-const INTERVALOS_MARKETS = ["First Half Winner", "Both Teams Score - First Half", "HT/FT Double", "Both Teams To Score - Second Half"];
+const INTERVALOS_MARKETS = ["First Half Winner", "Both Teams Score - First Half", "Both Teams To Score - Second Half", "HT/FT Double"];
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
   if (tab === "todos") return true;
   if (tab === "gols") return GOLS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
   if (tab === "escanteios") return ESCANTEIOS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
   if (tab === "cartoes") return CARTOES_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
-  if (tab === "intervalos") return INTERVALOS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
+  if (tab === "intervalos") return INTERVALOS_MARKETS.some(m => m === marketName);
   return false;
 }
 
