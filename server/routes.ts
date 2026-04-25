@@ -500,13 +500,17 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards - Away",
     "Home Team Total Cards",
     "Away Team Total Cards",
+    "Total Corners (1st Half)",
+    "Corners. First Corner (3 way)",
     "First Half Winner",
   ]);
 
   // Normaliza nomes alternativos da API para os nomes internos
   const marketNameAliases: Record<string, string> = {
-    "Home Team Total Cards": "Cards - Home",
-    "Away Team Total Cards": "Cards - Away",
+    "Home Team Total Cards":          "Cards - Home",
+    "Away Team Total Cards":          "Cards - Away",
+    "Total Corners (1st Half)":       "Corners Over Under First Half",
+    "Corners. First Corner (3 way)":  "First Corner",
   };
 
   // Para cada mercado permitido, usar o bookmaker de MAIOR PRIORIDADE que o tenha.
