@@ -39,7 +39,6 @@ const MARKET_LABELS: Record<string, string> = {
   "Cards - Home": "Cartões - Casa",
   "Cards - Away": "Cartões - Fora",
   "Red Card In The Match (1st Half)": "Cartão Vermelho 1º Tempo",
-  "Red Card": "Cartão Vermelho no Jogo",
   "Corners Over Under First Half": "Escanteios 1º Tempo",
   "Results/Both Teams Score": "Resultado + Ambas Marcam",
   "Result/Total Goals": "Resultado + Total Gols",

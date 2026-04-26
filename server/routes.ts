@@ -965,6 +965,49 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
   ];
 }
 
+// Mapeamento de sport keys → league IDs da API-Football (usado em runCheckResults e registerRoutes)
+const LEAGUE_MAPPING: Record<string, number> = {
+  "soccer_brazil_campeonato": 71,
+  "soccer_brazil_serie_b": 72,
+  "soccer_brazil_copa_do_brasil": 73,
+  "soccer_conmebol_copa_libertadores": 13,
+  "soccer_conmebol_copa_sudamericana": 11,
+  "soccer_argentina_primera_division": 128,
+  "soccer_uefa_champs_league": 2,
+  "soccer_uefa_europa_league": 3,
+  "soccer_uefa_europa_conference_league": 848,
+  "soccer_epl": 39,
+  "soccer_efl_champ": 40,
+  "soccer_fa_cup": 45,
+  "soccer_spain_la_liga": 140,
+  "soccer_italy_serie_a": 135,
+  "soccer_germany_bundesliga": 78,
+  "soccer_france_ligue_one": 61,
+  "soccer_portugal_primeira_liga": 94,
+  "soccer_netherlands_eredivisie": 88,
+  "soccer_turkey_super_league": 203,
+  "soccer_belgium_first_div": 144,
+  "soccer_usa_mls": 253,
+  "soccer_mexico_ligamx": 262,
+  "soccer_japan_j_league": 98,
+  "soccer_international_friendlies": 10,
+  "soccer_wc_qualifiers_conmebol": 34,
+  "soccer_wc_qualifiers_europe": 32,
+  "soccer_wc_qualifiers_concacaf": 31,
+  "soccer_wc_qualifiers_caf": 29,
+  "soccer_wc_qualifiers_afc": 30,
+  "soccer_wc_intercontinental": 43,
+};
+
+// Ligas com temporada no formato calendário (jan–dez), não europeu (ago–jul)
+const CALENDAR_YEAR_LEAGUES = new Set([
+  71, 72, 73,
+  11, 13, 128,
+  253, 262, 98,
+  10,
+  34, 32, 31, 29, 30, 43,
+]);
+
 async function runCheckResults() {
   const cornerStatsCache     = new Map<number, number>();       // fid → total
   const cornerHomeCache      = new Map<number, number>();       // fid → escanteios casa
@@ -1191,54 +1234,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  // Mapeamento de sport keys da The Odds API para league IDs da API-Football (para mercados extras)
-  const LEAGUE_MAPPING: Record<string, number> = {
-    // Brasil
-    "soccer_brazil_campeonato": 71,             // Brasileirão Série A
-    "soccer_brazil_serie_b": 72,               // Brasileirão Série B
-    "soccer_brazil_copa_do_brasil": 73,         // Copa do Brasil
-    // Conmebol
-    "soccer_conmebol_copa_libertadores": 13,    // Copa Libertadores
-    "soccer_conmebol_copa_sudamericana": 11,    // Copa Sul-Americana
-    "soccer_argentina_primera_division": 128,   // Liga Profesional Argentina
-    // UEFA
-    "soccer_uefa_champs_league": 2,             // Champions League
-    "soccer_uefa_europa_league": 3,             // Europa League
-    "soccer_uefa_europa_conference_league": 848,// Conference League
-    // Europa – grandes ligas
-    "soccer_epl": 39,                           // Premier League
-    "soccer_efl_champ": 40,                     // Championship
-    "soccer_fa_cup": 45,                        // FA Cup
-    "soccer_spain_la_liga": 140,                // La Liga
-    "soccer_italy_serie_a": 135,                // Serie A
-    "soccer_germany_bundesliga": 78,            // Bundesliga
-    "soccer_france_ligue_one": 61,              // Ligue 1
-    "soccer_portugal_primeira_liga": 94,        // Primeira Liga
-    "soccer_netherlands_eredivisie": 88,        // Eredivisie
-    "soccer_turkey_super_league": 203,          // Süper Lig
-    "soccer_belgium_first_div": 144,            // Belgium First Division
-    // Resto do mundo
-    "soccer_usa_mls": 253,                      // MLS
-    "soccer_mexico_ligamx": 262,                // Liga MX
-    "soccer_japan_j_league": 98,               // J1 League
-    "soccer_international_friendlies": 10,     // Amistosos Internacionais
-    // Qualificatórias Copa do Mundo 2026
-    "soccer_wc_qualifiers_conmebol": 34,        // Eliminatórias – CONMEBOL
-    "soccer_wc_qualifiers_europe": 32,          // Eliminatórias – UEFA
-    "soccer_wc_qualifiers_concacaf": 31,        // Eliminatórias – CONCACAF
-    "soccer_wc_qualifiers_caf": 29,             // Eliminatórias – África
-    "soccer_wc_qualifiers_afc": 30,             // Eliminatórias – Ásia
-    "soccer_wc_intercontinental": 43,           // Playoffs Intercontinentais
-  };
-
-  // Ligas com temporada no formato calendário (jan–dez), não europeu (ago–jul)
-  const CALENDAR_YEAR_LEAGUES = new Set([
-    71, 72, 73,    // Brasileirão A, B, Copa do Brasil
-    11, 13, 128,   // Copa Liberta, Sudamericana, Argentina
-    253, 262, 98,  // MLS, Liga MX, J-League
-    10,            // Amistosos Internacionais
-    34, 32, 31, 29, 30, 43, // Qualificatórias Copa do Mundo
-  ]);
+  // LEAGUE_MAPPING e CALENDAR_YEAR_LEAGUES declarados em escopo de módulo (antes de runCheckResults)
 
   // ─── Auth Routes ──────────────────────────────────────────────────────────
   app.post("/api/auth/register", async (req, res) => {
