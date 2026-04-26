@@ -3977,9 +3977,9 @@ export async function registerRoutes(
         } else if (mk === "first half winner") {
           // Vencedor do 1º Tempo
           const ocTrim = oc.toLowerCase().trim();
-          if (ocTrim === "home" || ocTrim === "casa") selResult = htHome > htAway ? "won" : "lost";
-          else if (ocTrim === "away" || ocTrim === "fora" || ocTrim === "visitante") selResult = htAway > htHome ? "won" : "lost";
-          else if (ocTrim === "draw" || ocTrim === "empate" || ocTrim === "x") selResult = htHome === htAway ? "won" : "lost";
+          if (ocTrim.includes("draw") || ocTrim.includes("empate") || ocTrim === "x") selResult = htHome === htAway ? "won" : "lost";
+          else if (ocTrim.includes("home") || ocTrim.includes("casa")) selResult = htHome > htAway ? "won" : "lost";
+          else if (ocTrim.includes("away") || ocTrim.includes("fora") || ocTrim.includes("visitante")) selResult = htAway > htHome ? "won" : "lost";
           else resolved = false;
 
         } else if (mk === "total - home" || mk === "total - away") {
@@ -4483,9 +4483,9 @@ function checkSelectionResult(
   if (marketKey === "first half winner") {
     if (htHomeGoals === null || htAwayGoals === null) { console.log(`    First Half Winner: dados HT indisponíveis`); return null; }
     const oc2 = outcome.trim();
-    if (oc2 === "home" || oc2 === "casa") { const r = htHomeGoals > htAwayGoals; console.log(`    FHW: apostou Casa, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
-    if (oc2 === "away" || oc2 === "fora" || oc2 === "visitante") { const r = htAwayGoals > htHomeGoals; console.log(`    FHW: apostou Fora, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
-    if (oc2 === "draw" || oc2 === "empate" || oc2 === "x") { const r = htHomeGoals === htAwayGoals; console.log(`    FHW: apostou Empate, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
+    if (oc2.includes("draw") || oc2.includes("empate") || oc2 === "x") { const r = htHomeGoals === htAwayGoals; console.log(`    FHW: apostou Empate, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
+    if (oc2.includes("home") || oc2.includes("casa")) { const r = htHomeGoals > htAwayGoals; console.log(`    FHW: apostou Casa, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
+    if (oc2.includes("away") || oc2.includes("fora") || oc2.includes("visitante")) { const r = htAwayGoals > htHomeGoals; console.log(`    FHW: apostou Fora, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
     console.log(`    FHW: outcome não reconhecido "${outcome}"`); return false;
   }
 
