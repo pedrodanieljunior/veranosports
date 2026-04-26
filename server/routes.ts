@@ -969,6 +969,8 @@ async function runCheckResults() {
   const cornerStatsCache     = new Map<number, number>();       // fid → total
   const cornerHomeCache      = new Map<number, number>();       // fid → escanteios casa
   const cornerAwayCache      = new Map<number, number>();       // fid → escanteios visitante
+  const cardHomeCache        = new Map<number, number>();       // fid → cartões casa (amarelo+vermelho)
+  const cardAwayCache        = new Map<number, number>();       // fid → cartões visitante
   const firstGoalCache       = new Map<number, string | null>();
   const redCardCache     = new Map<number, boolean>();
   const redCard1HCache   = new Map<number, boolean>();
@@ -1078,27 +1080,35 @@ async function runCheckResults() {
         selection.marketName?.toLowerCase().includes("escanteio") ||
         selection.marketName?.toLowerCase().includes("corner");
 
+      const isCardSelection = mk.includes("cards") && !mk.includes("red card");
+
+      // Busca estatísticas (escanteios + cartões) quando necessário
       let totalCorners: number | null = null;
-      if (isCornerSelection) {
+      if (isCornerSelection || isCardSelection) {
         const fixtureId = matchingFixture.fixture.id;
-        if (!cornerStatsCache.has(fixtureId)) {
+        if (!cornerStatsCache.has(fixtureId) && !cardHomeCache.has(fixtureId)) {
           try {
             const statsRes = await fetch(`${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY! } });
             if (statsRes.ok) {
               const statsData = await statsRes.json();
               let homeCorners = 0; let awayCorners = 0;
+              let homeYellow = 0; let homeRed = 0; let awayYellow = 0; let awayRed = 0;
               for (const teamStat of statsData.response || []) {
-                const cornerStat = (teamStat.statistics || []).find((s: any) => s.type === "Corner Kicks");
-                if (cornerStat) {
-                  const val = parseInt(cornerStat.value) || 0;
-                  if (teamsMatch(teamStat.team.name, matchingFixture.teams.home.name)) homeCorners = val; else awayCorners = val;
+                const isHome = teamsMatch(teamStat.team.name, matchingFixture.teams.home.name);
+                for (const s of teamStat.statistics || []) {
+                  const val = parseInt(s.value) || 0;
+                  if (s.type === "Corner Kicks") { if (isHome) homeCorners = val; else awayCorners = val; }
+                  if (s.type === "Yellow Cards") { if (isHome) homeYellow = val; else awayYellow = val; }
+                  if (s.type === "Red Cards")    { if (isHome) homeRed = val; else awayRed = val; }
                 }
               }
               cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
               cornerHomeCache.set(fixtureId, homeCorners);
               cornerAwayCache.set(fixtureId, awayCorners);
+              cardHomeCache.set(fixtureId, homeYellow + homeRed);
+              cardAwayCache.set(fixtureId, awayYellow + awayRed);
             }
-          } catch (err) { console.log(`[CheckResults] Erro escanteios fixture ${fixtureId}:`, err); }
+          } catch (err) { console.log(`[CheckResults] Erro stats fixture ${fixtureId}:`, err); }
         }
         totalCorners = cornerStatsCache.get(fixtureId) ?? null;
       }
@@ -1142,7 +1152,9 @@ async function runCheckResults() {
       const fixtureId2 = matchingFixture.fixture.id;
       const homeCorners2 = cornerHomeCache.get(fixtureId2) ?? null;
       const awayCorners2 = cornerAwayCache.get(fixtureId2) ?? null;
-      const selectionWon = checkSelectionResult(selection, homeGoals, awayGoals, totalGoals, matchingFixture.teams.home.name, matchingFixture.teams.away.name, htHomeGoals, htAwayGoals, totalCorners, firstScorerTeam, hasRedCard, hasRedCard1H, homeCorners2, awayCorners2);
+      const homeCards2   = cardHomeCache.get(fixtureId2) ?? null;
+      const awayCards2   = cardAwayCache.get(fixtureId2) ?? null;
+      const selectionWon = checkSelectionResult(selection, homeGoals, awayGoals, totalGoals, matchingFixture.teams.home.name, matchingFixture.teams.away.name, htHomeGoals, htAwayGoals, totalCorners, firstScorerTeam, hasRedCard, hasRedCard1H, homeCorners2, awayCorners2, homeCorners1H, awayCorners1H, homeCards2, awayCards2);
 
       if (selectionWon === null) {
         allSelectionsWon = false;
@@ -3729,6 +3741,8 @@ export async function registerRoutes(
       const arCornerAwayCache = new Map<string, number>();        // fid → escanteios visitante
       const arCorner1HHomeCache = new Map<string, number | null>(); // fid → escanteios casa 1ºT (do DB)
       const arCorner1HAwayCache = new Map<string, number | null>(); // fid → escanteios visitante 1ºT (do DB)
+      const arCardHomeCache  = new Map<string, number>();        // fid → cartões casa (amarelo+vermelho)
+      const arCardAwayCache  = new Map<string, number>();        // fid → cartões visitante
       const arFirstGoalCache = new Map<string, string | null>(); // fid → team name que marcou primeiro
       const arRedCardCache   = new Map<string, boolean>();       // fid → houve cartão vermelho (jogo inteiro)
       const arRedCard1HCache = new Map<string, boolean>();       // fid → houve cartão vermelho (1º tempo)
@@ -3840,7 +3854,7 @@ export async function registerRoutes(
           }
 
         } else if (mk.includes("corner")) {
-          // Escanteios — busca estatísticas da API-Football
+          // Escanteios — busca estatísticas da API-Football (também extrai cartões)
           if (!arCornerCache.has(fid)) {
             try {
               const statsRes = await fetch(
@@ -3850,20 +3864,25 @@ export async function registerRoutes(
               if (statsRes.ok) {
                 const statsData = await statsRes.json();
                 let homeC = 0; let awayC = 0;
+                let homeYellow = 0; let homeRed = 0; let awayYellow = 0; let awayRed = 0;
                 for (const teamStat of statsData.response || []) {
-                  const cornerStat = (teamStat.statistics || []).find((s: any) => s.type === "Corner Kicks");
-                  if (cornerStat) {
-                    const val = parseInt(cornerStat.value) || 0;
-                    if (teamsMatch(teamStat.team?.name ?? "", homeTeam)) homeC = val; else awayC = val;
+                  const isHome = teamsMatch(teamStat.team?.name ?? "", homeTeam);
+                  for (const s of teamStat.statistics || []) {
+                    const val = parseInt(s.value) || 0;
+                    if (s.type === "Corner Kicks")  { if (isHome) homeC = val; else awayC = val; }
+                    if (s.type === "Yellow Cards")  { if (isHome) homeYellow = val; else awayYellow = val; }
+                    if (s.type === "Red Cards")     { if (isHome) homeRed = val; else awayRed = val; }
                   }
                 }
                 arCornerCache.set(fid, homeC + awayC);
                 arCornerHomeCache.set(fid, homeC);
                 arCornerAwayCache.set(fid, awayC);
-                console.log(`    [auto-resolve] Escanteios fixture ${fid}: total=${homeC + awayC} (casa=${homeC}, fora=${awayC})`);
+                arCardHomeCache.set(fid, homeYellow + homeRed);
+                arCardAwayCache.set(fid, awayYellow + awayRed);
+                console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed + awayYellow + awayRed} (${homeYellow + homeRed}/${awayYellow + awayRed})`);
               }
             } catch (e) {
-              console.log(`    [auto-resolve] Erro ao buscar escanteios fixture ${fid}:`, e);
+              console.log(`    [auto-resolve] Erro ao buscar stats fixture ${fid}:`, e);
             }
           }
 
@@ -3957,6 +3976,73 @@ export async function registerRoutes(
             selResult = parseInt(og) === homeGoals && parseInt(ag) === awayGoals ? "won" : "lost";
           } else {
             resolved = false;
+          }
+
+        } else if (mk === "first half winner") {
+          // Vencedor do 1º Tempo
+          const ocTrim = oc.toLowerCase().trim();
+          if (ocTrim === "home" || ocTrim === "casa") selResult = htHome > htAway ? "won" : "lost";
+          else if (ocTrim === "away" || ocTrim === "fora" || ocTrim === "visitante") selResult = htAway > htHome ? "won" : "lost";
+          else if (ocTrim === "draw" || ocTrim === "empate" || ocTrim === "x") selResult = htHome === htAway ? "won" : "lost";
+          else resolved = false;
+
+        } else if (mk === "total - home" || mk === "total - away") {
+          // Total de gols de um time específico
+          const teamGoals = mk === "total - home" ? homeGoals : awayGoals;
+          const overMatch = oc.match(/over\s*(\d+\.?\d*)/i);
+          const underMatch = oc.match(/under\s*(\d+\.?\d*)/i);
+          if (overMatch)       selResult = teamGoals > parseFloat(overMatch[1]) ? "won" : "lost";
+          else if (underMatch) selResult = teamGoals < parseFloat(underMatch[1]) ? "won" : "lost";
+          else resolved = false;
+
+        } else if (mk.includes("cards") && !mk.includes("red card")) {
+          // Mercados de cartões — busca estatísticas da API-Football
+          if (!arCardHomeCache.has(fid)) {
+            try {
+              const statsRes = await fetch(
+                `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fid}`,
+                { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" } }
+              );
+              if (statsRes.ok) {
+                const statsData = await statsRes.json();
+                let homeYellow = 0; let homeRed = 0; let awayYellow = 0; let awayRed = 0;
+                let homeC = 0; let awayC = 0;
+                for (const teamStat of statsData.response || []) {
+                  const isHome = teamsMatch(teamStat.team?.name ?? "", homeTeam);
+                  for (const s of teamStat.statistics || []) {
+                    const val = parseInt(s.value) || 0;
+                    if (s.type === "Corner Kicks") { if (isHome) homeC = val; else awayC = val; }
+                    if (s.type === "Yellow Cards") { if (isHome) homeYellow = val; else awayYellow = val; }
+                    if (s.type === "Red Cards")    { if (isHome) homeRed = val; else awayRed = val; }
+                  }
+                }
+                arCardHomeCache.set(fid, homeYellow + homeRed);
+                arCardAwayCache.set(fid, awayYellow + awayRed);
+                if (!arCornerCache.has(fid)) {
+                  arCornerCache.set(fid, homeC + awayC);
+                  arCornerHomeCache.set(fid, homeC);
+                  arCornerAwayCache.set(fid, awayC);
+                }
+                console.log(`    [auto-resolve] Cartões fixture ${fid}: casa=${homeYellow + homeRed}, fora=${awayYellow + awayRed}`);
+              }
+            } catch (e) {
+              console.log(`    [auto-resolve] Erro ao buscar cartões fixture ${fid}:`, e);
+            }
+          }
+          const homeCards = arCardHomeCache.get(fid) ?? null;
+          const awayCards = arCardAwayCache.get(fid) ?? null;
+          if (homeCards === null || awayCards === null) {
+            resolved = false;
+          } else {
+            let cardTotal: number;
+            if (mk === "cards - home" || mk === "home team total cards") cardTotal = homeCards;
+            else if (mk === "cards - away" || mk === "away team total cards") cardTotal = awayCards;
+            else cardTotal = homeCards + awayCards; // cards over/under
+            const overMatch = oc.match(/over\s*(\d+\.?\d*)/i);
+            const underMatch = oc.match(/under\s*(\d+\.?\d*)/i);
+            if (overMatch)       { selResult = cardTotal > parseFloat(overMatch[1]) ? "won" : "lost"; console.log(`    [auto-resolve] Cartões Over ${overMatch[1]}: total=${cardTotal} → ${selResult}`); }
+            else if (underMatch) { selResult = cardTotal < parseFloat(underMatch[1]) ? "won" : "lost"; console.log(`    [auto-resolve] Cartões Under ${underMatch[1]}: total=${cardTotal} → ${selResult}`); }
+            else resolved = false;
           }
 
         } else if (mk.includes("team to score first") || mk.includes("score first") || mk.includes("red card")) {
@@ -4176,7 +4262,9 @@ function checkSelectionResult(
   homeCorners: number | null = null,
   awayCorners: number | null = null,
   homeCorners1H: number | null = null,
-  awayCorners1H: number | null = null
+  awayCorners1H: number | null = null,
+  homeCards: number | null = null,
+  awayCards: number | null = null
 ): boolean | null {
   const outcome   = selection.outcome?.toLowerCase() ?? "";
   const marketKey = selection.marketKey?.toLowerCase() ?? "";
@@ -4393,6 +4481,40 @@ function checkSelectionResult(
     if (pickedAway) { console.log(`    1st scorer: apostou visitante, marcou ${firstScorerTeam}: ${scoredAway}`); return scoredAway; }
     console.log(`    1st scorer: não identificou time no outcome "${selection.outcome}"`);
     return false;
+  }
+
+  // ── Vencedor do 1º Tempo ─────────────────────────────────────────────────
+  if (marketKey === "first half winner") {
+    if (htHomeGoals === null || htAwayGoals === null) { console.log(`    First Half Winner: dados HT indisponíveis`); return null; }
+    const oc2 = outcome.trim();
+    if (oc2 === "home" || oc2 === "casa") { const r = htHomeGoals > htAwayGoals; console.log(`    FHW: apostou Casa, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
+    if (oc2 === "away" || oc2 === "fora" || oc2 === "visitante") { const r = htAwayGoals > htHomeGoals; console.log(`    FHW: apostou Fora, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
+    if (oc2 === "draw" || oc2 === "empate" || oc2 === "x") { const r = htHomeGoals === htAwayGoals; console.log(`    FHW: apostou Empate, HT=${htHomeGoals}-${htAwayGoals} → ${r}`); return r; }
+    console.log(`    FHW: outcome não reconhecido "${outcome}"`); return false;
+  }
+
+  // ── Total de Gols de um Time (Total - Home / Total - Away) ────────────────
+  if (marketKey === "total - home" || marketKey === "total - away") {
+    const teamGoals = marketKey === "total - home" ? homeGoals : awayGoals;
+    const overM  = outcome.match(/over\s*(\d+\.?\d*)/i);
+    const underM = outcome.match(/under\s*(\d+\.?\d*)/i);
+    if (overM)  { const r = teamGoals > parseFloat(overM[1]);  console.log(`    ${marketKey}: Over ${overM[1]}, gols=${teamGoals} → ${r}`); return r; }
+    if (underM) { const r = teamGoals < parseFloat(underM[1]); console.log(`    ${marketKey}: Under ${underM[1]}, gols=${teamGoals} → ${r}`); return r; }
+    console.log(`    ${marketKey}: outcome não reconhecido "${outcome}"`); return false;
+  }
+
+  // ── Mercados de Cartões (Cards Over/Under, Cards - Home, Cards - Away) ────
+  if (marketKey.includes("cards") && !marketKey.includes("red card")) {
+    if (homeCards === null || awayCards === null) { console.log(`    Cards: dados de cartões indisponíveis`); return null; }
+    let cardTotal: number;
+    if (marketKey === "cards - home" || marketKey === "home team total cards") cardTotal = homeCards;
+    else if (marketKey === "cards - away" || marketKey === "away team total cards") cardTotal = awayCards;
+    else cardTotal = homeCards + awayCards; // cards over/under
+    const overM  = outcome.match(/over\s*(\d+\.?\d*)/i);
+    const underM = outcome.match(/under\s*(\d+\.?\d*)/i);
+    if (overM)  { const r = cardTotal > parseFloat(overM[1]);  console.log(`    Cards Over ${overM[1]}: total=${cardTotal} → ${r}`); return r; }
+    if (underM) { const r = cardTotal < parseFloat(underM[1]); console.log(`    Cards Under ${underM[1]}: total=${cardTotal} → ${r}`); return r; }
+    console.log(`    Cards: outcome não reconhecido "${outcome}"`); return false;
   }
 
   console.log(`    Mercado não reconhecido: mk="${marketKey}", outcome="${selection.outcome}"`);
