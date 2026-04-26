@@ -1045,7 +1045,7 @@ async function runCheckResults() {
   }
 
   const fromDate = toManausDateStr(oldestGameDate.getTime() - 24 * 60 * 60 * 1000);
-  const toDate = toManausDateStr(Math.min(newestGameDate.getTime() + 24 * 60 * 60 * 1000, today.getTime()));
+  const toDate = toManausDateStr(newestGameDate.getTime() + 24 * 60 * 60 * 1000);
 
   console.log(`[CheckResults] Buscando resultados de ${fromDate} até ${toDate}`);
 
