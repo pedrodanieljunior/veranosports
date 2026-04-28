@@ -99,7 +99,12 @@ export function BetSlip({
     queries: sgpGames.map(({ gameId, sels }) => {
       const eligible = sels.filter(s => isSGPEligible(s.marketKey));
       const first = sels[0];
-      const selJson = JSON.stringify(eligible.map(s => ({ marketKey: s.marketKey, outcome: s.outcome })));
+      const selJson = JSON.stringify(eligible.map(s => ({
+        marketKey: s.marketKey,
+        outcome: s.outcome,
+        odds: s.odds,
+        originalOdds: s.originalOdds,
+      })));
       return {
         queryKey: ['sgp', gameId, selJson],
         queryFn: (): Promise<{ odd: number | null; error?: string }> =>

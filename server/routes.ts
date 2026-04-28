@@ -626,11 +626,69 @@ async function fetchResultBttsOdd(fixtureId: string, targetValue: string): Promi
   return null;
 }
 
+// Fator de correlação para fallback quando Placar Exato não está disponível.
+// Positivo (>1) = mercados positivamente correlacionados → odd combinada menor que naive.
+// Negativo (<1) = correlação negativa → odd combinada maior que naive.
+function getSGPCorrelationFactor(sels: Array<{ marketKey: string; outcome: string }>, homeTeam: string): number {
+  const mk = (s: { marketKey: string }) => s.marketKey.toLowerCase();
+  const oc = (s: { outcome: string }) => s.outcome.toLowerCase();
+
+  const h2hSel = sels.find(s => mk(s) === 'h2h' || mk(s) === 'match_winner');
+  const goalsSel = sels.find(s => mk(s) === 'goals over/under');
+  const bttsSel = sels.find(s => mk(s) === 'both teams score' || mk(s) === 'btts');
+  const htWinSel = sels.find(s => mk(s) === 'first half winner');
+  const totalHomeSel = sels.find(s => mk(s) === 'total - home');
+  const totalAwaySel = sels.find(s => mk(s) === 'total - away');
+
+  if (h2hSel) {
+    const h2hOc = oc(h2hSel);
+    const isDraw = h2hOc.includes('empate') || h2hOc.includes('draw') || h2hOc === 'x';
+
+    if (goalsSel) {
+      const goalsOc = oc(goalsSel);
+      const isOver = goalsOc.includes('over');
+      if (isDraw) return isOver ? 1.15 : 1.22; // Empate + over: 1-1, 2-2 são positivamente correlacionados; Empate + under: 0-0
+      return isOver ? 1.22 : 0.72; // Home/Away win + over: positivo; + under: negativo (ganhar com 1-0 ou 2-0 é menos provável que o naive)
+    }
+
+    if (bttsSel) {
+      const bttsOc = oc(bttsSel);
+      const isYes = bttsOc.includes('sim') || bttsOc.includes('yes');
+      if (isDraw) return isYes ? 1.28 : 0.80; // Empate + BTTS sim: 1-1 muito comum; + não: 0-0
+      return isYes ? 1.20 : 0.75; // Home/Away + BTTS sim: positivo (se casa ganha 2-1, btts=sim); + não: negativo
+    }
+
+    if (totalHomeSel || totalAwaySel) {
+      const sel = totalHomeSel || totalAwaySel!;
+      const selOc = oc(sel);
+      const isOver = selOc.includes('over');
+      const isHomeTeamTotal = !!totalHomeSel;
+      // H2H casa + total casa over: forte correlação (ganha = marcou mais)
+      if (!isDraw && isOver && isHomeTeamTotal) return 1.30;
+      if (!isDraw && isOver && !isHomeTeamTotal) return 1.18;
+      return 1.10;
+    }
+
+    return 1.12; // Combinação h2h + outro mercado elegível
+  }
+
+  // Sem h2h: correlações mais fracas entre mercados de gols
+  if (goalsSel && bttsSel) {
+    const isOver = oc(goalsSel).includes('over');
+    const isYes = oc(bttsSel).includes('sim') || oc(bttsSel).includes('yes');
+    if (isOver && isYes) return 1.40; // Over 2.5 + BTTS sim: forte correlação positiva (3 gols e ambas marcam)
+    if (!isOver && !isYes) return 1.35; // Under 2.5 + BTTS não: 0-0 ou 0-X/X-0
+    return 0.70; // Opostos: negativamente correlacionados
+  }
+
+  return 1.10; // Default: leve correlação positiva
+}
+
 async function computeSGPOddForGame(
   fixtureId: string,
   homeTeam: string,
   awayTeam: string,
-  sels: Array<{ marketKey: string; outcome: string }>
+  sels: Array<{ marketKey: string; outcome: string; odds?: number; originalOdds?: number }>
 ): Promise<number | null> {
   if (sels.length < 2) return null;
 
@@ -683,7 +741,27 @@ async function computeSGPOddForGame(
     fetchScoreDist(fixtureId, 10),
     needsHT ? fetchScoreDist(fixtureId, 31) : Promise.resolve(null),
   ]);
-  if (!ftLines || ftLines.length === 0) return null;
+  if (!ftLines || ftLines.length === 0) {
+    // ── Fallback: Placar Exato indisponível → usar odds individuais + modelo de correlação ──
+    const hasIndividualOdds = sels.every(s => typeof s.originalOdds === 'number' || typeof s.odds === 'number');
+    if (!hasIndividualOdds) return null;
+
+    // Usar originalOdds (sem boost) quando disponível; caso contrário estimar removendo o boost de 20%
+    const rawProbs = sels.map(s => {
+      const rawOdd = (typeof s.originalOdds === 'number' && s.originalOdds > 1)
+        ? s.originalOdds
+        : (s.odds || 1.5) / 1.2;
+      return Math.min(0.95, Math.max(0.02, 1 / rawOdd));
+    });
+
+    const naiveJointProb = rawProbs.reduce((p, q) => p * q, 1);
+    const corrFactor = getSGPCorrelationFactor(sels, homeTeam);
+    const adjustedProb = naiveJointProb * corrFactor;
+
+    if (adjustedProb <= 0 || adjustedProb >= 1) return null;
+    // Usar SGP_BOOST reduzido para fallback (já são odds com margem embutida)
+    return Math.round((1 / adjustedProb) * (SGP_BOOST * 0.95) * 100) / 100;
+  }
 
   const prob = calcSGPProbability(ftLines, htLines, preds);
   if (prob <= 0 || prob >= 1) return null;
@@ -2948,11 +3026,31 @@ export async function registerRoutes(
       const sgpGameOdds = new Map<string, number>();
       await Promise.all(Array.from(byGameForSGP.entries()).map(async ([gameId, gameSels]) => {
         const eligible = gameSels.filter((s: any) => isSGPEligibleMarket(s.marketKey));
-        if (eligible.length < 2 || !gameId.startsWith('api-football-')) return;
-        const fid = gameId.replace('api-football-', '');
+        if (eligible.length < 2) return;
         const first: any = gameSels[0];
+        // Resolver fixtureId: usar prefixo api-football ou buscar via cache de extra-markets
+        let fid: string;
+        if (gameId.startsWith('api-football-')) {
+          fid = gameId.replace('api-football-', '');
+        } else {
+          const ht = first.homeTeam || '';
+          const at = first.awayTeam || '';
+          const extraCached = cache.get<any>(`extra_markets_${ht}_${at}_`);
+          if (extraCached?.fixtureId) {
+            fid = String(extraCached.fixtureId);
+          } else {
+            // Sem fixtureId mas passamos odds individuais para o fallback de correlação
+            fid = gameId; // não numérico → fetchScoreDist vai falhar → fallback de correlação será usado
+          }
+        }
         try {
-          const sgpOdd = await computeSGPOddForGame(fid, first.homeTeam || '', first.awayTeam || '', eligible);
+          const eligibleWithOdds = eligible.map((s: any) => ({
+            marketKey: s.marketKey,
+            outcome: s.outcome,
+            odds: s.odds,
+            originalOdds: s.originalOdds,
+          }));
+          const sgpOdd = await computeSGPOddForGame(fid, first.homeTeam || '', first.awayTeam || '', eligibleWithOdds);
           if (sgpOdd !== null) sgpGameOdds.set(gameId, sgpOdd);
         } catch { /* fallback to naive */ }
       }));
@@ -3808,7 +3906,7 @@ export async function registerRoutes(
       if (!API_FOOTBALL_KEY) return res.status(500).json({ odd: null, error: "API não configurada" });
       const { gameId, homeTeam = '', awayTeam = '', selections: selJson } = req.query;
       if (!gameId || !selJson) return res.status(400).json({ odd: null, error: "Parâmetros insuficientes" });
-      const sels: Array<{ marketKey: string; outcome: string }> = JSON.parse(String(selJson));
+      const sels: Array<{ marketKey: string; outcome: string; odds?: number; originalOdds?: number }> = JSON.parse(String(selJson));
       if (!Array.isArray(sels) || sels.length < 2) return res.status(400).json({ odd: null, error: "Mínimo 2 seleções" });
 
       // Resolver fixtureId: direto do gameId se tiver prefixo, ou buscar por times
@@ -3817,16 +3915,12 @@ export async function registerRoutes(
         // gameId não é api-football — tentar achar via cache de extra-markets ou busca por times
         const ht = String(homeTeam);
         const at = String(awayTeam);
-        // Verificar cache de extra-markets por times
-        const extraCacheKey = `extra_markets_${ht}_${at}_`;
         let resolved: string | null = null;
-        // Iterar pelas entradas de cache que batem com os times
         const extraCached = cache.get<any>(`extra_markets_${ht}_${at}_`);
         if (extraCached?.fixtureId) {
           resolved = String(extraCached.fixtureId);
         }
         if (!resolved && ht && at) {
-          // Buscar fixture por nome de time (igual ao extra-markets)
           const normalizeTeam = (name: string) => name.toLowerCase()
             .replace(/[^a-z0-9\s]/g, '')
             .split(' ')
@@ -3855,8 +3949,8 @@ export async function registerRoutes(
             }
           } catch {}
         }
-        if (!resolved) return res.json({ odd: null, error: "Partida não encontrada" });
-        fixtureId = resolved;
+        // Se não resolveu o fixtureId mas temos odds individuais, ainda podemos usar o fallback de correlação
+        fixtureId = resolved ?? fixtureId; // mantem gameId original (não numérico) → fetchScoreDist falha → fallback corre
       }
 
       const cacheKey = `sgp_odds_${fixtureId}_${JSON.stringify(sels.map(s => `${s.marketKey}:${s.outcome}`).sort())}`;
