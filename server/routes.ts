@@ -454,9 +454,9 @@ function buildSGPPredicate(sel: SGPSelInput & { homeTeam: string; awayTeam: stri
       const over = m[1].toLowerCase() === 'over';
       return { type: 'ft', pred: (h, a) => over ? h + a > line : h + a < line };
     }
-    // Some bookmakers return "Goals Over/Under" with Yes/No values (BTTS-style)
-    if (oc === 'yes' || oc === 'sim') return { type: 'ft', pred: (h, a) => h > 0 && a > 0 };
-    if (oc === 'no' || oc === 'não' || oc === 'nao') return { type: 'ft', pred: (h, a) => !(h > 0 && a > 0) };
+    // Server simplifies "Goals Over/Under" to show only the 2.5 line as "Sim"/"Não"
+    if (oc === 'sim' || oc === 'yes') return { type: 'ft', pred: (h, a) => h + a > 2.5 };
+    if (oc === 'não' || oc === 'nao' || oc === 'no') return { type: 'ft', pred: (h, a) => h + a < 2.5 };
     return null;
   }
 
