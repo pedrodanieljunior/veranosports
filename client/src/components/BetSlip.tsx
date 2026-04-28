@@ -8,9 +8,9 @@ import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, 
 import { SiWhatsapp } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
@@ -67,6 +67,84 @@ export function BetSlip({
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
 
   const MAX_BET_PAYOUT = limits?.maxBetPayout ?? 15000;
+
+  // ── SGP (Same Game Parlay) ────────────────────────────────────────────
+  const SGP_ELIGIBLE = useMemo(() => new Set([
+    'h2h', 'match_winner', 'goals over/under', 'goals over/under - second half',
+    'both teams score', 'both teams to score - second half', 'total - home', 'total - away',
+    'first half winner', 'goals over/under first half', 'both teams score - first half',
+  ]), []);
+  const isSGPEligible = (mk: string) => SGP_ELIGIBLE.has(mk.toLowerCase());
+
+  // Group selections by gameId (also used in rendering)
+  const grouped = useMemo(() => {
+    const g: Record<string, Selection[]> = {};
+    for (const sel of selections) {
+      if (!g[sel.gameId]) g[sel.gameId] = [];
+      g[sel.gameId].push(sel);
+    }
+    return g;
+  }, [selections]);
+
+  // Games with 2+ SGP-eligible markets
+  const sgpGames = useMemo(() =>
+    Object.entries(grouped)
+      .filter(([, sels]) => sels.filter(s => isSGPEligible(s.marketKey)).length >= 2)
+      .map(([gameId, sels]) => ({ gameId, sels })),
+    [grouped]
+  );
+
+  // Fetch SGP correlated odd per eligible game
+  const sgpQueries = useQueries({
+    queries: sgpGames.map(({ gameId, sels }) => {
+      const eligible = sels.filter(s => isSGPEligible(s.marketKey));
+      const first = sels[0];
+      const selJson = JSON.stringify(eligible.map(s => ({ marketKey: s.marketKey, outcome: s.outcome })));
+      return {
+        queryKey: ['sgp', gameId, selJson],
+        queryFn: (): Promise<{ odd: number | null; error?: string }> =>
+          fetch(`/api/football/sgp-odds?gameId=${encodeURIComponent(gameId)}&homeTeam=${encodeURIComponent(first.homeTeam)}&awayTeam=${encodeURIComponent(first.awayTeam)}&selections=${encodeURIComponent(selJson)}`)
+            .then(r => r.json()),
+        enabled: gameId.startsWith('api-football-') && eligible.length >= 2,
+        staleTime: 5 * 60 * 1000,
+      };
+    }),
+  });
+
+  // Map: gameId → correlated SGP odd
+  const sgpOddsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    sgpGames.forEach(({ gameId }, idx) => {
+      const data = sgpQueries[idx]?.data;
+      if (data?.odd) map.set(gameId, data.odd);
+    });
+    return map;
+  }, [sgpGames, sgpQueries]);
+
+  const hasSGPActive = sgpOddsMap.size > 0;
+  const sgpLoading = sgpQueries.some(q => q.isLoading);
+
+  // Per-game contribution to total odds, respecting SGP and h2h context
+  const computeGameContrib = (gameId: string, sels: Selection[], isComboCtx: boolean): number => {
+    const sgpOdd = sgpOddsMap.get(gameId);
+    if (sgpOdd) {
+      const eligible = sels.filter(s => isSGPEligible(s.marketKey));
+      const nonEligible = sels.filter(s => !isSGPEligible(s.marketKey));
+      if (eligible.length >= 2) {
+        let contrib = sgpOdd;
+        for (const sel of nonEligible) {
+          const isH2H = sel.marketKey === 'h2h' || sel.marketKey === 'match_winner';
+          contrib *= (isComboCtx && isH2H && sel.originalOdds) ? sel.originalOdds : sel.odds;
+        }
+        return contrib;
+      }
+    }
+    // Fallback: naive product (h2h uses originalOdds in combo context)
+    return sels.reduce((acc, s) => {
+      const isH2H = s.marketKey === 'h2h' || s.marketKey === 'match_winner';
+      return acc * ((isComboCtx && isH2H && s.originalOdds) ? s.originalOdds : s.odds);
+    }, 1);
+  };
 
   const copyPixCode = () => {
     if (placedBet?.pixCode) {
@@ -158,7 +236,35 @@ export function BetSlip({
   
   const { user } = useAuth();
 
-  const totalOdds = roundOdds(computeTotalOdds(selections));
+  const comboApplies = checkIsComboBonus(selections);
+  const distinctGameCount = Object.keys(grouped).length;
+
+  // Compute total odds: use correlated SGP odds for eligible games, fallback otherwise
+  const totalOdds = useMemo(() => {
+    if (hasSGPActive) {
+      const isComboCtx = distinctGameCount > 1;
+      let total = 1;
+      for (const [gameId, sels] of Object.entries(grouped)) {
+        total *= computeGameContrib(gameId, sels, isComboCtx);
+      }
+      return roundOdds(total);
+    }
+    return roundOdds(computeTotalOdds(selections));
+  }, [hasSGPActive, grouped, selections, sgpOddsMap, distinctGameCount]);
+
+  const comboBonusPct = comboApplies ? getComboBonus(distinctGameCount) : 0;
+  const baseOddsForBonus = useMemo(() => {
+    if (!comboApplies) return 0;
+    if (hasSGPActive) {
+      let base = 1;
+      for (const [gameId, sels] of Object.entries(grouped)) {
+        base *= computeGameContrib(gameId, sels, true);
+      }
+      return base;
+    }
+    return selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1);
+  }, [comboApplies, hasSGPActive, grouped, selections, sgpOddsMap]);
+
   const stakeNum = parseFloat(stake || "0");
   const hasBonusBalance = (user?.bonusBalance ?? 0) > 0;
   const totalAvailableWithBonus = (user?.balance ?? 0) + (user?.bonusBalance ?? 0);
@@ -166,12 +272,6 @@ export function BetSlip({
     useBonus ? totalAvailableWithBonus < stakeNum : (user?.balance ?? 0) < stakeNum
   );
 
-  const comboApplies = checkIsComboBonus(selections);
-  const distinctGameCount = new Set(selections.map(s => s.gameId)).size;
-  const comboBonusPct = comboApplies ? getComboBonus(distinctGameCount) : 0;
-  const baseOddsForBonus = comboApplies
-    ? selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
-    : 0;
   const returnWithoutBonus = stakeNum * baseOddsForBonus;
   const returnWithBonus = Math.min(returnWithoutBonus * (1 + comboBonusPct), MAX_BET_PAYOUT);
 
@@ -362,17 +462,17 @@ export function BetSlip({
           <>
             <ScrollArea className="flex-1 -mx-4 px-4">
               {(() => {
-                const grouped: Record<string, Selection[]> = {};
-                for (const sel of selections) {
-                  const key = sel.gameId;
-                  if (!grouped[key]) grouped[key] = [];
-                  grouped[key].push(sel);
-                }
                 return (
                   <div className="space-y-3">
                     {Object.entries(grouped).map(([gameId, sels]) => {
                       const first = sels[0];
-                      const gameOdds = roundOdds(computeTotalOdds(sels, comboApplies));
+                      const sgpOdd = sgpOddsMap.get(gameId);
+                      const isSGPGame = !!sgpOdd && sels.filter(s => isSGPEligible(s.marketKey)).length >= 2;
+                      const isSGPQueryLoading = sgpLoading && sgpGames.some(g => g.gameId === gameId);
+                      const isComboCtx = distinctGameCount > 1;
+                      const gameOdds = isSGPGame
+                        ? roundOdds(computeGameContrib(gameId, sels, isComboCtx))
+                        : roundOdds(computeTotalOdds(sels, comboApplies));
                       return (
                         <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
                           <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border">
@@ -381,8 +481,16 @@ export function BetSlip({
                               <span className="font-semibold text-foreground text-sm truncate">
                                 {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
                               </span>
+                              {isSGPGame && (
+                                <span className="flex-shrink-0 text-[10px] font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full tracking-wide" data-testid={`badge-sgp-${gameId}`}>
+                                  SGP
+                                </span>
+                              )}
+                              {isSGPQueryLoading && !isSGPGame && (
+                                <span className="flex-shrink-0 w-3 h-3 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+                              )}
                             </div>
-                            <span className="text-yellow-400 font-bold text-sm flex-shrink-0 ml-2">
+                            <span className={`font-bold text-sm flex-shrink-0 ml-2 ${isSGPGame ? "text-purple-400" : "text-yellow-400"}`}>
                               {fmtOdds(gameOdds)}
                             </span>
                           </div>
@@ -549,6 +657,23 @@ export function BetSlip({
                   </div>
                 )}
 
+                {hasSGPActive && sgpGames.length > 0 && (
+                  <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-sgp-active">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
+                        <span className="text-white font-extrabold text-sm tracking-wide">COMBINAÇÃO ESPECIAL</span>
+                      </div>
+                      <span className="bg-white/20 text-white font-extrabold text-xs px-2 py-0.5 rounded-full">
+                        SGP
+                      </span>
+                    </div>
+                    <div className="bg-purple-500/10 px-3 py-2 space-y-1">
+                      <p className="text-xs text-purple-300">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
+                    </div>
+                  </div>
+                )}
+
                 {comboApplies && comboBonusPct > 0 && (
                   <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
                     <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
@@ -582,7 +707,7 @@ export function BetSlip({
 
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
+                  <span className={`font-bold ${hasSGPActive ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>

@@ -411,6 +411,189 @@ function pickBestBookmaker(allBks: any[]): any {
 // Estratégia: usar odds do melhor bookmaker disponível (Bet365 > Betano > ...).
 // Para cada mercado, usa o bookmaker de maior prioridade que tenha aquele mercado.
 // Nunca mistura nem faz média de odds entre bookmakers.
+// ==========================================
+// SGP (Same Game Parlay) Engine
+// ==========================================
+
+const SGP_FT_MARKETS = new Set([
+  'h2h', 'match_winner', 'goals over/under', 'goals over/under - second half',
+  'both teams score', 'both teams to score - second half', 'total - home', 'total - away',
+]);
+const SGP_HT_MARKETS = new Set([
+  'first half winner', 'goals over/under first half', 'both teams score - first half',
+]);
+
+function isSGPEligibleMarket(marketKey: string): boolean {
+  const mk = marketKey.toLowerCase();
+  return SGP_FT_MARKETS.has(mk) || SGP_HT_MARKETS.has(mk);
+}
+
+interface ScoreLine { h: number; a: number; odd: number; prob: number; }
+interface SGPSelInput { marketKey: string; outcome: string; }
+type SGPPred = { type: 'ft' | 'ht'; pred: (h: number, a: number) => boolean };
+
+function buildSGPPredicate(sel: SGPSelInput & { homeTeam: string; awayTeam: string }): SGPPred | null {
+  const mk = sel.marketKey.toLowerCase();
+  const oc = sel.outcome
+    .replace(new RegExp(`^${sel.marketKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:]\\s*`, 'i'), '')
+    .toLowerCase()
+    .trim();
+
+  if (mk === 'h2h' || mk === 'match_winner') {
+    if (oc.includes('empate') || oc.includes('draw') || oc === 'x')
+      return { type: 'ft', pred: (h, a) => h === a };
+    if (oc.includes(sel.homeTeam.toLowerCase()) || oc === 'home' || oc === '1' || oc === 'casa' || oc === '1')
+      return { type: 'ft', pred: (h, a) => h > a };
+    return { type: 'ft', pred: (h, a) => a > h };
+  }
+
+  if (mk === 'goals over/under') {
+    const m = oc.match(/(over|under)\s*(\d+\.?\d*)/i);
+    if (!m) return null;
+    const line = parseFloat(m[2]);
+    const over = m[1].toLowerCase() === 'over';
+    return { type: 'ft', pred: (h, a) => over ? h + a > line : h + a < line };
+  }
+
+  if (mk === 'goals over/under first half') {
+    const m = oc.match(/(over|under)\s*(\d+\.?\d*)/i);
+    if (!m) return null;
+    const line = parseFloat(m[2]);
+    const over = m[1].toLowerCase() === 'over';
+    return { type: 'ht', pred: (h, a) => over ? h + a > line : h + a < line };
+  }
+
+  if (mk === 'goals over/under - second half') return null; // needs joint distribution
+
+  if (mk === 'both teams score') {
+    const isYes = oc.includes('yes') || oc.includes('sim');
+    return { type: 'ft', pred: (h, a) => isYes ? (h > 0 && a > 0) : !(h > 0 && a > 0) };
+  }
+
+  if (mk === 'both teams score - first half') {
+    const isYes = oc.includes('yes') || oc.includes('sim');
+    return { type: 'ht', pred: (h, a) => isYes ? (h > 0 && a > 0) : !(h > 0 && a > 0) };
+  }
+
+  if (mk === 'both teams to score - second half') return null; // needs joint
+
+  if (mk === 'first half winner') {
+    if (oc.includes('draw') || oc.includes('empate'))
+      return { type: 'ht', pred: (h, a) => h === a };
+    if (oc.includes('home') || oc.includes('casa') || oc.includes(sel.homeTeam.toLowerCase()))
+      return { type: 'ht', pred: (h, a) => h > a };
+    return { type: 'ht', pred: (h, a) => a > h };
+  }
+
+  if (mk === 'total - home') {
+    const m = oc.match(/(over|under)\s*(\d+\.?\d*)/i);
+    if (!m) return null;
+    const line = parseFloat(m[2]);
+    const over = m[1].toLowerCase() === 'over';
+    return { type: 'ft', pred: (h, _a) => over ? h > line : h < line };
+  }
+
+  if (mk === 'total - away') {
+    const m = oc.match(/(over|under)\s*(\d+\.?\d*)/i);
+    if (!m) return null;
+    const line = parseFloat(m[2]);
+    const over = m[1].toLowerCase() === 'over';
+    return { type: 'ft', pred: (_h, a) => over ? a > line : a < line };
+  }
+
+  return null;
+}
+
+function normalizeScoreLines(values: any[]): ScoreLine[] {
+  const raw: ScoreLine[] = [];
+  for (const v of values) {
+    const m = String(v.value).match(/(\d+):(\d+)/);
+    if (!m) continue;
+    const odd = parseFloat(v.odd);
+    if (!isFinite(odd) || odd <= 0) continue;
+    raw.push({ h: parseInt(m[1]), a: parseInt(m[2]), odd, prob: 0 });
+  }
+  if (raw.length === 0) return [];
+  const sumInv = raw.reduce((s, sc) => s + 1 / sc.odd, 0);
+  raw.forEach(sc => { sc.prob = (1 / sc.odd) / sumInv; });
+  return raw;
+}
+
+async function fetchScoreDist(fixtureId: string, betId: number): Promise<ScoreLine[] | null> {
+  const cacheKey = `sgp_dist_${fixtureId}_bet${betId}`;
+  const cached = cache.get<ScoreLine[]>(cacheKey);
+  if (cached) return cached;
+  if (!API_FOOTBALL_KEY) return null;
+  try {
+    const resp = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${fixtureId}&bet=${betId}`,
+      { headers: { 'x-apisports-key': API_FOOTBALL_KEY } });
+    const data = await resp.json();
+    const allBks: any[] = data.response?.[0]?.bookmakers || [];
+    const bk = pickBestBookmaker(allBks);
+    if (!bk) return null;
+    const bet = bk.bets?.find((b: any) => b.id === betId);
+    if (!bet?.values?.length) return null;
+    const lines = normalizeScoreLines(bet.values);
+    if (lines.length > 0) cache.set(cacheKey, lines, CACHE_TTL_FOOTBALL);
+    return lines.length > 0 ? lines : null;
+  } catch { return null; }
+}
+
+function calcSGPProbability(ftLines: ScoreLine[], htLines: ScoreLine[] | null, preds: SGPPred[]): number {
+  const ftPreds = preds.filter(p => p.type === 'ft');
+  const htPreds = preds.filter(p => p.type === 'ht');
+  const hasFT = ftPreds.length > 0;
+  const hasHT = htPreds.length > 0;
+
+  if (hasFT && !hasHT)
+    return ftLines.filter(sc => ftPreds.every(p => p.pred(sc.h, sc.a))).reduce((s, sc) => s + sc.prob, 0);
+
+  if (!hasFT && hasHT && htLines)
+    return htLines.filter(sc => htPreds.every(p => p.pred(sc.h, sc.a))).reduce((s, sc) => s + sc.prob, 0);
+
+  if (hasFT && hasHT && htLines) {
+    let prob = 0;
+    for (const ft of ftLines) {
+      if (!ftPreds.every(p => p.pred(ft.h, ft.a))) continue;
+      const valid = htLines.filter(ht => ht.h <= ft.h && ht.a <= ft.a);
+      const validTotal = valid.reduce((s, ht) => s + ht.prob, 0);
+      if (validTotal === 0) continue;
+      for (const ht of valid) {
+        if (htPreds.every(p => p.pred(ht.h, ht.a)))
+          prob += ft.prob * (ht.prob / validTotal);
+      }
+    }
+    return prob;
+  }
+  return 0;
+}
+
+const SGP_BOOST = 1.1;
+
+async function computeSGPOddForGame(
+  fixtureId: string,
+  homeTeam: string,
+  awayTeam: string,
+  sels: Array<{ marketKey: string; outcome: string }>
+): Promise<number | null> {
+  if (sels.length < 2) return null;
+  const preds = sels
+    .map(s => buildSGPPredicate({ ...s, homeTeam, awayTeam }))
+    .filter((p): p is SGPPred => p !== null);
+  if (preds.length < 2) return null;
+
+  const needsHT = preds.some(p => p.type === 'ht');
+  const [ftLines, htLines] = await Promise.all([
+    fetchScoreDist(fixtureId, 10),
+    needsHT ? fetchScoreDist(fixtureId, 31) : Promise.resolve(null),
+  ]);
+  if (!ftLines || ftLines.length === 0) return null;
+
+  const prob = calcSGPProbability(ftLines, htLines, preds);
+  if (prob <= 0 || prob >= 1) return null;
+  return Math.round((1 / prob) * SGP_BOOST * 100) / 100;
+}
+
 function buildMarketsFromBookmaker(bookmakerOrBookmakers: any, homeTeam: string, awayTeam: string) {
   const bookmakers: any[] = Array.isArray(bookmakerOrBookmakers) ? bookmakerOrBookmakers : [bookmakerOrBookmakers];
   // Reordenar bookmakers pela lista de preferência
@@ -2655,18 +2838,61 @@ export async function registerRoutes(
         });
       }
 
+      // Agrupar seleções por jogo e calcular odds SGP quando aplicável
+      const byGameForSGP = new Map<string, typeof validatedData.selections>();
+      for (const sel of validatedData.selections) {
+        if (!byGameForSGP.has(sel.gameId)) byGameForSGP.set(sel.gameId, []);
+        byGameForSGP.get(sel.gameId)!.push(sel);
+      }
+
+      const sgpGameOdds = new Map<string, number>();
+      await Promise.all(Array.from(byGameForSGP.entries()).map(async ([gameId, gameSels]) => {
+        const eligible = gameSels.filter((s: any) => isSGPEligibleMarket(s.marketKey));
+        if (eligible.length < 2 || !gameId.startsWith('api-football-')) return;
+        const fid = gameId.replace('api-football-', '');
+        const first: any = gameSels[0];
+        try {
+          const sgpOdd = await computeSGPOddForGame(fid, first.homeTeam || '', first.awayTeam || '', eligible);
+          if (sgpOdd !== null) sgpGameOdds.set(gameId, sgpOdd);
+        } catch { /* fallback to naive */ }
+      }));
+
+      // Calcular odd de cada jogo considerando SGP
+      function gameContribution(gameId: string, gameSels: any[], isComboCtx: boolean): number {
+        const sgpOdd = sgpGameOdds.get(gameId);
+        if (sgpOdd) {
+          const eligible = gameSels.filter((s: any) => isSGPEligibleMarket(s.marketKey));
+          const nonEligible = gameSels.filter((s: any) => !isSGPEligibleMarket(s.marketKey));
+          if (eligible.length >= 2) {
+            let contrib = sgpOdd;
+            for (const sel of nonEligible) {
+              const isH2H = sel.marketKey === 'h2h' || sel.marketKey === 'match_winner';
+              contrib *= (isComboCtx && isH2H && sel.originalOdds) ? sel.originalOdds : sel.odds;
+            }
+            return contrib;
+          }
+        }
+        // Naive: usar originalOdds para h2h em contexto de combo
+        return gameSels.reduce((acc: number, s: any) => {
+          const isH2H = s.marketKey === 'h2h' || s.marketKey === 'match_winner';
+          return acc * ((isComboCtx && isH2H && s.originalOdds) ? s.originalOdds : s.odds);
+        }, 1);
+      }
+
       let totalOdds: number;
       let potentialWin: number;
       if (checkIsComboBonus(validatedData.selections)) {
-        const distinctGameCount = new Set(validatedData.selections.map((s: any) => s.gameId)).size;
+        const distinctGameCount = byGameForSGP.size;
         const bonusPct = getComboBonus(distinctGameCount);
-        const baseOdds = validatedData.selections.reduce((acc: number, s: any) => acc * (s.originalOdds ?? s.odds), 1);
+        const baseOdds = Array.from(byGameForSGP.entries())
+          .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, true), 1);
         const rawTotalOdds = baseOdds * (1 + bonusPct);
-        // Use floor so totalOdds truncates (not rounds up) — potentialWin = stake × floor(totalOdds)
         totalOdds = Math.floor(rawTotalOdds * 100) / 100;
         potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
       } else {
-        totalOdds = Math.round(computeTotalOdds(validatedData.selections) * 100) / 100;
+        const baseOdds = Array.from(byGameForSGP.entries())
+          .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, false), 1);
+        totalOdds = Math.round(baseOdds * 100) / 100;
         potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
       }
 
@@ -3473,6 +3699,28 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching extra markets:", error);
       res.status(500).json({ error: "Failed to fetch extra markets" });
+    }
+  });
+
+  // Same Game Parlay: calcular odd correlacionada via distribuição de Placar Exato
+  app.get("/api/football/sgp-odds", async (req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) return res.status(500).json({ odd: null, error: "API não configurada" });
+      const { gameId, homeTeam = '', awayTeam = '', selections: selJson } = req.query;
+      if (!gameId || !selJson) return res.status(400).json({ odd: null, error: "Parâmetros insuficientes" });
+      const fixtureId = String(gameId).replace('api-football-', '');
+      if (!/^\d+$/.test(fixtureId)) return res.status(400).json({ odd: null, error: "gameId inválido" });
+      const sels: Array<{ marketKey: string; outcome: string }> = JSON.parse(String(selJson));
+      if (!Array.isArray(sels) || sels.length < 2) return res.status(400).json({ odd: null, error: "Mínimo 2 seleções" });
+      const cacheKey = `sgp_odds_${fixtureId}_${JSON.stringify(sels.map(s => `${s.marketKey}:${s.outcome}`).sort())}`;
+      const cached = cache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
+      const sgpOdd = await computeSGPOddForGame(fixtureId, String(homeTeam), String(awayTeam), sels);
+      const result = sgpOdd !== null ? { odd: sgpOdd } : { odd: null, error: "Dados insuficientes para calcular SGP" };
+      if (sgpOdd !== null) cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
+      return res.json(result);
+    } catch (e) {
+      return res.json({ odd: null, error: "Erro ao calcular SGP" });
     }
   });
 

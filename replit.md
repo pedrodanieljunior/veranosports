@@ -64,6 +64,18 @@ The server handles:
 - Duplicate credit protection: won credit only applies if previous status was not "won"
 - No balance change when admin marks as "lost"
 
+### Same Game Parlay (SGP)
+- When a user adds 2+ goal-based markets from the **same game** to the bet slip, SGP activates automatically
+- SGP-eligible markets: h2h, Goals Over/Under (FT/HT), Both Teams Score (FT/HT), First Half Winner, Total Home/Away
+- Odds are calculated via **correlated probability** from API-Football Exact Score distribution (bet ID 10) and HT Correct Score (bet ID 31)
+- Process: fetch score distribution → normalize margin → build predicates per market → compute joint probability via sum of matching scorelines → apply 10% boost (`fair_odd * 1.1`)
+- For mixed FT+HT markets: joint distribution uses conditional P(HT|FT) — only HT scores where h1≤h and a1≤a are considered for each FT scoreline
+- Backend: `GET /api/football/sgp-odds?gameId=&homeTeam=&awayTeam=&selections=JSON` in `server/routes.ts`
+- Server also independently computes SGP odds during `POST /api/bets` (with cache reuse — no extra API quota)
+- Frontend: `BetSlip.tsx` uses `useQueries` to fetch SGP odd per eligible game; shows purple "SGP" badge, correlated game odd, and "COMBINAÇÃO ESPECIAL" banner
+- Falls back to naive multiplication if API-Football data unavailable
+- Non-goal markets in the same game (corners, cards) multiply independently on top of the SGP odd
+
 ### Super Boost Cards
 - Admin tab "Boost" at `/painel-gm7x9k2` → guia **Boost**
 - Admin can create cards with: event name, match title, description, up to 3 manual selections, original odds, boosted odds, start/end datetime, active toggle
