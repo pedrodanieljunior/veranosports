@@ -570,6 +570,62 @@ function calcSGPProbability(ftLines: ScoreLine[], htLines: ScoreLine[] | null, p
 
 const SGP_BOOST = 1.1;
 
+// Busca a odd diretamente do mercado pré-construído "Results/Both Teams Score"
+// usando o cache do extra-markets quando disponível (sem custo de quota adicional)
+async function fetchResultBttsOdd(fixtureId: string, targetValue: string): Promise<number | null> {
+  // 1) Tentar do cache processado pelo endpoint extra-markets
+  const extraCached = cache.get<any>(`extra_markets_${fixtureId}`);
+  if (extraCached?.markets) {
+    const market = extraCached.markets.find((m: any) => m.name === "Results/Both Teams Score");
+    if (market?.values?.length) {
+      const val = market.values.find((v: any) =>
+        String(v.value).toLowerCase() === targetValue.toLowerCase()
+      );
+      if (val) {
+        const odd = parseFloat(val.odd);
+        if (isFinite(odd) && odd > 0) return odd;
+      }
+      return null; // mercado encontrado mas outcome não disponível
+    }
+  }
+
+  // 2) Tentar do cache de bookmakers brutos
+  const rawCacheKey = `raw_bks_${fixtureId}`;
+  let allBks: any[] = cache.get<any[]>(rawCacheKey) || [];
+
+  if (allBks.length === 0) {
+    if (!API_FOOTBALL_KEY) return null;
+    try {
+      const resp = await fetch(
+        `${API_FOOTBALL_BASE}/odds?fixture=${fixtureId}`,
+        { headers: { 'x-apisports-key': API_FOOTBALL_KEY } }
+      );
+      const data = await resp.json();
+      allBks = data.response?.[0]?.bookmakers || [];
+      if (allBks.length > 0) cache.set(rawCacheKey, allBks, CACHE_TTL_FOOTBALL);
+    } catch { return null; }
+  }
+
+  // Ordem de preferência de bookmakers
+  const sorted = [...PREFERRED_BOOKMAKERS]
+    .map(name => allBks.find((b: any) => b.name === name))
+    .filter(Boolean)
+    .concat(allBks.filter((b: any) => !PREFERRED_BOOKMAKERS.includes(b.name)));
+
+  for (const bk of sorted) {
+    const bet = (bk.bets || []).find((b: any) => b.name === "Results/Both Teams Score");
+    if (!bet?.values?.length) continue;
+    const val = bet.values.find((v: any) =>
+      String(v.value).toLowerCase() === targetValue.toLowerCase()
+    );
+    if (val) {
+      const odd = parseFloat(val.odd);
+      if (isFinite(odd) && odd > 0) return odd;
+    }
+  }
+  return null;
+}
+
 async function computeSGPOddForGame(
   fixtureId: string,
   homeTeam: string,
@@ -577,6 +633,46 @@ async function computeSGPOddForGame(
   sels: Array<{ marketKey: string; outcome: string }>
 ): Promise<number | null> {
   if (sels.length < 2) return null;
+
+  // ── ATALHO: h2h + btts (2 seleções) → usar mercado "Results/Both Teams Score" diretamente ──
+  // Garante que a odd mostrada seja idêntica à odd do mercado combinado pré-construído
+  if (sels.length === 2) {
+    const h2hSel = sels.find(s => s.marketKey === 'h2h' || s.marketKey === 'match_winner');
+    const bttsSel = sels.find(s => {
+      const mk = s.marketKey.toLowerCase();
+      return mk === 'both teams score' || mk === 'btts' || mk === 'ambas marcam';
+    });
+
+    if (h2hSel && bttsSel) {
+      // Inferir resultado do h2h (Home / Draw / Away)
+      const h2hOc = h2hSel.outcome
+        .replace(/^(h2h|match.winner|resultado final)\s*[-:]\s*/i, '')
+        .toLowerCase().trim();
+
+      let resultKey: string;
+      if (h2hOc.includes('empate') || h2hOc.includes('draw') || h2hOc === 'x') {
+        resultKey = 'Draw';
+      } else if (
+        h2hOc.includes(homeTeam.toLowerCase()) ||
+        h2hOc === 'home' || h2hOc === '1' || h2hOc === 'casa'
+      ) {
+        resultKey = 'Home';
+      } else {
+        resultKey = 'Away';
+      }
+
+      // Inferir BTTS (Yes / No)
+      const bttsOc = bttsSel.outcome.toLowerCase();
+      const bttsKey = (bttsOc.includes('sim') || bttsOc.includes('yes')) ? 'Yes' : 'No';
+
+      const targetValue = `${resultKey}/${bttsKey}`;
+      const directOdd = await fetchResultBttsOdd(fixtureId, targetValue);
+      if (directOdd !== null) return directOdd;
+      // Se não encontrou o mercado pré-construído, cai para o cálculo via Placar Exato
+    }
+  }
+
+  // ── Cálculo via distribuição de Placar Exato (fallback e outros mercados) ──
   const preds = sels
     .map(s => buildSGPPredicate({ ...s, homeTeam, awayTeam }))
     .filter((p): p is SGPPred => p !== null);
