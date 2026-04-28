@@ -238,12 +238,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
         const line = parseFloat(m[2]);
         return line % 1 === 0.5 && line >= 0.5 && line <= 6.5;
       }
-      if (market.name === "Goals Over/Under") {
-        const m = value.value.match(/^(Over|Under)\s+([\d.]+)$/i);
-        if (!m) return false;
-        const num = parseFloat(m[2]);
-        return num % 1 === 0.5;
-      }
       if (market.name === "Goals Over/Under First Half") {
         return ["Over 0.5", "Under 0.5", "Over 1.5", "Under 1.5", "Over 2.5", "Under 2.5"].includes(value.value);
       }
