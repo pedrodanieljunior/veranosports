@@ -449,10 +449,15 @@ function buildSGPPredicate(sel: SGPSelInput & { homeTeam: string; awayTeam: stri
 
   if (mk === 'goals over/under') {
     const m = oc.match(/(over|under)\s*(\d+\.?\d*)/i);
-    if (!m) return null;
-    const line = parseFloat(m[2]);
-    const over = m[1].toLowerCase() === 'over';
-    return { type: 'ft', pred: (h, a) => over ? h + a > line : h + a < line };
+    if (m) {
+      const line = parseFloat(m[2]);
+      const over = m[1].toLowerCase() === 'over';
+      return { type: 'ft', pred: (h, a) => over ? h + a > line : h + a < line };
+    }
+    // Some bookmakers return "Goals Over/Under" with Yes/No values (BTTS-style)
+    if (oc === 'yes' || oc === 'sim') return { type: 'ft', pred: (h, a) => h > 0 && a > 0 };
+    if (oc === 'no' || oc === 'não' || oc === 'nao') return { type: 'ft', pred: (h, a) => !(h > 0 && a > 0) };
+    return null;
   }
 
   if (mk === 'goals over/under first half') {
@@ -743,7 +748,6 @@ async function computeSGPOddForGame(
   ]);
   if (!ftLines || ftLines.length === 0) {
     // ── Fallback: Placar Exato indisponível → usar odds individuais + modelo de correlação ──
-    console.log('[SGP] No Exact Score data for fixture', fixtureId, '— trying correlation fallback. sels odds:', sels.map(s => ({ mk: s.marketKey, oc: s.outcome, odds: s.odds, orig: s.originalOdds })));
     const hasIndividualOdds = sels.every(s => typeof s.originalOdds === 'number' || typeof s.odds === 'number');
     if (!hasIndividualOdds) return null;
 
@@ -3907,7 +3911,6 @@ export async function registerRoutes(
       if (!API_FOOTBALL_KEY) return res.status(500).json({ odd: null, error: "API não configurada" });
       const { gameId, homeTeam = '', awayTeam = '', selections: selJson } = req.query;
       if (!gameId || !selJson) return res.status(400).json({ odd: null, error: "Parâmetros insuficientes" });
-      console.log('[SGP] Request:', { gameId, homeTeam, awayTeam, selJson });
       const sels: Array<{ marketKey: string; outcome: string; odds?: number; originalOdds?: number }> = JSON.parse(String(selJson));
       if (!Array.isArray(sels) || sels.length < 2) return res.status(400).json({ odd: null, error: "Mínimo 2 seleções" });
 
@@ -3959,7 +3962,6 @@ export async function registerRoutes(
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
       const sgpOdd = await computeSGPOddForGame(fixtureId, String(homeTeam), String(awayTeam), sels);
-      console.log('[SGP] Result:', { fixtureId, sgpOdd });
       const result = sgpOdd !== null ? { odd: sgpOdd } : { odd: null, error: "Dados insuficientes para calcular SGP" };
       if (sgpOdd !== null) cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
       return res.json(result);
