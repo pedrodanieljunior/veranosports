@@ -91,6 +91,10 @@ export function BetSlip({
     const result = Object.entries(grouped)
       .filter(([, sels]) => sels.filter(s => isSGPEligible(s.marketKey)).length >= 2)
       .map(([gameId, sels]) => ({ gameId, sels }));
+    if (Object.keys(grouped).length > 0) {
+      console.log('[SGP-client] grouped:', Object.fromEntries(Object.entries(grouped).map(([k, v]) => [k, v.map(s => ({ mk: s.marketKey, oc: s.outcome, eligible: isSGPEligible(s.marketKey) }))])));
+      console.log('[SGP-client] sgpGames:', result.map(g => g.gameId));
+    }
     return result;
   }, [grouped]);
 
@@ -121,8 +125,10 @@ export function BetSlip({
     const map = new Map<string, number>();
     sgpGames.forEach(({ gameId }, idx) => {
       const data = sgpQueries[idx]?.data;
+      console.log('[SGP-client] query result for', gameId, data);
       if (data?.odd) map.set(gameId, data.odd);
     });
+    console.log('[SGP-client] sgpOddsMap size:', map.size, 'sgpGames:', sgpGames.map(g => g.gameId));
     return map;
   }, [sgpGames, sgpQueries]);
 
