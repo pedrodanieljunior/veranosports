@@ -97,10 +97,20 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const h2hMarket = allMarkets["h2h"];
 
-  const isSelected = (outcomeName: string, marketKey: string) =>
-    selections.some(s => s.gameId === game.id && s.outcome === outcomeName && s.marketKey === marketKey);
+  // Usar o fixture ID da API-Football quando disponível para que o SGP seja calculado
+  const effectiveGameId = extraMarkets?.fixtureId
+    ? `api-football-${extraMarkets.fixtureId}`
+    : game.id;
 
-  const selectionsForThisGame = selections.filter(s => s.gameId === game.id);
+  const isSelected = (outcomeName: string, marketKey: string) =>
+    selections.some(s =>
+      (s.gameId === effectiveGameId || s.gameId === game.id) &&
+      s.outcome === outcomeName && s.marketKey === marketKey
+    );
+
+  const selectionsForThisGame = selections.filter(s =>
+    s.gameId === effectiveGameId || s.gameId === game.id
+  );
   const distinctMarketsForThisGame = new Set(selectionsForThisGame.map(s => s.marketKey)).size;
   const gameSelectionLimitReached = distinctMarketsForThisGame >= 3;
 
@@ -172,8 +182,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     const boostKey = marketKeyToBoostKey(marketKey);
     const finalOdds = Math.round(originalOdds * getBoostMultiplier(boostKey) * 100) / 100;
     const selection: Selection = {
-      id: `${game.id}-${marketKey}-${outcomeName}`,
-      gameId: game.id,
+      id: `${effectiveGameId}-${marketKey}-${outcomeName}`,
+      gameId: effectiveGameId,
       homeTeam: game.homeTeam,
       awayTeam: game.awayTeam,
       commenceTime: game.commenceTime,

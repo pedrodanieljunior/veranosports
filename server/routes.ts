@@ -3681,7 +3681,7 @@ export async function registerRoutes(
           const oddsData = await oddsResp.json();
           const allBookmakers = oddsData.response?.[0]?.bookmakers || [];
           if (allBookmakers.length > 0) {
-            const result = buildMarketsFromBookmaker(allBookmakers, String(homeTeam), String(awayTeam));
+            const result = { ...buildMarketsFromBookmaker(allBookmakers, String(homeTeam), String(awayTeam)), fixtureId: Number(directFixtureId) };
             cache.set(cacheKey, result, CACHE_TTL_FOOTBALL);
             return res.json(result);
           }
