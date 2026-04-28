@@ -642,25 +642,58 @@ function getSGPCorrelationFactor(sels: Array<{ marketKey: string; outcome: strin
   const goalsSel = sels.find(s => mk(s) === 'goals over/under');
   const bttsSel = sels.find(s => mk(s) === 'both teams score' || mk(s) === 'btts');
   const htWinSel = sels.find(s => mk(s) === 'first half winner');
+  const htGoalsSel = sels.find(s => mk(s) === 'goals over/under first half');
   const totalHomeSel = sels.find(s => mk(s) === 'total - home');
   const totalAwaySel = sels.find(s => mk(s) === 'total - away');
 
   if (h2hSel) {
     const h2hOc = oc(h2hSel);
     const isDraw = h2hOc.includes('empate') || h2hOc.includes('draw') || h2hOc === 'x';
+    const isHome = !isDraw && (
+      h2hOc.includes(homeTeam.toLowerCase()) || h2hOc === 'home' || h2hOc === '1' || h2hOc === 'casa'
+    );
+    const isAway = !isDraw && !isHome;
+
+    // H2H + Gols 1T (first half goals) — correlação forte positiva
+    if (htGoalsSel) {
+      const htGoalsOc = oc(htGoalsSel);
+      const isOver = htGoalsOc.includes('over');
+      const lineMatch = htGoalsOc.match(/(\d+\.?\d*)/);
+      const line = lineMatch ? parseFloat(lineMatch[1]) : 1.5;
+      // Vencer o jogo + mais gols no 1T: correlação positiva (time favorito domina todo o jogo)
+      if (isDraw) {
+        return isOver ? (line <= 0.5 ? 1.35 : line <= 1.5 ? 1.10 : 0.90) : (line <= 0.5 ? 0.80 : 1.15);
+      }
+      // Home/Away win + HT over: forte correlação positiva
+      return isOver ? (line <= 0.5 ? 1.55 : line <= 1.5 ? 1.45 : 1.30) : (line <= 0.5 ? 0.65 : line <= 1.5 ? 0.78 : 0.92);
+    }
+
+    // H2H + Resultado 1T
+    if (htWinSel) {
+      const htWinOc = oc(htWinSel);
+      const htIsDraw = htWinOc.includes('empate') || htWinOc.includes('draw');
+      const htIsHome = !htIsDraw && (htWinOc.includes('home') || htWinOc.includes('casa') || htWinOc.includes(homeTeam.toLowerCase()));
+      // Vencer o jogo E vencer o 1T com mesmo time: forte correlação positiva
+      if (isHome && htIsHome) return 1.55;
+      if (isAway && !htIsHome && !htIsDraw) return 1.55;
+      // Vencer jogo + empate 1T: correlação moderada (recuperação no 2T)
+      if (!isDraw && htIsDraw) return 1.25;
+      // Vencer jogo + 1T oposto: correlação negativa (improvável)
+      return 0.65;
+    }
 
     if (goalsSel) {
       const goalsOc = oc(goalsSel);
-      const isOver = goalsOc.includes('over');
-      if (isDraw) return isOver ? 1.15 : 1.22; // Empate + over: 1-1, 2-2 são positivamente correlacionados; Empate + under: 0-0
-      return isOver ? 1.22 : 0.72; // Home/Away win + over: positivo; + under: negativo (ganhar com 1-0 ou 2-0 é menos provável que o naive)
+      const isOver = goalsOc.includes('over') || goalsOc.includes('sim');
+      if (isDraw) return isOver ? 1.15 : 1.22;
+      return isOver ? 1.22 : 0.72;
     }
 
     if (bttsSel) {
       const bttsOc = oc(bttsSel);
       const isYes = bttsOc.includes('sim') || bttsOc.includes('yes');
-      if (isDraw) return isYes ? 1.28 : 0.80; // Empate + BTTS sim: 1-1 muito comum; + não: 0-0
-      return isYes ? 1.20 : 0.75; // Home/Away + BTTS sim: positivo (se casa ganha 2-1, btts=sim); + não: negativo
+      if (isDraw) return isYes ? 1.28 : 0.80;
+      return isYes ? 1.20 : 0.75;
     }
 
     if (totalHomeSel || totalAwaySel) {
@@ -668,25 +701,30 @@ function getSGPCorrelationFactor(sels: Array<{ marketKey: string; outcome: strin
       const selOc = oc(sel);
       const isOver = selOc.includes('over');
       const isHomeTeamTotal = !!totalHomeSel;
-      // H2H casa + total casa over: forte correlação (ganha = marcou mais)
       if (!isDraw && isOver && isHomeTeamTotal) return 1.30;
       if (!isDraw && isOver && !isHomeTeamTotal) return 1.18;
       return 1.10;
     }
 
-    return 1.12; // Combinação h2h + outro mercado elegível
+    return 1.12;
   }
 
-  // Sem h2h: correlações mais fracas entre mercados de gols
+  // Sem h2h: correlações entre mercados de gols
+  if (htGoalsSel && goalsSel) {
+    const htOver = oc(htGoalsSel).includes('over');
+    const ftOver = oc(goalsSel).includes('over') || oc(goalsSel).includes('sim');
+    return htOver === ftOver ? 1.45 : 0.65; // Mesma direção: forte correlação; direções opostas: negativa
+  }
+
   if (goalsSel && bttsSel) {
-    const isOver = oc(goalsSel).includes('over');
+    const isOver = oc(goalsSel).includes('over') || oc(goalsSel).includes('sim');
     const isYes = oc(bttsSel).includes('sim') || oc(bttsSel).includes('yes');
-    if (isOver && isYes) return 1.40; // Over 2.5 + BTTS sim: forte correlação positiva (3 gols e ambas marcam)
-    if (!isOver && !isYes) return 1.35; // Under 2.5 + BTTS não: 0-0 ou 0-X/X-0
-    return 0.70; // Opostos: negativamente correlacionados
+    if (isOver && isYes) return 1.40;
+    if (!isOver && !isYes) return 1.35;
+    return 0.70;
   }
 
-  return 1.10; // Default: leve correlação positiva
+  return 1.10;
 }
 
 async function computeSGPOddForGame(
@@ -768,9 +806,31 @@ async function computeSGPOddForGame(
     return Math.round((1 / adjustedProb) * (SGP_BOOST * 0.95) * 100) / 100;
   }
 
-  const prob = calcSGPProbability(ftLines, htLines, preds);
-  if (prob <= 0 || prob >= 1) return null;
-  return Math.round((1 / prob) * SGP_BOOST * 100) / 100;
+  // Para combinações mistas FT+HT, o modelo condicional de placares subestima
+  // a probabilidade real (ex: FT=1:0 exclui todos os placares HT com >1 gol).
+  // Nesses casos, usar o modelo de correlação que dá resultados próximos às casas de aposta.
+  const hasMixedFTHT = preds.some(p => p.type === 'ft') && preds.some(p => p.type === 'ht');
+  if (!hasMixedFTHT) {
+    const prob = calcSGPProbability(ftLines, htLines, preds);
+    if (prob <= 0 || prob >= 1) return null;
+    return Math.round((1 / prob) * SGP_BOOST * 100) / 100;
+  }
+
+  // Modelo de correlação para combinações FT+HT
+  const hasIndividualOdds = sels.every(s => typeof s.originalOdds === 'number' || typeof s.odds === 'number');
+  if (!hasIndividualOdds) return null;
+  const rawProbs = sels.map(s => {
+    const rawOdd = (typeof s.originalOdds === 'number' && s.originalOdds > 1)
+      ? s.originalOdds
+      : (s.odds || 1.5) / 1.2;
+    return Math.min(0.95, Math.max(0.02, 1 / rawOdd));
+  });
+  const naiveJointProb = rawProbs.reduce((p, q) => p * q, 1);
+  const corrFactor = getSGPCorrelationFactor(sels, homeTeam);
+  const adjustedProb = naiveJointProb * corrFactor;
+  if (adjustedProb <= 0 || adjustedProb >= 1) return null;
+  // Usar boost reduzido: probabilidades individuais já têm margem embutida
+  return Math.round((1 / adjustedProb) * (SGP_BOOST * 0.95) * 100) / 100;
 }
 
 function buildMarketsFromBookmaker(bookmakerOrBookmakers: any, homeTeam: string, awayTeam: string) {
