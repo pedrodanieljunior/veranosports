@@ -278,6 +278,17 @@ export default function Home() {
   };
   const handleRemoveSelection = (selectionId: string) => setSelections((prev) => prev.filter((s) => s.id !== selectionId));
   const handleClearAll = () => { setSelections([]); setPlacedBet(null); };
+  const handleMigrateGameId = (oldId: string, newId: string) => {
+    setSelections((prev) => {
+      const hasOld = prev.some((s) => s.gameId === oldId);
+      if (!hasOld) return prev;
+      return prev.map((s) =>
+        s.gameId === oldId
+          ? { ...s, gameId: newId, id: s.id.replace(oldId, newId) }
+          : s
+      );
+    });
+  };
   const handlePlaceBet = (stake: number, useBonus: boolean) => placeBetMutation.mutate({ selections, stake, useBonus });
 
   return (
@@ -528,7 +539,7 @@ export default function Home() {
       </div>
 
       {/* Modals */}
-      <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} />
+      <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} onMigrateGameId={handleMigrateGameId} />
       {showBetSlip && user && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => setShowBetSlip(false)} onPlaceBet={handlePlaceBet} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
       {showHistory && user && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
       <RulesModal open={showRules} onClose={() => setShowRules(false)} />

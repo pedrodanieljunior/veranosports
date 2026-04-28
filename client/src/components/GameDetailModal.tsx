@@ -31,6 +31,7 @@ interface GameDetailModalProps {
   onClose: () => void;
   selections: Selection[];
   onToggleSelection: (selection: Selection) => void;
+  onMigrateGameId?: (oldId: string, newId: string) => void;
 }
 
 type MarketTab = "todos" | "gols" | "escanteios" | "cartoes" | "intervalos";
@@ -63,7 +64,7 @@ function matchesTab(marketName: string, tab: MarketTab): boolean {
   return false;
 }
 
-export function GameDetailModal({ game, open, onClose, selections, onToggleSelection }: GameDetailModalProps) {
+export function GameDetailModal({ game, open, onClose, selections, onToggleSelection, onMigrateGameId }: GameDetailModalProps) {
   const { getBoostMultiplier, hasBoosted, getBoostPercent } = useMarketSettings();
   const [activeTab, setActiveTab] = useState<MarketTab>("todos");
 
@@ -81,6 +82,16 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     staleTime: 15 * 60 * 1000,
     retry: 1,
   });
+
+  // Quando o fixtureId da API-Football chega, migrar seleções existentes do jogo para o novo ID
+  useEffect(() => {
+    if (extraMarkets?.fixtureId && game && onMigrateGameId) {
+      const newId = `api-football-${extraMarkets.fixtureId}`;
+      if (game.id !== newId) {
+        onMigrateGameId(game.id, newId);
+      }
+    }
+  }, [extraMarkets?.fixtureId, game?.id]);
 
   if (!game) return null;
 
