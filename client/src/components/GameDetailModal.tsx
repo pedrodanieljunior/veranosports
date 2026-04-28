@@ -101,7 +101,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     selections.some(s => s.gameId === game.id && s.outcome === outcomeName && s.marketKey === marketKey);
 
   const selectionsForThisGame = selections.filter(s => s.gameId === game.id);
-  const gameSelectionLimitReached = selectionsForThisGame.length >= 3;
+  const distinctMarketsForThisGame = new Set(selectionsForThisGame.map(s => s.marketKey)).size;
+  const gameSelectionLimitReached = distinctMarketsForThisGame >= 3;
 
   const marketKeyToBoostKey = (mk: string): string => {
     if (mk === "h2h") return "h2h";
@@ -160,6 +161,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   const isButtonDisabled = (outcomeName: string, marketKey: string) => {
     const selected = isSelected(outcomeName, marketKey);
     if (selected) return false;
+    // Bloquear demais opções do mesmo mercado quando uma já está selecionada
+    const sameMarketHasSelection = selectionsForThisGame.some(s => s.marketKey === marketKey);
+    if (sameMarketHasSelection) return true;
     const boostKey = marketKeyToBoostKey(marketKey);
     return gameSelectionLimitReached || isCorrelatedLocked(boostKey);
   };

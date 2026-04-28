@@ -89,14 +89,22 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
             const boostPct = getBoostPercent(boostKey);
             const displayOdd = Math.round((isBoosted ? outcome.odd * getBoostMultiplier(boostKey) : outcome.odd) * 100) / 100;
             const displayValue = translateFn ? translateFn(outcome.value) : outcome.value;
+            // Bloquear demais opções do mercado quando uma já está selecionada
+            const anyInMarketSelected = market.values.some(o =>
+              isSelected(`${marketKey}-${o.value}`, marketKey)
+            );
+            const blockedByMarket = !selected && anyInMarketSelected;
             return (
               <button
                 key={outcome.value}
-                onClick={() => handleOddClick(`${marketKey}-${outcome.value}`, outcome.odd, marketKey, title)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all hover-elevate active-elevate-2 ${
+                onClick={() => !blockedByMarket && handleOddClick(`${marketKey}-${outcome.value}`, outcome.odd, marketKey, title)}
+                disabled={blockedByMarket}
+                className={`flex flex-col items-center gap-1 p-3 rounded-md border transition-all ${
                   selected
                     ? "bg-primary/10 border-primary text-foreground"
-                    : "bg-muted/50 border-transparent"
+                    : blockedByMarket
+                    ? "bg-muted/20 border-transparent opacity-40 cursor-not-allowed"
+                    : "bg-muted/50 border-transparent hover-elevate active-elevate-2"
                 }`}
                 data-testid={`button-${marketKey}-${fixture.id}-${outcome.value}`}
               >
@@ -104,10 +112,10 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
                   {displayValue}
                 </span>
                 <div className="flex flex-col items-center">
-                  <span className={`font-bold text-lg ${selected ? "text-primary" : ""}`}>
+                  <span className={`font-bold text-lg ${selected ? "text-primary" : blockedByMarket ? "text-muted-foreground/50" : ""}`}>
                     {displayOdd.toFixed(2)}
                   </span>
-                  {isBoosted && (
+                  {isBoosted && !blockedByMarket && (
                     <span className="text-[10px] text-muted-foreground/60 line-through flex items-center gap-0.5">
                       {outcome.odd.toFixed(2)}
                       {boostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}

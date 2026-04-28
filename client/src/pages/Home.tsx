@@ -251,12 +251,23 @@ export default function Home() {
         return prev;
       }
 
-      const selectionsFromSameGame = prev.filter((s) => s.gameId === selection.gameId);
-      if (selectionsFromSameGame.length >= 3) {
+      // Remove qualquer seleção anterior do mesmo jogo+mercado (comportamento de rádio)
+      const withoutSameMarket = prev.filter(
+        (s) => !(s.gameId === selection.gameId && s.marketKey === selection.marketKey)
+      );
+
+      // Contar mercados distintos para o jogo (após remover o mesmo mercado)
+      const distinctMarketsForGame = new Set(
+        withoutSameMarket
+          .filter((s) => s.gameId === selection.gameId)
+          .map((s) => s.marketKey)
+      ).size;
+
+      if (distinctMarketsForGame >= 3) {
         toast({ title: "Máximo de 3 mercados por jogo", variant: "destructive" });
         return prev;
       }
-      return [...prev, selection];
+      return [...withoutSameMarket, selection];
     });
     const alreadySelected = selections.find((s) => s.id === selection.id);
     if (!alreadySelected) {
