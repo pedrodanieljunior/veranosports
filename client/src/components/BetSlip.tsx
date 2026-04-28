@@ -87,12 +87,12 @@ export function BetSlip({
   }, [selections]);
 
   // Games with 2+ SGP-eligible markets
-  const sgpGames = useMemo(() =>
-    Object.entries(grouped)
+  const sgpGames = useMemo(() => {
+    const result = Object.entries(grouped)
       .filter(([, sels]) => sels.filter(s => isSGPEligible(s.marketKey)).length >= 2)
-      .map(([gameId, sels]) => ({ gameId, sels })),
-    [grouped]
-  );
+      .map(([gameId, sels]) => ({ gameId, sels }));
+    return result;
+  }, [grouped]);
 
   // Fetch SGP correlated odd per eligible game
   const sgpQueries = useQueries({
@@ -105,7 +105,7 @@ export function BetSlip({
         queryFn: (): Promise<{ odd: number | null; error?: string }> =>
           fetch(`/api/football/sgp-odds?gameId=${encodeURIComponent(gameId)}&homeTeam=${encodeURIComponent(first.homeTeam)}&awayTeam=${encodeURIComponent(first.awayTeam)}&selections=${encodeURIComponent(selJson)}`)
             .then(r => r.json()),
-        enabled: gameId.startsWith('api-football-') && eligible.length >= 2,
+        enabled: eligible.length >= 2,
         staleTime: 5 * 60 * 1000,
       };
     }),
@@ -122,6 +122,7 @@ export function BetSlip({
   }, [sgpGames, sgpQueries]);
 
   const hasSGPActive = sgpOddsMap.size > 0;
+  const hasSGPCombination = sgpGames.length > 0; // Qualquer combinação de mercados elegíveis do mesmo jogo
   const sgpLoading = sgpQueries.some(q => q.isLoading);
 
   // Per-game contribution to total odds, respecting SGP and h2h context
@@ -657,7 +658,7 @@ export function BetSlip({
                   </div>
                 )}
 
-                {hasSGPActive && sgpGames.length > 0 && (
+                {hasSGPCombination && (
                   <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-sgp-active">
                     <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
@@ -669,7 +670,13 @@ export function BetSlip({
                       </span>
                     </div>
                     <div className="bg-purple-500/10 px-3 py-2 space-y-1">
-                      <p className="text-xs text-purple-300">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
+                      {sgpLoading ? (
+                        <p className="text-xs text-purple-300">Calculando odds correlacionadas...</p>
+                      ) : hasSGPActive ? (
+                        <p className="text-xs text-purple-300">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
+                      ) : (
+                        <p className="text-xs text-purple-300">Mercados do mesmo jogo combinados com odds especiais.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -707,7 +714,7 @@ export function BetSlip({
 
                 <div className="flex justify-between text-lg pt-2 border-t border-card-border">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${hasSGPActive ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
+                  <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>

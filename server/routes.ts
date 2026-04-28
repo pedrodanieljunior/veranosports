@@ -1142,11 +1142,15 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
     },
     {
       id: 5,
-      name: "Goals Over/Under 2.5",
-      label: "Total de Gols 2,5",
+      name: "Goals Over/Under",
+      label: "Total de Gols",
       values: [
-        { value: "Sim (Mais de 2.5)", odd: r(1.55, 1.75) },
-        { value: "Não (Menos de 2.5)", odd: r(1.75, 1.95) }
+        { value: "Over 1.5", odd: r(1.45, 1.60) },
+        { value: "Under 1.5", odd: r(2.20, 2.60) },
+        { value: "Over 2.5", odd: r(1.75, 1.95) },
+        { value: "Under 2.5", odd: r(1.75, 1.95) },
+        { value: "Over 3.5", odd: r(2.50, 2.90) },
+        { value: "Under 3.5", odd: r(1.38, 1.50) },
       ]
     },
     {
@@ -3804,10 +3808,57 @@ export async function registerRoutes(
       if (!API_FOOTBALL_KEY) return res.status(500).json({ odd: null, error: "API não configurada" });
       const { gameId, homeTeam = '', awayTeam = '', selections: selJson } = req.query;
       if (!gameId || !selJson) return res.status(400).json({ odd: null, error: "Parâmetros insuficientes" });
-      const fixtureId = String(gameId).replace('api-football-', '');
-      if (!/^\d+$/.test(fixtureId)) return res.status(400).json({ odd: null, error: "gameId inválido" });
       const sels: Array<{ marketKey: string; outcome: string }> = JSON.parse(String(selJson));
       if (!Array.isArray(sels) || sels.length < 2) return res.status(400).json({ odd: null, error: "Mínimo 2 seleções" });
+
+      // Resolver fixtureId: direto do gameId se tiver prefixo, ou buscar por times
+      let fixtureId = String(gameId).replace('api-football-', '');
+      if (!/^\d+$/.test(fixtureId)) {
+        // gameId não é api-football — tentar achar via cache de extra-markets ou busca por times
+        const ht = String(homeTeam);
+        const at = String(awayTeam);
+        // Verificar cache de extra-markets por times
+        const extraCacheKey = `extra_markets_${ht}_${at}_`;
+        let resolved: string | null = null;
+        // Iterar pelas entradas de cache que batem com os times
+        const extraCached = cache.get<any>(`extra_markets_${ht}_${at}_`);
+        if (extraCached?.fixtureId) {
+          resolved = String(extraCached.fixtureId);
+        }
+        if (!resolved && ht && at) {
+          // Buscar fixture por nome de time (igual ao extra-markets)
+          const normalizeTeam = (name: string) => name.toLowerCase()
+            .replace(/[^a-z0-9\s]/g, '')
+            .split(' ')
+            .filter((w: string) => w.length > 2 && !['fc', 'sc', 'cf', 'ac', 'cd', 'rc'].includes(w));
+          const homeWords = normalizeTeam(ht);
+          const searchTerm = homeWords[0] || ht.split(' ')[0];
+          const today = new Date();
+          const from = toManausDateStr(today.getTime() - 24 * 60 * 60 * 1000);
+          const to = toManausDateStr(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          try {
+            const searchResp = await fetch(
+              `${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(searchTerm)}&from=${from}&to=${to}`,
+              { headers: { 'x-apisports-key': API_FOOTBALL_KEY } }
+            );
+            if (searchResp.ok) {
+              const searchData = await searchResp.json();
+              const fixtures = searchData.response || [];
+              const awayNorm = normalizeTeam(at);
+              const match = fixtures.find((f: any) => {
+                const fhNorm = normalizeTeam(f.teams.home.name);
+                const faNorm = normalizeTeam(f.teams.away.name);
+                return homeWords.some((w: string) => fhNorm.includes(w)) &&
+                       awayNorm.some((w: string) => faNorm.includes(w));
+              });
+              if (match) resolved = String(match.fixture.id);
+            }
+          } catch {}
+        }
+        if (!resolved) return res.json({ odd: null, error: "Partida não encontrada" });
+        fixtureId = resolved;
+      }
+
       const cacheKey = `sgp_odds_${fixtureId}_${JSON.stringify(sels.map(s => `${s.marketKey}:${s.outcome}`).sort())}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
