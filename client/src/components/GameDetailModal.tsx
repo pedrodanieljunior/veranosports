@@ -52,8 +52,20 @@ const ESCANTEIOS_MARKETS = [
   "Corners Over Under", "Total Corners",
   "Corners 1x2", "Corners Over Under First Half",
 ];
-const CARTOES_MARKETS = ["Red Card", "Red Card In The Match (1st Half)", "Cards Over/Under", "Cards - Home", "Cards - Away"];
+const CARTOES_MARKETS = ["Cards Over/Under", "Cards - Home", "Cards - Away"];
 const INTERVALOS_MARKETS = ["First Half Winner", "Both Teams Score - First Half", "Both Teams To Score - Second Half", "HT/FT Double"];
+
+// Lock groups: selecting any market from one group blocks all others in that group
+const GOLS_INTERVALOS_LOCK = new Set([...GOLS_MARKETS, ...INTERVALOS_MARKETS]);
+const ESCANTEIOS_LOCK = new Set(ESCANTEIOS_MARKETS);
+const CARTOES_LOCK = new Set(CARTOES_MARKETS);
+
+function getMarketLockGroup(marketKey: string): 'gols_intervalos' | 'escanteios' | 'cartoes' | null {
+  if (GOLS_INTERVALOS_LOCK.has(marketKey)) return 'gols_intervalos';
+  if (ESCANTEIOS_LOCK.has(marketKey)) return 'escanteios';
+  if (CARTOES_LOCK.has(marketKey)) return 'cartoes';
+  return null;
+}
 
 function matchesTab(marketName: string, tab: MarketTab): boolean {
   if (tab === "todos") return true;
@@ -83,7 +95,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     retry: 1,
   });
 
-  // Quando o fixtureId da API-Football chega, migrar seleções existentes do jogo para o novo ID
   useEffect(() => {
     if (extraMarkets?.fixtureId && game && onMigrateGameId) {
       const newId = `api-football-${extraMarkets.fixtureId}`;
@@ -108,7 +119,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const h2hMarket = allMarkets["h2h"];
 
-  // Usar o fixture ID da API-Football quando disponível para que o SGP seja calculado
   const effectiveGameId = extraMarkets?.fixtureId
     ? `api-football-${extraMarkets.fixtureId}`
     : game.id;
@@ -144,8 +154,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "Cards - Home": "cards_home",
       "Cards - Away": "cards_away",
       "First Half Winner": "first_half_result",
-      "Red Card": "red_card",
-      "Red Card In The Match (1st Half)": "red_card_1h",
       "Results/Both Teams Score": "result_btts",
       "Both Teams Score - First Half": "btts_1h",
       "Both Teams To Score - Second Half": "btts_2h",
@@ -159,7 +167,6 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
         "5": "totals",
         "4": "exact_score", "11": "exact_score",
         "6": "first_to_score",
-        "15": "red_card",
         "45": "corners", "46": "corners",
       };
       return idMap[id] || mk;
@@ -179,14 +186,28 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     return selectedCorrelated.size >= 2 && !selectedCorrelated.has(boostKey);
   };
 
+  const isGroupLocked = (marketKey: string): boolean => {
+    const group = getMarketLockGroup(marketKey);
+    if (!group) return false;
+    return selectionsForThisGame.some(s => {
+      if (s.marketKey === marketKey) return false;
+      return getMarketLockGroup(s.marketKey) === group;
+    });
+  };
+
   const isButtonDisabled = (outcomeName: string, marketKey: string) => {
     const selected = isSelected(outcomeName, marketKey);
     if (selected) return false;
-    // Bloquear demais opções do mesmo mercado quando uma já está selecionada
     const sameMarketHasSelection = selectionsForThisGame.some(s => s.marketKey === marketKey);
     if (sameMarketHasSelection) return true;
+    if (isGroupLocked(marketKey)) return true;
     const boostKey = marketKeyToBoostKey(marketKey);
     return gameSelectionLimitReached || isCorrelatedLocked(boostKey);
+  };
+
+  const isMarketGroupLocked = (marketKey: string): boolean => {
+    const selected = selectionsForThisGame.some(s => s.marketKey === marketKey);
+    return !selected && isGroupLocked(marketKey);
   };
 
   const handleOddClick = (outcomeName: string, originalOdds: number, marketKey: string, bookmaker: string) => {
@@ -259,6 +280,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       return part;
     };
 
+    const groupLocked = isMarketGroupLocked(marketKey);
+
     return (
       <div key={market.id} className="space-y-3">
         <span className="text-sm font-semibold text-gray-200">{market.label}</span>
@@ -287,6 +310,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
             const disabled = isButtonDisabled(outcomeKey, marketKey);
             const correlatedLocked = !selected && isCorrelatedLocked(boostKey);
+            const showLock = !selected && (groupLocked || correlatedLocked);
             return (
               <button
                 key={value.value}
@@ -294,7 +318,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 disabled={disabled}
                 className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
                   disabled
-                    ? correlatedLocked
+                    ? (groupLocked || correlatedLocked)
                       ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
                       : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
                     : selected
@@ -303,7 +327,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 }`}
                 data-testid={`button-modal-extra-${market.id}-${value.value}`}
               >
-                {correlatedLocked && !selected && (
+                {showLock && (
                   <span className="absolute top-1 right-1">
                     <Lock className="w-3 h-3 text-gray-400" />
                   </span>
@@ -387,7 +411,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
         <ScrollArea className="max-h-[55vh]">
           <div className="p-4 space-y-6">
 
-            {/* H2H market — shown on Todos and Gols */}
+            {/* H2H market — shown on Todos tab */}
             {showH2h && h2hMarket && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

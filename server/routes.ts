@@ -923,7 +923,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Away Team Total Cards",
     "Total Corners (1st Half)",
     "First Half Winner",
-    "Red Card In The Match (1st Half)",
     "Results/Both Teams Score",
     "Both Teams Score - First Half",
     "Both Teams To Score - Second Half",

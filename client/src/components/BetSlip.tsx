@@ -126,8 +126,13 @@ export function BetSlip({
   }, [sgpGames, sgpQueries]);
 
   const hasSGPActive = sgpOddsMap.size > 0;
-  const hasSGPCombination = sgpGames.length > 0; // Qualquer combinação de mercados elegíveis do mesmo jogo
+  const hasSGPCombination = sgpGames.length > 0;
   const sgpLoading = sgpQueries.some(q => q.isLoading);
+
+  // Badge: qualquer jogo com 2+ mercados diferentes selecionados
+  const hasMultiMarketSameGame = useMemo(() =>
+    Object.values(grouped).some(sels => new Set(sels.map(s => s.marketKey)).size >= 2),
+    [grouped]);
 
   // Per-game contribution to total odds, respecting SGP and h2h context
   const computeGameContrib = (gameId: string, sels: Selection[], isComboCtx: boolean): number => {
@@ -681,6 +686,15 @@ export function BetSlip({
                       ) : (
                         <p className="text-xs text-purple-300">Mercados do mesmo jogo combinados com odds especiais.</p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {hasMultiMarketSameGame && (
+                  <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-best-odds">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
+                      <span className="text-white font-extrabold text-sm tracking-wide">A FW Sports garante as melhores odds combinadas do mercado</span>
                     </div>
                   </div>
                 )}
