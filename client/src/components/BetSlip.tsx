@@ -695,11 +695,11 @@ export function BetSlip({
                     <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
-                        <span className="text-white font-extrabold text-sm tracking-wide">A FW Sports garante as maiores odds combinadas do mercado</span>
+                        <span className="text-white font-extrabold text-sm tracking-wide">Combinadas Especiais</span>
                       </div>
                     </div>
                     <div className="bg-purple-500/10 px-3 py-2">
-                      <p className="text-xs text-purple-300">Combinação de mercados do mesmo jogo com as melhores odds disponíveis.</p>
+                      <p className="text-xs text-purple-300">A FW Sports oferece as maiores odds combinadas dos mercado.</p>
                     </div>
                   </div>
                 )}
