@@ -699,7 +699,7 @@ export function BetSlip({
                       </div>
                     </div>
                     <div className="bg-purple-500/10 px-3 py-2">
-                      <p className="text-xs text-purple-300">A FW Sports oferece as maiores odds combinadas dos mercado.</p>
+                      <p className="text-xs text-purple-300">A FW Sports oferece as maiores odds combinadas do mercado.</p>
                     </div>
                   </div>
                 )}
