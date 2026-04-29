@@ -581,100 +581,8 @@ export function BetSlip({
                   </div>
                 );
               })()}
-            </ScrollArea>
-            
-            <div className="mt-4 pt-4 border-t border-card-border space-y-4 flex-shrink-0">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Valor da Aposta (R$)</label>
-                <Input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={stake}
-                  onChange={(e) => setStake(e.target.value)}
-                  placeholder="0.00"
-                  className="text-lg font-mono"
-                  data-testid="input-stake"
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                {[10, 25, 50, 100].map((value) => (
-                  <Button
-                    key={value}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setStake(value.toString())}
-                    className="flex-1"
-                    data-testid={`button-stake-${value}`}
-                  >
-                    R${value}
-                  </Button>
-                ))}
-              </div>
-
-              {isCappedAtMax && (
-                <div className="bg-red-500/10 border border-red-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-capped-max">
-                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-700 dark:text-red-400 font-semibold">Retorno potencial ultrapassa o limite de R$15.000,00. Reduza o valor apostado para continuar.</p>
-                </div>
-              )}
-
-              {gameLimitRemaining != null && gameLimitRemaining > 0 && selections.length === 1 && (() => {
-                const maxPayout = Math.min(
-                  MAX_BET_PAYOUT,
-                  gameLimitRemaining,
-                  limits?.caixaBalance != null ? limits.caixaBalance : Infinity
-                );
-                const maxStake = Math.floor(maxPayout / totalOdds * 100) / 100;
-                if (maxStake <= 0) return null;
-                return (
-                  <div className="bg-amber-500/10 border border-amber-500/50 rounded-md p-3 flex items-center gap-3" data-testid="alert-game-limit-suggestion">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-amber-300 font-semibold mb-0.5">Limite do jogo atingido</p>
-                      <p className="text-xs text-amber-200/80">
-                        Aposta máxima sugerida para este jogo:
-                      </p>
-                      <p className="text-sm font-bold text-amber-300 mt-0.5">
-                        R$ {maxStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-amber-500/50 text-amber-300 hover:bg-amber-500/20 text-xs shrink-0"
-                      onClick={() => setStake(maxStake.toFixed(2))}
-                      data-testid="button-use-suggested-stake"
-                    >
-                      Usar
-                    </Button>
-                  </div>
-                );
-              })()}
-
-              {isNearCaixaLimit && !isCappedAtMax && (
-                <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">
-                  <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-1">
-                    <p className="text-xs text-orange-700 dark:text-orange-400">
-                      Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")}
-                    </p>
-                    {maxSuggestedStake > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setStake(maxSuggestedStake.toFixed(2))}
-                        className="text-xs text-orange-600 dark:text-orange-300 underline text-left hover:text-orange-500"
-                        data-testid="button-use-max-stake"
-                      >
-                        Usar valor máximo: R$ {maxSuggestedStake.toFixed(2).replace(".", ",")}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
+              {/* Stats + Banners + Retorno inside the ScrollArea so they don't squeeze game cards */}
+              <div className="space-y-3 mt-3 pt-3 border-t border-card-border">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Seleções</span>
                   <span className="font-medium">{selections.length}</span>
@@ -778,14 +686,105 @@ export function BetSlip({
                   </div>
                 )}
 
-                <div className="flex justify-between text-lg pt-2 border-t border-card-border">
+                <div className="flex justify-between text-lg pt-2 border-t border-card-border pb-2">
                   <span className="font-medium">Retorno Potencial</span>
                   <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
                     R$ {displayPotentialWin.toFixed(2)}
                   </span>
                 </div>
               </div>
+            </ScrollArea>
+
+            {/* Fixed bottom: stake input + alerts + submit */}
+            <div className="pt-3 border-t border-card-border space-y-3 flex-shrink-0">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Valor da Aposta (R$)</label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={stake}
+                  onChange={(e) => setStake(e.target.value)}
+                  placeholder="0.00"
+                  className="text-lg font-mono"
+                  data-testid="input-stake"
+                />
+              </div>
               
+              <div className="flex gap-2">
+                {[10, 25, 50, 100].map((value) => (
+                  <Button
+                    key={value}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStake(value.toString())}
+                    className="flex-1"
+                    data-testid={`button-stake-${value}`}
+                  >
+                    R${value}
+                  </Button>
+                ))}
+              </div>
+
+              {isCappedAtMax && (
+                <div className="bg-red-500/10 border border-red-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-capped-max">
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 dark:text-red-400 font-semibold">Retorno potencial ultrapassa o limite de R$15.000,00. Reduza o valor apostado para continuar.</p>
+                </div>
+              )}
+
+              {gameLimitRemaining != null && gameLimitRemaining > 0 && selections.length === 1 && (() => {
+                const maxPayout = Math.min(
+                  MAX_BET_PAYOUT,
+                  gameLimitRemaining,
+                  limits?.caixaBalance != null ? limits.caixaBalance : Infinity
+                );
+                const maxStake = Math.floor(maxPayout / totalOdds * 100) / 100;
+                if (maxStake <= 0) return null;
+                return (
+                  <div className="bg-amber-500/10 border border-amber-500/50 rounded-md p-3 flex items-center gap-3" data-testid="alert-game-limit-suggestion">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-amber-300 font-semibold mb-0.5">Limite do jogo atingido</p>
+                      <p className="text-xs text-amber-200/80">Aposta máxima sugerida para este jogo:</p>
+                      <p className="text-sm font-bold text-amber-300 mt-0.5">
+                        R$ {maxStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-500/50 text-amber-300 hover:bg-amber-500/20 text-xs shrink-0"
+                      onClick={() => setStake(maxStake.toFixed(2))}
+                      data-testid="button-use-suggested-stake"
+                    >
+                      Usar
+                    </Button>
+                  </div>
+                );
+              })()}
+
+              {isNearCaixaLimit && !isCappedAtMax && (
+                <div className="bg-orange-500/10 border border-orange-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-near-daily">
+                  <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-orange-700 dark:text-orange-400">
+                      Os ganhos máximos desta aposta são de R$ {(limits?.caixaBalance ?? 0).toFixed(2).replace(".", ",")}
+                    </p>
+                    {maxSuggestedStake > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setStake(maxSuggestedStake.toFixed(2))}
+                        className="text-xs text-orange-600 dark:text-orange-300 underline text-left hover:text-orange-500"
+                        data-testid="button-use-max-stake"
+                      >
+                        Usar valor máximo: R$ {maxSuggestedStake.toFixed(2).replace(".", ",")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {hasBonusBalance && (
                 <label className="flex items-center gap-2 cursor-pointer bg-green-950/40 border border-green-700/40 rounded-lg px-3 py-2">
                   <input
