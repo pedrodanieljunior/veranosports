@@ -60,6 +60,15 @@ export function BetSlip({
   gameLimitRemaining,
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
+  const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
+  const toggleGameExpand = (gameId: string) => {
+    setExpandedGames(prev => {
+      const next = new Set(prev);
+      if (next.has(gameId)) next.delete(gameId);
+      else next.add(gameId);
+      return next;
+    });
+  };
   const [useBonus, setUseBonus] = useState(false);
   const { toast } = useToast();
   const { getBoostPercent, getBoostMultiplier } = useMarketSettings();
@@ -483,9 +492,14 @@ export function BetSlip({
                       const gameOdds = isSGPGame
                         ? roundOdds(computeGameContrib(gameId, sels, isComboCtx))
                         : roundOdds(computeTotalOdds(sels, comboApplies));
+                      const isMulti = sels.length >= 2;
+                      const isExpanded = expandedGames.has(gameId);
                       return (
                         <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
-                          <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border">
+                          <div
+                            className={`flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border ${isMulti ? "cursor-pointer select-none active:opacity-70" : ""}`}
+                            onClick={() => isMulti && toggleGameExpand(gameId)}
+                          >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-sm">⚽</span>
                               <span className="font-semibold text-foreground text-sm truncate">
@@ -500,38 +514,67 @@ export function BetSlip({
                                 <span className="flex-shrink-0 w-3 h-3 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
                               )}
                             </div>
-                            <span className={`font-bold text-sm flex-shrink-0 ml-2 ${isSGPGame ? "text-purple-400" : "text-yellow-400"}`}>
-                              {fmtOdds(gameOdds)}
-                            </span>
-                          </div>
-                          <div className="px-3 py-2.5">
-                            <div className="relative pl-5">
-                              <div
-                                className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
-                                style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
-                              />
-                              {sels.map((sel, idx) => (
-                                <div key={sel.id} className={`flex items-start justify-between ${idx > 0 ? "mt-3" : ""}`}>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-0 relative">
-                                      <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
-                                      <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
-                                    </div>
-                                    <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
-                                  </div>
-                                  <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
-                                    <button
-                                      onClick={() => onRemoveSelection(sel.id)}
-                                      className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors"
-                                      data-testid={`button-remove-selection-${sel.id}`}
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
+                            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                              <span className={`font-bold text-sm ${isSGPGame ? "text-purple-400" : "text-yellow-400"}`}>
+                                {fmtOdds(gameOdds)}
+                              </span>
+                              {isMulti && (
+                                isExpanded
+                                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              )}
                             </div>
                           </div>
+
+                          {/* Collapsed preview */}
+                          {isMulti && !isExpanded && (
+                            <button
+                              className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/80 transition-colors"
+                              onClick={() => toggleGameExpand(gameId)}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
+                                <span className="text-muted-foreground text-xs truncate">
+                                  {translateMarket(sels[0].marketKey)} · {formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)}
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                                +{sels.length - 1} mais
+                              </span>
+                            </button>
+                          )}
+
+                          {/* Expanded list */}
+                          {(!isMulti || isExpanded) && (
+                            <div className="px-3 py-2.5">
+                              <div className="relative pl-5">
+                                <div
+                                  className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                                  style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
+                                />
+                                {sels.map((sel, idx) => (
+                                  <div key={sel.id} className={`flex items-start justify-between ${idx > 0 ? "mt-3" : ""}`}>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-0 relative">
+                                        <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
+                                        <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                      </div>
+                                      <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
+                                      <button
+                                        onClick={() => onRemoveSelection(sel.id)}
+                                        className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors"
+                                        data-testid={`button-remove-selection-${sel.id}`}
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
