@@ -52,11 +52,12 @@ const ESCANTEIOS_MARKETS = [
   "Corners Over Under", "Total Corners",
   "Corners 1x2", "Corners Over Under First Half",
 ];
-const CARTOES_MARKETS = ["Cards Over/Under", "Cards - Home", "Cards - Away"];
+const CARTOES_MARKETS = ["Red Card In The Match (1st Half)", "Cards Over/Under", "Cards - Home", "Cards - Away"];
 const INTERVALOS_MARKETS = ["First Half Winner", "Both Teams Score - First Half", "Both Teams To Score - Second Half", "HT/FT Double"];
 
 // Lock groups: selecting any market from one group blocks all others in that group
-const GOLS_INTERVALOS_LOCK = new Set([...GOLS_MARKETS, ...INTERVALOS_MARKETS]);
+// h2h (Resultado Final 1X2) belongs to the Gols group
+const GOLS_INTERVALOS_LOCK = new Set(["h2h", ...GOLS_MARKETS, ...INTERVALOS_MARKETS]);
 const ESCANTEIOS_LOCK = new Set(ESCANTEIOS_MARKETS);
 const CARTOES_LOCK = new Set(CARTOES_MARKETS);
 
@@ -154,6 +155,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
       "Cards - Home": "cards_home",
       "Cards - Away": "cards_away",
       "First Half Winner": "first_half_result",
+      "Red Card In The Match (1st Half)": "red_card_1h",
       "Results/Both Teams Score": "result_btts",
       "Both Teams Score - First Half": "btts_1h",
       "Both Teams To Score - Second Half": "btts_2h",
@@ -350,7 +352,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
-  const showH2h = activeTab === "todos";
+  const showH2h = activeTab === "todos" || activeTab === "gols";
   const filteredExtraMarkets = (extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? []).sort((a, b) => {
     if (activeTab === "intervalos") {
       return INTERVALOS_MARKETS.indexOf(a.name) - INTERVALOS_MARKETS.indexOf(b.name);

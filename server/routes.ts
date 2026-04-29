@@ -919,6 +919,7 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     "Cards Over/Under",
     "Cards - Home",
     "Cards - Away",
+    "Red Card In The Match (1st Half)",
     "Home Team Total Cards",
     "Away Team Total Cards",
     "Total Corners (1st Half)",
