@@ -692,9 +692,14 @@ export function BetSlip({
 
                 {hasMultiMarketSameGame && (
                   <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-best-odds">
-                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
-                      <span className="text-white font-extrabold text-sm tracking-wide">A FW Sports garante as melhores odds combinadas do mercado</span>
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
+                        <span className="text-white font-extrabold text-sm tracking-wide">A FW Sports garante as maiores odds combinadas do mercado</span>
+                      </div>
+                    </div>
+                    <div className="bg-purple-500/10 px-3 py-2">
+                      <p className="text-xs text-purple-300">Combinação de mercados do mesmo jogo com as melhores odds disponíveis.</p>
                     </div>
                   </div>
                 )}
