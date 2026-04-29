@@ -491,7 +491,7 @@ export function BetSlip({
                       const isComboCtx = distinctGameCount > 1;
                       const gameOdds = isSGPGame
                         ? roundOdds(computeGameContrib(gameId, sels, isComboCtx))
-                        : roundOdds(computeTotalOdds(sels, comboApplies));
+                        : roundOdds(computeTotalOdds(sels, isComboCtx));
                       const isMulti = sels.length >= 2;
                       const isExpanded = expandedGames.has(gameId);
                       return (
