@@ -538,9 +538,12 @@ export function BetSlip({
                                   {translateMarket(sels[0].marketKey)} · {formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)}
                                 </span>
                               </div>
-                              <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                                +{sels.length - 1} mais
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-600/30 border border-purple-500/50 text-purple-300 leading-none tracking-wide">
+                                  CA
+                                </span>
+                                <span className="text-xs text-muted-foreground">+{sels.length - 1} mais</span>
+                              </div>
                             </button>
                           )}
 
