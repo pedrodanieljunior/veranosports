@@ -37,7 +37,14 @@ export function getComboBonus(h2hGameCount: number): number {
 export function checkIsComboBonus(selections: SelectionForOdds[]): boolean {
   if (selections.length < 2) return false;
   const distinctGames = new Set(selections.map(s => s.gameId));
-  return distinctGames.size >= 2;
+  if (distinctGames.size < 2) return false;
+  // Bônus só se aplica quando TODOS os mercados são Resultado Final (h2h) ou Ambos Marcam (BTTS)
+  return selections.every(s => {
+    const mk = (s.marketKey ?? "").toLowerCase();
+    const isResultadoFinal = mk === "h2h" || mk === "match_winner";
+    const isAmbosMarcam = mk.includes("both teams") || mk === "btts";
+    return isResultadoFinal || isAmbosMarcam;
+  });
 }
 
 function isBTTS(sel: SelectionForOdds): boolean {
