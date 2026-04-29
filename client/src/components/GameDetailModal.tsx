@@ -72,7 +72,7 @@ function matchesTab(marketName: string, tab: MarketTab): boolean {
   if (tab === "todos") return true;
   if (tab === "gols") return GOLS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
   if (tab === "escanteios") return ESCANTEIOS_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
-  if (tab === "cartoes") return CARTOES_MARKETS.some(m => marketName.includes(m) || m.includes(marketName));
+  if (tab === "cartoes") return CARTOES_MARKETS.includes(marketName);
   if (tab === "intervalos") return INTERVALOS_MARKETS.some(m => m === marketName);
   return false;
 }

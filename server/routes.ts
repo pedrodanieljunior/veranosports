@@ -1148,20 +1148,6 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     markets.sort((a, b) => (marketOrder[a.name] ?? 99) - (marketOrder[b.name] ?? 99));
   }
 
-  // Adicionar mercado de Cartão Vermelho sinteticamente se a API não retornou
-  const hasRedCard = markets.some(m => m.name === "Red Card");
-  if (!hasRedCard) {
-    markets.push({
-      id: 15,
-      name: "Red Card",
-      label: "Cartão Vermelho no Jogo",
-      values: [
-        { value: "Sim", odd: 3.25 },
-        { value: "Não", odd: 1.24 }
-      ]
-    });
-  }
-
   // Fallbacks sintéticos para novos mercados
   if (!markets.some(m => m.name === "Goals Over/Under First Half")) {
     markets.push({
@@ -1379,15 +1365,6 @@ function generateExtraMarkets(homeTeam: string, awayTeam: string) {
         { value: "Over 6.5", odd: r(4.00, 4.50) }, { value: "Under 6.5", odd: r(1.16, 1.24) },
       ]
     },
-    {
-      id: 15,
-      name: "Red Card",
-      label: "Cartão Vermelho no Jogo",
-      values: [
-        { value: "Sim", odd: r(3.00, 3.80) },
-        { value: "Não", odd: r(1.18, 1.28) }
-      ]
-    }
   ];
 }
 
