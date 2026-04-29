@@ -38,11 +38,11 @@ export function checkIsComboBonus(selections: SelectionForOdds[]): boolean {
   if (selections.length < 2) return false;
   const distinctGames = new Set(selections.map(s => s.gameId));
   if (distinctGames.size < 2) return false;
-  // Bônus só se aplica quando TODOS os mercados são Resultado Final (h2h) ou Ambos Marcam (BTTS)
+  // Bônus só se aplica quando TODOS os mercados são exatamente Resultado Final (h2h) ou Ambos Marcam FT (BTTS)
   return selections.every(s => {
-    const mk = (s.marketKey ?? "").toLowerCase();
+    const mk = s.marketKey ?? "";
     const isResultadoFinal = mk === "h2h" || mk === "match_winner";
-    const isAmbosMarcam = mk.includes("both teams") || mk === "btts";
+    const isAmbosMarcam = mk === "Both Teams Score" || mk === "btts";
     return isResultadoFinal || isAmbosMarcam;
   });
 }
