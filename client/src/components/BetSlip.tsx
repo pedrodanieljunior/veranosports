@@ -581,122 +581,119 @@ export function BetSlip({
                   </div>
                 );
               })()}
-              {/* Stats + Banners + Retorno inside the ScrollArea so they don't squeeze game cards */}
-              <div className="space-y-3 mt-3 pt-3 border-t border-card-border">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Seleções</span>
-                  <span className="font-medium">{selections.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Odds Total</span>
-                  <span className="font-medium">{fmtOdds(totalOdds)}</span>
-                </div>
-
-                {isSingleH2H && superAumentoPct > 0 && superAumentoBaseReturn > 0 && (
-                  <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
-                    <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
-                        <span className="text-black font-extrabold text-sm tracking-wide">SUPER AUMENTADA</span>
-                      </div>
-                      <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
-                        +{superAumentoPct}%
-                      </span>
-                    </div>
-                    <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Odd normal</span>
-                        <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {superAumentoBaseReturn.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
-                        <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
-                          <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Super Aumentada
-                        </span>
-                        <span className="text-yellow-400 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {hasSGPCombination && (
-                  <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-sgp-active">
-                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
-                        <span className="text-white font-extrabold text-sm tracking-wide">COMBINAÇÃO ESPECIAL</span>
-                      </div>
-                      <span className="bg-white/20 text-white font-extrabold text-xs px-2 py-0.5 rounded-full">
-                        SGP
-                      </span>
-                    </div>
-                    <div className="bg-purple-500/10 px-3 py-2 space-y-1">
-                      {sgpLoading ? (
-                        <p className="text-xs text-purple-300">Calculando odds correlacionadas...</p>
-                      ) : hasSGPActive ? (
-                        <p className="text-xs text-purple-300">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
-                      ) : (
-                        <p className="text-xs text-purple-300">Mercados do mesmo jogo combinados com odds especiais.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {hasMultiMarketSameGame && (
-                  <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-best-odds">
-                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
-                        <span className="text-white font-extrabold text-sm tracking-wide">Combinadas Especiais</span>
-                      </div>
-                    </div>
-                    <div className="bg-purple-500/10 px-3 py-2">
-                      <p className="text-xs text-purple-300">A FW Sports oferece as maiores odds combinadas do mercado.</p>
-                    </div>
-                  </div>
-                )}
-
-                {comboApplies && comboBonusPct > 0 && (
-                  <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
-                    <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
-                        <span className="text-black font-extrabold text-sm tracking-wide">BÔNUS COMBINADA</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-black/70 text-xs font-medium">{distinctGameCount} jogos</span>
-                        <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
-                          +{(comboBonusPct * 100) % 1 === 0
-                            ? `${(comboBonusPct * 100).toFixed(0)}%`
-                            : `${(comboBonusPct * 100).toFixed(1)}%`}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Sem bônus</span>
-                        <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {returnWithoutBonus.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
-                        <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
-                          <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Com bônus
-                        </span>
-                        <span className="text-yellow-300 font-extrabold text-base">R$ {returnWithBonus.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between text-lg pt-2 border-t border-card-border pb-2">
-                  <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
-                    R$ {displayPotentialWin.toFixed(2)}
-                  </span>
-                </div>
-              </div>
             </ScrollArea>
 
-            {/* Fixed bottom: stake input + alerts + submit */}
+            {/* Fixed bottom: stats + banners + stake input + alerts + submit */}
             <div className="pt-3 border-t border-card-border space-y-3 flex-shrink-0">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Seleções</span>
+                <span className="font-medium">{selections.length}</span>
+              </div>
+              <div className="flex justify-between text-sm -mt-2">
+                <span className="text-muted-foreground">Odds Total</span>
+                <span className="font-medium">{fmtOdds(totalOdds)}</span>
+              </div>
+
+              {isSingleH2H && superAumentoPct > 0 && superAumentoBaseReturn > 0 && (
+                <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
+                  <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
+                      <span className="text-black font-extrabold text-sm tracking-wide">SUPER AUMENTADA</span>
+                    </div>
+                    <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
+                      +{superAumentoPct}%
+                    </span>
+                  </div>
+                  <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Odd normal</span>
+                      <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {superAumentoBaseReturn.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
+                      <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Super Aumentada
+                      </span>
+                      <span className="text-yellow-400 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {hasSGPCombination && (
+                <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-sgp-active">
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
+                      <span className="text-white font-extrabold text-sm tracking-wide">COMBINAÇÃO ESPECIAL</span>
+                    </div>
+                    <span className="bg-white/20 text-white font-extrabold text-xs px-2 py-0.5 rounded-full">
+                      SGP
+                    </span>
+                  </div>
+                  <div className="bg-purple-500/10 px-3 py-2 space-y-1">
+                    {sgpLoading ? (
+                      <p className="text-xs text-purple-300">Calculando odds correlacionadas...</p>
+                    ) : hasSGPActive ? (
+                      <p className="text-xs text-purple-300">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
+                    ) : (
+                      <p className="text-xs text-purple-300">Mercados do mesmo jogo combinados com odds especiais.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {hasMultiMarketSameGame && !(comboApplies && comboBonusPct > 0) && (
+                <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-best-odds">
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
+                      <span className="text-white font-extrabold text-sm tracking-wide">Combinadas Especiais</span>
+                    </div>
+                  </div>
+                  <div className="bg-purple-500/10 px-3 py-2">
+                    <p className="text-xs text-purple-300">A FW Sports oferece as maiores odds combinadas do mercado.</p>
+                  </div>
+                </div>
+              )}
+
+              {comboApplies && comboBonusPct > 0 && (
+                <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-lg shadow-yellow-500/20">
+                  <div className="bg-gradient-to-r from-yellow-500 to-amber-400 px-3 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-black fill-black flex-shrink-0" />
+                      <span className="text-black font-extrabold text-sm tracking-wide">BÔNUS COMBINADA</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-black/70 text-xs font-medium">{distinctGameCount} jogos</span>
+                      <span className="bg-black text-yellow-400 font-extrabold text-sm px-2 py-0.5 rounded-full">
+                        +{(comboBonusPct * 100) % 1 === 0
+                          ? `${(comboBonusPct * 100).toFixed(0)}%`
+                          : `${(comboBonusPct * 100).toFixed(1)}%`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Sem bônus</span>
+                      <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {returnWithoutBonus.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
+                      <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Com bônus
+                      </span>
+                      <span className="text-yellow-300 font-extrabold text-base">R$ {returnWithBonus.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between text-lg pt-1 border-t border-card-border">
+                <span className="font-medium">Retorno Potencial</span>
+                <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
+                  R$ {displayPotentialWin.toFixed(2)}
+                </span>
+              </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Valor da Aposta (R$)</label>
                 <Input
