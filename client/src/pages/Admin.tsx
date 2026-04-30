@@ -370,7 +370,7 @@ export default function Admin() {
   useEffect(() => {
     const init: Record<number, number> = {};
     for (let i = 2; i <= 12; i++) {
-      init[i] = comboBonusSettings[i] ?? comboBonusSettings[String(i)] ?? DEFAULT_COMBO_BONUS_PCT[i];
+      init[i] = (comboBonusSettings[String(i)] as number | undefined) ?? DEFAULT_COMBO_BONUS_PCT[i];
     }
     setComboBonusEdits(init);
   }, [comboBonusSettings]);
