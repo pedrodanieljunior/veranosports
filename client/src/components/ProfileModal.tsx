@@ -179,7 +179,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
           </div>
         )}
         <div className="space-y-2">
-          <Label className="text-zinc-300">Valor do depósito (R$) — mín. R$10 / máx. R$5.000</Label>
+          <Label className="text-zinc-300">Valor do depósito (R$) — mín. R$10 / máx. R$1.000</Label>
           <Input
             placeholder="Ex: 100,00"
             value={amount}
