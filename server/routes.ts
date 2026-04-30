@@ -3123,7 +3123,8 @@ export async function registerRoutes(
       let potentialWin: number;
       if (checkIsComboBonus(validatedData.selections)) {
         const distinctGameCount = byGameForSGP.size;
-        const bonusPct = getComboBonus(distinctGameCount);
+        const comboPctTable = await loadComboBonusTable();
+        const bonusPct = getComboBonus(distinctGameCount, pctTableToFraction(comboPctTable));
         const baseOdds = Array.from(byGameForSGP.entries())
           .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, true), 1);
         const rawTotalOdds = baseOdds * (1 + bonusPct);
@@ -3361,6 +3362,62 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating market settings:", error);
       res.status(500).json({ error: "Failed to update market settings" });
+    }
+  });
+
+  // Combo bonus settings (default percentages as fractions, stored as pct integers in DB)
+  const DEFAULT_COMBO_BONUS_PCT: Record<number, number> = {
+    2: 5, 3: 10, 4: 15, 5: 20, 6: 27, 7: 34, 8: 41, 9: 49, 10: 58, 11: 65, 12: 72,
+  };
+
+  async function loadComboBonusTable(): Promise<Record<number, number>> {
+    const raw = await storage.getSetting("combo_bonus");
+    if (!raw) return DEFAULT_COMBO_BONUS_PCT;
+    try { return JSON.parse(raw); } catch { return DEFAULT_COMBO_BONUS_PCT; }
+  }
+
+  function pctTableToFraction(pct: Record<number, number>): Record<number, number> {
+    const out: Record<number, number> = {};
+    for (const [k, v] of Object.entries(pct)) out[Number(k)] = v / 100;
+    return out;
+  }
+
+  app.get("/api/market-settings/combo-bonus", async (_req, res) => {
+    try {
+      const tbl = await loadComboBonusTable();
+      res.json(tbl);
+    } catch (err) {
+      console.error("Error fetching combo bonus settings:", err);
+      res.status(500).json({ error: "Failed to fetch combo bonus settings" });
+    }
+  });
+
+  app.get("/api/admin/combo-bonus", requireAdmin, async (_req, res) => {
+    try {
+      const tbl = await loadComboBonusTable();
+      res.json(tbl);
+    } catch (err) {
+      console.error("Error fetching combo bonus settings:", err);
+      res.status(500).json({ error: "Failed to fetch combo bonus settings" });
+    }
+  });
+
+  app.put("/api/admin/combo-bonus", requireAdmin, async (req, res) => {
+    try {
+      const body = req.body as Record<string, number>;
+      if (typeof body !== "object" || Array.isArray(body)) {
+        return res.status(400).json({ error: "Body must be an object { 2: pct, 3: pct, ... }" });
+      }
+      const validated: Record<number, number> = {};
+      for (let i = 2; i <= 12; i++) {
+        const val = body[i] ?? body[String(i)];
+        validated[i] = typeof val === "number" ? val : DEFAULT_COMBO_BONUS_PCT[i];
+      }
+      await storage.setSetting("combo_bonus", JSON.stringify(validated));
+      res.json(validated);
+    } catch (err) {
+      console.error("Error saving combo bonus settings:", err);
+      res.status(500).json({ error: "Failed to save combo bonus settings" });
     }
   });
 

@@ -98,6 +98,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
+import { useComboBonus } from "@/hooks/use-combo-bonus";
 
 const MARKET_LABELS: Record<string, string> = {
   "h2h": "Resultado Final",
@@ -133,10 +134,14 @@ interface GameLimitEntry {
 
 const SIMPLE_BET_GAME_LIMIT = 15000;
 
-function computeBetPayout(bet: { stake: number; selections: any[] }) {
+const DEFAULT_COMBO_BONUS_PCT: Record<number, number> = {
+  2: 5, 3: 10, 4: 15, 5: 20, 6: 27, 7: 34, 8: 41, 9: 49, 10: 58, 11: 65, 12: 72,
+};
+
+function computeBetPayout(bet: { stake: number; selections: any[] }, bonusTable?: Record<number, number>) {
   const isCombo = checkIsComboBonus(bet.selections);
   const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
-  const comboPct = isCombo ? getComboBonus(dc) : 0;
+  const comboPct = isCombo ? getComboBonus(dc, bonusTable) : 0;
   const baseOdds = computeTotalOdds(bet.selections);
   const displayTotalOdds = isCombo
     ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
@@ -349,6 +354,39 @@ export default function Admin() {
     },
     onError: () => {
       toast({ title: "Erro", description: "Não foi possível salvar as configurações.", variant: "destructive" });
+    },
+  });
+
+  const { fractionTable: comboBonusTable } = useComboBonus();
+
+  const { data: comboBonusSettings = DEFAULT_COMBO_BONUS_PCT, isLoading: comboBonusLoading } = useQuery<Record<string, number>>({
+    queryKey: ["/api/admin/combo-bonus"],
+    staleTime: 30 * 1000,
+    enabled: !!adminMe?.isAdmin,
+  });
+
+  const [comboBonusEdits, setComboBonusEdits] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    const init: Record<number, number> = {};
+    for (let i = 2; i <= 12; i++) {
+      init[i] = comboBonusSettings[i] ?? comboBonusSettings[String(i)] ?? DEFAULT_COMBO_BONUS_PCT[i];
+    }
+    setComboBonusEdits(init);
+  }, [comboBonusSettings]);
+
+  const saveComboBonusMutation = useMutation({
+    mutationFn: async (data: Record<number, number>) => {
+      const response = await apiRequest("PUT", "/api/admin/combo-bonus", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/combo-bonus"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/market-settings/combo-bonus"] });
+      toast({ title: "Bônus Combinada atualizado", description: "Os percentuais foram salvos e já estão ativos no sistema." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível salvar os percentuais.", variant: "destructive" });
     },
   });
 
@@ -1004,7 +1042,7 @@ export default function Admin() {
                                   <div className="text-right whitespace-nowrap">
                                     <p className="text-xs text-muted-foreground">Retorno</p>
                                     {(() => {
-                                      const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet);
+                                      const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet, comboBonusTable);
                                       return (
                                         <>
                                           <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{fmtBRL(displayPotentialWin)}</p>
@@ -1795,7 +1833,7 @@ export default function Admin() {
                                 Aposta: <span className="font-bold">R$&nbsp;{bet.stake.toFixed(2)}</span>
                               </span>
                               {(() => {
-                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, bonusLabel } = computeBetPayout(bet);
+                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, bonusLabel } = computeBetPayout(bet, comboBonusTable);
                                 return (
                                   <>
                                     <span className="flex items-center gap-1 whitespace-nowrap">
@@ -2077,6 +2115,100 @@ export default function Admin() {
                               className="w-8 h-8 p-0"
                               onClick={() => setMarketBoosts(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? setting.boostPercent) + 1 }))}
                               data-testid={`button-increase-${setting.marketKey}`}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Combo bonus percentage card */}
+            <Card className="mt-6">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-purple-400" />
+                    Bônus Combinada — Percentuais por Seleções
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={() => saveComboBonusMutation.mutate(comboBonusEdits)}
+                    disabled={saveComboBonusMutation.isPending}
+                    data-testid="button-save-combo-bonus"
+                  >
+                    {saveComboBonusMutation.isPending ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Salvar Percentuais
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Defina o bônus (%) aplicado ao retorno quando o usuário combina seleções elegíveis (Resultado Final / Ambos Marcam) de jogos diferentes.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {comboBonusLoading ? (
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Array.from({ length: 11 }, (_, idx) => idx + 2).map((count) => {
+                      const label = count === 12 ? "12+ seleções" : `${count} seleções`;
+                      const current = comboBonusEdits[count] ?? 0;
+                      const isModified = current !== (DEFAULT_COMBO_BONUS_PCT[count] ?? 0);
+                      return (
+                        <div
+                          key={count}
+                          className={`flex items-center justify-between gap-3 p-3 rounded-lg border transition-colors ${
+                            isModified ? "border-purple-500/50 bg-purple-500/5" : "border-border bg-muted/30"
+                          }`}
+                          data-testid={`combo-bonus-row-${count}`}
+                        >
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm">{label}</p>
+                            <p className="text-xs text-purple-400">{current}% de bônus</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-7 h-7 p-0"
+                              onClick={() => setComboBonusEdits(prev => ({ ...prev, [count]: Math.max(0, (prev[count] ?? 0) - 1) }))}
+                              data-testid={`button-decrease-combo-${count}`}
+                            >
+                              −
+                            </Button>
+                            <div className="relative w-16">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={current}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val) && val >= 0) {
+                                    setComboBonusEdits(prev => ({ ...prev, [count]: val }));
+                                  }
+                                }}
+                                className="text-center pr-5 h-7 text-sm"
+                                data-testid={`input-combo-bonus-${count}`}
+                              />
+                              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-7 h-7 p-0"
+                              onClick={() => setComboBonusEdits(prev => ({ ...prev, [count]: (prev[count] ?? 0) + 1 }))}
+                              data-testid={`button-increase-combo-${count}`}
                             >
                               +
                             </Button>

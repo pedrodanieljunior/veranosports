@@ -28,10 +28,11 @@ export function countH2HGames(selections: SelectionForOdds[]): number {
   return h2hGameIds.size;
 }
 
-export function getComboBonus(h2hGameCount: number): number {
+export function getComboBonus(h2hGameCount: number, customTable?: Record<number, number>): number {
   if (h2hGameCount < 2) return 0;
-  if (h2hGameCount >= 12) return 0.72;
-  return COMBO_BONUS_TABLE[h2hGameCount] ?? 0;
+  const table = customTable ?? COMBO_BONUS_TABLE;
+  if (h2hGameCount >= 12) return (table[12] ?? 0.72);
+  return table[h2hGameCount] ?? 0;
 }
 
 export function checkIsComboBonus(selections: SelectionForOdds[]): boolean {

@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
 import { useMarketSettings } from "@/hooks/use-market-settings";
+import { useComboBonus } from "@/hooks/use-combo-bonus";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
@@ -72,6 +73,7 @@ export function BetSlip({
   const [useBonus, setUseBonus] = useState(false);
   const { toast } = useToast();
   const { getBoostPercent, getBoostMultiplier } = useMarketSettings();
+  const { fractionTable: comboBonusTable } = useComboBonus();
 
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
 
@@ -185,7 +187,7 @@ export function BetSlip({
     }
     const isCombo = checkIsComboBonus(bet.selections);
     const distinctBetGames = new Set(bet.selections.map(s => s.gameId)).size;
-    const comboPct = isCombo ? getComboBonus(distinctBetGames) : 0;
+    const comboPct = isCombo ? getComboBonus(distinctBetGames, comboBonusTable) : 0;
     const baseReturn = isCombo
       ? bet.stake * bet.selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1)
       : 0;
@@ -271,7 +273,7 @@ export function BetSlip({
     return roundOdds(computeTotalOdds(selections));
   }, [hasSGPActive, grouped, selections, sgpOddsMap, distinctGameCount]);
 
-  const comboBonusPct = comboApplies ? getComboBonus(distinctGameCount) : 0;
+  const comboBonusPct = comboApplies ? getComboBonus(distinctGameCount, comboBonusTable) : 0;
   const baseOddsForBonus = useMemo(() => {
     if (!comboApplies) return 0;
     if (hasSGPActive) {
