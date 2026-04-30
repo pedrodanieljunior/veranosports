@@ -1650,7 +1650,10 @@ export async function registerRoutes(
       const passwordHash = await hashPassword(data.password);
       const user = await storage.createUser({ cpf, name: data.name, phone: data.phone, referredByCode: data.referralCode, passwordHash });
       req.session.userId = cpf;
-      res.json(user);
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ message: "Erro ao salvar sessão" });
+        res.json(user);
+      });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: err.issues[0]?.message || "Dados inválidos" });
       res.status(500).json({ message: "Erro ao cadastrar" });
@@ -1668,7 +1671,10 @@ export async function registerRoutes(
       if (!valid) return res.status(401).json({ message: "CPF ou senha incorretos" });
       req.session.userId = cpf;
       const { passwordHash: _ph, ...userPublic } = user;
-      res.json(userPublic);
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ message: "Erro ao salvar sessão" });
+        res.json(userPublic);
+      });
     } catch {
       res.status(500).json({ message: "Erro ao fazer login" });
     }
@@ -1782,12 +1788,18 @@ export async function registerRoutes(
       return res.status(401).json({ message: "Senha de administrador incorreta" });
     }
     req.session.isAdmin = true;
-    return res.json({ ok: true });
+    req.session.save((err) => {
+      if (err) {
+        console.error("[admin/login] session save error:", err);
+        return res.status(500).json({ message: "Erro ao salvar sessão" });
+      }
+      return res.json({ ok: true });
+    });
   });
 
   app.post("/api/admin/logout", (req, res) => {
     req.session.isAdmin = false;
-    res.json({ ok: true });
+    req.session.save(() => res.json({ ok: true }));
   });
 
   app.get("/api/admin/me", (req, res) => {
