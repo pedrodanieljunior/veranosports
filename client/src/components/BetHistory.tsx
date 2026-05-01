@@ -39,6 +39,8 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
     : baseOdds;
   const displayPotentialWin = Math.round(bet.stake * displayTotalOdds * 100) / 100;
+  const bonusUsed = bet.bonusUsed ?? 0;
+  const netReturn = bonusUsed > 0 ? Math.max(0, displayPotentialWin - bonusUsed) : displayPotentialWin;
   const comboBonusPctStr = (comboPct * 100) % 1 === 0
     ? `${(comboPct * 100).toFixed(0)}%`
     : `${(comboPct * 100).toFixed(1)}%`;
@@ -86,7 +88,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
       lines.push(`  Com bônus: R$ ${displayPotentialWin.toFixed(2)}`);
     }
-    lines.push(`🏆 Retorno: R$ ${displayPotentialWin.toFixed(2)}`);
+    lines.push(`🏆 Retorno: R$ ${netReturn.toFixed(2)}`);
     lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
     lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
     const shareText = lines.join("\n");
@@ -139,7 +141,7 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${st.cls}`}>
                 {st.icon}{st.label}
               </span>
-              <span className="text-yellow-400 font-bold text-xs">R$ {displayPotentialWin.toFixed(2).replace(".", ",")}</span>
+              <span className="text-yellow-400 font-bold text-xs">R$ {netReturn.toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -211,9 +213,16 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className="text-muted-foreground text-sm">
                 {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
               </span>
-              <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
-                R$ {displayPotentialWin.toFixed(2)}
-              </span>
+              <div className="text-right">
+                <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
+                  R$ {netReturn.toFixed(2)}
+                </span>
+                {bonusUsed > 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    R$ {displayPotentialWin.toFixed(2)} − R$ {bonusUsed.toFixed(2)} bônus
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
