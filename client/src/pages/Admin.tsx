@@ -62,7 +62,7 @@ import {
   Edit,
   Eye,
   EyeOff,
-  Gift,
+
   UserCheck,
   Search,
   Settings,
@@ -1085,9 +1085,7 @@ export default function Admin() {
                 // Entradas reais de PIX (sem o bônus que é artificial)
                 const confirmedDeposits = allDeposits.filter(d => d.status === "confirmed");
                 const entradasPix = confirmedDeposits.reduce((s, d) => s + d.amount, 0);
-                // Bônus concedidos = dinheiro artificial criado pela casa
-                const bonusConcedidos = confirmedDeposits.reduce((s, d) => s + (d.bonusAmount ?? 0), 0);
-                // Provisionamento: saldos atuais dos clientes (o que a casa deve aos usuários)
+                // Provisionamento: saldos líquidos dos clientes (sem bonusBalance)
                 const saldosClientes = allUsers.reduce((s, u) => s + u.balance, 0);
                 // Provisionamento: ganhos potenciais líquidos (apostas pendentes, descontando bônus usado)
                 const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + Math.max(0, b.potentialWin - (b.bonusUsed ?? 0)), 0);
@@ -1104,8 +1102,7 @@ export default function Admin() {
                   - saldosClientes
                   - exposicao
                   - totalSaquesAdmin
-                  - pagamentosUsuarios
-                  - bonusConcedidos;
+                  - pagamentosUsuarios;
 
                 const isPositive = caixa >= 0;
 
@@ -1266,7 +1263,7 @@ export default function Admin() {
                           <p className="text-xs text-muted-foreground">Ganhos potenciais</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         {/* Saques admin */}
                         <div className="bg-orange-500/10 rounded-lg p-3 text-center">
                           <MinusCircle className="w-4 h-4 mx-auto mb-1 text-orange-400" />
@@ -1278,12 +1275,6 @@ export default function Admin() {
                           <ArrowDownCircle className="w-4 h-4 mx-auto mb-1 text-red-400" />
                           <p className="text-sm font-bold text-red-400">−R${fmt(pagamentosUsuarios)}</p>
                           <p className="text-xs text-muted-foreground">Pagamentos usuários</p>
-                        </div>
-                        {/* Bônus concedidos */}
-                        <div className="bg-pink-500/10 rounded-lg p-3 text-center">
-                          <Gift className="w-4 h-4 mx-auto mb-1 text-pink-400" />
-                          <p className="text-sm font-bold text-pink-400">−R${fmt(bonusConcedidos)}</p>
-                          <p className="text-xs text-muted-foreground">Bônus concedidos</p>
                         </div>
                       </div>
                     </CardContent>
