@@ -304,6 +304,11 @@ export function BetSlip({
 
   const rawPotentialWin = comboApplies ? returnWithBonus : stakeNum * totalOdds;
   const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
+
+  // Retorno líquido: quando usar bônus, desconta a parte do bônus usada no stake
+  const bonusUsedInBet = useBonus ? Math.min(user?.bonusBalance ?? 0, stakeNum) : 0;
+  const netPotentialWin = Math.max(0, displayPotentialWin - bonusUsedInBet);
+
   const isCappedAtMax = comboApplies
     ? returnWithoutBonus * (1 + comboBonusPct) > MAX_BET_PAYOUT
     : stakeNum * totalOdds > MAX_BET_PAYOUT;
@@ -693,11 +698,18 @@ export function BetSlip({
                 </div>
               )}
 
-              <div className="flex justify-between text-lg pt-1 border-t border-card-border">
-                <span className="font-medium">Retorno Potencial</span>
-                <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
-                  R$ {displayPotentialWin.toFixed(2)}
-                </span>
+              <div className="pt-1 border-t border-card-border">
+                <div className="flex justify-between text-lg">
+                  <span className="font-medium">Retorno Potencial</span>
+                  <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
+                    R$ {bonusUsedInBet > 0 ? netPotentialWin.toFixed(2) : displayPotentialWin.toFixed(2)}
+                  </span>
+                </div>
+                {bonusUsedInBet > 0 && stakeNum > 0 && (
+                  <p className="text-xs text-zinc-400 text-right mt-0.5">
+                    R$ {displayPotentialWin.toFixed(2)} − R$ {bonusUsedInBet.toFixed(2)} bônus
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Valor da Aposta (R$)</label>

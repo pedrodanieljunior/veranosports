@@ -3219,7 +3219,8 @@ export async function registerRoutes(
 
       let betSlip;
       try {
-        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin } as any);
+        const _bonusUsed = (validatedData as any)._usedBonusAmt ?? 0;
+        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin, _bonusUsed } as any);
       } catch (createErr) {
         // Rollback: reembolsar saldo caso a criação do bilhete falhe
         if (sessionUserId) {
@@ -4186,17 +4187,20 @@ export async function registerRoutes(
       }
 
       // Creditar saldo ao usuário se ganhou (evitar crédito duplo)
+      // O valor creditado é potentialWin - bonusUsed (retorno líquido real)
       if (status === "won" && existing?.userId && existing.status !== "won") {
         const winUser = await storage.getUserByCpf(existing.userId);
         if (winUser) {
-          const credited = Math.round((winUser.balance + updated.potentialWin) * 100) / 100;
+          const bonusUsed = (existing as any).bonusUsed ?? 0;
+          const netPayout = Math.max(0, Math.round((updated.potentialWin - bonusUsed) * 100) / 100);
+          const credited = Math.round((winUser.balance + netPayout) * 100) / 100;
           await storage.updateUserBalance(existing.userId, credited);
           await storage.createTransaction({
             userId: existing.userId,
             type: "win",
-            amount: updated.potentialWin,
+            amount: netPayout,
             balanceAfter: credited,
-            description: `Aposta ganha`,
+            description: `Aposta ganha${bonusUsed > 0 ? ` (R$${updated.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
             referenceId: id,
           });
         }
@@ -4205,7 +4209,9 @@ export async function registerRoutes(
       if ((status === "pending" || status === "lost") && existing?.status === "won" && existing?.userId) {
         const winUser = await storage.getUserByCpf(existing.userId);
         if (winUser) {
-          const reversed = Math.round((winUser.balance - existing.potentialWin) * 100) / 100;
+          const bonusUsed = (existing as any).bonusUsed ?? 0;
+          const netPayout = Math.max(0, Math.round((existing.potentialWin - bonusUsed) * 100) / 100);
+          const reversed = Math.round((winUser.balance - netPayout) * 100) / 100;
           const newBalance = Math.max(0, reversed);
           await storage.updateUserBalance(existing.userId, newBalance);
           await storage.createTransaction({

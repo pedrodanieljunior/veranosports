@@ -1043,10 +1043,15 @@ export default function Admin() {
                                     <p className="text-xs text-muted-foreground">Retorno</p>
                                     {(() => {
                                       const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet, comboBonusTable);
+                                      const bonusUsed = bet.bonusUsed ?? 0;
+                                      const netReturn = Math.max(0, displayPotentialWin - bonusUsed);
                                       return (
                                         <>
-                                          <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{fmtBRL(displayPotentialWin)}</p>
-                                          {baseReturn !== null && bonusReturn !== null && (
+                                          <p className={`font-bold text-sm ${activeGroup.textCls}`}>R$&nbsp;{fmtBRL(bonusUsed > 0 ? netReturn : displayPotentialWin)}</p>
+                                          {bonusUsed > 0 && (
+                                            <p className="text-[10px] text-zinc-400">R$&nbsp;{fmtBRL(displayPotentialWin)}&nbsp;−&nbsp;R$&nbsp;{fmtBRL(bonusUsed)}&nbsp;bônus</p>
+                                          )}
+                                          {bonusUsed === 0 && baseReturn !== null && bonusReturn !== null && (
                                             <p className="text-[10px] text-muted-foreground">R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel}</p>
                                           )}
                                         </>
@@ -1733,6 +1738,16 @@ export default function Admin() {
                                 <Clock className="w-3 h-3" />
                                 {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                               </span>
+                              {bet.userId && (() => {
+                                const betUser = allUsers.find(u => u.cpf === bet.userId);
+                                return betUser ? (
+                                  <span className="text-xs bg-zinc-700/60 text-zinc-300 px-2 py-0.5 rounded-full font-medium">
+                                    👤 {betUser.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">{bet.userId}</span>
+                                );
+                              })()}
                             </div>
                             
                             {/* Bilhete visual — agrupado por jogo */}
@@ -1834,13 +1849,18 @@ export default function Admin() {
                               </span>
                               {(() => {
                                 const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, bonusLabel } = computeBetPayout(bet, comboBonusTable);
+                                const bonusUsed = bet.bonusUsed ?? 0;
+                                const netReturn = Math.max(0, displayPotentialWin - bonusUsed);
                                 return (
                                   <>
-                                    <span className="flex items-center gap-1 whitespace-nowrap">
+                                    <span className="flex items-center gap-1 whitespace-nowrap flex-wrap">
                                       <TrendingUp className="w-4 h-4 text-primary" />
                                       Retorno:&nbsp;
-                                      <span className="font-bold text-primary">R$&nbsp;{fmtBRL(displayPotentialWin)}</span>
-                                      {baseReturn !== null && bonusReturn !== null && (
+                                      <span className="font-bold text-primary">R$&nbsp;{fmtBRL(bonusUsed > 0 ? netReturn : displayPotentialWin)}</span>
+                                      {bonusUsed > 0 && (
+                                        <span className="text-zinc-400 text-xs">(R$&nbsp;{fmtBRL(displayPotentialWin)}&nbsp;−&nbsp;R$&nbsp;{fmtBRL(bonusUsed)}&nbsp;bônus)</span>
+                                      )}
+                                      {bonusUsed === 0 && baseReturn !== null && bonusReturn !== null && (
                                         <span className="text-green-400 text-xs">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel})</span>
                                       )}
                                     </span>
