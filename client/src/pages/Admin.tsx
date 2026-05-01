@@ -304,7 +304,7 @@ export default function Admin() {
   const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
     const db = periodBets.filter(b => new Date(b.createdAt).getDay() === idx);
     const e = db.reduce((s,b)=>s+b.stake,0);
-    const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+    const s2 = db.filter(b=>b.status==="won").reduce((s,b)=>s+Math.max(0,b.potentialWin-(b.bonusUsed??0)),0);
     return { day, Entrada: parseFloat(e.toFixed(2)), "Prêmios pagos": parseFloat(s2.toFixed(2)), Lucro: parseFloat((e-s2).toFixed(2)) };
   }), [periodBets]);
 
@@ -319,7 +319,7 @@ export default function Admin() {
         else if (bet.status==="lost") cur.lost++;
         else cur.pending++;
         cur.entrada += bet.stake;
-        if (bet.status==="won") cur.saida += bet.potentialWin;
+        if (bet.status==="won") cur.saida += Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
         cur.lucroEntrada += bet.stake;
         map.set(key, cur);
       });
@@ -1089,8 +1089,8 @@ export default function Admin() {
                 const bonusConcedidos = confirmedDeposits.reduce((s, d) => s + (d.bonusAmount ?? 0), 0);
                 // Provisionamento: saldos atuais dos clientes (o que a casa deve aos usuários)
                 const saldosClientes = allUsers.reduce((s, u) => s + u.balance, 0);
-                // Provisionamento: ganhos potenciais (apostas pendentes)
-                const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + b.potentialWin, 0);
+                // Provisionamento: ganhos potenciais líquidos (apostas pendentes, descontando bônus usado)
+                const exposicao = bets.filter(b => b.status === "pending").reduce((s, b) => s + Math.max(0, b.potentialWin - (b.bonusUsed ?? 0)), 0);
                 // Saques do caixa (retiradas administrativas)
                 const totalSaquesAdmin = withdrawals.reduce((s, w) => s + w.amount, 0);
                 // Pagamentos feitos a usuários (saques pagos via PIX)
@@ -1306,7 +1306,7 @@ export default function Admin() {
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
                     <p className="text-xl font-bold text-yellow-400">
-                      R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                      R${bets.filter(b=>b.status==="pending").reduce((s,b)=>s+Math.max(0,b.potentialWin-(b.bonusUsed??0)),0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
                     </p>
                     <p className="text-xs text-muted-foreground">Exposição pendente</p>
                   </CardContent>
@@ -1472,10 +1472,10 @@ export default function Admin() {
             {(() => {
 
               const entrada      = periodBets.reduce((s,b)=>s+b.stake,0);
-              const saida        = periodBets.filter(b=>b.status==="won").reduce((s,b)=>s+b.potentialWin,0);
+              const saida        = periodBets.filter(b=>b.status==="won").reduce((s,b)=>s+Math.max(0,b.potentialWin-(b.bonusUsed??0)),0);
               const totalSaques  = withdrawals.reduce((s,w)=>s+w.amount,0);
               const lucro        = entrada - saida - totalSaques;
-              const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+b.potentialWin,0);
+              const pendente  = periodBets.filter(b=>b.status==="pending").reduce((s,b)=>s+Math.max(0,b.potentialWin-(b.bonusUsed??0)),0);
               const totalBets = periodBets.length;
               const wonBets   = periodBets.filter(b=>b.status==="won").length;
               const lostBets  = periodBets.filter(b=>b.status==="lost").length;

@@ -270,7 +270,7 @@ export class DatabaseStorage implements IStorage {
 
   async getDailyTotalPotentialWin(): Promise<number> {
     const [result] = await db.select({
-      total: sql<number>`COALESCE(SUM(${betSlipsTable.potentialWin}), 0)`
+      total: sql<number>`COALESCE(SUM(GREATEST(${betSlipsTable.potentialWin} - COALESCE(${betSlipsTable.bonusUsed}, 0), 0)), 0)`
     }).from(betSlipsTable)
       .where(eq(betSlipsTable.status, "pending"));
     

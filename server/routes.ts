@@ -2935,7 +2935,7 @@ export async function registerRoutes(
     const entradasPix = confirmedDeposits.reduce((s: number, d: any) => s + d.amount, 0);
     const bonusConcedidos = confirmedDeposits.reduce((s: number, d: any) => s + (d.bonusAmount ?? 0), 0);
     const saldosClientes = allUsers.reduce((s: number, u: any) => s + u.balance + u.bonusBalance, 0);
-    const exposicao = allBets.filter((b: any) => b.status === "pending").reduce((s: number, b: any) => s + b.potentialWin, 0);
+    const exposicao = allBets.filter((b: any) => b.status === "pending").reduce((s: number, b: any) => s + Math.max(0, b.potentialWin - (b.bonusUsed ?? 0)), 0);
     const totalSaquesAdmin = adminWithdrawals.reduce((s: number, w: any) => s + w.amount, 0);
     const pagamentosUsuarios = userWithdrawals
       .filter((w: any) => w.status === "paid" || w.status === "approved")
