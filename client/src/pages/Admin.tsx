@@ -834,9 +834,14 @@ export default function Admin() {
               <PieChart className="w-4 h-4 mr-2" />
               Financeiro
             </TabsTrigger>
-            <TabsTrigger value="pagamentos" data-testid="tab-pagamentos">
+            <TabsTrigger value="pagamentos" data-testid="tab-pagamentos" className="relative">
               <Banknote className="w-4 h-4 mr-2" />
               Pagamentos
+              {allUserWithdrawals.filter(w => w.status === "pending").length > 0 && (
+                <span className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                  {allUserWithdrawals.filter(w => w.status === "pending").length}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="saques" data-testid="tab-saques">
               <MinusCircle className="w-4 h-4 mr-2" />
@@ -858,9 +863,14 @@ export default function Admin() {
               <Zap className="w-4 h-4 mr-2" />
               Boost
             </TabsTrigger>
-            <TabsTrigger value="depositos" data-testid="tab-depositos">
+            <TabsTrigger value="depositos" data-testid="tab-depositos" className="relative">
               <Wallet className="w-4 h-4 mr-2" />
               Depósitos
+              {allDeposits.filter(d => d.status === "pending").length > 0 && (
+                <span className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                  {allDeposits.filter(d => d.status === "pending").length}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">
               <Users className="w-4 h-4 mr-2" />
