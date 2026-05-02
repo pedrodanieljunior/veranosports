@@ -5,6 +5,7 @@ import { insertBetSlipSchema, insertUserSchema } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
 import { z } from "zod";
 import { cache } from "./cache";
+import { pool } from "./db";
 import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
@@ -1800,6 +1801,16 @@ export async function registerRoutes(
   app.post("/api/admin/logout", (req, res) => {
     req.session.isAdmin = false;
     req.session.save(() => res.json({ ok: true }));
+  });
+
+  app.post("/api/admin/clear-all-sessions", async (req, res) => {
+    if (!req.session.isAdmin) return res.status(403).json({ message: "Acesso restrito" });
+    try {
+      await pool.query("DELETE FROM sessions");
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: "Erro ao limpar sessões", error: (e as Error).message });
+    }
   });
 
   app.get("/api/admin/me", (req, res) => {

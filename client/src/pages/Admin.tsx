@@ -220,6 +220,13 @@ export default function Admin() {
     },
   });
 
+  const clearAllSessionsMutation = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/admin/clear-all-sessions", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/me"] });
+    },
+  });
+
   const { data: bets = [], isLoading, refetch } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets"],
     refetchInterval: adminMe?.isAdmin ? 5 * 1000 : false,
@@ -739,6 +746,19 @@ export default function Admin() {
             <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-admin">
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm("Encerrar TODAS as sessões ativas? Qualquer pessoa logada será desconectada imediatamente.")) {
+                  clearAllSessionsMutation.mutate();
+                }
+              }}
+              disabled={clearAllSessionsMutation.isPending}
+              data-testid="button-clear-all-sessions"
+            >
+              Encerrar Todas as Sessões
             </Button>
             <Button variant="ghost" size="sm" onClick={() => logoutAdminMutation.mutate()} data-testid="button-admin-logout">
               Sair
