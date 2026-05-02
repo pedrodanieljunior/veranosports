@@ -10,7 +10,6 @@ import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
 import { checkIsComboBonus, getComboBonus, computeTotalOdds } from "@shared/oddsUtils";
-import { useMarketSettings } from "@/hooks/use-market-settings";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -20,7 +19,6 @@ interface BetHistoryProps {
 
 function BetCard({ bet }: { bet: BetSlipType }) {
   const { toast } = useToast();
-  const { getBoostPercent } = useMarketSettings();
   const [expanded, setExpanded] = useState(false);
   const isCombo = checkIsComboBonus(bet.selections);
   const grouped: Record<string, Selection[]> = {};
@@ -75,9 +73,12 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     const isSingleH2H = bet.selections.length === 1 &&
       (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
-    const superPct = isSingleH2H ? getBoostPercent("h2h") : 0;
-    const superBase = isSingleH2H && bet.selections[0]?.originalOdds
-      ? bet.stake * bet.selections[0].originalOdds : 0;
+    const sel0 = bet.selections[0];
+    const historicalBoostPct = (isSingleH2H && sel0?.originalOdds && sel0?.odds && sel0.odds > sel0.originalOdds)
+      ? Math.round((sel0.odds / sel0.originalOdds - 1) * 100) : 0;
+    const superPct = historicalBoostPct;
+    const superBase = isSingleH2H && sel0?.originalOdds
+      ? bet.stake * sel0.originalOdds : 0;
     if (isSingleH2H && superPct > 0 && superBase > 0) {
       lines.push(`⚡ SUPER AUMENTADA +${superPct}%`);
       lines.push(`  Odd normal: R$ ${superBase.toFixed(2)}`);

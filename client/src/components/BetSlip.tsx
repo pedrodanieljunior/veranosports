@@ -14,7 +14,6 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
-import { useMarketSettings } from "@/hooks/use-market-settings";
 import { useComboBonus } from "@/hooks/use-combo-bonus";
 
 interface PlacedBetWithPix extends BetSlipType {
@@ -72,7 +71,6 @@ export function BetSlip({
   };
   const [useBonus, setUseBonus] = useState(false);
   const { toast } = useToast();
-  const { getBoostPercent, getBoostMultiplier } = useMarketSettings();
   const { fractionTable: comboBonusTable } = useComboBonus();
 
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
@@ -207,9 +205,11 @@ export function BetSlip({
     lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
     const betIsSingleH2H = bet.selections.length === 1 &&
       (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
-    const betSuperPct = betIsSingleH2H ? getBoostPercent("h2h") : 0;
-    const betBaseReturn = betIsSingleH2H && bet.selections[0]?.originalOdds
-      ? bet.stake * bet.selections[0].originalOdds : 0;
+    const betSel0 = bet.selections[0];
+    const betSuperPct = (betIsSingleH2H && betSel0?.originalOdds && betSel0?.odds && betSel0.odds > betSel0.originalOdds)
+      ? Math.round((betSel0.odds / betSel0.originalOdds - 1) * 100) : 0;
+    const betBaseReturn = betIsSingleH2H && betSel0?.originalOdds
+      ? bet.stake * betSel0.originalOdds : 0;
     if (betIsSingleH2H && betSuperPct > 0 && betBaseReturn > 0) {
       lines.push(`⚡ SUPER AUMENTADA +${betSuperPct}%`);
       lines.push(`  Odd normal: R$ ${betBaseReturn.toFixed(2)}`);
@@ -298,9 +298,11 @@ export function BetSlip({
 
   const isSingleH2H = selections.length === 1 &&
     (selections[0].marketKey === "h2h" || selections[0].marketKey === "match_winner");
-  const superAumentoPct = isSingleH2H ? getBoostPercent("h2h") : 0;
-  const superAumentoBaseReturn = isSingleH2H && selections[0]?.originalOdds
-    ? stakeNum * selections[0].originalOdds : 0;
+  const liveSel0 = selections[0];
+  const superAumentoPct = (isSingleH2H && liveSel0?.originalOdds && liveSel0?.odds && liveSel0.odds > liveSel0.originalOdds)
+    ? Math.round((liveSel0.odds / liveSel0.originalOdds - 1) * 100) : 0;
+  const superAumentoBaseReturn = isSingleH2H && liveSel0?.originalOdds
+    ? stakeNum * liveSel0.originalOdds : 0;
 
   const rawPotentialWin = comboApplies ? returnWithBonus : stakeNum * totalOdds;
   const displayPotentialWin = Math.min(rawPotentialWin, MAX_BET_PAYOUT);
