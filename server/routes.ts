@@ -1447,8 +1447,8 @@ async function runCheckResults() {
     oldestGameDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  const fromDate = toManausDateStr(oldestGameDate.getTime() - 24 * 60 * 60 * 1000);
-  const toDate = toManausDateStr(newestGameDate.getTime() + 24 * 60 * 60 * 1000);
+  const fromDate = new Date(oldestGameDate.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = new Date(newestGameDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   console.log(`[CheckResults] Buscando resultados de ${fromDate} até ${toDate}`);
 
@@ -2428,9 +2428,9 @@ export async function registerRoutes(
           console.log(`Brasileirão ${currentYear} sem jogos nas próximas 24h`);
         }
 
-        // Buscar todas as odds do Brasileirão de uma vez (hoje + amanhã, pois jogos como 00:30 ficam no dia seguinte)
+        // Buscar todas as odds do Brasileirão de uma vez (hoje + amanhã UTC, pois jogos como 21:00 BRT ficam no dia seguinte UTC)
         const oddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
-        const tomorrow = toManausDateStr(nowMs + 24 * 60 * 60 * 1000);
+        const tomorrow = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const processOddsEntries = (entries: any[]) => {
           for (const entry of entries) {
             const fid = entry.fixture?.id;
@@ -3784,8 +3784,8 @@ export async function registerRoutes(
       }
       
       // Buscar jogos próximos
-      const today = toManausDateStr(Date.now());
-      const nextWeek = toManausDateStr(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const today = new Date().toISOString().split('T')[0];
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
       // Determinar a temporada atual (ligas europeias vão de agosto a maio do ano seguinte)
       const currentYear = new Date().getFullYear();
@@ -3916,8 +3916,8 @@ export async function registerRoutes(
       const fromDate = gameDate ? new Date(gameDate.getTime() - 24 * 60 * 60 * 1000) : today;
       const toDate = gameDate ? new Date(gameDate.getTime() + 24 * 60 * 60 * 1000) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
       
-      const from = toManausDateStr(fromDate.getTime());
-      const to = toManausDateStr(toDate.getTime());
+      const from = new Date(fromDate.getTime()).toISOString().split('T')[0];
+      const to = new Date(toDate.getTime()).toISOString().split('T')[0];
       
       // Buscar por nome do time da casa (primeira palavra significativa)
       const homeWords = String(homeTeam).toLowerCase().split(' ').filter(w => w.length > 2 && !['fc', 'sc', 'cf', 'ac', 'cd', 'rc'].includes(w));
@@ -4040,8 +4040,8 @@ export async function registerRoutes(
           const homeWords = normalizeTeam(ht);
           const searchTerm = homeWords[0] || ht.split(' ')[0];
           const today = new Date();
-          const from = toManausDateStr(today.getTime() - 24 * 60 * 60 * 1000);
-          const to = toManausDateStr(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const from = new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const to = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
           try {
             const searchResp = await fetch(
               `${API_FOOTBALL_BASE}/fixtures?search=${encodeURIComponent(searchTerm)}&from=${from}&to=${to}`,
