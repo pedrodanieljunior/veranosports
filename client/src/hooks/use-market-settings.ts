@@ -3,7 +3,7 @@ import { MarketSetting } from "@shared/schema";
 
 export function useMarketSettings() {
   const { data: settings = [] } = useQuery<MarketSetting[]>({
-    queryKey: ["/api/admin/market-settings"],
+    queryKey: ["/api/market-settings"],
     staleTime: 60 * 1000,
   });
 
