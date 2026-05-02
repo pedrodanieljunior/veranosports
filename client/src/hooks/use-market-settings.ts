@@ -7,7 +7,7 @@ export function useMarketSettings() {
     staleTime: 60 * 1000,
   });
 
-  const DEFAULT_BOOST: Record<string, number> = { h2h: 20 };
+  const DEFAULT_BOOST: Record<string, number> = {};
 
   const getBoostMultiplier = (marketKey: string): number => {
     const setting = settings.find(s => s.marketKey === marketKey);
