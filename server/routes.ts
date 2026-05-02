@@ -2198,8 +2198,9 @@ export async function registerRoutes(
 
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-        const todayStr = toManausDateStr(nowMs);
-        const next24hStr = toManausDateStr(next24hMs);
+        // Use UTC dates for API queries so games at midnight UTC (e.g. 21:00 BRT) are never missed
+        const todayStr = new Date(nowMs).toISOString().split('T')[0];
+        const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
 
         const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = [];
         const BATCH_SIZE = 5;
@@ -2405,8 +2406,8 @@ export async function registerRoutes(
         const currentYear = new Date().getFullYear();
         const nowMs = Date.now();
         const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-        const today = toManausDateStr(nowMs);
-        const next24hStr = toManausDateStr(next24hMs);
+        const today = new Date(nowMs).toISOString().split('T')[0];
+        const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
 
         const fetchBrasileiraoFixtures = async (season: number) => {
           const r = await fetch(
@@ -2799,8 +2800,8 @@ export async function registerRoutes(
 
           const nowMs = Date.now();
           const next24hMs = nowMs + 24 * 60 * 60 * 1000;
-          const today = toManausDateStr(nowMs);
-          const next24hStr = toManausDateStr(next24hMs);
+          const today = new Date(nowMs).toISOString().split('T')[0];
+          const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
           
           const fetchFixtures = async (season: number) => {
             const fixturesResponse = await fetch(
