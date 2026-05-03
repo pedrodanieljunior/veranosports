@@ -96,6 +96,7 @@ export interface IStorage {
   // Transactions
   createTransaction(data: { userId: string; type: string; amount: number; balanceAfter: number; description: string; referenceId?: string }): Promise<Transaction>;
   getTransactionsByUser(userId: string): Promise<Transaction[]>;
+  getWinTransactionForBet(betId: string): Promise<Transaction | null>;
   // Fixture Halftime Stats
   upsertFixtureHalftimeStats(fixtureId: number, homeCorners: number, awayCorners: number): Promise<void>;
   getFixtureHalftimeStats(fixtureId: number): Promise<{ homeCorners: number; awayCorners: number } | null>;
@@ -795,6 +796,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(transactionsTable.userId, userId))
       .orderBy(desc(transactionsTable.createdAt));
     return rows.map(r => this.mapTransaction(r));
+  }
+
+  async getWinTransactionForBet(betId: string): Promise<Transaction | null> {
+    const [row] = await db.select().from(transactionsTable)
+      .where(and(eq(transactionsTable.referenceId, betId), eq(transactionsTable.type, "win")))
+      .orderBy(desc(transactionsTable.createdAt))
+      .limit(1);
+    return row ? this.mapTransaction(row) : null;
   }
 
   async upsertFixtureHalftimeStats(fixtureId: number, homeCorners: number, awayCorners: number): Promise<void> {

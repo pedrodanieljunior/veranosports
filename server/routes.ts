@@ -4220,15 +4220,18 @@ export async function registerRoutes(
       if ((status === "pending" || status === "lost") && existing?.status === "won" && existing?.userId) {
         const winUser = await storage.getUserByCpf(existing.userId);
         if (winUser) {
-          const bonusUsed = (existing as any).bonusUsed ?? 0;
-          const netPayout = Math.max(0, Math.round((existing.potentialWin - bonusUsed) * 100) / 100);
-          const reversed = Math.round((winUser.balance - netPayout) * 100) / 100;
+          // Busca a transação de ganho original para reverter EXATAMENTE o que foi creditado
+          const winTx = await storage.getWinTransactionForBet(id);
+          const creditedAmount = winTx
+            ? winTx.amount
+            : Math.max(0, Math.round(((existing as any).potentialWin - ((existing as any).bonusUsed ?? 0)) * 100) / 100);
+          const reversed = Math.round((winUser.balance - creditedAmount) * 100) / 100;
           const newBalance = Math.max(0, reversed);
           await storage.updateUserBalance(existing.userId, newBalance);
           await storage.createTransaction({
             userId: existing.userId,
             type: "adjustment",
-            amount: -existing.potentialWin,
+            amount: -creditedAmount,
             balanceAfter: newBalance,
             description: `Estorno de ganho — aposta marcada como ${status === "lost" ? "perdida" : "pendente"}`,
             referenceId: id,
