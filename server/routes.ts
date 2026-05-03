@@ -4529,11 +4529,12 @@ export async function registerRoutes(
               // Dados não disponíveis — mantém pendente
               resolved = false;
             } else if (mk.includes("1x2")) {
-              // Corners 1x2 1ºT
-              const ocTrim = oc.toLowerCase().trim();
-              if (ocTrim === "home" || ocTrim === "casa") selResult = hc1H > ac1H ? "won" : "lost";
-              else if (ocTrim === "away" || ocTrim === "fora" || ocTrim === "visitante") selResult = ac1H > hc1H ? "won" : "lost";
-              else if (ocTrim === "draw" || ocTrim === "empate" || ocTrim === "x") selResult = hc1H === ac1H ? "won" : "lost";
+              // Corners 1x2 1ºT — extrai só a escolha (outcome pode ter prefixo "Corners 1x2-Home")
+              const ocFull1H = oc.toLowerCase().trim();
+              const ocTrim1H = ocFull1H.includes("-") ? ocFull1H.split("-").pop()!.trim() : ocFull1H;
+              if (ocTrim1H === "home" || ocTrim1H === "casa") selResult = hc1H > ac1H ? "won" : "lost";
+              else if (ocTrim1H === "away" || ocTrim1H === "fora" || ocTrim1H === "visitante") selResult = ac1H > hc1H ? "won" : "lost";
+              else if (ocTrim1H === "draw" || ocTrim1H === "empate" || ocTrim1H === "x") selResult = hc1H === ac1H ? "won" : "lost";
               else resolved = false;
             } else {
               // Corners Over/Under 1ºT
@@ -4558,7 +4559,9 @@ export async function registerRoutes(
             const hc = arCornerHomeCache.get(fid);
             const ac = arCornerAwayCache.get(fid);
             if (hc !== undefined && ac !== undefined) {
-              const ocTrim = oc.toLowerCase().trim();
+              // Extrai só a escolha (outcome pode ter prefixo "Corners 1x2-Home")
+              const ocFull = oc.toLowerCase().trim();
+              const ocTrim = ocFull.includes("-") ? ocFull.split("-").pop()!.trim() : ocFull;
               if (ocTrim === "home" || ocTrim === "casa") selResult = hc > ac ? "won" : "lost";
               else if (ocTrim === "away" || ocTrim === "fora" || ocTrim === "visitante") selResult = ac > hc ? "won" : "lost";
               else if (ocTrim === "draw" || ocTrim === "empate" || ocTrim === "x") selResult = hc === ac ? "won" : "lost";
@@ -4967,12 +4970,14 @@ function checkSelectionResult(
         console.log(`    Corners 1x2: dados home/away não disponíveis`);
         return null;
       }
-      const oc2 = outcome.toLowerCase().trim();
+      // O outcome pode incluir prefixo do mercado (ex: "Corners 1x2-Home") — extrai só a escolha
+      const oc2Full = outcome.toLowerCase().trim();
+      const oc2 = oc2Full.includes("-") ? oc2Full.split("-").pop()!.trim() : oc2Full;
       if (oc2 === "home" || oc2 === "casa") { console.log(`    Corners 1x2: apostou Casa (${homeCorners} vs ${awayCorners})`); return homeCorners > awayCorners; }
       if (oc2 === "away" || oc2 === "fora" || oc2 === "visitante") { console.log(`    Corners 1x2: apostou Fora (${awayCorners} vs ${homeCorners})`); return awayCorners > homeCorners; }
       if (oc2 === "draw" || oc2 === "empate" || oc2 === "x") { console.log(`    Corners 1x2: apostou Empate (${homeCorners}=${awayCorners})`); return homeCorners === awayCorners; }
       console.log(`    Corners 1x2: outcome não reconhecido "${outcome}"`);
-      return false;
+      return null;
     }
     // Corners Over/Under (jogo inteiro)
     if (totalCorners === null) {
