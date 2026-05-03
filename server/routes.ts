@@ -10,6 +10,7 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { fetchAndSaveFixtureHalftimeStats } from "./halftime-capture";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) return res.status(401).json({ message: "Não autenticado" });
@@ -3651,6 +3652,35 @@ export async function registerRoutes(
     }
   });
 
+  // Entrada manual de escanteios do 1º tempo para fixtures sem dados capturados
+  app.post("/api/admin/fixtures/halftime-stats", requireAdmin, async (req, res) => {
+    try {
+      const { fixtureId, homeCorners, awayCorners } = z.object({
+        fixtureId: z.number().int().positive(),
+        homeCorners: z.number().int().min(0),
+        awayCorners: z.number().int().min(0),
+      }).parse(req.body);
+      await storage.upsertFixtureHalftimeStats(fixtureId, homeCorners, awayCorners);
+      console.log(`[Admin] Escanteios 1ºT inseridos manualmente: fixture ${fixtureId}, casa=${homeCorners}, fora=${awayCorners}`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Erro ao salvar halftime stats manual:", error);
+      res.status(400).json({ error: "Dados inválidos" });
+    }
+  });
+
+  // Buscar escanteios 1ºT registrados no banco (para listar no admin)
+  app.get("/api/admin/fixtures/halftime-stats", requireAdmin, async (_req, res) => {
+    try {
+      const rows = await pool.query(
+        `SELECT fixture_id, home_corners, away_corners, captured_at FROM fixture_halftime_stats ORDER BY captured_at DESC LIMIT 100`
+      );
+      res.json(rows.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar registros" });
+    }
+  });
+
   // Todos os bilhetes para o painel admin (histórico completo)
   app.get("/api/admin/bets", async (req, res) => {
     try {
@@ -4507,15 +4537,23 @@ export async function registerRoutes(
             // Só busca do DB se ainda não tiver no cache
             if (!arCorner1HHomeCache.has(fid)) {
               try {
-                const htStats = await storage.getFixtureHalftimeStats(parseInt(fid));
+                let htStats = await storage.getFixtureHalftimeStats(parseInt(fid));
+                if (!htStats) {
+                  // Não há registro no banco — tenta buscar ao vivo da API (útil se o jogo está em HT agora)
+                  console.log(`    [auto-resolve] Sem registro 1ºT para fixture ${fid} no banco — tentando busca ao vivo...`);
+                  const live = await fetchAndSaveFixtureHalftimeStats(parseInt(fid));
+                  if (live) {
+                    htStats = { fixtureId: parseInt(fid), homeCorners: live.home, awayCorners: live.away, capturedAt: new Date() };
+                  }
+                }
                 if (htStats) {
                   arCorner1HHomeCache.set(fid, htStats.homeCorners);
                   arCorner1HAwayCache.set(fid, htStats.awayCorners);
-                  console.log(`    [auto-resolve] Escanteios 1ºT fixture ${fid} (DB): casa=${htStats.homeCorners}, fora=${htStats.awayCorners}`);
+                  console.log(`    [auto-resolve] Escanteios 1ºT fixture ${fid}: casa=${htStats.homeCorners}, fora=${htStats.awayCorners}`);
                 } else {
                   arCorner1HHomeCache.set(fid, null);
                   arCorner1HAwayCache.set(fid, null);
-                  console.log(`    [auto-resolve] Sem registro 1ºT para fixture ${fid} no banco`);
+                  console.log(`    [auto-resolve] Dados 1ºT indisponíveis para fixture ${fid} (jogo não está em HT)`);
                 }
               } catch (e) {
                 arCorner1HHomeCache.set(fid, null);

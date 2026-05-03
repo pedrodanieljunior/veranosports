@@ -904,6 +904,10 @@ export default function Admin() {
               <Settings className="w-4 h-4 mr-2" />
               Configurações
             </TabsTrigger>
+            <TabsTrigger value="escanteios" data-testid="tab-escanteios">
+              <Target className="w-4 h-4 mr-2" />
+              Escanteios 1ºT
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="limites">
@@ -2288,6 +2292,10 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="configuracoes">
             <SettingsTab />
+          </TabsContent>
+
+          <TabsContent value="escanteios">
+            <HalftimeStatsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -3986,5 +3994,142 @@ function SettingsTab() {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+function HalftimeStatsTab() {
+  const { toast } = useToast();
+  const [fixtureId, setFixtureId] = useState("");
+  const [homeCorners, setHomeCorners] = useState("");
+  const [awayCorners, setAwayCorners] = useState("");
+
+  const { data: records = [], refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/fixtures/halftime-stats"],
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () =>
+      apiRequest("POST", "/api/admin/fixtures/halftime-stats", {
+        fixtureId: parseInt(fixtureId),
+        homeCorners: parseInt(homeCorners),
+        awayCorners: parseInt(awayCorners),
+      }),
+    onSuccess: () => {
+      toast({ title: "Dados salvos com sucesso!" });
+      setFixtureId("");
+      setHomeCorners("");
+      setAwayCorners("");
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/fixtures/halftime-stats"] });
+    },
+    onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }),
+  });
+
+  const canSave =
+    fixtureId.trim() !== "" &&
+    homeCorners.trim() !== "" &&
+    awayCorners.trim() !== "" &&
+    !isNaN(parseInt(fixtureId)) &&
+    !isNaN(parseInt(homeCorners)) &&
+    !isNaN(parseInt(awayCorners));
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5" />
+            Inserir Escanteios do 1º Tempo Manualmente
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Use esta ferramenta quando o sistema não capturou os dados durante o intervalo do jogo.
+            O ID do fixture é o número que aparece na URL do API-Football (ex: <span className="font-mono">1492244</span>).
+            Após salvar, rode o <strong>Auto-Resolver</strong> no bilhete para processá-lo.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">ID do Fixture (API-Football)</label>
+              <Input
+                data-testid="input-fixture-id"
+                placeholder="ex: 1492244"
+                value={fixtureId}
+                onChange={e => setFixtureId(e.target.value)}
+                type="number"
+                min={1}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Escanteios — Time da Casa</label>
+              <Input
+                data-testid="input-home-corners"
+                placeholder="ex: 4"
+                value={homeCorners}
+                onChange={e => setHomeCorners(e.target.value)}
+                type="number"
+                min={0}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Escanteios — Time Visitante</label>
+              <Input
+                data-testid="input-away-corners"
+                placeholder="ex: 3"
+                value={awayCorners}
+                onChange={e => setAwayCorners(e.target.value)}
+                type="number"
+                min={0}
+              />
+            </div>
+          </div>
+          <Button
+            data-testid="button-save-halftime-stats"
+            onClick={() => saveMutation.mutate()}
+            disabled={!canSave || saveMutation.isPending}
+          >
+            {saveMutation.isPending ? "Salvando..." : "Salvar Dados"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Registros Salvos (últimos 100)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {records.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left py-2 pr-4">Fixture ID</th>
+                    <th className="text-left py-2 pr-4">Casa</th>
+                    <th className="text-left py-2 pr-4">Visitante</th>
+                    <th className="text-left py-2">Total</th>
+                    <th className="text-left py-2 pl-4">Capturado em</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r: any) => (
+                    <tr key={r.fixture_id} className="border-b last:border-0">
+                      <td className="py-2 pr-4 font-mono">{r.fixture_id}</td>
+                      <td className="py-2 pr-4">{r.home_corners}</td>
+                      <td className="py-2 pr-4">{r.away_corners}</td>
+                      <td className="py-2">{r.home_corners + r.away_corners}</td>
+                      <td className="py-2 pl-4 text-muted-foreground text-xs">
+                        {new Date(r.captured_at).toLocaleString("pt-BR")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

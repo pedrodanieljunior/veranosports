@@ -12,6 +12,67 @@ function teamsMatchSimple(a: string, b: string): boolean {
   return n1.includes(n2) || n2.includes(n1);
 }
 
+/**
+ * Tenta buscar escanteios do 1º tempo de um fixture específico via API-Football.
+ * Funciona se o jogo estiver em status HT.
+ * Salva no banco e retorna os dados; retorna null se não disponível.
+ */
+export async function fetchAndSaveFixtureHalftimeStats(
+  fid: number
+): Promise<{ home: number; away: number } | null> {
+  const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
+  if (!API_FOOTBALL_KEY) return null;
+
+  try {
+    const fixtureRes = await fetch(
+      `${API_FOOTBALL_BASE}/fixtures?id=${fid}`,
+      { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+    );
+    if (!fixtureRes.ok) return null;
+    const fixtureData = await fixtureRes.json();
+    const fixture = fixtureData.response?.[0];
+    if (!fixture) return null;
+
+    const statusShort = fixture.fixture?.status?.short;
+
+    // Aceita somente status HT (intervalo): única janela onde estatísticas = dados do 1º tempo
+    if (statusShort !== "HT") {
+      console.log(`[HalftimeCapture] Fixture ${fid}: status="${statusShort}" — não está em HT, não é possível capturar`);
+      return null;
+    }
+
+    const statsRes = await fetch(
+      `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fid}`,
+      { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+    );
+    if (!statsRes.ok) return null;
+    const statsData = await statsRes.json();
+
+    const homeTeamName = fixture.teams.home.name ?? "";
+    let homeCorners = 0;
+    let awayCorners = 0;
+
+    for (const teamStat of statsData.response || []) {
+      const cornerStat = (teamStat.statistics || []).find((s: any) => s.type === "Corner Kicks");
+      if (cornerStat) {
+        const val = parseInt(cornerStat.value) || 0;
+        if (teamsMatchSimple(teamStat.team?.name ?? "", homeTeamName)) {
+          homeCorners = val;
+        } else {
+          awayCorners = val;
+        }
+      }
+    }
+
+    await storage.upsertFixtureHalftimeStats(fid, homeCorners, awayCorners);
+    console.log(`[HalftimeCapture] ✅ Fixture ${fid} (HT ao vivo): casa=${homeCorners}, fora=${awayCorners}`);
+    return { home: homeCorners, away: awayCorners };
+  } catch (e) {
+    console.log(`[HalftimeCapture] Erro ao buscar fixture ${fid}:`, e);
+    return null;
+  }
+}
+
 export async function captureHalftimeStats(): Promise<void> {
   const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
   if (!API_FOOTBALL_KEY) return;
@@ -42,50 +103,6 @@ export async function captureHalftimeStats(): Promise<void> {
   console.log(`[HalftimeCapture] Verificando ${toCapture.length} fixture(s) ao vivo para escanteios 1ºT`);
 
   for (const fid of toCapture) {
-    try {
-      const fixtureRes = await fetch(
-        `${API_FOOTBALL_BASE}/fixtures?id=${fid}`,
-        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-      );
-      if (!fixtureRes.ok) continue;
-      const fixtureData = await fixtureRes.json();
-      const fixture = fixtureData.response?.[0];
-      if (!fixture) continue;
-
-      const statusShort = fixture.fixture?.status?.short;
-
-      if (statusShort !== "HT") {
-        console.log(`[HalftimeCapture] Fixture ${fid}: status="${statusShort}", aguardando HT`);
-        continue;
-      }
-
-      const statsRes = await fetch(
-        `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fid}`,
-        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-      );
-      if (!statsRes.ok) continue;
-      const statsData = await statsRes.json();
-
-      const homeTeamName = fixture.teams.home.name ?? "";
-      let homeCorners = 0;
-      let awayCorners = 0;
-
-      for (const teamStat of statsData.response || []) {
-        const cornerStat = (teamStat.statistics || []).find((s: any) => s.type === "Corner Kicks");
-        if (cornerStat) {
-          const val = parseInt(cornerStat.value) || 0;
-          if (teamsMatchSimple(teamStat.team?.name ?? "", homeTeamName)) {
-            homeCorners = val;
-          } else {
-            awayCorners = val;
-          }
-        }
-      }
-
-      await storage.upsertFixtureHalftimeStats(fid, homeCorners, awayCorners);
-      console.log(`[HalftimeCapture] ✅ Fixture ${fid} (HT capturado): casa=${homeCorners}, fora=${awayCorners}`);
-    } catch (e) {
-      console.log(`[HalftimeCapture] Erro ao processar fixture ${fid}:`, e);
-    }
+    await fetchAndSaveFixtureHalftimeStats(fid);
   }
 }
