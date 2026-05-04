@@ -3152,12 +3152,12 @@ export async function registerRoutes(
           .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, true), 1);
         const rawTotalOdds = baseOdds * (1 + bonusPct);
         totalOdds = Math.floor(rawTotalOdds * 100) / 100;
-        potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
+        potentialWin = Math.round(validatedData.stake * rawTotalOdds * 100) / 100;
       } else {
         const baseOdds = Array.from(byGameForSGP.entries())
           .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, false), 1);
         totalOdds = Math.round(baseOdds * 100) / 100;
-        potentialWin = Math.round(validatedData.stake * totalOdds * 100) / 100;
+        potentialWin = Math.round(validatedData.stake * baseOdds * 100) / 100;
       }
 
       if (potentialWin > MAX_BET_PAYOUT) {
