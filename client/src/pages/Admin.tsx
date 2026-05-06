@@ -4087,6 +4087,7 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
       toast({ title: "Defesa cadastrada", description: `R$${fmt(parsedValue)} debitado do caixa de defesas.` });
       setForm({ game: "", markets: "", value: "", odds: "", referencedTicket: "", additionalInfo: "" });
       refetch(); onRefresh();
+      createMutation.reset();
     },
     onError: () => toast({ title: "Erro ao cadastrar defesa", variant: "destructive" }),
   });
