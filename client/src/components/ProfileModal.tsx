@@ -95,7 +95,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
 
   const parsedAmount = parseFloat(amount.replace(",", "."));
   const isFirstDeposit = !user?.firstDepositDone;
-  const bonus = isFirstDeposit && parsedAmount >= 10 ? Math.round(parsedAmount * 0.1 * 100) / 100 : 0;
+  const bonus = isFirstDeposit && parsedAmount >= 10 ? 10 : 0;
 
   const pixCode = step === "pix" && pendingDeposit ? buildPixCode(pendingDeposit.amount) : "";
 
@@ -175,7 +175,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
         </div>
         {isFirstDeposit && (
           <div className="bg-green-900/40 border border-green-700 rounded-xl p-3">
-            <p className="text-sm text-green-300 font-semibold">🎁 1º depósito ganha +10% de bônus!</p>
+            <p className="text-sm text-green-300 font-semibold">🎁 1º depósito ganha +R$ 10,00 de bônus!</p>
           </div>
         )}
         <div className="space-y-2">
@@ -191,7 +191,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
             <p className="text-sm text-red-400">Valor máximo por depósito é R$1.000,00</p>
           )}
           {bonus > 0 && parsedAmount <= 1000 && (
-            <p className="text-sm text-green-400">Você receberá +R$ {bonus.toFixed(2).replace(".", ",")} de bônus</p>
+            <p className="text-sm text-green-400">Você receberá +R$ 10,00 de bônus</p>
           )}
         </div>
         <Button

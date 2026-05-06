@@ -1721,7 +1721,7 @@ export async function registerRoutes(
       const userId = req.session.userId!;
       const user = await storage.getUserByCpf(userId);
       if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
-      const bonusAmount = user.firstDepositDone ? 0 : Math.round(amount * 0.10 * 100) / 100;
+      const bonusAmount = user.firstDepositDone ? 0 : 10;
       const deposit = await storage.createDeposit(userId, amount, bonusAmount);
       res.json(deposit);
     } catch {
