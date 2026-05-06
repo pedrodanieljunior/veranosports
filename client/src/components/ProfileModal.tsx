@@ -9,7 +9,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Deposit, UserWithdrawal, Transaction } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -49,7 +50,7 @@ function buildPixCode(amount?: number): string {
   return payload + crc16(payload);
 }
 
-type View = "menu" | "deposit" | "withdraw" | "account" | "history" | "invite";
+type View = "menu" | "deposit" | "withdraw" | "account" | "history" | "invite" | "rules";
 
 interface Props {
   open: boolean;
@@ -609,6 +610,35 @@ function InviteView({ onBack }: { onBack: () => void }) {
   );
 }
 
+function RulesView({ onBack }: { onBack: () => void }) {
+  const { data, isLoading } = useQuery<{ content: string }>({
+    queryKey: ["/api/rules"],
+  });
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+        <ChevronLeft className="w-4 h-4" /> Voltar
+      </button>
+      <ScrollArea className="h-[60vh] pr-2">
+        {isLoading ? (
+          <div className="space-y-3 py-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-3 bg-zinc-700 rounded animate-pulse" style={{ width: `${65 + (i % 3) * 12}%` }} />
+            ))}
+          </div>
+        ) : !data?.content ? (
+          <p className="text-zinc-400 text-sm text-center py-8">Nenhuma regra cadastrada ainda.</p>
+        ) : (
+          <div
+            className="prose prose-sm dark:prose-invert max-w-none py-1 rules-content"
+            dangerouslySetInnerHTML={{ __html: data.content }}
+          />
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
 export function ProfileModal({ open, onClose }: Props) {
   const { user, logout } = useAuth();
   const [view, setView] = useState<View>("menu");
@@ -621,6 +651,7 @@ export function ProfileModal({ open, onClose }: Props) {
     { id: "history" as View, icon: <History className="w-5 h-5" />, label: "Extrato", desc: "Histórico de movimentações" },
     { id: "account" as View, icon: <User className="w-5 h-5" />, label: "Minha Conta", desc: "Dados e senha" },
     { id: "invite" as View, icon: <Gift className="w-5 h-5" />, label: "Convite", desc: "Seu código de indicação" },
+    { id: "rules" as View, icon: <BookOpen className="w-5 h-5" />, label: "Regras do Site", desc: "Termos e condições" },
   ];
 
   return (
@@ -634,6 +665,7 @@ export function ProfileModal({ open, onClose }: Props) {
             {view === "history" && "Extrato"}
             {view === "account" && "Minha Conta"}
             {view === "invite" && "Convite"}
+            {view === "rules" && "Regras do Site"}
           </DialogTitle>
         </DialogHeader>
 
@@ -683,6 +715,7 @@ export function ProfileModal({ open, onClose }: Props) {
         {view === "history" && <HistoryView onBack={() => setView("menu")} />}
         {view === "account" && <AccountView onBack={() => setView("menu")} />}
         {view === "invite" && <InviteView onBack={() => setView("menu")} />}
+        {view === "rules" && <RulesView onBack={() => setView("menu")} />}
       </DialogContent>
     </Dialog>
   );
