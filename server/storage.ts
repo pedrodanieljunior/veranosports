@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -97,6 +97,11 @@ export interface IStorage {
   createTransaction(data: { userId: string; type: string; amount: number; balanceAfter: number; description: string; referenceId?: string }): Promise<Transaction>;
   getTransactionsByUser(userId: string): Promise<Transaction[]>;
   getWinTransactionForBet(betId: string): Promise<Transaction | null>;
+  // Defesas
+  getDefesas(): Promise<Defesa[]>;
+  createDefesa(data: InsertDefesa): Promise<Defesa>;
+  updateDefesaStatus(id: number, status: "pending" | "won" | "lost"): Promise<Defesa | undefined>;
+  deleteDefesa(id: number): Promise<boolean>;
   // Fixture Halftime Stats
   upsertFixtureHalftimeStats(fixtureId: number, homeCorners: number, awayCorners: number): Promise<void>;
   getFixtureHalftimeStats(fixtureId: number): Promise<{ homeCorners: number; awayCorners: number } | null>;
@@ -828,6 +833,49 @@ export class DatabaseStorage implements IStorage {
     const result = new Map<number, { homeCorners: number; awayCorners: number }>();
     for (const row of rows) result.set(row.fixtureId, { homeCorners: row.homeCorners, awayCorners: row.awayCorners });
     return result;
+  }
+
+  private mapDefesa(r: typeof defensasTable.$inferSelect): Defesa {
+    return {
+      id: r.id,
+      game: r.game,
+      markets: r.markets,
+      value: r.value,
+      odds: r.odds,
+      potentialReturn: r.potentialReturn,
+      referencedTicket: r.referencedTicket ?? null,
+      additionalInfo: r.additionalInfo ?? null,
+      status: (r.status as "pending" | "won" | "lost"),
+      createdAt: r.createdAt.toISOString(),
+    };
+  }
+
+  async getDefesas(): Promise<Defesa[]> {
+    const rows = await db.select().from(defensasTable).orderBy(desc(defensasTable.createdAt));
+    return rows.map(r => this.mapDefesa(r));
+  }
+
+  async createDefesa(data: InsertDefesa): Promise<Defesa> {
+    const [row] = await db.insert(defensasTable).values({
+      game: data.game,
+      markets: data.markets,
+      value: data.value,
+      odds: data.odds,
+      potentialReturn: data.potentialReturn,
+      referencedTicket: data.referencedTicket || null,
+      additionalInfo: data.additionalInfo || null,
+    }).returning();
+    return this.mapDefesa(row);
+  }
+
+  async updateDefesaStatus(id: number, status: "pending" | "won" | "lost"): Promise<Defesa | undefined> {
+    const [row] = await db.update(defensasTable).set({ status }).where(eq(defensasTable.id, id)).returning();
+    return row ? this.mapDefesa(row) : undefined;
+  }
+
+  async deleteDefesa(id: number): Promise<boolean> {
+    const result = await db.delete(defensasTable).where(eq(defensasTable.id, id)).returning();
+    return result.length > 0;
   }
 }
 

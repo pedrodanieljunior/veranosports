@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,7 @@ import {
   Search,
   Settings,
   RotateCcw,
+  Shield,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -266,6 +267,15 @@ export default function Admin() {
     },
     enabled: !!adminMe?.isAdmin,
     refetchInterval: adminMe?.isAdmin ? 10 * 1000 : false,
+  });
+
+  const { data: defensasData, refetch: refetchDefesas } = useQuery<{ defesas: Defesa[]; defensasBalance: number; defensasInitialBalance: number; defensasProfits: number }>({
+    queryKey: ["/api/admin/defensas"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/defensas");
+      return res.json();
+    },
+    enabled: !!adminMe?.isAdmin,
   });
 
   const createWithdrawalMutation = useMutation({
@@ -900,6 +910,10 @@ export default function Admin() {
               <UserCheck className="w-4 h-4 mr-2" />
               Indicações
             </TabsTrigger>
+            <TabsTrigger value="defesas" data-testid="tab-defesas">
+              <Shield className="w-4 h-4 mr-2" />
+              Defesas
+            </TabsTrigger>
             <TabsTrigger value="configuracoes" data-testid="tab-configuracoes">
               <Settings className="w-4 h-4 mr-2" />
               Configurações
@@ -1264,6 +1278,38 @@ export default function Admin() {
                             <span>Meta: R${fmt(lucroMeta)}</span>
                           </div>
                         </div>
+
+                        {/* Barra 3 — Caixa de Defesas */}
+                        {(() => {
+                          const defBal = defensasData?.defensasBalance ?? 0;
+                          const defInit = defensasData?.defensasInitialBalance ?? 1000;
+                          const defPct = defInit > 0 ? Math.max(0, Math.min(100, (defBal / defInit) * 100)) : 0;
+                          const defColor = defPct > 60
+                            ? "bg-gradient-to-r from-cyan-600 to-cyan-400"
+                            : defPct > 25
+                            ? "bg-gradient-to-r from-yellow-600 to-amber-400"
+                            : "bg-gradient-to-r from-red-600 to-rose-400";
+                          return (
+                            <div>
+                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-cyan-400" /> Caixa de Defesas</span>
+                                <span className="font-semibold text-cyan-400">
+                                  R${fmt(defBal)} / R${fmt(defInit)}
+                                  {(defensasData?.defensasProfits ?? 0) > 0 && (
+                                    <span className="text-green-400 ml-1">(+R${fmt(defensasData!.defensasProfits)} lucro no caixa)</span>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                                <div className={`h-full transition-all duration-500 ${defColor}`} style={{ width: `${defPct}%` }} />
+                              </div>
+                              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <span>R$0</span>
+                                <span>R${fmt(defInit)} (limite configurado)</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Grid de componentes */}
@@ -2286,6 +2332,10 @@ export default function Admin() {
           <TabsContent value="indicacoes">
             <ReferralsTab />
           </TabsContent>
+          <TabsContent value="defesas">
+            <DefesasTab onRefresh={refetchDefesas} />
+          </TabsContent>
+
           <TabsContent value="configuracoes">
             <SettingsTab />
           </TabsContent>
@@ -3907,16 +3957,16 @@ function ReferralsTab() {
 
 function SettingsTab() {
   const { toast } = useToast();
-  const [form, setForm] = useState({ aporteInicial: 50000, checkIntervalMinutes: 5, toasterDurationSeconds: 3 });
+  const [form, setForm] = useState({ aporteInicial: 50000, checkIntervalMinutes: 5, toasterDurationSeconds: 3, defensasInitialBalance: 1000 });
   const [initialized, setInitialized] = useState(false);
 
-  const { data: settings } = useQuery<{ aporteInicial: number; checkIntervalMinutes: number; toasterDurationSeconds: number }>({
+  const { data: settings } = useQuery<{ aporteInicial: number; checkIntervalMinutes: number; toasterDurationSeconds: number; defensasInitialBalance: number }>({
     queryKey: ["/api/admin/settings"],
   });
 
   useEffect(() => {
     if (settings && !initialized) {
-      setForm(settings);
+      setForm({ aporteInicial: settings.aporteInicial, checkIntervalMinutes: settings.checkIntervalMinutes, toasterDurationSeconds: settings.toasterDurationSeconds, defensasInitialBalance: settings.defensasInitialBalance ?? 1000 });
       setInitialized(true);
     }
   }, [settings, initialized]);
@@ -3928,6 +3978,7 @@ function SettingsTab() {
     onSuccess: () => {
       localStorage.setItem("toasterDurationMs", String(form.toasterDurationSeconds * 1000));
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/defensas"] });
       toast({ title: "Configurações salvas", description: "As alterações foram aplicadas com sucesso." });
     },
     onError: () => {
@@ -3977,6 +4028,17 @@ function SettingsTab() {
             onChange={e => setForm(f => ({ ...f, toasterDurationSeconds: parseInt(e.target.value) || 3 }))}
           />
         </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2"><Shield className="w-4 h-4 text-cyan-400" /> Caixa de Defesas (R$)</label>
+          <p className="text-xs text-muted-foreground">Valor máximo reservado para defesas (hedge bets).</p>
+          <Input
+            type="number"
+            min={1}
+            data-testid="input-defensas-initial"
+            value={form.defensasInitialBalance}
+            onChange={e => setForm(f => ({ ...f, defensasInitialBalance: parseFloat(e.target.value) || 1000 }))}
+          />
+        </div>
         <Button
           data-testid="button-save-settings"
           onClick={() => saveMutation.mutate(form)}
@@ -3987,6 +4049,205 @@ function SettingsTab() {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+interface DefesasTabProps { onRefresh: () => void; }
+
+function DefesasTab({ onRefresh }: DefesasTabProps) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ game: "", markets: "", value: "", odds: "", referencedTicket: "", additionalInfo: "" });
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const { data, isLoading, refetch } = useQuery<{ defesas: Defesa[]; defensasBalance: number; defensasInitialBalance: number; defensasProfits: number }>({
+    queryKey: ["/api/admin/defensas"],
+    queryFn: async () => { const res = await apiRequest("GET", "/api/admin/defensas"); return res.json(); },
+  });
+
+  const defesas = data?.defesas ?? [];
+  const balance = data?.defensasBalance ?? 0;
+  const initial = data?.defensasInitialBalance ?? 1000;
+  const profits = data?.defensasProfits ?? 0;
+  const parsedValue = parseFloat(form.value) || 0;
+  const parsedOdds = parseFloat(form.odds) || 0;
+  const potentialReturn = parsedValue > 0 && parsedOdds > 0 ? Math.round(parsedValue * parsedOdds * 100) / 100 : 0;
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/defensas", {
+        game: form.game, markets: form.markets,
+        value: parsedValue, odds: parsedOdds,
+        potentialReturn,
+        referencedTicket: form.referencedTicket,
+        additionalInfo: form.additionalInfo,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Defesa cadastrada", description: `R$${fmt(parsedValue)} debitado do caixa de defesas.` });
+      setForm({ game: "", markets: "", value: "", odds: "", referencedTicket: "", additionalInfo: "" });
+      refetch(); onRefresh();
+    },
+    onError: () => toast({ title: "Erro ao cadastrar defesa", variant: "destructive" }),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: "won" | "lost" }) => {
+      const res = await apiRequest("PATCH", `/api/admin/defensas/${id}/status`, { status });
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      toast({ title: vars.status === "won" ? "Defesa: Ganhou! Lucro adicionado ao caixa." : "Defesa: Perdeu. Valor descontado." });
+      refetch(); onRefresh();
+    },
+    onError: () => toast({ title: "Erro ao atualizar defesa", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/defensas/${id}`);
+      return res.json();
+    },
+    onSuccess: () => { toast({ title: "Defesa removida" }); refetch(); onRefresh(); },
+    onError: () => toast({ title: "Erro ao remover defesa", variant: "destructive" }),
+  });
+
+  const balancePct = initial > 0 ? Math.max(0, Math.min(100, (balance / initial) * 100)) : 0;
+  const balColor = balancePct > 60 ? "bg-gradient-to-r from-cyan-600 to-cyan-400"
+    : balancePct > 25 ? "bg-gradient-to-r from-yellow-600 to-amber-400"
+    : "bg-gradient-to-r from-red-600 to-rose-400";
+
+  return (
+    <div className="space-y-4">
+      {/* Barra de saldo */}
+      <Card className="border-cyan-500/30 bg-cyan-500/5">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Shield className="w-6 h-6 text-cyan-400" />
+              <div>
+                <p className="font-bold">Caixa de Defesas</p>
+                <p className="text-xs text-muted-foreground">Reserva para hedge bets em outras casas</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-cyan-400">R${fmt(balance)}</p>
+              <p className="text-xs text-muted-foreground">de R${fmt(initial)} disponíveis</p>
+            </div>
+          </div>
+          <div className="w-full h-3 bg-muted rounded-full overflow-hidden mb-2">
+            <div className={`h-full transition-all duration-500 ${balColor}`} style={{ width: `${balancePct}%` }} />
+          </div>
+          {profits > 0 && (
+            <p className="text-xs text-green-400 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> Lucro total enviado ao caixa principal: R${fmt(profits)}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Formulário */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Plus className="w-4 h-4 text-primary" /> Nova Defesa
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Jogo *</label>
+              <Input data-testid="input-defesa-game" placeholder="Ex: Flamengo x Corinthians" value={form.game} onChange={e => setForm(f => ({ ...f, game: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Mercados *</label>
+              <Input data-testid="input-defesa-markets" placeholder="Ex: Resultado Final – Corinthians" value={form.markets} onChange={e => setForm(f => ({ ...f, markets: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Valor (R$) *</label>
+              <Input data-testid="input-defesa-value" type="number" min="0.01" step="0.01" placeholder="0,00" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Odds *</label>
+              <Input data-testid="input-defesa-odds" type="number" min="1.01" step="0.01" placeholder="1.00" value={form.odds} onChange={e => setForm(f => ({ ...f, odds: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Bilhete Referenciado</label>
+              <Input data-testid="input-defesa-ticket" placeholder="ID do bilhete do cliente" value={form.referencedTicket} onChange={e => setForm(f => ({ ...f, referencedTicket: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Retorno Potencial</label>
+              <div className="h-10 flex items-center px-3 bg-muted/50 rounded-md text-sm font-semibold text-green-400">
+                {potentialReturn > 0 ? `R$ ${fmt(potentialReturn)}` : "—"}
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">Informações Adicionais</label>
+            <Input data-testid="input-defesa-info" placeholder="Observações..." value={form.additionalInfo} onChange={e => setForm(f => ({ ...f, additionalInfo: e.target.value }))} />
+          </div>
+          <Button
+            data-testid="button-create-defesa"
+            className="w-full"
+            disabled={!form.game || !form.markets || parsedValue <= 0 || parsedOdds < 1.01 || createMutation.isPending}
+            onClick={() => createMutation.mutate()}
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            {createMutation.isPending ? "Cadastrando..." : "Cadastrar Defesa"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Lista */}
+      <div className="space-y-3">
+        {isLoading ? (
+          <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+        ) : defesas.length === 0 ? (
+          <Card><CardContent className="p-8 text-center text-muted-foreground"><Shield className="w-10 h-10 mx-auto mb-3 opacity-30" /><p>Nenhuma defesa cadastrada.</p></CardContent></Card>
+        ) : (
+          defesas.map(d => (
+            <Card key={d.id} className={`border ${d.status === "won" ? "border-green-500/30 bg-green-500/5" : d.status === "lost" ? "border-red-500/20 opacity-70" : "border-cyan-500/20"}`} data-testid={`card-defesa-${d.id}`}>
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-3 justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${d.status === "won" ? "bg-green-500/20 text-green-400" : d.status === "lost" ? "bg-red-500/20 text-red-400" : "bg-cyan-500/20 text-cyan-400"}`}>
+                        {d.status === "won" ? "GANHOU" : d.status === "lost" ? "PERDEU" : "PENDENTE"}
+                      </span>
+                      <span className="font-semibold text-sm truncate">{d.game}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-1">{d.markets}</p>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <span>Valor: <strong className="text-white">R${fmt(d.value)}</strong></span>
+                      <span>Odds: <strong className="text-yellow-400">{d.odds.toFixed(2)}</strong></span>
+                      <span>Retorno: <strong className="text-green-400">R${fmt(d.potentialReturn)}</strong></span>
+                    </div>
+                    {d.referencedTicket && <p className="text-xs text-muted-foreground mt-1">Bilhete: {d.referencedTicket}</p>}
+                    {d.additionalInfo && <p className="text-xs text-muted-foreground mt-0.5">{d.additionalInfo}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(d.createdAt).toLocaleString("pt-BR")}</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0 flex-wrap">
+                    {d.status === "pending" && (
+                      <>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => statusMutation.mutate({ id: d.id, status: "won" })} disabled={statusMutation.isPending} data-testid={`button-defesa-won-${d.id}`}>
+                          <CheckCircle className="w-4 h-4 mr-1" /> Ganhou
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => statusMutation.mutate({ id: d.id, status: "lost" })} disabled={statusMutation.isPending} data-testid={`button-defesa-lost-${d.id}`}>
+                          <XCircle className="w-4 h-4 mr-1" /> Perdeu
+                        </Button>
+                      </>
+                    )}
+                    <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-red-400" onClick={() => { if (confirm("Remover esta defesa?")) deleteMutation.mutate(d.id); }} disabled={deleteMutation.isPending} data-testid={`button-defesa-delete-${d.id}`}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 

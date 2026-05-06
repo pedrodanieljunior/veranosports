@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, hashPassword, verifyPassword } from "./storage";
-import { insertBetSlipSchema, insertUserSchema } from "@shared/schema";
+import { insertBetSlipSchema, insertUserSchema, insertDefesaSchema } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
 import { z } from "zod";
 import { cache } from "./cache";
@@ -2920,6 +2920,17 @@ export async function registerRoutes(
   const savedInterval = await storage.getSetting("checkIntervalMinutes");
   if (savedInterval) autoCheckIntervalMs = (parseInt(savedInterval, 10) || 5) * 60 * 1000;
 
+  // Defesas pool (hedge bets)
+  let defensasInitialBalance = 1000;
+  let defensasBalance = 1000;
+  let defensasProfits = 0;
+  const savedDefesasInitial = await storage.getSetting("defensasInitialBalance");
+  if (savedDefesasInitial) defensasInitialBalance = parseFloat(savedDefesasInitial) || 1000;
+  const savedDefesasBalance = await storage.getSetting("defensasBalance");
+  defensasBalance = savedDefesasBalance !== null ? (parseFloat(savedDefesasBalance) ?? defensasInitialBalance) : defensasInitialBalance;
+  const savedDefesasProfits = await storage.getSetting("defensasProfits");
+  if (savedDefesasProfits) defensasProfits = parseFloat(savedDefesasProfits) || 0;
+
   function startAutoCheckTimer() {
     if (autoCheckTimer) clearInterval(autoCheckTimer);
     autoCheckTimer = setInterval(async () => {
@@ -2952,7 +2963,7 @@ export async function registerRoutes(
       .filter((w: any) => w.status === "paid" || w.status === "approved")
       .reduce((s: number, w: any) => s + w.amount, 0);
     return Math.max(0,
-      DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios
+      DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios + defensasProfits
     );
   }
 
@@ -4140,7 +4151,7 @@ export async function registerRoutes(
       const aporteInicial = parseInt((await storage.getSetting("aporteInicial")) || "50000", 10);
       const checkIntervalMinutes = parseInt((await storage.getSetting("checkIntervalMinutes")) || "5", 10);
       const toasterDurationSeconds = parseInt((await storage.getSetting("toasterDurationSeconds")) || "3", 10);
-      res.json({ aporteInicial, checkIntervalMinutes, toasterDurationSeconds });
+      res.json({ aporteInicial, checkIntervalMinutes, toasterDurationSeconds, defensasInitialBalance });
     } catch (err) {
       res.status(500).json({ error: "Erro ao buscar configurações" });
     }
@@ -4148,7 +4159,7 @@ export async function registerRoutes(
 
   app.patch("/api/admin/settings", requireAdmin, async (req, res) => {
     try {
-      const { aporteInicial, checkIntervalMinutes, toasterDurationSeconds } = req.body;
+      const { aporteInicial, checkIntervalMinutes, toasterDurationSeconds, defensasInitialBalance: newDefesasInitial } = req.body;
       if (aporteInicial !== undefined) {
         const val = parseInt(String(aporteInicial), 10);
         if (!isNaN(val) && val > 0) {
@@ -4170,14 +4181,85 @@ export async function registerRoutes(
           await storage.setSetting("toasterDurationSeconds", String(val));
         }
       }
+      if (newDefesasInitial !== undefined) {
+        const val = parseFloat(String(newDefesasInitial));
+        if (!isNaN(val) && val > 0) {
+          defensasInitialBalance = val;
+          await storage.setSetting("defensasInitialBalance", String(val));
+        }
+      }
       const updated = {
         aporteInicial: DAILY_LIMIT,
         checkIntervalMinutes: autoCheckIntervalMs / 60000,
         toasterDurationSeconds: parseInt((await storage.getSetting("toasterDurationSeconds")) || "3", 10),
+        defensasInitialBalance,
       };
       res.json(updated);
     } catch (err) {
       res.status(500).json({ error: "Erro ao salvar configurações" });
+    }
+  });
+
+  // Admin: Defesas
+  app.get("/api/admin/defensas", requireAdmin, async (req, res) => {
+    try {
+      const defesas = await storage.getDefesas();
+      res.json({ defesas, defensasBalance, defensasInitialBalance, defensasProfits });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao buscar defesas" });
+    }
+  });
+
+  app.post("/api/admin/defensas", requireAdmin, async (req, res) => {
+    try {
+      const parsed = insertDefesaSchema.safeParse(req.body);
+      if (!parsed.success) return void res.status(400).json({ error: parsed.error.issues });
+      const defesa = await storage.createDefesa(parsed.data);
+      defensasBalance = Math.max(0, defensasBalance - parsed.data.value);
+      await storage.setSetting("defensasBalance", String(defensasBalance));
+      res.json({ defesa, defensasBalance });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao criar defesa" });
+    }
+  });
+
+  app.patch("/api/admin/defensas/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      if (!["won", "lost"].includes(status)) return void res.status(400).json({ error: "Status inválido" });
+      const defesas = await storage.getDefesas();
+      const defesa = defesas.find(d => d.id === id);
+      if (!defesa) return void res.status(404).json({ error: "Defesa não encontrada" });
+      if (defesa.status !== "pending") return void res.status(400).json({ error: "Defesa já resolvida" });
+      const updated = await storage.updateDefesaStatus(id, status);
+      if (status === "won") {
+        defensasBalance = Math.min(defensasInitialBalance, defensasBalance + defesa.value);
+        const profit = Math.max(0, Math.round((defesa.potentialReturn - defesa.value) * 100) / 100);
+        defensasProfits = Math.round((defensasProfits + profit) * 100) / 100;
+        await storage.setSetting("defensasProfits", String(defensasProfits));
+        await storage.setSetting("defensasBalance", String(defensasBalance));
+      }
+      res.json({ defesa: updated, defensasBalance, defensasProfits });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao atualizar defesa" });
+    }
+  });
+
+  app.delete("/api/admin/defensas/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const defesas = await storage.getDefesas();
+      const defesa = defesas.find(d => d.id === id);
+      if (!defesa) return void res.status(404).json({ error: "Defesa não encontrada" });
+      if (defesa.status === "pending") {
+        defensasBalance = Math.min(defensasInitialBalance, defensasBalance + defesa.value);
+        await storage.setSetting("defensasBalance", String(defensasBalance));
+      }
+      await storage.deleteDefesa(id);
+      res.json({ ok: true, defensasBalance });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao excluir defesa" });
     }
   });
 

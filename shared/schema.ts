@@ -353,6 +353,47 @@ export const insertUserWithdrawalSchema = z.object({
   pixKey: z.string().min(5, "Chave PIX inválida"),
 });
 
+// ─── Defesas ──────────────────────────────────────────────────────────────────
+export const defensasTable = pgTable("defensas", {
+  id: serial("id").primaryKey(),
+  game: text("game").notNull(),
+  markets: text("markets").notNull(),
+  value: real("value").notNull(),
+  odds: real("odds").notNull(),
+  potentialReturn: real("potential_return").notNull(),
+  referencedTicket: text("referenced_ticket"),
+  additionalInfo: text("additional_info"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const defensaSchema = z.object({
+  id: z.number(),
+  game: z.string(),
+  markets: z.string(),
+  value: z.number(),
+  odds: z.number(),
+  potentialReturn: z.number(),
+  referencedTicket: z.string().nullable().optional(),
+  additionalInfo: z.string().nullable().optional(),
+  status: z.enum(["pending", "won", "lost"]),
+  createdAt: z.string(),
+});
+
+export type Defesa = z.infer<typeof defensaSchema>;
+
+export const insertDefesaSchema = z.object({
+  game: z.string().min(1, "Jogo obrigatório"),
+  markets: z.string().min(1, "Mercados obrigatórios"),
+  value: z.number().positive("Valor deve ser positivo"),
+  odds: z.number().min(1.01, "Odd mínima é 1.01"),
+  potentialReturn: z.number().positive(),
+  referencedTicket: z.string().optional().default(""),
+  additionalInfo: z.string().optional().default(""),
+});
+
+export type InsertDefesa = z.infer<typeof insertDefesaSchema>;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),

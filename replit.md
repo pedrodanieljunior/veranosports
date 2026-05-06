@@ -76,6 +76,17 @@ The server handles:
 - Falls back to naive multiplication if API-Football data unavailable
 - Non-goal markets in the same game (corners, cards) multiply independently on top of the SGP odd
 
+### Defesas (Hedge Bets)
+- Admin tab "Defesas" at `/painel-gm7x9k2` → guia **Defesas**
+- Admin cadastra defesas com: jogo, mercados, valor, odds, retorno potencial (auto-calculado), bilhete referenciado, informações adicionais
+- Botões "Ganhou" / "Perdeu" para resolver cada defesa pendente
+- Caixa de Defesas: saldo separado (padrão R$1.000, configurável em Configurações) que é debitado ao criar e creditado ao ganhar
+- Quando ganha: valor investido volta ao caixa de defesas; lucro (retorno − valor) vai para o caixa principal via `defensasProfits`
+- Quando perde: o valor já foi debitado na criação, sem ação adicional
+- Excluir defesa pendente reembolsa o valor ao caixa de defesas
+- Barra de Defesas exibida na aba Caixa; `defensasProfits` entra na fórmula `computeCaixaBalance`
+- Tabela: `defensas` em PostgreSQL; saldo/lucro armazenados nas configurações via `setSetting`
+
 ### Super Boost Cards
 - Admin tab "Boost" at `/painel-gm7x9k2` → guia **Boost**
 - Admin can create cards with: event name, match title, description, up to 3 manual selections, original odds, boosted odds, start/end datetime, active toggle
