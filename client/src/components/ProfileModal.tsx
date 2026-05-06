@@ -619,7 +619,7 @@ function RulesView({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
-      <ScrollArea className="h-[60vh] pr-2">
+      <ScrollArea className="max-h-[55vh] pr-2">
         {isLoading ? (
           <div className="space-y-3 py-2">
             {Array.from({ length: 8 }).map((_, i) => (
