@@ -656,7 +656,7 @@ export function ProfileModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) { setView("menu"); onClose(); } }}>
-      <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-sm">
+      <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-sm w-[calc(100%-2rem)] mx-4">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {view === "menu" && "Perfil"}
