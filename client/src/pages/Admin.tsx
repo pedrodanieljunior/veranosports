@@ -4084,6 +4084,7 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
         toast({ title: "Caixa renovado!", description: `R$${fmt(data.diff)} transferido do caixa principal.` });
       }
       refetch(); onRefresh();
+      queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
     },
     onError: () => toast({ title: "Erro ao renovar caixa", variant: "destructive" }),
   });
@@ -4116,6 +4117,7 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
     onSuccess: (_, vars) => {
       toast({ title: vars.status === "won" ? "Defesa: Ganhou! Lucro adicionado ao caixa." : "Defesa: Perdeu. Valor descontado." });
       refetch(); onRefresh();
+      queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
     },
     onError: () => toast({ title: "Erro ao atualizar defesa", variant: "destructive" }),
   });
@@ -4125,7 +4127,7 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
       const res = await apiRequest("DELETE", `/api/admin/defensas/${id}`);
       return res.json();
     },
-    onSuccess: () => { toast({ title: "Defesa removida" }); refetch(); onRefresh(); },
+    onSuccess: () => { toast({ title: "Defesa removida" }); refetch(); onRefresh(); queryClient.invalidateQueries({ queryKey: ["/api/limits"] }); },
     onError: () => toast({ title: "Erro ao remover defesa", variant: "destructive" }),
   });
 
