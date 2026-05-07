@@ -1141,12 +1141,14 @@ export default function Admin() {
                   .reduce((s, w) => s + w.amount, 0);
 
                 // Fórmula principal
+                const defensasProfits = defensasData?.defensasProfits ?? 0;
                 const caixa = APORTE_INICIAL
                   + entradasPix
                   - saldosClientes
                   - exposicao
                   - totalSaquesAdmin
-                  - pagamentosUsuarios;
+                  - pagamentosUsuarios
+                  + defensasProfits;
 
                 const isPositive = caixa >= 0;
 
