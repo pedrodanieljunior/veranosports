@@ -4072,6 +4072,22 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
   const parsedOdds = parseFloat(form.odds) || 0;
   const potentialReturn = parsedValue > 0 && parsedOdds > 0 ? Math.round(parsedValue * parsedOdds * 100) / 100 : 0;
 
+  const renovarMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/defensas/renovar");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.diff <= 0) {
+        toast({ title: "Caixa já está completo", description: "Não há diferença a transferir." });
+      } else {
+        toast({ title: "Caixa renovado!", description: `R$${fmt(data.diff)} transferido do caixa principal.` });
+      }
+      refetch(); onRefresh();
+    },
+    onError: () => toast({ title: "Erro ao renovar caixa", variant: "destructive" }),
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/defensas", {
@@ -4139,11 +4155,26 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
           <div className="w-full h-3 bg-muted rounded-full overflow-hidden mb-2">
             <div className={`h-full transition-all duration-500 ${balColor}`} style={{ width: `${balancePct}%` }} />
           </div>
-          {profits > 0 && (
-            <p className="text-xs text-green-400 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" /> Lucro total enviado ao caixa principal: R${fmt(profits)}
-            </p>
-          )}
+          <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+            {profits > 0 && (
+              <p className="text-xs text-green-400 flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" /> Lucro total enviado ao caixa principal: R${fmt(profits)}
+              </p>
+            )}
+            {balance < initial && (
+              <Button
+                data-testid="button-renovar-caixa"
+                size="sm"
+                variant="outline"
+                className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 ml-auto"
+                disabled={renovarMutation.isPending}
+                onClick={() => renovarMutation.mutate()}
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                {renovarMutation.isPending ? "Renovando..." : `Renovar Caixa (+R$${fmt(initial - balance)})`}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

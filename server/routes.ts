@@ -4210,6 +4210,19 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/defensas/renovar", requireAdmin, async (req, res) => {
+    try {
+      const diff = Math.round((defensasInitialBalance - defensasBalance) * 100) / 100;
+      if (diff <= 0) return void res.json({ ok: true, diff: 0, defensasBalance });
+      await storage.createWithdrawal(diff, `Renovação Caixa de Defesas (R$${diff.toFixed(2)})`);
+      defensasBalance = defensasInitialBalance;
+      await storage.setSetting("defensasBalance", String(defensasBalance));
+      res.json({ ok: true, diff, defensasBalance });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao renovar caixa de defesas" });
+    }
+  });
+
   app.post("/api/admin/defensas", requireAdmin, async (req, res) => {
     try {
       const parsed = insertDefesaSchema.safeParse(req.body);
