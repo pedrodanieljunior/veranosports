@@ -9,7 +9,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Deposit, UserWithdrawal, Transaction } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen, MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -702,6 +702,17 @@ export function ProfileModal({ open, onClose }: Props) {
                   </div>
                 </button>
               ))}
+              <button
+                className="w-full flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition-colors"
+                onClick={() => window.open(`https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent("Olá, preciso de ajuda.")}`, "_blank")}
+                data-testid="button-profile-fale-conosco"
+              >
+                <span className="text-yellow-400"><MessageCircle className="w-5 h-5" /></span>
+                <div>
+                  <p className="font-semibold text-sm">Fale conosco</p>
+                  <p className="text-xs text-zinc-400">Suporte via WhatsApp</p>
+                </div>
+              </button>
             </div>
             <Button variant="outline" className="w-full border-red-600 text-red-400 hover:bg-red-900/20" onClick={() => { logout(); onClose(); }} data-testid="button-profile-logout">
               <LogOut className="w-4 h-4 mr-2" />
