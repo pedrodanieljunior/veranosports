@@ -670,55 +670,57 @@ export function ProfileModal({ open, onClose }: Props) {
         </DialogHeader>
 
         {view === "menu" && (
-          <div className="space-y-4">
-            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-              <p className="text-sm text-zinc-400">Olá, <span className="text-white font-semibold">{user.name.split(" ")[0]}</span></p>
-              <p className="text-xs text-zinc-500 mt-0.5">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
-              <div className="mt-3 pt-3 border-t border-zinc-700">
-                <p className="text-xs text-zinc-400">Saldo total</p>
-                <p className="text-2xl font-bold text-yellow-400">
-                  R$ {(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}
-                </p>
-                {(user.bonusBalance ?? 0) > 0 && (
-                  <div className="mt-1.5 flex gap-3 text-xs text-zinc-400">
-                    <span>💰 Principal: <span className="text-white font-semibold">R$ {user.balance.toFixed(2).replace(".", ",")}</span></span>
-                    <span>🎁 Bônus: <span className="text-green-400 font-semibold">R$ {(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></span>
-                  </div>
-                )}
+          <ScrollArea className="max-h-[70vh]">
+            <div className="space-y-4 pr-1">
+              <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+                <p className="text-sm text-zinc-400">Olá, <span className="text-white font-semibold">{user.name.split(" ")[0]}</span></p>
+                <p className="text-xs text-zinc-500 mt-0.5">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
+                <div className="mt-3 pt-3 border-t border-zinc-700">
+                  <p className="text-xs text-zinc-400">Saldo total</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    R$ {(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}
+                  </p>
+                  {(user.bonusBalance ?? 0) > 0 && (
+                    <div className="mt-1.5 flex gap-3 text-xs text-zinc-400">
+                      <span>💰 Principal: <span className="text-white font-semibold">R$ {user.balance.toFixed(2).replace(".", ",")}</span></span>
+                      <span>🎁 Bônus: <span className="text-green-400 font-semibold">R$ {(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              {menuItems.map(item => (
+              <div className="space-y-2">
+                {menuItems.map(item => (
+                  <button
+                    key={item.id}
+                    className="w-full flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition-colors"
+                    onClick={() => setView(item.id)}
+                    data-testid={`button-profile-${item.id}`}
+                  >
+                    <span className="text-yellow-400">{item.icon}</span>
+                    <div>
+                      <p className="font-semibold text-sm">{item.label}</p>
+                      <p className="text-xs text-zinc-400">{item.desc}</p>
+                    </div>
+                  </button>
+                ))}
                 <button
-                  key={item.id}
                   className="w-full flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition-colors"
-                  onClick={() => setView(item.id)}
-                  data-testid={`button-profile-${item.id}`}
+                  onClick={() => window.open(`https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent("Olá, preciso de ajuda.")}`, "_blank")}
+                  data-testid="button-profile-fale-conosco"
                 >
-                  <span className="text-yellow-400">{item.icon}</span>
+                  <span className="text-yellow-400"><MessageCircle className="w-5 h-5" /></span>
                   <div>
-                    <p className="font-semibold text-sm">{item.label}</p>
-                    <p className="text-xs text-zinc-400">{item.desc}</p>
+                    <p className="font-semibold text-sm">Fale conosco</p>
+                    <p className="text-xs text-zinc-400">Suporte via WhatsApp</p>
                   </div>
                 </button>
-              ))}
-              <button
-                className="w-full flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition-colors"
-                onClick={() => window.open(`https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent("Olá, preciso de ajuda.")}`, "_blank")}
-                data-testid="button-profile-fale-conosco"
-              >
-                <span className="text-yellow-400"><MessageCircle className="w-5 h-5" /></span>
-                <div>
-                  <p className="font-semibold text-sm">Fale conosco</p>
-                  <p className="text-xs text-zinc-400">Suporte via WhatsApp</p>
-                </div>
-              </button>
+              </div>
+              <Button variant="outline" className="w-full border-red-600 text-red-400 hover:bg-red-900/20" onClick={() => { logout(); onClose(); }} data-testid="button-profile-logout">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair da conta
+              </Button>
             </div>
-            <Button variant="outline" className="w-full border-red-600 text-red-400 hover:bg-red-900/20" onClick={() => { logout(); onClose(); }} data-testid="button-profile-logout">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair da conta
-            </Button>
-          </div>
+          </ScrollArea>
         )}
 
         {view === "deposit" && <DepositView onBack={() => setView("menu")} />}
