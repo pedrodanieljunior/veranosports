@@ -4252,12 +4252,20 @@ export async function registerRoutes(
       const defesas = await storage.getDefesas();
       const defesa = defesas.find(d => d.id === id);
       if (!defesa) return void res.status(404).json({ error: "Defesa não encontrada" });
-      if (defesa.status !== "won") {
+      if (defesa.status === "won") {
+        // Undo: remove the value that was returned and the profit credited
+        const profit = Math.round((defesa.potentialReturn - defesa.value) * 100) / 100;
+        defensasBalance = Math.max(0, defensasBalance - defesa.value);
+        defensasProfits = Math.max(0, Math.round((defensasProfits - profit) * 100) / 100);
+        await storage.setSetting("defensasBalance", String(defensasBalance));
+        await storage.setSetting("defensasProfits", String(defensasProfits));
+      } else {
+        // pending or lost: refund value back to defensas pool
         defensasBalance = Math.min(defensasInitialBalance, defensasBalance + defesa.value);
         await storage.setSetting("defensasBalance", String(defensasBalance));
       }
       await storage.deleteDefesa(id);
-      res.json({ ok: true, defensasBalance });
+      res.json({ ok: true, defensasBalance, defensasProfits });
     } catch (err) {
       res.status(500).json({ error: "Erro ao excluir defesa" });
     }
