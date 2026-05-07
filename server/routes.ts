@@ -4252,7 +4252,7 @@ export async function registerRoutes(
       const defesas = await storage.getDefesas();
       const defesa = defesas.find(d => d.id === id);
       if (!defesa) return void res.status(404).json({ error: "Defesa não encontrada" });
-      if (defesa.status === "pending") {
+      if (defesa.status !== "won") {
         defensasBalance = Math.min(defensasInitialBalance, defensasBalance + defesa.value);
         await storage.setSetting("defensasBalance", String(defensasBalance));
       }
