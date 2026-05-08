@@ -4290,7 +4290,7 @@ export async function registerRoutes(
       const { id } = req.params;
       const { status } = req.body;
 
-      if (!["pending", "won", "lost"].includes(status)) {
+      if (!["pending", "won", "lost", "anulado"].includes(status)) {
         return res.status(400).json({ error: "Status inválido" });
       }
 
@@ -4337,6 +4337,32 @@ export async function registerRoutes(
             amount: -creditedAmount,
             balanceAfter: newBalance,
             description: `Estorno de ganho — aposta marcada como ${status === "lost" ? "perdida" : "pendente"}`,
+            referenceId: id,
+          });
+        }
+      }
+      // Anular bilhete: devolver o valor apostado ao usuário
+      if (status === "anulado" && existing?.status !== "anulado" && existing?.userId) {
+        const user = await storage.getUserByCpf(existing.userId);
+        if (user) {
+          // Se estava como "won", primeiro reverter o crédito do ganho
+          let currentBalance = user.balance;
+          if (existing.status === "won") {
+            const winTx = await storage.getWinTransactionForBet(id);
+            const creditedAmount = winTx
+              ? winTx.amount
+              : Math.max(0, Math.round(((existing as any).potentialWin - ((existing as any).bonusUsed ?? 0)) * 100) / 100);
+            currentBalance = Math.max(0, Math.round((currentBalance - creditedAmount) * 100) / 100);
+          }
+          // Devolver o valor apostado
+          const refunded = Math.round((currentBalance + existing.stake) * 100) / 100;
+          await storage.updateUserBalance(existing.userId, refunded);
+          await storage.createTransaction({
+            userId: existing.userId,
+            type: "adjustment",
+            amount: existing.stake,
+            balanceAfter: refunded,
+            description: `Bilhete anulado — devolução de R$${existing.stake.toFixed(2)}`,
             referenceId: id,
           });
         }

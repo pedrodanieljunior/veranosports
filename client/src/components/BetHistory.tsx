@@ -107,12 +107,13 @@ function BetCard({ bet }: { bet: BetSlipType }) {
     won:     { label: "Ganhou",       icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-green-500/15 text-green-400 border-green-500/40" },
     lost:    { label: "Perdeu",       icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-500/15 text-red-400 border-red-500/40" },
     pending: { label: "Em Andamento", icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40" },
+    anulado: { label: "Anulado",      icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-gray-500/15 text-gray-400 border-gray-500/40" },
   };
   const st = statusConfig[(bet.status as keyof typeof statusConfig)] ?? statusConfig.pending;
 
   return (
     <div data-testid={`bet-history-item-${bet.id}`} className="rounded-xl border overflow-hidden"
-      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}>
+      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : bet.status === "anulado" ? "rgba(156,163,175,0.25)" : "rgba(255,255,255,0.1)" }}>
 
       {/* ── Preview (sempre visível) ── */}
       <button
@@ -122,9 +123,9 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       >
         <div className="flex items-center gap-3 min-w-0">
           {/* status dot */}
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${bet.status === "won" ? "bg-green-400" : bet.status === "lost" ? "bg-red-400" : "bg-yellow-400"}`} />
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${bet.status === "won" ? "bg-green-400" : bet.status === "lost" ? "bg-red-400" : bet.status === "anulado" ? "bg-gray-400" : "bg-yellow-400"}`} />
           <div className="min-w-0">
-            <p className={`font-mono text-sm font-bold leading-none ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
+            <p className={`font-mono text-sm font-bold leading-none ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : bet.status === "anulado" ? "text-gray-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
               #{bet.id.slice(0, 8).toUpperCase()}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-[160px]">
@@ -212,10 +213,10 @@ function BetCard({ bet }: { bet: BetSlipType }) {
             })()}
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-muted-foreground text-sm">
-                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : "Retorno potencial"}
+                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : bet.status === "anulado" ? "Valor devolvido" : "Retorno potencial"}
               </span>
               <div className="text-right">
-                <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : "text-yellow-400"}`}>
+                <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : bet.status === "anulado" ? "text-gray-400" : "text-yellow-400"}`}>
                   R$ {netReturn.toFixed(2)}
                 </span>
                 {bonusUsed > 0 && (

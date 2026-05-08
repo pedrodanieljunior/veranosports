@@ -121,7 +121,7 @@ const PCT = (v: number, t: number) => t > 0 ? `${((v / t) * 100).toFixed(1)}%` :
 
 const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-type BetStatus = "pending" | "won" | "lost";
+type BetStatus = "pending" | "won" | "lost" | "anulado";
 
 interface GameLimitEntry {
   gameId: string;
@@ -442,13 +442,19 @@ export default function Admin() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: BetStatus }) => {
-      await apiRequest("PATCH", `/api/admin/bets/${id}/status`, { status });
+      const res = await apiRequest("PATCH", `/api/admin/bets/${id}/status`, { status });
+      return { status, data: await res.json() };
     },
-    onSuccess: () => {
+    onSuccess: ({ status }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
       toast({
-        title: "Status atualizado",
-        description: "O status do bilhete foi atualizado.",
+        title: status === "anulado"
+          ? "Bilhete anulado"
+          : "Status atualizado",
+        description: status === "anulado"
+          ? "O valor apostado foi devolvido ao saldo do usuário."
+          : "O status do bilhete foi atualizado.",
       });
     },
     onError: () => {
@@ -660,6 +666,7 @@ export default function Admin() {
     pending: bets.filter(b => b.status === "pending").length,
     won: bets.filter(b => b.status === "won").length,
     lost: bets.filter(b => b.status === "lost").length,
+    anulado: bets.filter(b => b.status === "anulado").length,
     totalStake: bets.reduce((sum, b) => sum + b.stake, 0),
     totalPotential: bets.reduce((sum, b) => sum + b.potentialWin, 0),
   };
@@ -670,6 +677,8 @@ export default function Admin() {
         return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Ganhou</Badge>;
       case "lost":
         return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Perdeu</Badge>;
+      case "anulado":
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Anulado</Badge>;
       default:
         return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Em andamento</Badge>;
     }
@@ -826,6 +835,12 @@ export default function Admin() {
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-red-500">{stats.lost}</p>
               <p className="text-xs text-muted-foreground">Perdidos</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-gray-400">{stats.anulado}</p>
+              <p className="text-xs text-muted-foreground">Anulados</p>
             </CardContent>
           </Card>
           <Card>
@@ -1966,6 +1981,11 @@ export default function Admin() {
                                 <SelectItem value="lost">
                                   <span className="flex items-center gap-2">
                                     <XCircle className="w-3 h-3 text-red-500" /> Perdeu
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="anulado">
+                                  <span className="flex items-center gap-2">
+                                    <XCircle className="w-3 h-3 text-gray-400" /> Anular
                                   </span>
                                 </SelectItem>
                               </SelectContent>
@@ -3683,8 +3703,8 @@ function UsersTab() {
                             <div key={bet.id} className="p-2 border rounded text-xs">
                               <div className="flex justify-between">
                                 <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
-                                <Badge variant={bet.status === "won" ? "default" : bet.status === "lost" ? "destructive" : "secondary"} className="text-[10px]">
-                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : "Pendente"}
+                                <Badge variant={bet.status === "won" ? "default" : bet.status === "lost" ? "destructive" : "secondary"} className={`text-[10px] ${bet.status === "anulado" ? "bg-gray-500/20 text-gray-400 border-gray-500/30" : ""}`}>
+                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : "Pendente"}
                                 </Badge>
                               </div>
                               <div className="flex justify-between mt-1 flex-wrap gap-1">
