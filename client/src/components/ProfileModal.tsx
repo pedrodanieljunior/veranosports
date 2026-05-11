@@ -729,19 +729,6 @@ export function ProfileModal({ open, onClose }: Props) {
                   {
                     label: "Bronze",
                     icon: "🥉",
-                    glow: "rgba(132,204,22,0.45)",
-                    dot: "bg-lime-800 border-lime-700",
-                    dotReached: "bg-lime-400 border-lime-300",
-                    card: "bg-lime-950/40 border-lime-800/50",
-                    cardReached: "bg-lime-900/40 border-lime-500/70",
-                    name: "text-lime-600",
-                    nameReached: "text-lime-300",
-                    bonus: "text-lime-700",
-                    bonusReached: "text-lime-300",
-                  },
-                  {
-                    label: "Prata",
-                    icon: "🥈",
                     glow: "rgba(249,115,22,0.45)",
                     dot: "bg-orange-800 border-orange-700",
                     dotReached: "bg-orange-400 border-orange-300",
@@ -751,6 +738,19 @@ export function ProfileModal({ open, onClose }: Props) {
                     nameReached: "text-orange-300",
                     bonus: "text-orange-700",
                     bonusReached: "text-orange-300",
+                  },
+                  {
+                    label: "Prata",
+                    icon: "🥈",
+                    glow: "rgba(132,204,22,0.45)",
+                    dot: "bg-lime-800 border-lime-700",
+                    dotReached: "bg-lime-400 border-lime-300",
+                    card: "bg-lime-950/40 border-lime-800/50",
+                    cardReached: "bg-lime-900/40 border-lime-500/70",
+                    name: "text-lime-600",
+                    nameReached: "text-lime-300",
+                    bonus: "text-lime-700",
+                    bonusReached: "text-lime-300",
                   },
                   {
                     label: "Ouro",
@@ -794,7 +794,7 @@ export function ProfileModal({ open, onClose }: Props) {
                         className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                         style={{
                           width: `${pct}%`,
-                          background: "linear-gradient(to right, #84cc16, #f97316, #a855f7, #22d3ee)",
+                          background: "linear-gradient(to right, #f97316, #84cc16, #a855f7, #22d3ee)",
                         }}
                       />
                       {CLUB_FW_LEVELS.map(({ level, threshold }, idx) => {
