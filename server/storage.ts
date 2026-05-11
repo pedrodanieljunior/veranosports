@@ -81,7 +81,7 @@ export interface IStorage {
   markFirstDeposit(cpf: string): Promise<void>;
   getBetSlipsByUser(userId: string): Promise<BetSlip[]>;
   // Deposits
-  createDeposit(userId: string, amount: number, bonusAmount: number): Promise<Deposit>;
+  createDeposit(userId: string, amount: number, bonusAmount: number, mpData?: { mpPaymentId: string; pixCopyPaste: string; pixQrCode: string; pixExpiresAt: Date }): Promise<Deposit>;
   getDepositsByUser(userId: string): Promise<Deposit[]>;
   getAllDeposits(): Promise<Deposit[]>;
   updateDepositStatus(id: number, status: string): Promise<Deposit | undefined>;
@@ -680,16 +680,29 @@ export class DatabaseStorage implements IStorage {
       bonusAmount: row.bonusAmount,
       status: row.status,
       pixReceipt: row.pixReceipt ?? null,
+      mpPaymentId: row.mpPaymentId ?? null,
+      pixCopyPaste: row.pixCopyPaste ?? null,
+      pixQrCode: row.pixQrCode ?? null,
+      pixExpiresAt: row.pixExpiresAt ? row.pixExpiresAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
     };
   }
 
-  async createDeposit(userId: string, amount: number, bonusAmount: number): Promise<Deposit> {
+  async createDeposit(userId: string, amount: number, bonusAmount: number, mpData?: {
+    mpPaymentId: string;
+    pixCopyPaste: string;
+    pixQrCode: string;
+    pixExpiresAt: Date;
+  }): Promise<Deposit> {
     const [row] = await db.insert(depositsTable).values({
       userId,
       amount,
       bonusAmount,
       status: "pending",
+      mpPaymentId: mpData?.mpPaymentId ?? null,
+      pixCopyPaste: mpData?.pixCopyPaste ?? null,
+      pixQrCode: mpData?.pixQrCode ?? null,
+      pixExpiresAt: mpData?.pixExpiresAt ?? null,
     }).returning();
     return this.mapDeposit(row);
   }

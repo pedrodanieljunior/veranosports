@@ -1733,6 +1733,36 @@ export async function registerRoutes(
   });
 
   // ─── User Deposits ─────────────────────────────────────────────────────────
+  // ── Helper: confirm a deposit and credit user balance ───────────────────────
+  async function confirmDeposit(depositId: number): Promise<boolean> {
+    const deposit = (await storage.getAllDeposits()).find(d => d.id === depositId);
+    if (!deposit || deposit.status === "confirmed") return false;
+    const user = await storage.getUserByCpf(deposit.userId);
+    if (!user) return false;
+    await storage.updateDepositStatus(depositId, "confirmed");
+    const newBalance = Math.round((user.balance + deposit.amount) * 100) / 100;
+    await storage.updateUserBalance(deposit.userId, newBalance);
+    if (deposit.bonusAmount > 0) {
+      const newBonus = Math.round((user.bonusBalance + deposit.bonusAmount) * 100) / 100;
+      await storage.updateUserBonusBalance(deposit.userId, newBonus);
+    }
+    if (!user.firstDepositDone && deposit.bonusAmount > 0) {
+      await storage.markFirstDeposit(deposit.userId);
+    }
+    const description = deposit.bonusAmount > 0
+      ? `Depósito PIX confirmado (+R$${deposit.bonusAmount.toFixed(2)} bônus)`
+      : `Depósito PIX confirmado`;
+    await storage.createTransaction({
+      userId: deposit.userId,
+      type: "deposit",
+      amount: Math.round((deposit.amount + deposit.bonusAmount) * 100) / 100,
+      balanceAfter: newBalance,
+      description,
+      referenceId: String(depositId),
+    });
+    return true;
+  }
+
   app.post("/api/deposits", requireAuth, async (req, res) => {
     try {
       const { amount } = req.body as { amount: number };
@@ -1742,10 +1772,85 @@ export async function registerRoutes(
       const user = await storage.getUserByCpf(userId);
       if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
       const bonusAmount = user.firstDepositDone ? 0 : 10;
-      const deposit = await storage.createDeposit(userId, amount, bonusAmount);
+
+      // ── Mercado Pago PIX ─────────────────────────────────────────────────────
+      const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+      let mpData: { mpPaymentId: string; pixCopyPaste: string; pixQrCode: string; pixExpiresAt: Date } | undefined;
+
+      if (mpToken) {
+        try {
+          const idempotencyKey = `fw-deposit-${userId}-${Date.now()}`;
+          const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${mpToken}`,
+              "Content-Type": "application/json",
+              "X-Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+              transaction_amount: amount,
+              description: "Depósito FW Sports",
+              payment_method_id: "pix",
+              payer: { email: `${userId.replace(/\D/g, "")}@deposito.fwsports.com` },
+            }),
+          });
+          if (mpRes.ok) {
+            const mpJson = await mpRes.json();
+            const txData = mpJson?.point_of_interaction?.transaction_data;
+            if (txData?.qr_code) {
+              const expiresAt = mpJson.date_of_expiration
+                ? new Date(mpJson.date_of_expiration)
+                : new Date(Date.now() + 30 * 60 * 1000);
+              mpData = {
+                mpPaymentId: String(mpJson.id),
+                pixCopyPaste: txData.qr_code,
+                pixQrCode: txData.qr_code_base64 ?? "",
+                pixExpiresAt: expiresAt,
+              };
+            }
+          } else {
+            const errBody = await mpRes.text();
+            console.error("[MP] Erro ao criar pagamento:", mpRes.status, errBody);
+          }
+        } catch (mpErr) {
+          console.error("[MP] Exceção ao criar pagamento PIX:", mpErr);
+        }
+      }
+
+      const deposit = await storage.createDeposit(userId, amount, bonusAmount, mpData);
       res.json(deposit);
-    } catch {
+    } catch (e) {
+      console.error("[deposits] Erro:", e);
       res.status(500).json({ message: "Erro ao criar depósito" });
+    }
+  });
+
+  // ── Mercado Pago Webhook ────────────────────────────────────────────────────
+  app.post("/api/webhooks/mercadopago", async (req, res) => {
+    try {
+      res.status(200).send("OK"); // always acknowledge immediately
+      const { type, data } = req.body as { type?: string; data?: { id?: string } };
+      if (type !== "payment" || !data?.id) return;
+      const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+      if (!mpToken) return;
+
+      // Fetch payment status from MP
+      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+        headers: { "Authorization": `Bearer ${mpToken}` },
+      });
+      if (!mpRes.ok) return;
+      const mpPayment = await mpRes.json();
+      if (mpPayment.status !== "approved") return;
+
+      // Find matching deposit
+      const allDeposits = await storage.getAllDeposits();
+      const deposit = allDeposits.find(d => d.mpPaymentId === String(mpPayment.id));
+      if (!deposit) return;
+
+      await confirmDeposit(deposit.id);
+      console.log(`[MP Webhook] Depósito #${deposit.id} confirmado automaticamente (pagamento ${mpPayment.id})`);
+    } catch (err) {
+      console.error("[MP Webhook] Erro:", err);
     }
   });
 
@@ -2008,34 +2113,9 @@ export async function registerRoutes(
   app.patch("/api/admin/deposits/:id/confirm", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const deposit = (await storage.getAllDeposits()).find(d => d.id === id);
-      if (!deposit) return res.status(404).json({ message: "Depósito não encontrado" });
-      if (deposit.status === "confirmed") return res.status(400).json({ message: "Depósito já confirmado" });
-      const user = await storage.getUserByCpf(deposit.userId);
-      if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-      // Mark as confirmed FIRST to prevent double-credit on retry
-      const updated = await storage.updateDepositStatus(id, "confirmed");
-      const newBalance = Math.round((user.balance + deposit.amount) * 100) / 100;
-      const totalCredit = Math.round((deposit.amount + deposit.bonusAmount) * 100) / 100;
-      await storage.updateUserBalance(deposit.userId, newBalance);
-      if (deposit.bonusAmount > 0) {
-        const newBonusBalance = Math.round((user.bonusBalance + deposit.bonusAmount) * 100) / 100;
-        await storage.updateUserBonusBalance(deposit.userId, newBonusBalance);
-      }
-      if (!user.firstDepositDone && deposit.bonusAmount > 0) {
-        await storage.markFirstDeposit(deposit.userId);
-      }
-      const description = deposit.bonusAmount > 0
-        ? `Depósito PIX confirmado (+R$${deposit.bonusAmount.toFixed(2)} bônus)`
-        : `Depósito PIX confirmado`;
-      await storage.createTransaction({
-        userId: deposit.userId,
-        type: "deposit",
-        amount: totalCredit,
-        balanceAfter: newBalance,
-        description,
-        referenceId: String(id),
-      });
+      const ok = await confirmDeposit(id);
+      if (!ok) return res.status(400).json({ message: "Depósito não encontrado ou já confirmado" });
+      const updated = (await storage.getAllDeposits()).find(d => d.id === id);
       res.json(updated);
     } catch {
       res.status(500).json({ message: "Erro ao confirmar depósito" });

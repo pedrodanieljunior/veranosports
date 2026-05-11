@@ -284,6 +284,10 @@ export const depositsTable = pgTable("deposits", {
   bonusAmount: real("bonus_amount").notNull().default(0),
   status: text("status").notNull().default("pending"),
   pixReceipt: text("pix_receipt"),
+  mpPaymentId: text("mp_payment_id"),
+  pixCopyPaste: text("pix_copy_paste"),
+  pixQrCode: text("pix_qr_code"),
+  pixExpiresAt: timestamp("pix_expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -294,6 +298,10 @@ export const depositSchema = z.object({
   bonusAmount: z.number(),
   status: z.string(),
   pixReceipt: z.string().nullable().optional(),
+  mpPaymentId: z.string().nullable().optional(),
+  pixCopyPaste: z.string().nullable().optional(),
+  pixQrCode: z.string().nullable().optional(),
+  pixExpiresAt: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 

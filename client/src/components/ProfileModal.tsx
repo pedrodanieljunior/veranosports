@@ -98,10 +98,14 @@ function DepositView({ onBack }: { onBack: () => void }) {
   const isFirstDeposit = !user?.firstDepositDone;
   const bonus = isFirstDeposit && parsedAmount >= 10 ? 10 : 0;
 
-  const pixCode = step === "pix" && pendingDeposit ? buildPixCode(pendingDeposit.amount) : "";
+  // Use MP dynamic code if available, fallback to static PIX payload
+  const pixCode = step === "pix" && pendingDeposit
+    ? (pendingDeposit.pixCopyPaste ?? buildPixCode(pendingDeposit.amount))
+    : "";
+  const hasMp = !!(step === "pix" && pendingDeposit?.pixCopyPaste);
 
   const copyPix = () => {
-    navigator.clipboard.writeText(pixCode || PIX_KEY);
+    navigator.clipboard.writeText(pixCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -122,7 +126,9 @@ function DepositView({ onBack }: { onBack: () => void }) {
           <ChevronLeft className="w-4 h-4" /> Voltar
         </button>
         <div className="bg-zinc-800 rounded-xl p-4 space-y-3 border border-zinc-700">
-          <h3 className="font-bold text-center text-white">Faça o PIX</h3>
+          <h3 className="font-bold text-center text-white flex items-center justify-center gap-2">
+            <SiPix className="w-4 h-4 text-[#32BCAD]" /> Faça o PIX
+          </h3>
           <div className="space-y-1">
             <p className="text-xs text-zinc-400">Valor a pagar</p>
             <p className="text-2xl font-bold text-yellow-400">R$ {pendingDeposit.amount.toFixed(2).replace(".", ",")}</p>
@@ -130,9 +136,22 @@ function DepositView({ onBack }: { onBack: () => void }) {
               <p className="text-sm text-green-400 font-semibold">+ R$ {pendingDeposit.bonusAmount.toFixed(2).replace(".", ",")} de bônus (1º depósito)</p>
             )}
           </div>
+
+          {/* QR Code image from Mercado Pago */}
+          {hasMp && pendingDeposit.pixQrCode && (
+            <div className="flex flex-col items-center gap-2">
+              <img
+                src={`data:image/png;base64,${pendingDeposit.pixQrCode}`}
+                alt="QR Code PIX"
+                className="w-48 h-48 rounded-lg border border-zinc-600 bg-white p-1"
+              />
+              <p className="text-xs text-zinc-500">Aponte a câmera do seu banco para o QR Code</p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <p className="text-xs text-zinc-400 font-medium">PIX Copia e Cola</p>
-            <div className="bg-zinc-900 border border-zinc-600 rounded-lg p-3 font-mono text-[11px] text-zinc-300 break-all leading-relaxed select-all">
+            <p className="text-xs text-zinc-400 font-medium">ou use o PIX Copia e Cola</p>
+            <div className="bg-zinc-900 border border-zinc-600 rounded-lg p-3 font-mono text-[10px] text-zinc-300 break-all leading-relaxed select-all max-h-20 overflow-y-auto">
               {pixCode}
             </div>
             <Button
@@ -143,20 +162,31 @@ function DepositView({ onBack }: { onBack: () => void }) {
               <SiPix className="w-4 h-4 mr-2" />
               {copied ? "✓ Código copiado!" : "Copiar código PIX"}
             </Button>
-            <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1">
-              <span>Chave: {PIX_KEY}</span>
-              <span>Beneficiário: {PIX_NAME}</span>
-            </div>
+            {pendingDeposit.pixExpiresAt && (
+              <p className="text-[11px] text-orange-400 text-center">
+                ⏱ Expira em: {new Date(pendingDeposit.pixExpiresAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
           </div>
         </div>
-        <Button
-          className="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold"
-          onClick={sendWhatsApp}
-        >
-          <SiWhatsapp className="w-5 h-5 mr-2" />
-          Enviar comprovante via WhatsApp
-        </Button>
-        <p className="text-xs text-zinc-400 text-center">Após enviar o comprovante, seu saldo será atualizado em até 10 minutos.</p>
+
+        {hasMp ? (
+          <div className="bg-green-900/30 border border-green-700/50 rounded-xl p-3 text-center">
+            <p className="text-sm text-green-300 font-semibold">✅ Confirmação automática</p>
+            <p className="text-xs text-green-400 mt-0.5">Seu saldo será creditado automaticamente após o pagamento ser aprovado.</p>
+          </div>
+        ) : (
+          <>
+            <Button
+              className="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold"
+              onClick={sendWhatsApp}
+            >
+              <SiWhatsapp className="w-5 h-5 mr-2" />
+              Enviar comprovante via WhatsApp
+            </Button>
+            <p className="text-xs text-zinc-400 text-center">Após enviar o comprovante, seu saldo será atualizado em até 10 minutos.</p>
+          </>
+        )}
       </div>
     );
   }
