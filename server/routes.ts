@@ -1854,6 +1854,38 @@ export async function registerRoutes(
     }
   });
 
+  // ─── MP Payment Polling (fallback para quando webhook não chega) ──────────────
+  const pollMpPayments = async () => {
+    const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    if (!mpToken) return;
+    try {
+      const allDeposits = await storage.getAllDeposits();
+      const pending = allDeposits.filter(d => d.status === "pending" && d.mpPaymentId);
+      for (const deposit of pending) {
+        try {
+          const r = await fetch(`https://api.mercadopago.com/v1/payments/${deposit.mpPaymentId}`, {
+            headers: { "Authorization": `Bearer ${mpToken}` },
+          });
+          if (!r.ok) continue;
+          const payment = await r.json();
+          if (payment.status === "approved") {
+            await confirmDeposit(deposit.id);
+            console.log(`[MP Poll] Depósito #${deposit.id} confirmado automaticamente (pagamento ${deposit.mpPaymentId})`);
+          } else if (payment.status === "cancelled" || payment.status === "rejected") {
+            await storage.updateDepositStatus(deposit.id, "rejected");
+            console.log(`[MP Poll] Depósito #${deposit.id} rejeitado/cancelado pelo MP`);
+          }
+        } catch { /* silently skip individual failures */ }
+      }
+    } catch (err) {
+      console.error("[MP Poll] Erro:", err);
+    }
+  };
+  // Poll every 30 seconds
+  setInterval(pollMpPayments, 30_000);
+  // Also run once on startup after a short delay
+  setTimeout(pollMpPayments, 5_000);
+
   app.get("/api/deposits/mine", requireAuth, async (req, res) => {
     const deposits = await storage.getDepositsByUser(req.session.userId!);
     res.json(deposits);
