@@ -3585,8 +3585,34 @@ function UsersTab() {
     onError: () => toast({ title: "Erro ao deletar usuário", variant: "destructive" }),
   });
 
+  const totalUsersBalance = users.reduce((s, u) => s + u.balance, 0);
+
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{users.length}</p>
+              <p className="text-xs text-muted-foreground">Usuários cadastrados</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-400">R$ {totalUsersBalance.toFixed(2).replace(".", ",")}</p>
+              <p className="text-xs text-muted-foreground">Saldo ativo dos usuários</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* User list */}
           <Card className="md:col-span-1">
