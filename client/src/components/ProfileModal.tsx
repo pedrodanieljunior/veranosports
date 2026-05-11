@@ -729,6 +729,7 @@ export function ProfileModal({ open, onClose }: Props) {
                   {
                     label: "Bronze",
                     icon: "🥉",
+                    glow: "rgba(217,119,6,0.4)",
                     dot: "bg-amber-600 border-amber-500",
                     dotReached: "bg-amber-500 border-amber-400",
                     card: "bg-amber-900/20 border-amber-700/50",
@@ -741,6 +742,7 @@ export function ProfileModal({ open, onClose }: Props) {
                   {
                     label: "Prata",
                     icon: "🥈",
+                    glow: "rgba(148,163,184,0.4)",
                     dot: "bg-zinc-600 border-zinc-500",
                     dotReached: "bg-slate-300 border-slate-200",
                     card: "bg-zinc-700/30 border-zinc-600/50",
@@ -753,6 +755,7 @@ export function ProfileModal({ open, onClose }: Props) {
                   {
                     label: "Ouro",
                     icon: "🥇",
+                    glow: "rgba(234,179,8,0.4)",
                     dot: "bg-zinc-600 border-zinc-500",
                     dotReached: "bg-yellow-400 border-yellow-300",
                     card: "bg-zinc-700/30 border-zinc-600/50",
@@ -765,6 +768,7 @@ export function ProfileModal({ open, onClose }: Props) {
                   {
                     label: "Diamante",
                     icon: "💎",
+                    glow: "rgba(34,211,238,0.4)",
                     dot: "bg-zinc-600 border-zinc-500",
                     dotReached: "bg-cyan-400 border-cyan-300",
                     card: "bg-zinc-700/30 border-zinc-600/50",
@@ -813,26 +817,56 @@ export function ProfileModal({ open, onClose }: Props) {
                     </div>
 
                     {/* níveis */}
-                    <div className="grid grid-cols-4 gap-1 mb-3">
-                      {CLUB_FW_LEVELS.map(({ level, threshold, bonus }, idx) => {
-                        const reached = weeklyStake >= threshold;
-                        const t = TIERS[idx];
-                        return (
-                          <div key={level} className={`rounded-lg p-1.5 text-center border transition-colors ${reached ? t.cardReached : t.card}`}>
-                            <p className="text-sm leading-none mb-0.5">{t.icon}</p>
-                            <p className={`text-[9px] font-bold ${reached ? t.nameReached : t.name}`}>
-                              {t.label}
-                            </p>
-                            <p className={`text-[9px] ${reached ? "text-zinc-300" : "text-zinc-600"}`}>
-                              R${threshold >= 1000 ? "1k" : threshold}
-                            </p>
-                            <p className={`text-[10px] font-bold mt-0.5 ${reached ? t.bonusReached : t.bonus}`}>
-                              +R${bonus}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {(() => {
+                      // Índice do nível mais alto atingido (-1 se nenhum)
+                      const currentIdx = CLUB_FW_LEVELS.reduce((acc, { threshold }, idx) =>
+                        weeklyStake >= threshold ? idx : acc, -1);
+                      return (
+                        <div className="grid grid-cols-4 gap-1 mb-3">
+                          {CLUB_FW_LEVELS.map(({ level, threshold, bonus }, idx) => {
+                            const t = TIERS[idx];
+                            const isPast    = idx < currentIdx;
+                            const isCurrent = idx === currentIdx;
+                            const isLocked  = idx > currentIdx;
+                            return (
+                              <div
+                                key={level}
+                                className={`rounded-lg p-1.5 text-center border transition-colors relative
+                                  ${isCurrent ? `${t.cardReached} ring-1 ring-offset-0` : ""}
+                                  ${isPast    ? "bg-zinc-800/60 border-zinc-700/40 opacity-50" : ""}
+                                  ${isLocked  ? t.card : ""}
+                                `}
+                                style={isCurrent ? { boxShadow: `0 0 8px 0 ${t.glow}` } : undefined}
+                              >
+                                {isPast && (
+                                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-zinc-900/60">
+                                    <span className="text-green-400 font-bold text-xs">✓</span>
+                                  </div>
+                                )}
+                                <p className={`text-sm leading-none mb-0.5 ${isPast ? "grayscale opacity-40" : ""}`}>{t.icon}</p>
+                                <p className={`text-[9px] font-bold
+                                  ${isCurrent ? t.nameReached : ""}
+                                  ${isPast    ? "text-zinc-500" : ""}
+                                  ${isLocked  ? t.name : ""}
+                                `}>
+                                  {t.label}
+                                </p>
+                                <p className={`text-[9px] ${isCurrent ? "text-zinc-300" : "text-zinc-600"}`}>
+                                  R${threshold >= 1000 ? "1k" : threshold}
+                                </p>
+                                <p className={`text-[10px] font-bold mt-0.5
+                                  ${isCurrent ? t.bonusReached : ""}
+                                  ${isPast    ? "text-zinc-600 line-through" : ""}
+                                  ${isLocked  ? t.bonus : ""}
+                                `}>
+                                  +R${bonus}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
 
                     <div className="space-y-1 text-center">
                       <p className="text-xs text-zinc-400">
