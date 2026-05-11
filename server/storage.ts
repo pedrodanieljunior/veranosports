@@ -885,22 +885,39 @@ export class DatabaseStorage implements IStorage {
 
   // ─── Clube FW ──────────────────────────────────────────────────────────────
 
-  private getBrasiliaWeekStart(): string {
-    const now = new Date();
-    const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
-    const dayOfWeek = brasiliaTime.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Manaus = UTC-4 (sem horário de verão)
+  private getManausWeekStart(now = new Date()): string {
+    const manausTime = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+    const dayOfWeek = manausTime.getUTCDay(); // 0=Sun, 1=Mon
     const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const monday = new Date(brasiliaTime.getTime() - daysToMonday * 24 * 60 * 60 * 1000);
+    const monday = new Date(manausTime.getTime() - daysToMonday * 24 * 60 * 60 * 1000);
     const year = monday.getUTCFullYear();
     const month = String(monday.getUTCMonth() + 1).padStart(2, "0");
     const day = String(monday.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
 
+  private getPreviousManausWeekStart(): string {
+    const currentMonday = new Date(`${this.getManausWeekStart()}T04:00:00.000Z`);
+    const prevMondayUTC = new Date(currentMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const prevMondayManaus = new Date(prevMondayUTC.getTime() - 4 * 60 * 60 * 1000);
+    const year = prevMondayManaus.getUTCFullYear();
+    const month = String(prevMondayManaus.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(prevMondayManaus.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // Segunda-feira a partir de 08:00 horário de Manaus
+  private isManausPayoutTime(): boolean {
+    const now = new Date();
+    const manausTime = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+    return manausTime.getUTCDay() === 1 && manausTime.getUTCHours() >= 8;
+  }
+
   async getWeeklyStake(userId: string, weekStart: string): Promise<number> {
-    // weekStart = "YYYY-MM-DD" (Monday in Brasília, UTC-3)
-    // Monday 00:00 Brasília = Monday 03:00 UTC
-    const startUTC = new Date(`${weekStart}T03:00:00.000Z`);
+    // weekStart = "YYYY-MM-DD" (Segunda-feira em Manaus, UTC-4)
+    // Segunda 00:00 Manaus = Segunda 04:00 UTC
+    const startUTC = new Date(`${weekStart}T04:00:00.000Z`);
     const endUTC = new Date(startUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
     const [row] = await db
       .select({ total: sql<number>`COALESCE(SUM(${betSlipsTable.stake}), 0)` })
@@ -934,10 +951,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkAndAwardClubFw(userId: string): Promise<{ newLevels: number[]; totalBonus: number }> {
-    const weekStart = this.getBrasiliaWeekStart();
+    // Crédito apenas na segunda-feira a partir das 08h horário de Manaus
+    if (!this.isManausPayoutTime()) return { newLevels: [], totalBonus: 0 };
+
+    // Verificar apostas da SEMANA ANTERIOR
+    const prevWeekStart = this.getPreviousManausWeekStart();
     const [weeklyStake, claimedLevels] = await Promise.all([
-      this.getWeeklyStake(userId, weekStart),
-      this.getClubFwClaimedLevels(userId, weekStart),
+      this.getWeeklyStake(userId, prevWeekStart),
+      this.getClubFwClaimedLevels(userId, prevWeekStart),
     ]);
 
     const toAward = CLUB_FW_LEVELS.filter(
@@ -954,13 +975,13 @@ export class DatabaseStorage implements IStorage {
     await this.updateUserBonusBalance(userId, newBonusBalance);
 
     for (const { level, bonus } of toAward) {
-      await this.createClubFwClaim(userId, weekStart, level, bonus);
+      await this.createClubFwClaim(userId, prevWeekStart, level, bonus);
       await this.createTransaction({
         userId,
         type: "bonus",
         amount: bonus,
         balanceAfter: user.balance,
-        description: `Clube FW — Nível ${level} desbloqueado! +R$${bonus.toFixed(2)} bônus`,
+        description: `Clube FW — Nível ${level} (semana ${prevWeekStart}) +R$${bonus.toFixed(2)} bônus`,
       });
     }
 
@@ -968,16 +989,20 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
-
-export function getBrasiliaWeekStart(): string {
+export function getManausWeekStart(): string {
   const now = new Date();
-  const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
-  const dayOfWeek = brasiliaTime.getUTCDay();
+  const manausTime = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+  const dayOfWeek = manausTime.getUTCDay();
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const monday = new Date(brasiliaTime.getTime() - daysToMonday * 24 * 60 * 60 * 1000);
+  const monday = new Date(manausTime.getTime() - daysToMonday * 24 * 60 * 60 * 1000);
   const year = monday.getUTCFullYear();
   const month = String(monday.getUTCMonth() + 1).padStart(2, "0");
   const day = String(monday.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+export function getBrasiliaWeekStart(): string {
+  return getManausWeekStart();
+}
+
+export const storage = new DatabaseStorage();

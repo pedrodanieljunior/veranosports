@@ -1697,12 +1697,16 @@ export async function registerRoutes(
   app.get("/api/club-fw/progress", async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: "Não autenticado" });
     try {
+      // Tenta creditar bônus da semana anterior se for segunda >= 08h Manaus
+      const awarded = await storage.checkAndAwardClubFw(req.session.userId);
+
+      // Progresso da SEMANA ATUAL (o que está acumulando para a próxima premiação)
       const weekStart = getBrasiliaWeekStart();
       const [weeklyStake, claimedLevels] = await Promise.all([
         storage.getWeeklyStake(req.session.userId, weekStart),
         storage.getClubFwClaimedLevels(req.session.userId, weekStart),
       ]);
-      res.json({ weekStart, weeklyStake, claimedLevels });
+      res.json({ weekStart, weeklyStake, claimedLevels, newLevels: awarded.newLevels, newBonus: awarded.totalBonus });
     } catch (error) {
       console.error("Clube FW progress error:", error);
       res.status(500).json({ error: "Erro interno" });

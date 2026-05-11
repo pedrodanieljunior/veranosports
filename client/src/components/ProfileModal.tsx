@@ -640,13 +640,17 @@ function RulesView({ onBack }: { onBack: () => void }) {
 }
 
 export function ProfileModal({ open, onClose }: Props) {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [view, setView] = useState<View>("menu");
+
+  const { toast } = useToast();
 
   const { data: clubFwProgress } = useQuery<{
     weekStart: string;
     weeklyStake: number;
     claimedLevels: number[];
+    newLevels: number[];
+    newBonus: number;
   }>({
     queryKey: ["/api/club-fw/progress"],
     queryFn: async () => {
@@ -657,6 +661,16 @@ export function ProfileModal({ open, onClose }: Props) {
     enabled: !!user && open,
     refetchInterval: false,
   });
+
+  useEffect(() => {
+    if (clubFwProgress && clubFwProgress.newBonus > 0) {
+      toast({
+        title: "🏆 Clube FW — Bônus creditado!",
+        description: `+R$ ${clubFwProgress.newBonus.toFixed(2).replace(".", ",")} adicionados ao seu saldo bônus.`,
+      });
+      refreshUser();
+    }
+  }, [clubFwProgress?.newBonus]);
 
   if (!user) return null;
 
@@ -767,13 +781,18 @@ export function ProfileModal({ open, onClose }: Props) {
                       })}
                     </div>
 
-                    <p className="text-xs text-zinc-400 text-center">
-                      {allDone
-                        ? "🏆 Parabéns! Você atingiu todos os níveis esta semana!"
-                        : nextLevel
-                        ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ Nv.{nextLevel.level}</>
-                        : "Acompanhe seu progresso aqui"}
-                    </p>
+                    <div className="space-y-1 text-center">
+                      <p className="text-xs text-zinc-400">
+                        {allDone
+                          ? <>🏆 Meta atingida! Bônus creditado na segunda às 08h</>
+                          : nextLevel
+                          ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ Nv.{nextLevel.level}</>
+                          : "Acompanhe seu progresso aqui"}
+                      </p>
+                      <p className="text-[10px] text-zinc-500">
+                        🕗 Premiação toda segunda às 08h (horário de Manaus)
+                      </p>
+                    </div>
                   </div>
                 );
               })()}
