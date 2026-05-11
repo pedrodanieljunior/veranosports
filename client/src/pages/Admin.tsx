@@ -3528,6 +3528,14 @@ function UsersTab() {
   const [showPassword, setShowPassword] = useState(false);
   const [userSearch, setUserSearch] = useState("");
 
+  const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
+    queryKey: ["/api/admin/deposits"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/deposits");
+      return res.json();
+    },
+  });
+
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
@@ -3643,15 +3651,24 @@ function UsersTab() {
                     if (filtered.length === 0) return (
                       <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado para "{userSearch}".</p>
                     );
-                    return filtered.map(u => (
-                      <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setNewPassword(""); }}
-                        className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
-                        data-testid={`row-user-${u.cpf}`}>
-                        <p className="font-semibold text-sm">{u.name}</p>
-                        <p className="text-xs text-muted-foreground">{u.cpf}</p>
-                        <p className="text-xs text-green-600 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
-                      </button>
-                    ));
+                    return filtered.map(u => {
+                      const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
+                      const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
+                      return (
+                        <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setNewPassword(""); }}
+                          className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
+                          data-testid={`row-user-${u.cpf}`}>
+                          <p className="font-semibold text-sm">{u.name}</p>
+                          <p className="text-xs text-muted-foreground">{u.cpf}</p>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <p className="text-xs text-green-500 font-medium">Saldo: R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                            {userDeposits.length > 0 && (
+                              <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    });
                   })()}
                 </ScrollArea>
               )}
