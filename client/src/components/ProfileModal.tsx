@@ -807,10 +807,10 @@ export function ProfileModal({ open, onClose }: Props) {
                             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
                             style={{ left: `${pos}%` }}
                           >
-                            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center
-                              ${reached ? t.dotReached : t.dot}`}>
-                              {reached && <Star className="w-2 h-2 text-zinc-900" fill="currentColor" />}
-                            </div>
+                            {reached
+                            ? <span className="text-base leading-none drop-shadow-md">{t.icon}</span>
+                            : <div className={`w-3.5 h-3.5 rounded-full border-2 ${t.dot}`} />
+                          }
                           </div>
                         );
                       })}
