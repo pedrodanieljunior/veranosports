@@ -198,6 +198,7 @@ export default function Home() {
       setGameLimitRemaining(null);
       queryClient.invalidateQueries({ queryKey: ["/api/bets", user?.cpf ?? sessionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/club-fw/progress"] });
       if (user) {
         refreshUser();
       }
