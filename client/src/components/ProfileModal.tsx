@@ -909,6 +909,9 @@ export function ProfileModal({ open, onClose }: Props) {
                       <p className="text-[10px] text-zinc-500">
                         🕗 Premiação toda segunda às 08h (horário de Manaus)
                       </p>
+                      <p className="text-[10px] text-zinc-500">
+                        Bônus não acumulativo
+                      </p>
                     </div>
                   </div>
                 );
