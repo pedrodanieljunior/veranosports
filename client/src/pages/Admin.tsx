@@ -426,6 +426,7 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/club-fw/progress"] });
       toast({
         title: "Bilhete excluído",
         description: "O bilhete foi removido com sucesso.",
@@ -472,6 +473,7 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/club-fw/progress"] });
       toast({
         title: "Todos os bilhetes excluídos",
         description: "Todos os bilhetes foram removidos.",
