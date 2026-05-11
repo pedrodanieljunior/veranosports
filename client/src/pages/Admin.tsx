@@ -3813,6 +3813,7 @@ function DepositsTab() {
       const res = await apiRequest("GET", "/api/admin/deposits");
       return res.json();
     },
+    refetchInterval: 15_000,
   });
 
   const confirmDepositMutation = useMutation({

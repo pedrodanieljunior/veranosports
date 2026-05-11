@@ -1884,7 +1884,10 @@ export async function registerRoutes(
   // Poll every 30 seconds
   setInterval(pollMpPayments, 30_000);
   // Also run once on startup after a short delay
-  setTimeout(pollMpPayments, 5_000);
+  setTimeout(() => {
+    console.log("[MP Poll] Polling de pagamentos iniciado (intervalo: 30s)");
+    pollMpPayments();
+  }, 5_000);
 
   app.get("/api/deposits/mine", requireAuth, async (req, res) => {
     const deposits = await storage.getDepositsByUser(req.session.userId!);
