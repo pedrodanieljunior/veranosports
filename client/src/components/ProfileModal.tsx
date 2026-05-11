@@ -851,6 +851,9 @@ export function ProfileModal({ open, onClose }: Props) {
                                 `}>
                                   {t.label}
                                 </p>
+                                <p className={`text-[9px] ${isCurrent ? "text-zinc-300" : "text-zinc-600"}`}>
+                                  R${threshold >= 1000 ? "1k" : threshold}
+                                </p>
                                 <p className={`text-[10px] font-bold mt-0.5
                                   ${isCurrent ? t.bonusReached : ""}
                                   ${isPast    ? "text-zinc-600 line-through" : ""}
