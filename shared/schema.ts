@@ -394,6 +394,23 @@ export const insertDefesaSchema = z.object({
 
 export type InsertDefesa = z.infer<typeof insertDefesaSchema>;
 
+// ─── Clube FW – Weekly Reward Claims ─────────────────────────────────────────
+export const clubFwClaimsTable = pgTable("club_fw_claims", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  weekStart: text("week_start").notNull(),    // "YYYY-MM-DD" Monday in Brasília
+  level: integer("level").notNull(),           // 1 | 2 | 3 | 4
+  bonusAmount: real("bonus_amount").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const CLUB_FW_LEVELS = [
+  { level: 1, threshold: 100,  bonus: 10  },
+  { level: 2, threshold: 250,  bonus: 20  },
+  { level: 3, threshold: 600,  bonus: 50  },
+  { level: 4, threshold: 1000, bonus: 100 },
+] as const;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),

@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -106,6 +106,11 @@ export interface IStorage {
   upsertFixtureHalftimeStats(fixtureId: number, homeCorners: number, awayCorners: number): Promise<void>;
   getFixtureHalftimeStats(fixtureId: number): Promise<{ homeCorners: number; awayCorners: number } | null>;
   getFixtureHalftimeStatsBatch(fixtureIds: number[]): Promise<Map<number, { homeCorners: number; awayCorners: number }>>;
+  // Clube FW
+  getWeeklyStake(userId: string, weekStart: string): Promise<number>;
+  getClubFwClaimedLevels(userId: string, weekStart: string): Promise<number[]>;
+  createClubFwClaim(userId: string, weekStart: string, level: number, bonusAmount: number): Promise<void>;
+  checkAndAwardClubFw(userId: string): Promise<{ newLevels: number[]; totalBonus: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -877,6 +882,102 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(defensasTable).where(eq(defensasTable.id, id)).returning();
     return result.length > 0;
   }
+
+  // ─── Clube FW ──────────────────────────────────────────────────────────────
+
+  private getBrasiliaWeekStart(): string {
+    const now = new Date();
+    const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const dayOfWeek = brasiliaTime.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(brasiliaTime.getTime() - daysToMonday * 24 * 60 * 60 * 1000);
+    const year = monday.getUTCFullYear();
+    const month = String(monday.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(monday.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  async getWeeklyStake(userId: string, weekStart: string): Promise<number> {
+    // weekStart = "YYYY-MM-DD" (Monday in Brasília, UTC-3)
+    // Monday 00:00 Brasília = Monday 03:00 UTC
+    const startUTC = new Date(`${weekStart}T03:00:00.000Z`);
+    const endUTC = new Date(startUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const [row] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${betSlipsTable.stake}), 0)` })
+      .from(betSlipsTable)
+      .where(
+        and(
+          eq(betSlipsTable.userId, userId),
+          sql`${betSlipsTable.status} != 'anulado'`,
+          gte(betSlipsTable.createdAt, startUTC),
+          lte(betSlipsTable.createdAt, endUTC)
+        )
+      );
+    return Number(row?.total ?? 0);
+  }
+
+  async getClubFwClaimedLevels(userId: string, weekStart: string): Promise<number[]> {
+    const rows = await db
+      .select({ level: clubFwClaimsTable.level })
+      .from(clubFwClaimsTable)
+      .where(
+        and(
+          eq(clubFwClaimsTable.userId, userId),
+          eq(clubFwClaimsTable.weekStart, weekStart)
+        )
+      );
+    return rows.map(r => r.level);
+  }
+
+  async createClubFwClaim(userId: string, weekStart: string, level: number, bonusAmount: number): Promise<void> {
+    await db.insert(clubFwClaimsTable).values({ userId, weekStart, level, bonusAmount });
+  }
+
+  async checkAndAwardClubFw(userId: string): Promise<{ newLevels: number[]; totalBonus: number }> {
+    const weekStart = this.getBrasiliaWeekStart();
+    const [weeklyStake, claimedLevels] = await Promise.all([
+      this.getWeeklyStake(userId, weekStart),
+      this.getClubFwClaimedLevels(userId, weekStart),
+    ]);
+
+    const toAward = CLUB_FW_LEVELS.filter(
+      l => weeklyStake >= l.threshold && !claimedLevels.includes(l.level)
+    );
+
+    if (toAward.length === 0) return { newLevels: [], totalBonus: 0 };
+
+    const user = await this.getUserByCpf(userId);
+    if (!user) return { newLevels: [], totalBonus: 0 };
+
+    const totalBonus = toAward.reduce((s, l) => s + l.bonus, 0);
+    const newBonusBalance = Math.round((user.bonusBalance + totalBonus) * 100) / 100;
+    await this.updateUserBonusBalance(userId, newBonusBalance);
+
+    for (const { level, bonus } of toAward) {
+      await this.createClubFwClaim(userId, weekStart, level, bonus);
+      await this.createTransaction({
+        userId,
+        type: "bonus",
+        amount: bonus,
+        balanceAfter: user.balance,
+        description: `Clube FW — Nível ${level} desbloqueado! +R$${bonus.toFixed(2)} bônus`,
+      });
+    }
+
+    return { newLevels: toAward.map(l => l.level), totalBonus };
+  }
 }
 
 export const storage = new DatabaseStorage();
+
+export function getBrasiliaWeekStart(): string {
+  const now = new Date();
+  const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const dayOfWeek = brasiliaTime.getUTCDay();
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(brasiliaTime.getTime() - daysToMonday * 24 * 60 * 60 * 1000);
+  const year = monday.getUTCFullYear();
+  const month = String(monday.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(monday.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

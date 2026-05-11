@@ -7,9 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Deposit, UserWithdrawal, Transaction } from "@shared/schema";
+import { Deposit, UserWithdrawal, Transaction, CLUB_FW_LEVELS } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen, MessageCircle } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen, MessageCircle, Trophy, Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -643,6 +643,21 @@ export function ProfileModal({ open, onClose }: Props) {
   const { user, logout } = useAuth();
   const [view, setView] = useState<View>("menu");
 
+  const { data: clubFwProgress } = useQuery<{
+    weekStart: string;
+    weeklyStake: number;
+    claimedLevels: number[];
+  }>({
+    queryKey: ["/api/club-fw/progress"],
+    queryFn: async () => {
+      const res = await fetch("/api/club-fw/progress");
+      if (!res.ok) throw new Error("failed");
+      return res.json();
+    },
+    enabled: !!user && open,
+    refetchInterval: false,
+  });
+
   if (!user) return null;
 
   const menuItems = [
@@ -688,6 +703,81 @@ export function ProfileModal({ open, onClose }: Props) {
                   )}
                 </div>
               </div>
+              {/* Clube FW */}
+              {(() => {
+                const weeklyStake = clubFwProgress?.weeklyStake ?? 0;
+                const claimedLevels = clubFwProgress?.claimedLevels ?? [];
+                const MAX = 1000;
+                const pct = Math.min(100, (weeklyStake / MAX) * 100);
+                const nextLevel = CLUB_FW_LEVELS.find(l => weeklyStake < l.threshold);
+                const allDone = weeklyStake >= MAX;
+                return (
+                  <div className="bg-zinc-800 rounded-xl p-4 border border-yellow-500/30" data-testid="card-clube-fw">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-4 h-4 text-yellow-400" />
+                      <span className="font-bold text-sm text-yellow-400">Clube FW</span>
+                      <span className="ml-auto text-xs text-zinc-400">semana atual</span>
+                    </div>
+
+                    {/* barra de progresso */}
+                    <div className="relative h-2.5 bg-zinc-700 rounded-full mb-4">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                      {CLUB_FW_LEVELS.map(({ level, threshold }) => {
+                        const pos = (threshold / MAX) * 100;
+                        const reached = weeklyStake >= threshold;
+                        return (
+                          <div
+                            key={level}
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                            style={{ left: `${pos}%` }}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center
+                              ${reached ? "bg-yellow-400 border-yellow-400" : "bg-zinc-700 border-zinc-500"}`}>
+                              {reached && <Star className="w-2 h-2 text-zinc-900" fill="currentColor" />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* níveis */}
+                    <div className="grid grid-cols-4 gap-1 mb-3">
+                      {CLUB_FW_LEVELS.map(({ level, threshold, bonus }) => {
+                        const reached = weeklyStake >= threshold;
+                        const claimed = claimedLevels.includes(level);
+                        return (
+                          <div key={level} className={`rounded-lg p-1.5 text-center border ${
+                            claimed ? "bg-yellow-500/15 border-yellow-500/40" :
+                            reached ? "bg-yellow-500/10 border-yellow-500/30" :
+                            "bg-zinc-700/50 border-zinc-600/50"}`}>
+                            <p className={`text-[10px] font-bold ${reached ? "text-yellow-400" : "text-zinc-500"}`}>
+                              Nv.{level}
+                            </p>
+                            <p className={`text-[9px] ${reached ? "text-zinc-300" : "text-zinc-600"}`}>
+                              R${threshold >= 1000 ? "1k" : threshold}
+                            </p>
+                            <p className={`text-[10px] font-bold mt-0.5 ${claimed ? "text-green-400" : reached ? "text-yellow-300" : "text-zinc-500"}`}>
+                              {claimed ? "✓ R$" + bonus : "+R$" + bonus}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs text-zinc-400 text-center">
+                      {allDone
+                        ? "🏆 Parabéns! Você atingiu todos os níveis esta semana!"
+                        : nextLevel
+                        ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ Nv.{nextLevel.level}</>
+                        : "Acompanhe seu progresso aqui"}
+                    </p>
+                  </div>
+                );
+              })()}
+
               <div className="space-y-2">
                 {menuItems.map(item => (
                   <button

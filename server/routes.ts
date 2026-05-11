@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage, hashPassword, verifyPassword } from "./storage";
+import { storage, hashPassword, verifyPassword, getBrasiliaWeekStart } from "./storage";
 import { insertBetSlipSchema, insertUserSchema, insertDefesaSchema } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
 import { z } from "zod";
@@ -1693,6 +1693,22 @@ export async function registerRoutes(
     res.json(userPublic);
   });
 
+  // Clube FW: progresso semanal do usuário
+  app.get("/api/club-fw/progress", async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const weekStart = getBrasiliaWeekStart();
+      const [weeklyStake, claimedLevels] = await Promise.all([
+        storage.getWeeklyStake(req.session.userId, weekStart),
+        storage.getClubFwClaimedLevels(req.session.userId, weekStart),
+      ]);
+      res.json({ weekStart, weeklyStake, claimedLevels });
+    } catch (error) {
+      console.error("Clube FW progress error:", error);
+      res.status(500).json({ error: "Erro interno" });
+    }
+  });
+
   app.patch("/api/auth/referral-code", requireAuth, async (req, res) => {
     try {
       const { referralCode } = req.body as { referralCode: string };
@@ -3301,12 +3317,27 @@ export async function registerRoutes(
         color: { dark: '#000000', light: '#ffffff' }
       });
       
+      // Clube FW: verificar e premiar novos níveis semanais
+      let clubFwNewLevels: number[] = [];
+      let clubFwTotalBonus = 0;
+      if (sessionUserId) {
+        try {
+          const clubFwResult = await storage.checkAndAwardClubFw(sessionUserId);
+          clubFwNewLevels = clubFwResult.newLevels;
+          clubFwTotalBonus = clubFwResult.totalBonus;
+        } catch (e) {
+          console.error("Clube FW check error:", e);
+        }
+      }
+
       res.status(201).json({
         ...updatedBetSlip,
         pixCode: pixPayload,
         pixQrCode: qrCodeDataUrl,
         cappedAtMax: betSlip.potentialWin !== potentialWin && potentialWin === MAX_BET_PAYOUT,
         cappedByDaily,
+        clubFwNewLevels,
+        clubFwTotalBonus,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
