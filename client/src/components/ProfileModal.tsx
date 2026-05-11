@@ -720,13 +720,64 @@ export function ProfileModal({ open, onClose }: Props) {
               {/* Clube FW */}
               {(() => {
                 const weeklyStake = clubFwProgress?.weeklyStake ?? 0;
-                const claimedLevels = clubFwProgress?.claimedLevels ?? [];
                 const MAX = 1000;
                 const pct = Math.min(100, (weeklyStake / MAX) * 100);
                 const nextLevel = CLUB_FW_LEVELS.find(l => weeklyStake < l.threshold);
                 const allDone = weeklyStake >= MAX;
+
+                const TIERS = [
+                  {
+                    label: "Bronze",
+                    icon: "🥉",
+                    dot: "bg-amber-600 border-amber-500",
+                    dotReached: "bg-amber-500 border-amber-400",
+                    card: "bg-amber-900/20 border-amber-700/50",
+                    cardReached: "bg-amber-800/30 border-amber-500/60",
+                    name: "text-amber-500",
+                    nameReached: "text-amber-400",
+                    bonus: "text-amber-600",
+                    bonusReached: "text-amber-300",
+                  },
+                  {
+                    label: "Prata",
+                    icon: "🥈",
+                    dot: "bg-zinc-600 border-zinc-500",
+                    dotReached: "bg-slate-300 border-slate-200",
+                    card: "bg-zinc-700/30 border-zinc-600/50",
+                    cardReached: "bg-slate-700/30 border-slate-400/50",
+                    name: "text-zinc-500",
+                    nameReached: "text-slate-300",
+                    bonus: "text-zinc-600",
+                    bonusReached: "text-slate-300",
+                  },
+                  {
+                    label: "Ouro",
+                    icon: "🥇",
+                    dot: "bg-zinc-600 border-zinc-500",
+                    dotReached: "bg-yellow-400 border-yellow-300",
+                    card: "bg-zinc-700/30 border-zinc-600/50",
+                    cardReached: "bg-yellow-800/30 border-yellow-500/60",
+                    name: "text-zinc-500",
+                    nameReached: "text-yellow-400",
+                    bonus: "text-zinc-600",
+                    bonusReached: "text-yellow-300",
+                  },
+                  {
+                    label: "Diamante",
+                    icon: "💎",
+                    dot: "bg-zinc-600 border-zinc-500",
+                    dotReached: "bg-cyan-400 border-cyan-300",
+                    card: "bg-zinc-700/30 border-zinc-600/50",
+                    cardReached: "bg-cyan-900/30 border-cyan-500/60",
+                    name: "text-zinc-500",
+                    nameReached: "text-cyan-400",
+                    bonus: "text-zinc-600",
+                    bonusReached: "text-cyan-300",
+                  },
+                ];
+
                 return (
-                  <div className="bg-zinc-800 rounded-xl p-4 border border-yellow-500/30" data-testid="card-clube-fw">
+                  <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-600/40" data-testid="card-clube-fw">
                     <div className="flex items-center gap-2 mb-3">
                       <Trophy className="w-4 h-4 text-yellow-400" />
                       <span className="font-bold text-sm text-yellow-400">Clube FW</span>
@@ -736,12 +787,16 @@ export function ProfileModal({ open, onClose }: Props) {
                     {/* barra de progresso */}
                     <div className="relative h-2.5 bg-zinc-700 rounded-full mb-4">
                       <div
-                        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
+                        className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${pct}%`,
+                          background: "linear-gradient(to right, #d97706, #94a3b8, #eab308, #22d3ee)",
+                        }}
                       />
-                      {CLUB_FW_LEVELS.map(({ level, threshold }) => {
+                      {CLUB_FW_LEVELS.map(({ level, threshold }, idx) => {
                         const pos = (threshold / MAX) * 100;
                         const reached = weeklyStake >= threshold;
+                        const t = TIERS[idx];
                         return (
                           <div
                             key={level}
@@ -749,7 +804,7 @@ export function ProfileModal({ open, onClose }: Props) {
                             style={{ left: `${pos}%` }}
                           >
                             <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center
-                              ${reached ? "bg-yellow-400 border-yellow-400" : "bg-zinc-700 border-zinc-500"}`}>
+                              ${reached ? t.dotReached : t.dot}`}>
                               {reached && <Star className="w-2 h-2 text-zinc-900" fill="currentColor" />}
                             </div>
                           </div>
@@ -759,22 +814,20 @@ export function ProfileModal({ open, onClose }: Props) {
 
                     {/* níveis */}
                     <div className="grid grid-cols-4 gap-1 mb-3">
-                      {CLUB_FW_LEVELS.map(({ level, threshold, bonus }) => {
+                      {CLUB_FW_LEVELS.map(({ level, threshold, bonus }, idx) => {
                         const reached = weeklyStake >= threshold;
-                        const claimed = claimedLevels.includes(level);
+                        const t = TIERS[idx];
                         return (
-                          <div key={level} className={`rounded-lg p-1.5 text-center border ${
-                            claimed ? "bg-yellow-500/15 border-yellow-500/40" :
-                            reached ? "bg-yellow-500/10 border-yellow-500/30" :
-                            "bg-zinc-700/50 border-zinc-600/50"}`}>
-                            <p className={`text-[10px] font-bold ${reached ? "text-yellow-400" : "text-zinc-500"}`}>
-                              Nv.{level}
+                          <div key={level} className={`rounded-lg p-1.5 text-center border transition-colors ${reached ? t.cardReached : t.card}`}>
+                            <p className="text-sm leading-none mb-0.5">{t.icon}</p>
+                            <p className={`text-[9px] font-bold ${reached ? t.nameReached : t.name}`}>
+                              {t.label}
                             </p>
                             <p className={`text-[9px] ${reached ? "text-zinc-300" : "text-zinc-600"}`}>
                               R${threshold >= 1000 ? "1k" : threshold}
                             </p>
-                            <p className={`text-[10px] font-bold mt-0.5 ${claimed ? "text-green-400" : reached ? "text-yellow-300" : "text-zinc-500"}`}>
-                              {claimed ? "✓ R$" + bonus : "+R$" + bonus}
+                            <p className={`text-[10px] font-bold mt-0.5 ${reached ? t.bonusReached : t.bonus}`}>
+                              +R${bonus}
                             </p>
                           </div>
                         );
@@ -784,9 +837,9 @@ export function ProfileModal({ open, onClose }: Props) {
                     <div className="space-y-1 text-center">
                       <p className="text-xs text-zinc-400">
                         {allDone
-                          ? <>🏆 Meta atingida! Bônus creditado na segunda às 08h</>
+                          ? <>💎 Meta atingida! Bônus creditado na segunda às 08h</>
                           : nextLevel
-                          ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ Nv.{nextLevel.level}</>
+                          ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ {TIERS[CLUB_FW_LEVELS.findIndex(l => l.level === nextLevel.level)].label}</>
                           : "Acompanhe seu progresso aqui"}
                       </p>
                       <p className="text-[10px] text-zinc-500">
