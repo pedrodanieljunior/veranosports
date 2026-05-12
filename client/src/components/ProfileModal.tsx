@@ -819,7 +819,7 @@ export function ProfileModal({ open, onClose }: Props) {
                     </div>
 
                     {/* barra de progresso */}
-                    <div className="relative h-2.5 bg-zinc-700 rounded-full mb-4">
+                    <div className="relative h-2.5 bg-zinc-700 rounded-full mb-4 overflow-visible">
                       <div
                         className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                         style={{
