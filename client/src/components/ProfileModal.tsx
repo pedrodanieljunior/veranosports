@@ -837,10 +837,7 @@ export function ProfileModal({ open, onClose }: Props) {
                             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
                             style={{ left: `${pos}%` }}
                           >
-                            {reached
-                            ? <span className="text-base leading-none drop-shadow-md">{t.icon}</span>
-                            : <div className={`w-3.5 h-3.5 rounded-full border-2 ${t.dot}`} />
-                          }
+                            <span className={`text-base leading-none drop-shadow-md transition-all ${reached ? "opacity-100" : "opacity-30 grayscale"}`}>{t.icon}</span>
                           </div>
                         );
                       })}
