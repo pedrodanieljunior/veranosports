@@ -1951,9 +1951,6 @@ export async function registerRoutes(
         description: `Saque PIX solicitado`,
         referenceId: String(withdrawal.id),
       });
-      sendWhatsAppNotification(
-        `💸 Novo saque solicitado!\nNome: ${user.name}\nCPF: ${userId}\nValor: R$${amount.toFixed(2).replace(".", ",")}\nChave PIX: ${pixKey}`
-      );
       sendEmailNotification(
         `💸 Novo saque solicitado - FW Sports`,
         `<h2 style="color:#e11d48">💸 Novo saque solicitado</h2>
