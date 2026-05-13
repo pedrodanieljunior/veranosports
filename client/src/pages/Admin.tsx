@@ -98,6 +98,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { useComboBonus } from "@/hooks/use-combo-bonus";
 
@@ -3856,30 +3858,111 @@ function DepositsTab() {
     onError: () => toast({ title: "Erro ao remover depósito", variant: "destructive" }),
   });
 
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
   const pendingDeposits = deposits.filter(d => d.status === "pending");
-  const sorted = [...deposits].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const filtered = useMemo(() => {
+    let list = [...deposits].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (dateFrom) {
+      const from = new Date(dateFrom); from.setHours(0, 0, 0, 0);
+      list = list.filter(d => new Date(d.createdAt) >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
+      list = list.filter(d => new Date(d.createdAt) <= to);
+    }
+    return list;
+  }, [deposits, dateFrom, dateTo]);
+
+  const totalConfirmado = filtered.filter(d => d.status === "confirmed").reduce((s, d) => s + d.amount, 0);
+  const totalPendente = filtered.filter(d => d.status === "pending").reduce((s, d) => s + d.amount, 0);
+  const hasFilter = !!dateFrom || !!dateTo;
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-yellow-500" />
-            Depósitos ({deposits.length})
+            Depósitos ({filtered.length}{hasFilter ? ` de ${deposits.length}` : ""})
           </CardTitle>
           {pendingDeposits.length > 0 && (
             <Badge className="bg-red-500 text-white border-0">{pendingDeposits.length} pendente{pendingDeposits.length > 1 ? "s" : ""}</Badge>
           )}
         </div>
+
+        {/* Filtro de datas */}
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 text-sm" data-testid="button-date-from">
+                <CalendarDays className="w-4 h-4" />
+                {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Data inicial"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} locale={ptBR} initialFocus />
+            </PopoverContent>
+          </Popover>
+
+          <span className="text-muted-foreground text-sm">até</span>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 text-sm" data-testid="button-date-to">
+                <CalendarDays className="w-4 h-4" />
+                {dateTo ? format(dateTo, "dd/MM/yyyy") : "Data final"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={setDateTo} locale={ptBR} initialFocus />
+            </PopoverContent>
+          </Popover>
+
+          {hasFilter && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-muted-foreground">
+              Limpar filtro
+            </Button>
+          )}
+        </div>
+
+        {/* Totalizadores */}
+        {hasFilter && (
+          <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+              <CheckCircle className="w-4 h-4 text-green-400" />
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold">Confirmados</p>
+                <p className="text-sm font-bold text-green-400">R$ {totalConfirmado.toFixed(2).replace(".", ",")}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+              <Clock className="w-4 h-4 text-yellow-400" />
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold">Pendentes</p>
+                <p className="text-sm font-bold text-yellow-400">R$ {totalPendente.toFixed(2).replace(".", ",")}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
+              <Wallet className="w-4 h-4 text-blue-400" />
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold">Total período</p>
+                <p className="text-sm font-bold text-blue-400">R$ {(totalConfirmado + totalPendente).toFixed(2).replace(".", ",")}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {depositsLoading ? (
           <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
-        ) : sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhum depósito registrado.</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">{hasFilter ? "Nenhum depósito no período selecionado." : "Nenhum depósito registrado."}</p>
         ) : (
           <div className="space-y-3">
-            {sorted.map(dep => (
+            {filtered.map(dep => (
               <div key={dep.id} className={`flex items-center justify-between p-3 border rounded-lg ${dep.status === "confirmed" ? "border-green-500/30 bg-green-500/5" : dep.status === "rejected" ? "border-red-500/20 opacity-60" : "border-yellow-500/30 bg-yellow-500/5"}`} data-testid={`row-deposit-${dep.id}`}>
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
