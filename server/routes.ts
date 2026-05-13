@@ -1951,6 +1951,7 @@ export async function registerRoutes(
         description: `Saque PIX solicitado`,
         referenceId: String(withdrawal.id),
       });
+      console.log(`[saque] Notificando: nome=${user.name} cpf=${userId} valor=${amount} pix=${pixKey}`);
       sendEmailNotification(
         `💸 Novo saque solicitado - FW Sports`,
         `<h2 style="color:#e11d48">💸 Novo saque solicitado</h2>
