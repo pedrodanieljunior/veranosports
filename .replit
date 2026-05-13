@@ -45,3 +45,5 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
+CALLMEBOT_PHONE = "559281372318"
+CALLMEBOT_APIKEY = "1099152"

@@ -1899,6 +1899,19 @@ export async function registerRoutes(
     res.json(transactions);
   });
 
+  // ─── CallMeBot WhatsApp Notification ─────────────────────────────────────────
+  async function sendWhatsAppNotification(message: string) {
+    try {
+      const phone = process.env.CALLMEBOT_PHONE;
+      const apikey = process.env.CALLMEBOT_APIKEY;
+      if (!phone || !apikey) return;
+      const encoded = encodeURIComponent(message);
+      await fetch(`https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encoded}&apikey=${apikey}`);
+    } catch {
+      // silently ignore notification errors
+    }
+  }
+
   // ─── User Withdrawals ────────────────────────────────────────────────────────
   const createWithdrawalHandler = async (req: Request, res: Response) => {
     try {
@@ -1920,6 +1933,9 @@ export async function registerRoutes(
         description: `Saque PIX solicitado`,
         referenceId: String(withdrawal.id),
       });
+      sendWhatsAppNotification(
+        `💸 Novo saque solicitado!\nUsuário: ${userId}\nValor: R$${amount.toFixed(2).replace(".", ",")}\nChave PIX: ${pixKey}`
+      );
       res.json(withdrawal);
     } catch {
       res.status(500).json({ message: "Erro ao criar solicitação de saque" });
