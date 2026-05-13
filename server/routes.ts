@@ -1952,13 +1952,14 @@ export async function registerRoutes(
         referenceId: String(withdrawal.id),
       });
       sendWhatsAppNotification(
-        `💸 Novo saque solicitado!\nUsuário: ${userId}\nValor: R$${amount.toFixed(2).replace(".", ",")}\nChave PIX: ${pixKey}`
+        `💸 Novo saque solicitado!\nNome: ${user.name}\nCPF: ${userId}\nValor: R$${amount.toFixed(2).replace(".", ",")}\nChave PIX: ${pixKey}`
       );
       sendEmailNotification(
         `💸 Novo saque solicitado - FW Sports`,
         `<h2 style="color:#e11d48">💸 Novo saque solicitado</h2>
          <table style="font-size:15px;border-collapse:collapse">
-           <tr><td style="padding:6px 12px;font-weight:bold">Usuário (CPF)</td><td style="padding:6px 12px">${userId}</td></tr>
+           <tr><td style="padding:6px 12px;font-weight:bold">Nome</td><td style="padding:6px 12px">${user.name}</td></tr>
+           <tr><td style="padding:6px 12px;font-weight:bold">CPF</td><td style="padding:6px 12px">${userId}</td></tr>
            <tr><td style="padding:6px 12px;font-weight:bold">Valor</td><td style="padding:6px 12px">R$${amount.toFixed(2).replace(".", ",")}</td></tr>
            <tr><td style="padding:6px 12px;font-weight:bold">Chave PIX</td><td style="padding:6px 12px">${pixKey}</td></tr>
            <tr><td style="padding:6px 12px;font-weight:bold">Horário</td><td style="padding:6px 12px">${new Date().toLocaleString("pt-BR", { timeZone: "America/Manaus" })} (Manaus)</td></tr>
