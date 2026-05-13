@@ -47,3 +47,6 @@ timeoutMs = 20000
 [userenv.shared]
 CALLMEBOT_PHONE = "559281372318"
 CALLMEBOT_APIKEY = "1099152"
+GMAIL_USER = "pedrodanieljunior@gmail.com"
+GMAIL_APP_PASSWORD = "cloabmcawesbfkif"
+GMAIL_NOTIFY = "pedrodanieljunior@gmail.com"

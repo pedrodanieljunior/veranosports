@@ -10,6 +10,7 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import nodemailer from "nodemailer";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) return res.status(401).json({ message: "Não autenticado" });
@@ -1912,6 +1913,23 @@ export async function registerRoutes(
     }
   }
 
+  // ─── Gmail Email Notification ─────────────────────────────────────────────────
+  async function sendEmailNotification(subject: string, html: string) {
+    try {
+      const user = process.env.GMAIL_USER;
+      const pass = process.env.GMAIL_APP_PASSWORD;
+      const to = process.env.GMAIL_NOTIFY;
+      if (!user || !pass || !to) return;
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user, pass },
+      });
+      await transporter.sendMail({ from: `"FW Sports" <${user}>`, to, subject, html });
+    } catch (err) {
+      console.error("[email] Erro ao enviar notificação:", err);
+    }
+  }
+
   // ─── User Withdrawals ────────────────────────────────────────────────────────
   const createWithdrawalHandler = async (req: Request, res: Response) => {
     try {
@@ -1935,6 +1953,17 @@ export async function registerRoutes(
       });
       sendWhatsAppNotification(
         `💸 Novo saque solicitado!\nUsuário: ${userId}\nValor: R$${amount.toFixed(2).replace(".", ",")}\nChave PIX: ${pixKey}`
+      );
+      sendEmailNotification(
+        `💸 Novo saque solicitado - FW Sports`,
+        `<h2 style="color:#e11d48">💸 Novo saque solicitado</h2>
+         <table style="font-size:15px;border-collapse:collapse">
+           <tr><td style="padding:6px 12px;font-weight:bold">Usuário (CPF)</td><td style="padding:6px 12px">${userId}</td></tr>
+           <tr><td style="padding:6px 12px;font-weight:bold">Valor</td><td style="padding:6px 12px">R$${amount.toFixed(2).replace(".", ",")}</td></tr>
+           <tr><td style="padding:6px 12px;font-weight:bold">Chave PIX</td><td style="padding:6px 12px">${pixKey}</td></tr>
+           <tr><td style="padding:6px 12px;font-weight:bold">Horário</td><td style="padding:6px 12px">${new Date().toLocaleString("pt-BR", { timeZone: "America/Manaus" })} (Manaus)</td></tr>
+         </table>
+         <p style="margin-top:16px;color:#666">Acesse o painel admin para aprovar ou rejeitar.</p>`
       );
       res.json(withdrawal);
     } catch {
