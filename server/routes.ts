@@ -3703,6 +3703,59 @@ export async function registerRoutes(
     }
   });
 
+  // ─── Copa do Mundo Cards ─────────────────────────────────────────────────────
+  app.get("/api/copa-world-cup-cards", async (req, res) => {
+    try {
+      const { subTab } = req.query;
+      const cards = await storage.getCopaCards(subTab as string | undefined);
+      res.json(cards.filter(c => c.active));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch copa cards" });
+    }
+  });
+
+  app.get("/api/admin/copa-world-cup-cards", async (_req, res) => {
+    try {
+      const cards = await storage.getCopaCards();
+      res.json(cards);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch copa cards" });
+    }
+  });
+
+  app.post("/api/admin/copa-world-cup-cards", async (req, res) => {
+    try {
+      const { insertCopaWorldCupCardSchema } = await import("@shared/schema");
+      const data = insertCopaWorldCupCardSchema.parse(req.body);
+      const card = await storage.createCopaCard(data);
+      res.json(card);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Invalid data" });
+    }
+  });
+
+  app.put("/api/admin/copa-world-cup-cards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const card = await storage.updateCopaCard(id, req.body);
+      if (!card) return res.status(404).json({ error: "Not found" });
+      res.json(card);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Invalid data" });
+    }
+  });
+
+  app.delete("/api/admin/copa-world-cup-cards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const ok = await storage.deleteCopaCard(id);
+      if (!ok) return res.status(404).json({ error: "Not found" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete" });
+    }
+  });
+
   app.patch("/api/admin/boost-cards/:id/result", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

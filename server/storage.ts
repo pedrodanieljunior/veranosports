@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -69,6 +69,11 @@ export interface IStorage {
   updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined>;
   resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }>;
   deleteBoostCard(id: number): Promise<boolean>;
+  // Copa do Mundo Cards
+  getCopaCards(subTab?: string): Promise<CopaWorldCupCard[]>;
+  createCopaCard(data: InsertCopaWorldCupCard): Promise<CopaWorldCupCard>;
+  updateCopaCard(id: number, data: Partial<InsertCopaWorldCupCard>): Promise<CopaWorldCupCard | undefined>;
+  deleteCopaCard(id: number): Promise<boolean>;
   // Users
   createUser(data: { cpf: string; name: string; phone: string; referredByCode?: string; passwordHash: string }): Promise<User>;
   getUserByCpf(cpf: string): Promise<(User & { passwordHash: string }) | undefined>;
@@ -999,6 +1004,64 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { newLevels: toAward.map(l => l.level), totalBonus };
+  }
+
+  private mapCopaCard(r: typeof copaWorldCupCardsTable.$inferSelect): CopaWorldCupCard {
+    return {
+      id: r.id,
+      subTab: r.subTab as CopaWorldCupCard["subTab"],
+      title: r.title,
+      description: r.description,
+      team1: r.team1,
+      team2: r.team2,
+      odds: r.odds ?? null,
+      badge: r.badge,
+      imageUrl: r.imageUrl,
+      active: r.active,
+      createdAt: r.createdAt.toISOString(),
+    };
+  }
+
+  async getCopaCards(subTab?: string): Promise<CopaWorldCupCard[]> {
+    const rows = subTab
+      ? await db.select().from(copaWorldCupCardsTable).where(eq(copaWorldCupCardsTable.subTab, subTab)).orderBy(desc(copaWorldCupCardsTable.createdAt))
+      : await db.select().from(copaWorldCupCardsTable).orderBy(desc(copaWorldCupCardsTable.createdAt));
+    return rows.map(r => this.mapCopaCard(r));
+  }
+
+  async createCopaCard(data: InsertCopaWorldCupCard): Promise<CopaWorldCupCard> {
+    const [row] = await db.insert(copaWorldCupCardsTable).values({
+      subTab: data.subTab,
+      title: data.title,
+      description: data.description ?? "",
+      team1: data.team1 ?? "",
+      team2: data.team2 ?? "",
+      odds: data.odds ?? null,
+      badge: data.badge ?? "",
+      imageUrl: data.imageUrl ?? "",
+      active: data.active ?? true,
+    }).returning();
+    return this.mapCopaCard(row);
+  }
+
+  async updateCopaCard(id: number, data: Partial<InsertCopaWorldCupCard>): Promise<CopaWorldCupCard | undefined> {
+    const [row] = await db.update(copaWorldCupCardsTable).set({
+      ...(data.subTab !== undefined && { subTab: data.subTab }),
+      ...(data.title !== undefined && { title: data.title }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.team1 !== undefined && { team1: data.team1 }),
+      ...(data.team2 !== undefined && { team2: data.team2 }),
+      ...(data.odds !== undefined && { odds: data.odds }),
+      ...(data.badge !== undefined && { badge: data.badge }),
+      ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+      ...(data.active !== undefined && { active: data.active }),
+    }).where(eq(copaWorldCupCardsTable.id, id)).returning();
+    return row ? this.mapCopaCard(row) : undefined;
+  }
+
+  async deleteCopaCard(id: number): Promise<boolean> {
+    const result = await db.delete(copaWorldCupCardsTable).where(eq(copaWorldCupCardsTable.id, id)).returning();
+    return result.length > 0;
   }
 }
 

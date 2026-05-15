@@ -134,6 +134,10 @@ export default function Copa() {
     queryKey: ["/api/boost-cards"], staleTime: 0, refetchInterval: 30_000,
   });
 
+  const { data: copaCards = [] } = useQuery<any[]>({
+    queryKey: ["/api/copa-world-cup-cards"], staleTime: 60_000, refetchInterval: 60_000,
+  });
+
   const sessionId = getSessionId();
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
     queryKey: ["/api/bets", user?.cpf ?? sessionId],
@@ -427,7 +431,45 @@ export default function Copa() {
 
       {/* ===== GAMES LIST ===== */}
       <div className="px-0 pt-2 pb-4">
-        {activeTab === "copa" && filteredGames.length === 0 && !todayLoading ? (
+        {activeTab === "copa" && copaSubTab !== "todos" ? (
+          (() => {
+            const subCards = copaCards.filter((c: any) => c.subTab === copaSubTab);
+            if (subCards.length === 0) return (
+              <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
+                <div className="text-4xl mb-3">🏆</div>
+                <p className="text-white font-bold text-sm mb-1">Em breve!</p>
+                <p className="text-white/50 text-xs">Os cards desta seção serão adicionados em breve.</p>
+              </div>
+            );
+            return (
+              <div className="px-3 space-y-3">
+                {subCards.map((card: any) => (
+                  <div key={card.id} className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.3)" }}>
+                    {card.imageUrl && <img src={card.imageUrl} alt={card.title} className="w-full h-32 object-cover" />}
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          {card.badge && <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black mb-1" style={{ background: "rgba(201,162,39,0.2)", color: "#f5c518" }}>{card.badge}</span>}
+                          <h3 className="text-white font-bold text-sm leading-tight">{card.title}</h3>
+                          {(card.team1 || card.team2) && (
+                            <p className="text-white/60 text-xs mt-0.5">{card.team1}{card.team1 && card.team2 ? " × " : ""}{card.team2}</p>
+                          )}
+                          {card.description && <p className="text-white/50 text-xs mt-1 leading-relaxed">{card.description}</p>}
+                        </div>
+                        {card.odds && (
+                          <div className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,162,39,0.4)" }}>
+                            <span className="text-[9px] text-white/50 font-bold">ODD</span>
+                            <span className="text-base font-black" style={{ color: "#f5c518" }}>{Number(card.odds).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()
+        ) : activeTab === "copa" && filteredGames.length === 0 && !todayLoading ? (
           <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
             <div className="text-4xl mb-3">🏆</div>
             <p className="text-white font-bold text-sm mb-1">Jogos da Copa em breve!</p>

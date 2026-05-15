@@ -68,6 +68,7 @@ import {
   Settings,
   RotateCcw,
   Shield,
+  Pencil,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -907,6 +908,10 @@ export default function Admin() {
             <TabsTrigger value="regras" data-testid="tab-regras">
               <BookOpen className="w-4 h-4 mr-2" />
               Regras
+            </TabsTrigger>
+            <TabsTrigger value="copa-mundo" data-testid="tab-copa-mundo">
+              <Trophy className="w-4 h-4 mr-2" />
+              Copa do Mundo
             </TabsTrigger>
             <TabsTrigger value="boost" data-testid="tab-boost">
               <Zap className="w-4 h-4 mr-2" />
@@ -2341,6 +2346,10 @@ export default function Admin() {
 
           <TabsContent value="regras">
             <RulesEditorTab />
+          </TabsContent>
+
+          <TabsContent value="copa-mundo">
+            <CopaWorldCupTab />
           </TabsContent>
 
           <TabsContent value="boost">
@@ -4433,6 +4442,184 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
         )}
       </div>
     </div>
+  );
+}
+
+// ─── Copa do Mundo Tab ────────────────────────────────────────────────────────
+type CopaSubTabAdmin = "grupos" | "qualificatorias" | "longo" | "previsoes";
+const COPA_SUBTABS: { key: CopaSubTabAdmin; label: string }[] = [
+  { key: "grupos", label: "Grupos" },
+  { key: "qualificatorias", label: "Qualificatórias" },
+  { key: "longo", label: "Longo Prazo" },
+  { key: "previsoes", label: "Previsões" },
+];
+
+interface CopaCardForm {
+  subTab: CopaSubTabAdmin;
+  title: string;
+  description: string;
+  team1: string;
+  team2: string;
+  odds: string;
+  badge: string;
+  imageUrl: string;
+  active: boolean;
+}
+
+function CopaWorldCupTab() {
+  const { toast } = useToast();
+  const [activeSubTab, setActiveSubTab] = useState<CopaSubTabAdmin>("grupos");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: "", imageUrl: "", active: true };
+  const [form, setForm] = useState<CopaCardForm>(emptyForm);
+
+  const { data: allCards = [], isLoading, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/copa-world-cup-cards"] });
+  const cards = allCards.filter(c => c.subTab === activeSubTab);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/admin/copa-world-cup-cards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/copa-world-cup-cards"] }); queryClient.invalidateQueries({ queryKey: ["/api/copa-world-cup-cards"] }); toast({ title: "Card criado!" }); setShowForm(false); setForm(emptyForm); },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/admin/copa-world-cup-cards/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/copa-world-cup-cards"] }); queryClient.invalidateQueries({ queryKey: ["/api/copa-world-cup-cards"] }); toast({ title: "Card atualizado!" }); setShowForm(false); setEditingId(null); setForm(emptyForm); },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/admin/copa-world-cup-cards/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao deletar");
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/copa-world-cup-cards"] }); queryClient.invalidateQueries({ queryKey: ["/api/copa-world-cup-cards"] }); toast({ title: "Card removido!" }); },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const handleEdit = (card: any) => {
+    setEditingId(card.id);
+    setForm({ subTab: card.subTab, title: card.title, description: card.description, team1: card.team1, team2: card.team2, odds: card.odds != null ? String(card.odds) : "", badge: card.badge, imageUrl: card.imageUrl, active: card.active });
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    const payload = { ...form, odds: form.odds ? parseFloat(form.odds) : null };
+    if (!payload.title) return toast({ title: "Título obrigatório", variant: "destructive" });
+    if (editingId != null) updateMutation.mutate({ id: editingId, data: payload });
+    else createMutation.mutate(payload);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500" />Copa do Mundo 2026 — Cards</CardTitle>
+          <Button size="sm" onClick={() => { setEditingId(null); setForm({ ...emptyForm, subTab: activeSubTab }); setShowForm(!showForm); }} data-testid="button-copa-new-card">
+            <Plus className="w-4 h-4 mr-2" />{showForm && editingId == null ? "Cancelar" : "Novo Card"}
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">Crie cards informativos/apostas para cada sub-aba da página Copa do Mundo.</p>
+        {/* Sub-tab selector */}
+        <div className="flex gap-2 mt-3 flex-wrap">
+          {COPA_SUBTABS.map(st => (
+            <button key={st.key} onClick={() => { setActiveSubTab(st.key); setShowForm(false); setEditingId(null); }}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeSubTab === st.key ? "bg-yellow-500 text-black" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+              data-testid={`tab-copa-admin-${st.key}`}>{st.label}</button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Form */}
+        {showForm && (
+          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <h3 className="font-semibold text-sm">{editingId != null ? "Editar Card" : "Novo Card"} — {COPA_SUBTABS.find(s => s.key === (editingId != null ? form.subTab : activeSubTab))?.label}</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">Título *</label>
+                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Brasil x Argentina" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-title" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Time 1 / Seleção</label>
+                <input value={form.team1} onChange={e => setForm(f => ({ ...f, team1: e.target.value }))} placeholder="Ex: Brasil" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-team1" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Time 2 / Adversário</label>
+                <input value={form.team2} onChange={e => setForm(f => ({ ...f, team2: e.target.value }))} placeholder="Ex: Argentina" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-team2" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Odd</label>
+                <input type="number" step="0.01" value={form.odds} onChange={e => setForm(f => ({ ...f, odds: e.target.value }))} placeholder="Ex: 2.50" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-odds" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Badge (ex: GRUPO A, FAVORITO)</label>
+                <input value={form.badge} onChange={e => setForm(f => ({ ...f, badge: e.target.value }))} placeholder="Ex: GRUPO A" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-badge" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">Descrição / Informação</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Informação adicional do card..." rows={2} className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm resize-none" data-testid="input-copa-description" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">URL da Imagem (opcional)</label>
+                <input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="https://..." className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-image-url" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="copa-active" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} className="w-4 h-4" data-testid="checkbox-copa-active" />
+                <label htmlFor="copa-active" className="text-sm">Card ativo (visível no site)</label>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-copa-save">
+                {(createMutation.isPending || updateMutation.isPending) ? "Salvando..." : editingId != null ? "Salvar Alterações" : "Criar Card"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }} data-testid="button-copa-cancel">Cancelar</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Cards list */}
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        ) : cards.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            <Trophy className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            Nenhum card em <strong>{COPA_SUBTABS.find(s => s.key === activeSubTab)?.label}</strong>. Clique em "Novo Card" para criar.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {cards.map((card: any) => (
+              <div key={card.id} className="flex items-start gap-3 border rounded-lg p-3">
+                {card.imageUrl && <img src={card.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm truncate">{card.title}</span>
+                    {card.badge && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-600">{card.badge}</span>}
+                    {!card.active && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-500">INATIVO</span>}
+                  </div>
+                  {(card.team1 || card.team2) && <p className="text-xs text-muted-foreground mt-0.5">{card.team1}{card.team1 && card.team2 ? " × " : ""}{card.team2}{card.odds ? ` — Odd: ${card.odds}` : ""}</p>}
+                  {card.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{card.description}</p>}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => handleEdit(card)} data-testid={`button-copa-edit-${card.id}`}><Pencil className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-red-400 hover:text-red-500" onClick={() => { if (confirm("Remover este card?")) deleteMutation.mutate(card.id); }} data-testid={`button-copa-delete-${card.id}`}><Trash2 className="w-3 h-3" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

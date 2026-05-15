@@ -419,6 +419,51 @@ export const CLUB_FW_LEVELS = [
   { level: 4, threshold: 1000, bonus: 100 },
 ] as const;
 
+// ─── Copa do Mundo 2026 – Cards por sub-aba ──────────────────────────────────
+export const copaWorldCupCardsTable = pgTable("copa_world_cup_cards", {
+  id: serial("id").primaryKey(),
+  subTab: text("sub_tab").notNull(), // grupos | qualificatorias | longo | previsoes
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  team1: text("team1").notNull().default(""),
+  team2: text("team2").notNull().default(""),
+  odds: real("odds"),
+  badge: text("badge").notNull().default(""),
+  imageUrl: text("image_url").notNull().default(""),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const copaWorldCupCardSchema = z.object({
+  id: z.number(),
+  subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes"]),
+  title: z.string(),
+  description: z.string(),
+  team1: z.string(),
+  team2: z.string(),
+  odds: z.number().nullable(),
+  badge: z.string(),
+  imageUrl: z.string(),
+  active: z.boolean(),
+  createdAt: z.string(),
+});
+
+export type CopaWorldCupCard = z.infer<typeof copaWorldCupCardSchema>;
+
+export const insertCopaWorldCupCardSchema = z.object({
+  subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes"]),
+  title: z.string().min(1, "Título obrigatório"),
+  description: z.string().optional().default(""),
+  team1: z.string().optional().default(""),
+  team2: z.string().optional().default(""),
+  odds: z.number().optional().nullable(),
+  badge: z.string().optional().default(""),
+  imageUrl: z.string().optional().default(""),
+  active: z.boolean().optional().default(true),
+});
+
+export type InsertCopaWorldCupCard = z.infer<typeof insertCopaWorldCupCardSchema>;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),
