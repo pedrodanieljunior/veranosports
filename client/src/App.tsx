@@ -12,7 +12,7 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Copa} />
+      <Route path="/"><Redirect to="/home" /></Route>
       <Route path="/home" component={Home} />
       <Route path="/painel-gm7x9k2" component={Admin} />
       <Route component={NotFound} />
