@@ -237,6 +237,19 @@ export default function Admin() {
     enabled: !!adminMe?.isAdmin,
   });
 
+  const { data: copaCardsAdmin = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/copa-world-cup-cards"],
+    enabled: !!adminMe?.isAdmin,
+    staleTime: 60_000,
+  });
+  const copaCardBadgeMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of copaCardsAdmin) {
+      if (c.badge) m.set(`copa-card-${c.id}`, c.badge);
+    }
+    return m;
+  }, [copaCardsAdmin]);
+
   const { data: withdrawals = [], refetch: refetchWithdrawals } = useQuery<Withdrawal[]>({
     queryKey: ["/api/admin/withdrawals"],
     enabled: !!adminMe?.isAdmin,
@@ -1855,13 +1868,18 @@ export default function Admin() {
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
                                     const gameOdds = fmtOdds(computeTotalOdds(sels, checkIsComboBonus(bet.selections)));
+                                    const isCopaGrupo = sels.some(s => s.marketKey === "copa_grupo");
+                                    const copaBadge = isCopaGrupo ? copaCardBadgeMap.get(gameId) : undefined;
+                                    const gameLabel = copaBadge
+                                      ? copaBadge
+                                      : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
                                         <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
                                           <div className="flex items-center gap-2 min-w-0">
                                             <span className="font-semibold text-foreground text-xs truncate">
-                                              {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
+                                              {gameLabel}
                                             </span>
                                           </div>
                                           <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">
