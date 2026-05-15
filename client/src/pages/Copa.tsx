@@ -180,13 +180,7 @@ export default function Copa() {
     if (isSearching || isTyping || selectedSport) return future;
     if (activeTab === "copa") return future.filter(g => g.sportKey === "soccer_fifa_world_cup");
     if (activeTab === "champions") {
-      const regular = future.filter(g => g.sportKey === "soccer_uefa_champs_league");
-      if (uclFinalGame && !regular.find(g => g.id === uclFinalGame.id)) {
-        return [...regular, uclFinalGame].sort(
-          (a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime()
-        );
-      }
-      return regular;
+      return uclFinalGame ? [uclFinalGame] : [];
     }
     return future;
   }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now, uclFinalGame]);
