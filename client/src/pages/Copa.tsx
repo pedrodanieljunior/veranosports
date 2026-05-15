@@ -599,7 +599,7 @@ export default function Copa() {
             isLoading={isTyping || (isSearching ? searchLoading : todayLoading)}
             error={null}
             selectedSport={null}
-            isTodayGames={!isSearching && !isTyping}
+            isTodayGames={!isSearching && !isTyping && activeTab !== "champions"}
             isDark={true}
           />
         )}
