@@ -329,7 +329,7 @@ export default function Copa() {
                   <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(11px, 3.2vw, 15px)" }}>RUMO À COPA DO MUNDO 2026</h2>
                   <p className="text-white/45 text-[9px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</p>
                   <div className="flex items-center gap-3 mt-1 overflow-hidden">
-                    <span className="flex items-center gap-1 text-white/60 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-400 text-[10px]">✓</span>Cobertura completa da Copa 2026</span>
+                    <span className="flex items-center gap-1 text-white/60 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-400 text-[10px]">✓</span>Cobertura completa</span>
                     <span className="flex items-center gap-1 text-white/60 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-400 text-[10px]">✓</span>Odds especiais e mercados exclusivos</span>
                   </div>
                 </div>
