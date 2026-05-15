@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { History, Search, X, BookOpen, UserCircle } from "lucide-react";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
+import tacaCopa from "@assets/taca_copa_transparent.png";
 
 const COPA_START = new Date("2026-06-11T15:00:00Z");
 const WC_QUALIFIER_KEYS = [
@@ -256,11 +257,12 @@ export default function Copa() {
           <div className="rounded-2xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.4)" }}>
             <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 80% 50%, #ffd700 0%, transparent 60%)" }} />
             <div className="relative p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="text-4xl">🏆</div>
+              <div className="flex items-center gap-2">
+                <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-20 w-auto object-contain drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(201,162,39,0.5))" }} />
                 <div>
                   <h2 className="text-white font-black text-lg leading-tight">RUMO À COPA DO MUNDO</h2>
                   <p className="font-black text-2xl leading-tight" style={{ color: "#f5c518" }}>2026</p>
+                  <p className="text-white/50 text-[10px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-white/70">
