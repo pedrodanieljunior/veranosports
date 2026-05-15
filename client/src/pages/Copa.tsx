@@ -145,6 +145,14 @@ export default function Copa() {
     enabled: activeTab === "copa",
   });
 
+  const { data: uclFinalGame } = useQuery<Game | null>({
+    queryKey: ["/api/ucl-final"],
+    queryFn: () => fetch("/api/ucl-final").then(r => r.json()),
+    staleTime: 10 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
+    enabled: activeTab === "champions",
+  });
+
   const sessionId = getSessionId();
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
     queryKey: ["/api/bets", user?.cpf ?? sessionId],
@@ -171,9 +179,17 @@ export default function Copa() {
     const future = base.filter(g => new Date(g.commenceTime).getTime() > now);
     if (isSearching || isTyping || selectedSport) return future;
     if (activeTab === "copa") return future.filter(g => g.sportKey === "soccer_fifa_world_cup");
-    if (activeTab === "champions") return future.filter(g => g.sportKey === "soccer_uefa_champs_league");
+    if (activeTab === "champions") {
+      const regular = future.filter(g => g.sportKey === "soccer_uefa_champs_league");
+      if (uclFinalGame && !regular.find(g => g.id === uclFinalGame.id)) {
+        return [...regular, uclFinalGame].sort(
+          (a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime()
+        );
+      }
+      return regular;
+    }
     return future;
-  }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now]);
+  }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now, uclFinalGame]);
 
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number; useBonus: boolean }) => {

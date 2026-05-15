@@ -2679,6 +2679,77 @@ export async function registerRoutes(
     }
   });
 
+  // Endpoint dedicado para a Final da Champions League 2025/26 (PSG vs Arsenal, fixture 1544371)
+  app.get("/api/ucl-final", async (req, res) => {
+    try {
+      const UCL_FIXTURE_ID = 1544371;
+      const cacheKey = "ucl_final_2026";
+      const cached = cache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
+
+      if (!API_FOOTBALL_KEY) return res.json(null);
+
+      const fixtureRes = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures?id=${UCL_FIXTURE_ID}`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+      );
+      if (!fixtureRes.ok) return res.json(null);
+      const fixtureData = await fixtureRes.json();
+      const fixture = fixtureData.response?.[0];
+      if (!fixture) return res.json(null);
+
+      const homeTeam = formatTeamName(fixture.teams.home.name);
+      const awayTeam = formatTeamName(fixture.teams.away.name);
+
+      // Tentar buscar odds
+      let bookmakers: any[] = [];
+      try {
+        const oddsRes = await fetch(
+          `${API_FOOTBALL_BASE}/odds?fixture=${UCL_FIXTURE_ID}`,
+          { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+        );
+        if (oddsRes.ok) {
+          const oddsData = await oddsRes.json();
+          const bk = pickBestBookmaker(oddsData.response?.[0]?.bookmakers || []);
+          if (bk) {
+            const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+            if (h2h && h2h.values?.length >= 2) {
+              bookmakers = [{
+                key: "api-football",
+                title: bk.name,
+                markets: [{
+                  key: "h2h",
+                  outcomes: h2h.values.map((v: any) => ({
+                    name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                    price: parseFloat(v.odd),
+                  })),
+                }],
+              }];
+            }
+          }
+        }
+      } catch { /* silently ignore */ }
+
+      const game = {
+        id: `api-football-${UCL_FIXTURE_ID}`,
+        sportKey: "soccer_uefa_champs_league",
+        sportTitle: "UEFA Champions League",
+        commenceTime: fixture.fixture.date,
+        homeTeam,
+        awayTeam,
+        homeLogo: fixture.teams.home.logo,
+        awayLogo: fixture.teams.away.logo,
+        bookmakers,
+      };
+
+      cache.set(cacheKey, game, 10 * 60 * 1000);
+      res.json(game);
+    } catch (error) {
+      console.error("Error fetching UCL final:", error);
+      res.json(null);
+    }
+  });
+
   // Endpoint para buscar próximos jogos do Brasileirão
   app.get("/api/games/brasileirao", async (req, res) => {
     try {
