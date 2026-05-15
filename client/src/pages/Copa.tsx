@@ -439,7 +439,10 @@ export default function Copa() {
                 </p>
               </div>
               <p className="text-white/40 text-xs ml-7">
-                {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — {filteredGames.length} {filteredGames.length === 1 ? "jogo" : "jogos"}
+                {activeTab === "champions" && uclFinalGame
+                  ? `${new Date(uclFinalGame.commenceTime).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — 1 jogo`
+                  : `${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — ${filteredGames.length} ${filteredGames.length === 1 ? "jogo" : "jogos"}`
+                }
               </p>
             </div>
           </div>
