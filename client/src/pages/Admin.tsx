@@ -2076,7 +2076,7 @@ export default function Admin() {
                               Reverificar
                             </Button>
 
-                            {bet.userId !== "ADM_FW" && bet.status === "pending" && (
+                            {bet.userId !== "ADM_FW" && (
                               <Button
                                 variant="outline"
                                 size="sm"
