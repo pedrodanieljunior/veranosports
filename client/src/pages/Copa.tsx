@@ -217,10 +217,10 @@ export default function Copa() {
 
   const tabs: { key: CopaTab; label: string; icon: React.ReactNode }[] = [
     { key: "todos", label: "TODOS", icon: "📅" },
-    { key: "copa", label: "COPA", icon: <img src={copaTrofeuTab} alt="Copa" className="w-5 h-5 object-contain" /> },
+    { key: "copa", label: "COPA DO MUNDO", icon: <img src={copaTrofeuTab} alt="Copa" className="w-5 h-5 object-contain" /> },
     {
       key: "champions",
-      label: "CHAMPIONS",
+      label: "CHAMPIONS LEAGUE",
       icon: <img src="https://media.api-sports.io/football/leagues/2.png" alt="UCL" className="w-5 h-5 object-contain" />,
     },
   ];
