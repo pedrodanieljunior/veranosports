@@ -17,7 +17,7 @@ import { GamesList } from "@/components/GamesList";
 import { Badge } from "@/components/ui/badge";
 import { History, Search, X, BookOpen, UserCircle } from "lucide-react";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
-import copaLogo from "@assets/{EEE1968D-E038-4AF4-8D91-188B91B56EAD}_1778851405985.png";
+import copaLogo from "@assets/copa_logo_transparent.png";
 
 const COPA_START = new Date("2026-06-11T15:00:00Z");
 const WC_QUALIFIER_KEYS = [
