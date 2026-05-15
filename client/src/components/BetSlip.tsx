@@ -75,6 +75,18 @@ export function BetSlip({
 
   const { data: limits } = useQuery<LimitsData>({ queryKey: ["/api/limits"] });
 
+  const { data: copaCards = [] } = useQuery<any[]>({
+    queryKey: ["/api/copa-world-cup-cards"],
+    staleTime: 60_000,
+  });
+  const copaBetBadgeMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of copaCards) {
+      if (c.badge) m.set(`copa-card-${c.id}`, c.badge);
+    }
+    return m;
+  }, [copaCards]);
+
   const MAX_BET_PAYOUT = limits?.maxBetPayout ?? 15000;
 
   // ── SGP (Same Game Parlay) ────────────────────────────────────────────
@@ -503,6 +515,11 @@ export function BetSlip({
                         : roundOdds(computeTotalOdds(sels, isComboCtx));
                       const isMulti = sels.length >= 2;
                       const isExpanded = expandedGames.has(gameId);
+                      const isCopaGrupoGame = sels.some(s => s.marketKey === "copa_grupo");
+                      const copaGroupBadge = isCopaGrupoGame ? copaBetBadgeMap.get(gameId) : undefined;
+                      const betSlipGameLabel = copaGroupBadge
+                        ? `${copaGroupBadge} — ${first.homeTeam}`
+                        : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
                       return (
                         <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
                           <div
@@ -512,7 +529,7 @@ export function BetSlip({
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-sm">⚽</span>
                               <span className="font-semibold text-foreground text-sm truncate">
-                                {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
+                                {betSlipGameLabel}
                               </span>
                               {isSGPGame && (
                                 <span className="flex-shrink-0 text-[10px] font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full tracking-wide" data-testid={`badge-sgp-${gameId}`}>

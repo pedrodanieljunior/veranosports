@@ -1871,7 +1871,7 @@ export default function Admin() {
                                     const isCopaGrupo = sels.some(s => s.marketKey === "copa_grupo");
                                     const copaBadge = isCopaGrupo ? copaCardBadgeMap.get(gameId) : undefined;
                                     const gameLabel = copaBadge
-                                      ? copaBadge
+                                      ? `${copaBadge} — ${first.homeTeam}`
                                       : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
