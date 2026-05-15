@@ -309,37 +309,29 @@ export default function Copa() {
       {/* ===== COUNTDOWN BANNER ===== */}
       {!countdown.started && (
         <div className="px-3 pt-3">
-          <div className="rounded-2xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.4)" }}>
+          <div className="rounded-xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.4)" }}>
             <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 80% 50%, #ffd700 0%, transparent 60%)" }} />
-            <div className="relative p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-20 w-auto object-contain drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(201,162,39,0.5))" }} />
-                <div>
-                  <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(14px, 4vw, 22px)" }}>RUMO À COPA DO MUNDO 2026</h2>
-                  <p className="text-white/50 text-[10px] font-bold tracking-widest mt-0.5">EUA · CANADÁ · MÉXICO</p>
-                </div>
+            <div className="relative px-3 py-2 flex items-center gap-3">
+              <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-12 w-auto object-contain shrink-0" style={{ filter: "drop-shadow(0 0 6px rgba(201,162,39,0.5))" }} />
+              <div className="flex-1 min-w-0">
+                <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(11px, 3.2vw, 15px)" }}>RUMO À COPA DO MUNDO 2026</h2>
+                <p className="text-white/45 text-[9px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</p>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-white/70">
-                <div className="flex items-center gap-1.5"><span className="text-green-400">✓</span> Cobertura completa da Copa 2026</div>
-                <div className="flex items-center gap-1.5"><span className="text-green-400">✓</span> Odds especiais e mercados exclusivos</div>
-                <div className="flex items-center gap-1.5"><span className="text-green-400">✓</span> Apostas para o campeão do mundo</div>
-                <div className="flex items-center gap-1.5"><span className="text-green-400">✓</span> Os melhores aumentos dos mercados</div>
-              </div>
-              <div className="text-center">
-                <p className="text-white/60 text-xs mb-2">A maior competição do planeta começa em:</p>
-                <div className="flex items-center justify-center gap-2">
-                  {[
-                    { v: countdown.days, l: "DIAS" },
-                    { v: countdown.hours, l: "HORAS" },
-                    { v: countdown.minutes, l: "MIN" },
-                    { v: countdown.seconds, l: "SEG" },
-                  ].map(({ v, l }) => (
-                    <div key={l} className="flex flex-col items-center rounded-lg px-3 py-1.5 min-w-[50px]" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,162,39,0.4)" }}>
-                      <span className="text-xl font-black" style={{ color: "#f5c518" }}>{String(v).padStart(2, "0")}</span>
-                      <span className="text-white/50 text-[9px] font-bold tracking-widest">{l}</span>
+              <div className="flex items-center gap-1 shrink-0">
+                {[
+                  { v: countdown.days, l: "D" },
+                  { v: countdown.hours, l: "H" },
+                  { v: countdown.minutes, l: "M" },
+                  { v: countdown.seconds, l: "S" },
+                ].map(({ v, l }, i, arr) => (
+                  <div key={l} className="flex items-center gap-1">
+                    <div className="flex flex-col items-center rounded px-1.5 py-1 min-w-[32px]" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,162,39,0.4)" }}>
+                      <span className="text-sm font-black leading-none" style={{ color: "#f5c518" }}>{String(v).padStart(2, "0")}</span>
+                      <span className="text-white/45 text-[8px] font-bold">{l}</span>
                     </div>
-                  ))}
-                </div>
+                    {i < arr.length - 1 && <span className="text-white/30 text-xs font-bold">:</span>}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
