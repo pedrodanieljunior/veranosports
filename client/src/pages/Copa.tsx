@@ -18,7 +18,7 @@ import { GamesList } from "@/components/GamesList";
 import { MobileNav } from "@/components/MobileNav";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History, Search, X, BookOpen, UserCircle, Calendar, Users, Globe, ScanSearch, BarChart2 } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, Users, Globe, ScanSearch, BarChart2, Lock } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
@@ -498,11 +498,13 @@ export default function Copa() {
                                   }}
                                 >
                                   <span className="text-white text-xs font-semibold text-left">{team.name}</span>
-                                  {hasOdd && (
+                                  {hasOdd ? (
                                     <span className={`text-xs font-black ml-2 shrink-0 px-1.5 py-0.5 rounded ${isSelected ? "text-black" : ""}`}
                                       style={{ background: isSelected ? "#f5c518" : "transparent", color: isSelected ? "#000" : "#f5c518" }}>
                                       {Number(team.odds).toFixed(2)}
                                     </span>
+                                  ) : (
+                                    <Lock className="w-3.5 h-3.5 ml-2 shrink-0 text-white/30" />
                                   )}
                                 </button>
                               );
@@ -520,7 +522,7 @@ export default function Copa() {
                                     <p className="text-white/60 text-xs">{card.team1}{card.team1 && card.team2 ? " × " : ""}{card.team2}</p>
                                   )}
                                 </div>
-                                {card.odds && (
+                                {card.odds ? (
                                   <button
                                     onClick={() => handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), 0))}
                                     className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2 transition-all active:scale-95"
@@ -532,6 +534,11 @@ export default function Copa() {
                                     <span className="text-[9px] text-white/50 font-bold">ODD</span>
                                     <span className="text-base font-black" style={{ color: "#f5c518" }}>{Number(card.odds).toFixed(2)}</span>
                                   </button>
+                                ) : (
+                                  <div className="shrink-0 flex flex-col items-center justify-center rounded-lg px-2 py-1.5 ml-2"
+                                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                                    <Lock className="w-4 h-4 text-white/30" />
+                                  </div>
                                 )}
                               </div>
                             );
