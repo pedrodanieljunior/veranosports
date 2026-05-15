@@ -2568,6 +2568,117 @@ export async function registerRoutes(
     }
   });
 
+  // ── Copa do Mundo 2026 — jogos por data ──────────────────────────────────────
+  // Antes de 11/jun: retorna preview dos jogos de 11-12/jun.
+  // A partir de 11/jun: retorna jogos das próximas 24h (comportamento normal).
+  app.get("/api/copa-mundo-games", async (req, res) => {
+    try {
+      const WC_LEAGUE_ID = 1;
+      const WC_SEASON = 2026;
+      const TOURNAMENT_START_MS = new Date("2026-06-11T00:00:00Z").getTime();
+      const nowMs = Date.now();
+
+      let fromDate: string;
+      let toDate: string;
+
+      if (nowMs < TOURNAMENT_START_MS) {
+        fromDate = "2026-06-11";
+        toDate = "2026-06-12";
+      } else {
+        fromDate = new Date(nowMs).toISOString().split("T")[0];
+        toDate = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      }
+
+      const cacheKey = `copa_mundo_games_${fromDate}_${toDate}`;
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) return res.json(cached);
+
+      if (!API_FOOTBALL_KEY) return res.json([]);
+
+      const fixturesRes = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures?league=${WC_LEAGUE_ID}&season=${WC_SEASON}&from=${fromDate}&to=${toDate}`,
+        { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+      );
+      if (!fixturesRes.ok) return res.json([]);
+      const fixturesData = await fixturesRes.json();
+
+      const fixtures = (fixturesData.response || []).filter((f: any) => {
+        const status = f.fixture?.status?.short;
+        return ["NS", "TBD"].includes(status);
+      });
+
+      console.log(`[Copa do Mundo] ${fixtures.length} jogos encontrados para ${fromDate}→${toDate}`);
+
+      if (fixtures.length === 0) {
+        cache.set(cacheKey, [], 10 * 60 * 1000);
+        return res.json([]);
+      }
+
+      // Buscar odds para as datas relevantes
+      const oddsMap = new Map<number, any>();
+      for (const dateStr of fromDate === toDate ? [fromDate] : [fromDate, toDate]) {
+        try {
+          const r = await fetch(
+            `${API_FOOTBALL_BASE}/odds?league=${WC_LEAGUE_ID}&season=${WC_SEASON}&date=${dateStr}`,
+            { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+          );
+          if (r.ok) {
+            const d = await r.json();
+            for (const entry of d.response || []) {
+              const fid = entry.fixture?.id;
+              if (!fid || oddsMap.has(fid)) continue;
+              const bk = pickBestBookmaker(entry.bookmakers || []);
+              if (bk) oddsMap.set(fid, bk);
+            }
+          }
+        } catch { /* silently ignore */ }
+      }
+
+      const games = fixtures.map((fixture: any) => {
+        const fid = fixture.fixture.id;
+        const homeTeam = formatTeamName(fixture.teams.home.name);
+        const awayTeam = formatTeamName(fixture.teams.away.name);
+        const bk = oddsMap.get(fid);
+        let bookmakers: any[] = [];
+        if (bk) {
+          const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+          if (h2h && h2h.values?.length >= 2) {
+            bookmakers = [{
+              key: "api-football",
+              title: bk.name,
+              markets: [{
+                key: "h2h",
+                outcomes: h2h.values.map((v: any) => ({
+                  name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                  price: parseFloat(v.odd),
+                })),
+              }],
+            }];
+          }
+        }
+        return {
+          id: `api-football-${fid}`,
+          sportKey: "soccer_fifa_world_cup",
+          sportTitle: "Copa do Mundo 2026",
+          commenceTime: fixture.fixture.date,
+          homeTeam,
+          awayTeam,
+          homeLogo: fixture.teams.home.logo,
+          awayLogo: fixture.teams.away.logo,
+          bookmakers,
+        };
+      });
+
+      games.sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
+
+      cache.set(cacheKey, games, 10 * 60 * 1000);
+      res.json(games);
+    } catch (error) {
+      console.error("Error fetching Copa do Mundo games:", error);
+      res.status(500).json({ error: "Failed to fetch Copa do Mundo games" });
+    }
+  });
+
   // Endpoint para buscar próximos jogos do Brasileirão
   app.get("/api/games/brasileirao", async (req, res) => {
     try {

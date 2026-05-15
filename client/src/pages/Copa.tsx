@@ -138,6 +138,13 @@ export default function Copa() {
     queryKey: ["/api/copa-world-cup-cards"], staleTime: 60_000, refetchInterval: 60_000,
   });
 
+  const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
+    queryKey: ["/api/copa-mundo-games"],
+    staleTime: 10 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
+    enabled: activeTab === "copa",
+  });
+
   const sessionId = getSessionId();
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
     queryKey: ["/api/bets", user?.cpf ?? sessionId],
@@ -494,12 +501,31 @@ export default function Copa() {
               </div>
             );
           })()
-        ) : activeTab === "copa" && filteredGames.length === 0 && !todayLoading ? (
-          <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
-            <div className="text-4xl mb-3">🏆</div>
-            <p className="text-white font-bold text-sm mb-1">Jogos da Copa em breve!</p>
-            <p className="text-white/50 text-xs">Os jogos da Copa do Mundo 2026 estarão disponíveis a partir de 11 de junho.</p>
-          </div>
+        ) : activeTab === "copa" && copaSubTab === "todos" ? (
+          copaMundoLoading ? (
+            <div className="px-3 space-y-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+              ))}
+            </div>
+          ) : copaMundoGames.length === 0 ? (
+            <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
+              <div className="text-4xl mb-3">🏆</div>
+              <p className="text-white font-bold text-sm mb-1">Jogos da Copa em breve!</p>
+              <p className="text-white/50 text-xs">Os jogos da Copa do Mundo 2026 estarão disponíveis a partir de 11 de junho.</p>
+            </div>
+          ) : (
+            <GamesList
+              games={copaMundoGames}
+              selections={selections}
+              onGameClick={handleGameClick}
+              isLoading={false}
+              error={null}
+              selectedSport={null}
+              isTodayGames={false}
+              isDark={true}
+            />
+          )
         ) : (
           <GamesList
             games={filteredGames}
