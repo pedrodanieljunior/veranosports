@@ -14,8 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSessionId } from "@/lib/session";
 import { GamesList } from "@/components/GamesList";
+import { MobileNav } from "@/components/MobileNav";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { History, Search, X, BookOpen, UserCircle, Calendar, Users, Globe, ScanSearch, BarChart2 } from "lucide-react";
+import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
 import tacaCopa from "@assets/taca_copa_transparent.png";
@@ -62,6 +65,7 @@ export default function Copa() {
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CopaTab>("todos");
   const [copaSubTab, setCopaSubTab] = useState<CopaSubTab>("todos");
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -99,8 +103,14 @@ export default function Copa() {
     }
   }, [user]);
 
+  const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
+
   const { data: todayGames = [], isLoading: todayLoading } = useQuery<Game[]>({
-    queryKey: ["/api/games/today"], staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000,
+    queryKey: ["/api/games/today"], staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, enabled: !selectedSport,
+  });
+
+  const { data: leagueGames = [], isLoading: leagueLoading } = useQuery<Game[]>({
+    queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000,
   });
 
   const uniqueSportKeys = useMemo(() => [...new Set(todayGames.map(g => g.sportKey))], [todayGames]);
@@ -141,14 +151,17 @@ export default function Copa() {
     enabled: isSearching, staleTime: 5 * 60 * 1000,
   });
 
+  const baseGames = selectedSport ? leagueGames : todayGamesWithOdds;
+  const gamesLoading = selectedSport ? leagueLoading : todayLoading;
+
   const filteredGames = useMemo(() => {
-    const base = isSearching ? searchResults : todayGamesWithOdds;
+    const base = isSearching ? searchResults : baseGames;
     const future = base.filter(g => new Date(g.commenceTime).getTime() > now);
-    if (isSearching || isTyping) return future;
+    if (isSearching || isTyping || selectedSport) return future;
     if (activeTab === "copa") return future.filter(g => g.sportKey === "soccer_fifa_world_cup");
     if (activeTab === "qualificatorias") return future.filter(g => WC_QUALIFIER_KEYS.includes(g.sportKey));
     return future;
-  }, [todayGamesWithOdds, searchResults, isSearching, isTyping, activeTab, now]);
+  }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now]);
 
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number; useBonus: boolean }) => {
@@ -245,7 +258,42 @@ export default function Copa() {
           </div>
         </div>
 
-        {/* Row 2: Search */}
+        {/* Row 2: Ligas + Principais Ligas */}
+        <div className="flex flex-row flex-nowrap items-center gap-1">
+          <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={(key) => { setSelectedSport(key); setActiveTab("todos"); }} isLoading={sportsLoading} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }} data-testid="button-top-leagues-copa">
+                <span className="text-sm">🏆</span>
+                <span className="font-bold text-[10px] whitespace-nowrap" style={{ color: "rgba(255,255,255,0.8)" }}>Principais Ligas</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#1a3520] border-[#c9a227]/30 z-[9999]">
+              <p className="font-bold text-xs mb-2 px-1" style={{ color: "#f5c518" }}>🏆 Principais Ligas</p>
+              {[
+                { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
+                { key: "soccer_epl", label: "Premier League" },
+                { key: "soccer_uefa_champs_league", label: "Champions League" },
+                { key: "soccer_spain_la_liga", label: "La Liga" },
+                { key: "soccer_italy_serie_a", label: "Serie A" },
+                { key: "soccer_germany_bundesliga", label: "Bundesliga" },
+              ].map(({ key, label }) => {
+                const sport = sports.find(s => s.key === key);
+                if (!sport) return null;
+                return (
+                  <button key={key} onClick={() => { setSelectedSport(key); setActiveTab("todos"); }}
+                    className="w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors"
+                    style={selectedSport === key ? { background: "#c9a227", color: "#0b1f10" } : { color: "white" }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Row 3: Search */}
         <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(201,162,39,0.25)" }}>
           <Search className="w-4 h-4 shrink-0" style={{ color: "#c9a227" }} />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar time ou seleção..." className="flex-1 bg-transparent text-white text-sm placeholder-white/40 outline-none" data-testid="input-search-copa" />
