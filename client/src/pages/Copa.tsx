@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import copaTrofeuTab from "@assets/copa_trofeu_tab.png";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { BetSlip } from "@/components/BetSlip";
@@ -216,7 +217,7 @@ export default function Copa() {
 
   const tabs: { key: CopaTab; label: string; icon: React.ReactNode }[] = [
     { key: "todos", label: "TODOS", icon: "📅" },
-    { key: "copa", label: "COPA", icon: "🏆" },
+    { key: "copa", label: "COPA", icon: <img src={copaTrofeuTab} alt="Copa" className="w-5 h-5 object-contain" /> },
     {
       key: "champions",
       label: "CHAMPIONS",
