@@ -260,9 +260,8 @@ export default function Copa() {
               <div className="flex items-center gap-2">
                 <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-20 w-auto object-contain drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(201,162,39,0.5))" }} />
                 <div>
-                  <h2 className="text-white font-black text-lg leading-tight">RUMO À COPA DO MUNDO</h2>
-                  <p className="font-black text-2xl leading-tight" style={{ color: "#f5c518" }}>2026</p>
-                  <p className="text-white/50 text-[10px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</p>
+                  <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(14px, 4vw, 22px)" }}>RUMO À COPA DO MUNDO 2026</h2>
+                  <p className="text-white/50 text-[10px] font-bold tracking-widest mt-0.5">EUA · CANADÁ · MÉXICO</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-white/70">
