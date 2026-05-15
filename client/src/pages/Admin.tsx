@@ -983,7 +983,7 @@ export default function Admin() {
                           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                             <div>
                               <p className="font-semibold text-sm">
-                                {entry.homeTeam} <span className="text-muted-foreground">vs</span> {entry.awayTeam}
+                                {entry.homeTeam}{entry.awayTeam ? <> <span className="text-muted-foreground">vs</span> {entry.awayTeam}</> : ""}
                               </p>
                               <p className="text-xs text-muted-foreground">{entry.sportTitle} · {entry.count} aposta{entry.count !== 1 ? "s" : ""} simples</p>
                             </div>
@@ -1099,7 +1099,7 @@ export default function Admin() {
                                     <span className="text-xs text-muted-foreground">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
                                   </div>
                                   <p className="text-xs text-muted-foreground truncate max-w-xs">
-                                    {bet.selections.map(s=>`${s.homeTeam} x ${s.awayTeam}`).join(" · ")}
+                                    {bet.selections.map(s=>s.awayTeam ? `${s.homeTeam} x ${s.awayTeam}` : s.homeTeam).join(" · ")}
                                   </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 mt-1 sm:mt-0">
@@ -1861,7 +1861,7 @@ export default function Admin() {
                                         <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
                                           <div className="flex items-center gap-2 min-w-0">
                                             <span className="font-semibold text-foreground text-xs truncate">
-                                              {first.homeTeam} vs {first.awayTeam}
+                                              {first.homeTeam}{first.awayTeam ? ` vs ${first.awayTeam}` : ""}
                                             </span>
                                           </div>
                                           <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">
