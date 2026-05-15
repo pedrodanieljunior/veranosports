@@ -600,6 +600,7 @@ export default function Copa() {
             error={null}
             selectedSport={null}
             isTodayGames={!isSearching && !isTyping && activeTab !== "champions"}
+            hideHeader={activeTab === "champions"}
             isDark={true}
           />
         )}

@@ -16,6 +16,7 @@ interface GamesListProps {
   selectedSport: string | null;
   isTodayGames?: boolean;
   isDark?: boolean;
+  hideHeader?: boolean;
 }
 
 export function GamesList({ 
@@ -26,7 +27,8 @@ export function GamesList({
   error,
   selectedSport,
   isTodayGames = false,
-  isDark = false
+  isDark = false,
+  hideHeader = false,
 }: GamesListProps) {
   const [activeLeague, setActiveLeague] = useState<string | null>(null);
 
@@ -167,7 +169,7 @@ export function GamesList({
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-auto bg-transparent">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+      {!hideHeader && <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
         <div>
           {isTodayGames ? (
             <>
@@ -192,7 +194,7 @@ export function GamesList({
             </>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Abas de ligas */}
       {isTodayGames && leagueOrder.length > 1 && (
