@@ -98,15 +98,19 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-home-team-${game.id}`}>
             {game.homeTeam}
           </span>
-          {homeOdd && (
+          {homeOdd ? (
             <OddWithLock value={displayOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
+          ) : (
+            <Lock className={`w-3.5 h-3.5 ml-auto shrink-0 ${isDark ? "text-white/20" : "text-gray-300"}`} />
           )}
         </div>
 
         <div className="flex items-center gap-2 mb-1.5 pl-8">
           <span className={`text-[11px] flex-1 ${isDark ? "text-white/40" : "text-gray-400"}`}>Empate</span>
-          {drawOdd && (
+          {drawOdd ? (
             <OddWithLock value={displayOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
+          ) : (
+            <Lock className={`w-3.5 h-3.5 ml-auto shrink-0 ${isDark ? "text-white/20" : "text-gray-300"}`} />
           )}
         </div>
         
@@ -117,14 +121,16 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-away-team-${game.id}`}>
             {game.awayTeam}
           </span>
-          {awayOdd && (
+          {awayOdd ? (
             <OddWithLock value={displayOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
+          ) : (
+            <Lock className={`w-3.5 h-3.5 ml-auto shrink-0 ${isDark ? "text-white/20" : "text-gray-300"}`} />
           )}
         </div>
         
         {!h2hMarket && (
-          <div className={`text-center pt-1.5 text-[10px] ${isDark ? "text-white/30" : "text-gray-400"}`}>
-            Clique para ver mercados
+          <div className={`text-center pt-1 text-[9px] ${isDark ? "text-white/20" : "text-gray-300"}`}>
+            Odds em breve
           </div>
         )}
       </div>
