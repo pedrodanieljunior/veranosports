@@ -15,8 +15,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSessionId } from "@/lib/session";
 import { GamesList } from "@/components/GamesList";
 import { Badge } from "@/components/ui/badge";
-import { History, Search, X, BookOpen, UserCircle, Trophy } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle } from "lucide-react";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
+import copaLogo from "@assets/{EEE1968D-E038-4AF4-8D91-188B91B56EAD}_1778851405985.png";
 
 const COPA_START = new Date("2026-06-11T15:00:00Z");
 const WC_QUALIFIER_KEYS = [
@@ -213,14 +214,7 @@ export default function Copa() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <img src={fwSportsLogo} alt="FW Sports" className="h-12 w-auto" />
-            <div className="flex flex-col leading-tight">
-              <div className="flex items-center gap-1">
-                <Trophy className="w-4 h-4 text-yellow-400" />
-                <span className="text-yellow-400 font-black text-xs tracking-wide">COPA DO MUNDO</span>
-              </div>
-              <span className="text-white font-black text-xl leading-none tracking-tight" style={{ textShadow: "0 0 10px rgba(201,162,39,0.6)" }}>2026</span>
-              <span className="text-yellow-500/70 text-[9px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</span>
-            </div>
+            <img src={copaLogo} alt="Copa do Mundo 2026" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="flex items-center gap-1.5">
