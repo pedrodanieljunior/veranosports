@@ -430,6 +430,7 @@ export const copaWorldCupCardsTable = pgTable("copa_world_cup_cards", {
   odds: real("odds"),
   badge: text("badge").notNull().default(""),
   imageUrl: text("image_url").notNull().default(""),
+  teamsJson: text("teams_json"), // JSON array [{name, odds}] for grupos sub-tab
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -444,6 +445,7 @@ export const copaWorldCupCardSchema = z.object({
   odds: z.number().nullable(),
   badge: z.string(),
   imageUrl: z.string(),
+  teamsJson: z.string().nullable(),
   active: z.boolean(),
   createdAt: z.string(),
 });
@@ -459,6 +461,7 @@ export const insertCopaWorldCupCardSchema = z.object({
   odds: z.number().optional().nullable(),
   badge: z.string().optional().default(""),
   imageUrl: z.string().optional().default(""),
+  teamsJson: z.string().optional().nullable(),
   active: z.boolean().optional().default(true),
 });
 

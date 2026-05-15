@@ -1017,6 +1017,7 @@ export class DatabaseStorage implements IStorage {
       odds: r.odds ?? null,
       badge: r.badge,
       imageUrl: r.imageUrl,
+      teamsJson: (r as any).teamsJson ?? null,
       active: r.active,
       createdAt: r.createdAt.toISOString(),
     };
@@ -1039,6 +1040,7 @@ export class DatabaseStorage implements IStorage {
       odds: data.odds ?? null,
       badge: data.badge ?? "",
       imageUrl: data.imageUrl ?? "",
+      teamsJson: (data as any).teamsJson ?? null,
       active: data.active ?? true,
     }).returning();
     return this.mapCopaCard(row);
@@ -1054,6 +1056,7 @@ export class DatabaseStorage implements IStorage {
       ...(data.odds !== undefined && { odds: data.odds }),
       ...(data.badge !== undefined && { badge: data.badge }),
       ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+      ...((data as any).teamsJson !== undefined && { teamsJson: (data as any).teamsJson }),
       ...(data.active !== undefined && { active: data.active }),
     }).where(eq(copaWorldCupCardsTable.id, id)).returning();
     return row ? this.mapCopaCard(row) : undefined;

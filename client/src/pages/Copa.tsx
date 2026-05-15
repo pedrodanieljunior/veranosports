@@ -443,29 +443,54 @@ export default function Copa() {
             );
             return (
               <div className="px-3 space-y-3">
-                {subCards.map((card: any) => (
-                  <div key={card.id} className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.3)" }}>
-                    {card.imageUrl && <img src={card.imageUrl} alt={card.title} className="w-full h-32 object-cover" />}
-                    <div className="p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          {card.badge && <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black mb-1" style={{ background: "rgba(201,162,39,0.2)", color: "#f5c518" }}>{card.badge}</span>}
-                          <h3 className="text-white font-bold text-sm leading-tight">{card.title}</h3>
-                          {(card.team1 || card.team2) && (
-                            <p className="text-white/60 text-xs mt-0.5">{card.team1}{card.team1 && card.team2 ? " × " : ""}{card.team2}</p>
-                          )}
-                          {card.description && <p className="text-white/50 text-xs mt-1 leading-relaxed">{card.description}</p>}
+                {subCards.map((card: any) => {
+                  let parsedTeams: { name: string; odds: number | null }[] = [];
+                  if (card.teamsJson) { try { parsedTeams = JSON.parse(card.teamsJson); } catch {} }
+                  const isGrupoCard = parsedTeams.length > 0;
+                  return (
+                    <div key={card.id} className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.3)" }}>
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            {card.badge && <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black mb-1" style={{ background: "rgba(201,162,39,0.2)", color: "#f5c518" }}>{card.badge}</span>}
+                            <h3 className="text-white font-bold text-sm leading-tight">{card.title}</h3>
+                          </div>
                         </div>
-                        {card.odds && (
-                          <div className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,162,39,0.4)" }}>
-                            <span className="text-[9px] text-white/50 font-bold">ODD</span>
-                            <span className="text-base font-black" style={{ color: "#f5c518" }}>{Number(card.odds).toFixed(2)}</span>
+
+                        {isGrupoCard ? (
+                          /* Times do grupo com odds individuais */
+                          <div className="space-y-1.5">
+                            {parsedTeams.map((team, i) => (
+                              <div key={i} className="flex items-center justify-between rounded-lg px-2.5 py-1.5" style={{ background: "rgba(0,0,0,0.3)" }}>
+                                <span className="text-white text-xs font-semibold">{team.name}</span>
+                                {team.odds != null && (
+                                  <span className="text-xs font-black ml-2" style={{ color: "#f5c518" }}>{Number(team.odds).toFixed(2)}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          /* Card simples (outras sub-abas) */
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              {(card.team1 || card.team2) && (
+                                <p className="text-white/60 text-xs">{card.team1}{card.team1 && card.team2 ? " × " : ""}{card.team2}</p>
+                              )}
+                            </div>
+                            {card.odds && (
+                              <div className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,162,39,0.4)" }}>
+                                <span className="text-[9px] text-white/50 font-bold">ODD</span>
+                                <span className="text-base font-black" style={{ color: "#f5c518" }}>{Number(card.odds).toFixed(2)}</span>
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        {card.description && <p className="text-white/50 text-xs mt-2 leading-relaxed">{card.description}</p>}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })()
