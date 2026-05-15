@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSessionId } from "@/lib/session";
 import { GamesList } from "@/components/GamesList";
 import { Badge } from "@/components/ui/badge";
-import { History, Search, X, BookOpen, UserCircle } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, Users, Globe, ScanSearch, BarChart2 } from "lucide-react";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
 import tacaCopa from "@assets/taca_copa_transparent.png";
@@ -31,6 +31,7 @@ const WC_QUALIFIER_KEYS = [
 ];
 
 type CopaTab = "todos" | "copa" | "qualificatorias";
+type CopaSubTab = "todos" | "grupos" | "qualificatorias" | "longo" | "previsoes";
 
 function useCountdown(target: Date) {
   const [diff, setDiff] = useState(() => target.getTime() - Date.now());
@@ -60,6 +61,7 @@ export default function Copa() {
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CopaTab>("todos");
+  const [copaSubTab, setCopaSubTab] = useState<CopaSubTab>("todos");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -300,29 +302,63 @@ export default function Copa() {
         </div>
       )}
 
-      {/* ===== TABS ===== */}
+      {/* ===== TABS PRINCIPAIS ===== */}
       {!isSearching && !isTyping && (
-        <div className="px-3 pt-3">
-          <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
-            {tabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                data-testid={`tab-copa-${tab.key}`}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition-all shrink-0"
-                style={activeTab === tab.key
-                  ? { background: "#c9a227", color: "#0b1f10" }
-                  : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }
-                }
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            ))}
+        <div className="pt-3">
+          {/* Linha 1: TODOS | COPA | QUALIFICATÓRIAS */}
+          <div className="px-3">
+            <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+              {tabs.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setActiveTab(tab.key); if (tab.key === "copa") setCopaSubTab("todos"); }}
+                  data-testid={`tab-copa-${tab.key}`}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition-all shrink-0"
+                  style={activeTab === tab.key
+                    ? { background: "#c9a227", color: "#0b1f10" }
+                    : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }
+                  }
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
+          {/* Linha 2: Sub-abas da Copa (só aparece quando COPA está ativo) */}
+          {activeTab === "copa" && (
+            <div className="mt-2" style={{ background: "#111c14", borderTop: "1px solid rgba(201,162,39,0.15)", borderBottom: "1px solid rgba(201,162,39,0.15)" }}>
+              <div className="flex">
+                {([
+                  { key: "todos", label: "TODOS", Icon: Calendar },
+                  { key: "grupos", label: "GRUPOS", Icon: Users },
+                  { key: "qualificatorias", label: "QUALIFICATÓRIAS", Icon: Globe },
+                  { key: "longo", label: "LONGO PRAZO", Icon: ScanSearch },
+                  { key: "previsoes", label: "PREVISÕES", Icon: BarChart2 },
+                ] as { key: CopaSubTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => {
+                  const isActive = copaSubTab === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setCopaSubTab(key)}
+                      data-testid={`subtab-copa-${key}`}
+                      className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 transition-all relative"
+                      style={isActive ? { background: "#c9a227" } : {}}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: isActive ? "#0b1f10" : "rgba(255,255,255,0.55)" }} />
+                      <span className="font-black text-[9px] leading-none text-center whitespace-nowrap" style={{ color: isActive ? "#0b1f10" : "rgba(255,255,255,0.55)", letterSpacing: "0.03em" }}>
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Info do tab ativo */}
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-2 px-3 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl">📅</span>
