@@ -142,7 +142,8 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ duration, ...props }: Toast) {
   const effectiveDuration = duration ?? (() => {
     const stored = typeof localStorage !== "undefined" ? localStorage.getItem("toasterDurationMs") : null;
-    return stored ? parseInt(stored, 10) : 3000;
+    const parsed = stored ? parseInt(stored, 10) : 3000;
+    return (isNaN(parsed) || parsed < 1000) ? 3000 : parsed;
   })();
   const id = genId()
 
