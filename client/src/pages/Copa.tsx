@@ -459,7 +459,7 @@ export default function Copa() {
                   const makeCopaSelection = (outcome: string, odds: number, idx: number): Selection => ({
                     id: `copa-card-${card.id}-${idx}`,
                     gameId: `copa-card-${card.id}`,
-                    homeTeam: card.title,
+                    homeTeam: card.badge || card.title,
                     awayTeam: "",
                     commenceTime: WC_DATE,
                     sportTitle: "Copa do Mundo 2026",
