@@ -265,13 +265,13 @@ export default function Copa() {
                 <button onClick={() => setAuthMode("register")} className="px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-colors" style={{ background: "rgba(201,162,39,0.15)", color: "#f5c518", border: "1px solid rgba(201,162,39,0.3)" }} data-testid="button-register-copa">
                   Cadastrar
                 </button>
-                <button onClick={() => setAuthMode("login")} className="px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap" style={{ background: "#1a6b2e", color: "white" }} data-testid="button-login-copa">
+                <button onClick={() => setAuthMode("login")} className="px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap" style={{ background: "#002776", color: "white" }} data-testid="button-login-copa">
                   Login
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#1a6b2e", color: "white" }} data-testid="button-history-copa">
+                <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#002776", color: "white" }} data-testid="button-history-copa">
                   <History className="w-3.5 h-3.5" /><span>Apostas</span>
                   {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
                 </button>
