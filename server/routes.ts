@@ -4763,6 +4763,7 @@ export async function registerRoutes(
 
         // Sincronizar status do registro de defesa correspondente
         const defesaRecord = await storage.getDefesaByTicket(id);
+        console.log(`[defend-sync] betId=${id} status=${status} defesaFound=${!!defesaRecord} defesaId=${defesaRecord?.id}`);
         if (defesaRecord) {
           // Mapear status do bilhete para status de defesa (anulado → pending)
           const defesaStatus: "pending" | "won" | "lost" =
@@ -4770,6 +4771,7 @@ export async function registerRoutes(
             status === "lost" ? "lost" :
             "pending";
           await storage.updateDefesaStatus(defesaRecord.id, defesaStatus);
+          console.log(`[defend-sync] updated defesa ${defesaRecord.id} → ${defesaStatus}`);
         }
       }
 

@@ -467,6 +467,7 @@ export default function Admin() {
     onSuccess: ({ status }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/defensas"] });
       toast({
         title: status === "anulado"
           ? "Bilhete anulado"
