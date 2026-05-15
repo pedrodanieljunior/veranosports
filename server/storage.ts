@@ -104,6 +104,7 @@ export interface IStorage {
   getWinTransactionForBet(betId: string): Promise<Transaction | null>;
   // Defesas
   getDefesas(): Promise<Defesa[]>;
+  getDefesaByTicket(ticketId: string): Promise<Defesa | undefined>;
   createDefesa(data: InsertDefesa): Promise<Defesa>;
   updateDefesaStatus(id: number, status: "pending" | "won" | "lost"): Promise<Defesa | undefined>;
   deleteDefesa(id: number): Promise<boolean>;
@@ -876,6 +877,11 @@ export class DatabaseStorage implements IStorage {
   async getDefesas(): Promise<Defesa[]> {
     const rows = await db.select().from(defensasTable).orderBy(desc(defensasTable.createdAt));
     return rows.map(r => this.mapDefesa(r));
+  }
+
+  async getDefesaByTicket(ticketId: string): Promise<Defesa | undefined> {
+    const [row] = await db.select().from(defensasTable).where(eq(defensasTable.referencedTicket, ticketId));
+    return row ? this.mapDefesa(row) : undefined;
   }
 
   async createDefesa(data: InsertDefesa): Promise<Defesa> {

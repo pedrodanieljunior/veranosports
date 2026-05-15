@@ -4760,6 +4760,17 @@ export async function registerRoutes(
           defensasBalance = Math.min(defensasInitialBalance, Math.round((defensasBalance + (existing as any).stake) * 100) / 100);
           await storage.setSetting("defensasBalance", String(defensasBalance));
         }
+
+        // Sincronizar status do registro de defesa correspondente
+        const defesaRecord = await storage.getDefesaByTicket(id);
+        if (defesaRecord) {
+          // Mapear status do bilhete para status de defesa (anulado → pending)
+          const defesaStatus: "pending" | "won" | "lost" =
+            status === "won" ? "won" :
+            status === "lost" ? "lost" :
+            "pending";
+          await storage.updateDefesaStatus(defesaRecord.id, defesaStatus);
+        }
       }
 
       // Creditar saldo ao usuário se ganhou (evitar crédito duplo)
