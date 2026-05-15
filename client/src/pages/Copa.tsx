@@ -364,7 +364,7 @@ export default function Copa() {
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); if (tab.key === "copa") setCopaSubTab("todos"); }}
                   data-testid={`tab-copa-${tab.key}`}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-xs whitespace-nowrap transition-all shrink-0"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[10px] whitespace-nowrap transition-all shrink-0"
                   style={activeTab === tab.key
                     ? { background: "#c9a227", color: "#0b1f10" }
                     : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }
