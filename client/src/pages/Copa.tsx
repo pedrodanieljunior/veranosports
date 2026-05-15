@@ -33,7 +33,7 @@ const WC_QUALIFIER_KEYS = [
   "soccer_wc_intercontinental",
 ];
 
-type CopaTab = "todos" | "copa" | "qualificatorias";
+type CopaTab = "todos" | "copa" | "champions";
 type CopaSubTab = "todos" | "grupos" | "qualificatorias" | "longo" | "previsoes";
 
 function useCountdown(target: Date) {
@@ -159,7 +159,7 @@ export default function Copa() {
     const future = base.filter(g => new Date(g.commenceTime).getTime() > now);
     if (isSearching || isTyping || selectedSport) return future;
     if (activeTab === "copa") return future.filter(g => g.sportKey === "soccer_fifa_world_cup");
-    if (activeTab === "qualificatorias") return future.filter(g => WC_QUALIFIER_KEYS.includes(g.sportKey));
+    if (activeTab === "champions") return future.filter(g => g.sportKey === "soccer_uefa_champs_league");
     return future;
   }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now]);
 
@@ -214,10 +214,14 @@ export default function Copa() {
     setSelections(prev => prev.map(s => s.gameId === oldId ? { ...s, gameId: newId, id: s.id.replace(oldId, newId) } : s));
   };
 
-  const tabs: { key: CopaTab; label: string; icon: string }[] = [
+  const tabs: { key: CopaTab; label: string; icon: React.ReactNode }[] = [
     { key: "todos", label: "TODOS", icon: "📅" },
     { key: "copa", label: "COPA", icon: "🏆" },
-    { key: "qualificatorias", label: "QUALIFICATÓRIAS", icon: "🌍" },
+    {
+      key: "champions",
+      label: "CHAMPIONS",
+      icon: <img src="https://media.api-sports.io/football/leagues/2.png" alt="UCL" className="w-5 h-5 object-contain" />,
+    },
   ];
 
   const pendingBets = betHistory.filter(b => b.status === "pending").length;
@@ -411,7 +415,7 @@ export default function Copa() {
               <div className="flex items-center gap-2">
                 <span className="text-xl">📅</span>
                 <p className="text-white font-bold text-sm">
-                  {activeTab === "todos" ? "Jogos do Dia" : activeTab === "copa" ? "Copa do Mundo 2026" : "Qualificatórias"}
+                  {activeTab === "todos" ? "Jogos do Dia" : activeTab === "copa" ? "Copa do Mundo 2026" : "Champions League"}
                 </p>
               </div>
               <p className="text-white/40 text-xs ml-7">
