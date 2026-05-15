@@ -4729,9 +4729,42 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Bilhete não encontrado" });
       }
 
+      // ── Bilhetes ADM_FW (defesas): manejar caixa de defesas em vez do saldo do usuário ──
+      const isDefensaBet = existing?.userId === "ADM_FW";
+
+      if (isDefensaBet) {
+        // Ganhou: retornar stake + lucro ao caixa de defesas
+        if (status === "won" && existing.status !== "won") {
+          const profit = Math.max(0, Math.round((updated.potentialWin - updated.stake) * 100) / 100);
+          defensasBalance = Math.min(defensasInitialBalance, Math.round((defensasBalance + updated.stake) * 100) / 100);
+          defensasProfits = Math.round((defensasProfits + profit) * 100) / 100;
+          await storage.setSetting("defensasBalance", String(defensasBalance));
+          await storage.setSetting("defensasProfits", String(defensasProfits));
+        }
+        // Reverter "ganhou" → perdente/pendente
+        if ((status === "pending" || status === "lost") && existing.status === "won") {
+          const profit = Math.max(0, Math.round(((existing as any).potentialWin - (existing as any).stake) * 100) / 100);
+          defensasBalance = Math.max(0, Math.round((defensasBalance - (existing as any).stake) * 100) / 100);
+          defensasProfits = Math.max(0, Math.round((defensasProfits - profit) * 100) / 100);
+          await storage.setSetting("defensasBalance", String(defensasBalance));
+          await storage.setSetting("defensasProfits", String(defensasProfits));
+        }
+        // Anular: devolver stake ao caixa de defesas
+        if (status === "anulado" && existing.status !== "anulado") {
+          // Se estava como "ganhou", reverter o lucro também
+          if (existing.status === "won") {
+            const profit = Math.max(0, Math.round(((existing as any).potentialWin - (existing as any).stake) * 100) / 100);
+            defensasProfits = Math.max(0, Math.round((defensasProfits - profit) * 100) / 100);
+            await storage.setSetting("defensasProfits", String(defensasProfits));
+          }
+          defensasBalance = Math.min(defensasInitialBalance, Math.round((defensasBalance + (existing as any).stake) * 100) / 100);
+          await storage.setSetting("defensasBalance", String(defensasBalance));
+        }
+      }
+
       // Creditar saldo ao usuário se ganhou (evitar crédito duplo)
       // O valor creditado é potentialWin - bonusUsed (retorno líquido real)
-      if (status === "won" && existing?.userId && existing.status !== "won") {
+      if (!isDefensaBet && status === "won" && existing?.userId && existing.status !== "won") {
         const winUser = await storage.getUserByCpf(existing.userId);
         if (winUser) {
           const bonusUsed = (existing as any).bonusUsed ?? 0;
@@ -4749,7 +4782,7 @@ export async function registerRoutes(
         }
       }
       // Reverter crédito se mudando de "won" para qualquer outro status (pending ou lost)
-      if ((status === "pending" || status === "lost") && existing?.status === "won" && existing?.userId) {
+      if (!isDefensaBet && (status === "pending" || status === "lost") && existing?.status === "won" && existing?.userId) {
         const winUser = await storage.getUserByCpf(existing.userId);
         if (winUser) {
           // Busca a transação de ganho original para reverter EXATAMENTE o que foi creditado
@@ -4771,7 +4804,7 @@ export async function registerRoutes(
         }
       }
       // Anular bilhete: devolver o valor apostado ao usuário
-      if (status === "anulado" && existing?.status !== "anulado" && existing?.userId) {
+      if (!isDefensaBet && status === "anulado" && existing?.status !== "anulado" && existing?.userId) {
         const user = await storage.getUserByCpf(existing.userId);
         if (user) {
           // Se estava como "won", primeiro reverter o crédito do ganho
@@ -4823,6 +4856,71 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating selection result:", error);
       res.status(500).json({ error: "Erro ao atualizar resultado" });
+    }
+  });
+
+  // Admin: Criar defesa automática a partir de um bilhete existente
+  app.post("/api/admin/bets/:id/defend", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { stake } = req.body;
+
+      if (!stake || typeof stake !== "number" || stake <= 0) {
+        return res.status(400).json({ error: "Valor inválido para a defesa" });
+      }
+
+      const originalBet = await storage.getBetSlip(id);
+      if (!originalBet) {
+        return res.status(404).json({ error: "Bilhete não encontrado" });
+      }
+
+      if (defensasBalance < stake) {
+        return res.status(400).json({
+          error: `Saldo de defesas insuficiente. Disponível: R$${defensasBalance.toFixed(2)}`,
+          isInsufficientDefensasBalance: true,
+        });
+      }
+
+      // Calcular totalOdds e potentialWin com as mesmas odds do bilhete original
+      const totalOdds = Math.round(originalBet.selections.reduce((acc, sel) => acc * sel.odds, 1) * 100) / 100;
+      const potentialWin = Math.round(stake * totalOdds * 100) / 100;
+
+      // Criar bilhete com usuário ADM_FW (não deduza saldo de usuário real)
+      const defensaBet = await storage.createBetSlip({
+        selections: originalBet.selections as any,
+        stake,
+        userId: "ADM_FW",
+        _totalOdds: totalOdds,
+        _potentialWin: potentialWin,
+      } as any);
+
+      // Deduzir do caixa de defesas
+      defensasBalance = Math.max(0, defensasBalance - stake);
+      await storage.setSetting("defensasBalance", String(defensasBalance));
+
+      // Montar rótulos para o registro de defesa
+      const gameLabel = originalBet.selections.length > 0
+        ? `${originalBet.selections[0].homeTeam} x ${originalBet.selections[0].awayTeam}`
+        : "Jogo";
+      const marketsLabel = originalBet.selections
+        .map((s: any) => `${s.marketKey} - ${s.outcomeName}`)
+        .join("; ");
+
+      // Criar registro automático na aba Defesas
+      const defesa = await storage.createDefesa({
+        game: gameLabel,
+        markets: marketsLabel,
+        value: stake,
+        odds: totalOdds,
+        potentialReturn: potentialWin,
+        referencedTicket: defensaBet.id,
+        additionalInfo: `Defesa automática do bilhete #${id.slice(0, 8).toUpperCase()}`,
+      });
+
+      res.json({ bet: defensaBet, defesa, defensasBalance });
+    } catch (error) {
+      console.error("Error creating defesa bet:", error);
+      res.status(500).json({ error: "Erro ao criar defesa" });
     }
   });
 

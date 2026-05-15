@@ -97,6 +97,7 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -197,6 +198,7 @@ export default function Admin() {
   const [withdrawalDesc, setWithdrawalDesc] = useState<string>("");
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
+  const [defendDialog, setDefendDialog] = useState<{ bet: BetSlipType; stake: string } | null>(null);
 
   const { data: adminMe, isLoading: adminMeLoading } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/me"],
@@ -557,6 +559,30 @@ export default function Admin() {
       toast({
         title: "Erro",
         description: "Não foi possível resetar o bilhete.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const defendBetMutation = useMutation({
+    mutationFn: async ({ betId, stake }: { betId: string; stake: number }) => {
+      const res = await apiRequest("POST", `/api/admin/bets/${betId}/defend`, { stake });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/defensas"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
+      setDefendDialog(null);
+      toast({
+        title: "Defesa criada",
+        description: "Bilhete de defesa criado e registrado no caixa de defesas.",
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Erro ao criar defesa",
+        description: err?.message ?? "Não foi possível criar a defesa.",
         variant: "destructive",
       });
     },
@@ -1844,7 +1870,12 @@ export default function Admin() {
                                 <Clock className="w-3 h-3" />
                                 {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                               </span>
-                              {bet.userId && (() => {
+                              {bet.userId === "ADM_FW" ? (
+                                <span className="text-xs bg-purple-600/30 text-purple-300 px-2 py-0.5 rounded-full font-semibold border border-purple-500/40">
+                                  <Shield className="w-2.5 h-2.5 inline mr-0.5" />
+                                  DEFESA
+                                </span>
+                              ) : bet.userId && (() => {
                                 const betUser = allUsers.find(u => u.cpf === bet.userId);
                                 return betUser ? (
                                   <span className="text-xs bg-zinc-700/60 text-zinc-300 px-2 py-0.5 rounded-full font-medium">
@@ -2044,6 +2075,20 @@ export default function Admin() {
                               <RefreshCw className={`w-4 h-4 mr-1 ${recheckBetMutation.isPending ? 'animate-spin' : ''}`} />
                               Reverificar
                             </Button>
+
+                            {bet.userId !== "ADM_FW" && bet.status === "pending" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                                onClick={() => setDefendDialog({ bet, stake: String(bet.stake) })}
+                                data-testid={`button-defend-${bet.id}`}
+                                title="Criar defesa automática usando o caixa de defesas"
+                              >
+                                <Shield className="w-4 h-4 mr-1" />
+                                Defender
+                              </Button>
+                            )}
 
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -2395,6 +2440,89 @@ export default function Admin() {
 
         </Tabs>
       </div>
+
+      {/* Dialog: Criar Defesa a partir de bilhete */}
+      <Dialog open={!!defendDialog} onOpenChange={(open) => { if (!open) setDefendDialog(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-400" />
+              Criar Defesa
+            </DialogTitle>
+            <DialogDescription>
+              {defendDialog && (
+                <span>
+                  Bilhete <span className="font-mono text-foreground">#{defendDialog.bet.id.slice(0, 8).toUpperCase()}</span>
+                  {" — "}odds {fmtOdds(defendDialog.bet.totalOdds)}x
+                  {" — "}retorno potencial {R$(defendDialog.bet.potentialWin)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {defendDialog && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 text-sm space-y-1">
+                {defendDialog.bet.selections.map((sel: any) => (
+                  <div key={sel.id} className="flex items-start justify-between gap-2">
+                    <span className="text-muted-foreground truncate">
+                      {sel.homeTeam} x {sel.awayTeam} — {sel.outcomeName}
+                    </span>
+                    <span className="font-semibold text-purple-300 shrink-0">{fmtOdds(sel.odds)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Valor da defesa (R$)</label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={defendDialog.stake}
+                  onChange={(e) => setDefendDialog({ ...defendDialog, stake: e.target.value })}
+                  placeholder="Ex: 100"
+                  data-testid="input-defend-stake"
+                />
+                {(() => {
+                  const stakeNum = parseFloat(defendDialog.stake);
+                  if (!isNaN(stakeNum) && stakeNum > 0) {
+                    const pot = stakeNum * defendDialog.bet.totalOdds;
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        Retorno potencial: <span className="text-green-400 font-medium">{R$(pot)}</span>
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDefendDialog(null)}>Cancelar</Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={
+                defendBetMutation.isPending ||
+                !defendDialog ||
+                isNaN(parseFloat(defendDialog.stake)) ||
+                parseFloat(defendDialog.stake) <= 0
+              }
+              onClick={() => {
+                if (!defendDialog) return;
+                const stake = parseFloat(defendDialog.stake);
+                if (isNaN(stake) || stake <= 0) return;
+                defendBetMutation.mutate({ betId: defendDialog.bet.id, stake });
+              }}
+              data-testid="button-defend-confirm"
+            >
+              {defendBetMutation.isPending ? "Criando..." : "Confirmar Defesa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
