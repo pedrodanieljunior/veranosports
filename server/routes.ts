@@ -2097,10 +2097,26 @@ export async function registerRoutes(
 
   app.patch("/api/admin/users/:cpf", async (req, res) => {
     try {
-      const { name, phone, balance } = req.body as { name?: string; phone?: string; balance?: number };
+      const { name, phone, balance, reason } = req.body as { name?: string; phone?: string; balance?: number; reason?: string };
       const cpf = req.params.cpf;
       if (balance !== undefined) {
+        const userBefore = await storage.getUserByCpf(cpf);
         await storage.updateUserBalance(cpf, balance);
+        // Registrar transação de ajuste com motivo
+        if (userBefore) {
+          const diff = Math.round((balance - userBefore.balance) * 100) / 100;
+          const description = reason?.trim()
+            ? `Ajuste manual: ${reason.trim()}`
+            : `Ajuste manual de saldo (${diff >= 0 ? "+" : ""}R$${diff.toFixed(2)})`;
+          await storage.createTransaction({
+            userId: cpf,
+            type: "adjustment",
+            amount: diff,
+            balanceAfter: balance,
+            description,
+            referenceId: null,
+          });
+        }
       }
       if (name || phone) {
         await storage.updateUserData(cpf, { name, phone });

@@ -3684,6 +3684,7 @@ function UsersTab() {
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editBalance, setEditBalance] = useState("");
+  const [editBalanceReason, setEditBalanceReason] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [userSearch, setUserSearch] = useState("");
@@ -3715,13 +3716,14 @@ function UsersTab() {
   });
 
   const updateBalanceMutation = useMutation({
-    mutationFn: async ({ cpf, balance }: { cpf: string; balance: number }) => {
-      const res = await apiRequest("PATCH", `/api/admin/users/${encodeURIComponent(cpf)}`, { balance });
+    mutationFn: async ({ cpf, balance, reason }: { cpf: string; balance: number; reason?: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${encodeURIComponent(cpf)}`, { balance, reason });
       return res.json();
     },
     onSuccess: (updated: User) => {
       toast({ title: "Saldo atualizado!" });
       setSelectedUser(updated);
+      setEditBalanceReason("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       refetchUsers();
     },
@@ -3863,12 +3865,21 @@ function UsersTab() {
                         onChange={e => setEditBalance(e.target.value)}
                         className="w-36"
                         data-testid="input-edit-balance"
+                        placeholder="Novo saldo"
                       />
-                      <Button size="sm" onClick={() => updateBalanceMutation.mutate({ cpf: selectedUser.cpf, balance: parseFloat(editBalance) })}
+                      <Button size="sm" onClick={() => updateBalanceMutation.mutate({ cpf: selectedUser.cpf, balance: parseFloat(editBalance), reason: editBalanceReason })}
                         disabled={updateBalanceMutation.isPending || isNaN(parseFloat(editBalance))}>
                         <Save className="w-4 h-4 mr-1" /> Salvar
                       </Button>
                     </div>
+                    <Input
+                      type="text"
+                      value={editBalanceReason}
+                      onChange={e => setEditBalanceReason(e.target.value)}
+                      placeholder="Motivo do ajuste (aparece no extrato do usuário)"
+                      data-testid="input-edit-balance-reason"
+                      className="text-sm"
+                    />
                   </div>
 
                   {/* Reset password */}
