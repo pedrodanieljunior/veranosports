@@ -4778,20 +4778,25 @@ export async function registerRoutes(
       // Creditar saldo ao usuário se ganhou (evitar crédito duplo)
       // O valor creditado é potentialWin - bonusUsed (retorno líquido real)
       if (!isDefensaBet && status === "won" && existing?.userId && existing.status !== "won") {
-        const winUser = await storage.getUserByCpf(existing.userId);
-        if (winUser) {
-          const bonusUsed = (existing as any).bonusUsed ?? 0;
-          const netPayout = Math.max(0, Math.round((updated.potentialWin - bonusUsed) * 100) / 100);
-          const credited = Math.round((winUser.balance + netPayout) * 100) / 100;
-          await storage.updateUserBalance(existing.userId, credited);
-          await storage.createTransaction({
-            userId: existing.userId,
-            type: "win",
-            amount: netPayout,
-            balanceAfter: credited,
-            description: `Aposta ganha${bonusUsed > 0 ? ` (R$${updated.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
-            referenceId: id,
-          });
+        // Dupla proteção: verificar também se já existe transação de ganho no banco
+        // (evita race condition onde múltiplos cliques rápidos passam pela primeira verificação)
+        const existingWinTx = await storage.getWinTransactionForBet(id);
+        if (!existingWinTx) {
+          const winUser = await storage.getUserByCpf(existing.userId);
+          if (winUser) {
+            const bonusUsed = (existing as any).bonusUsed ?? 0;
+            const netPayout = Math.max(0, Math.round((updated.potentialWin - bonusUsed) * 100) / 100);
+            const credited = Math.round((winUser.balance + netPayout) * 100) / 100;
+            await storage.updateUserBalance(existing.userId, credited);
+            await storage.createTransaction({
+              userId: existing.userId,
+              type: "win",
+              amount: netPayout,
+              balanceAfter: credited,
+              description: `Aposta ganha${bonusUsed > 0 ? ` (R$${updated.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
+              referenceId: id,
+            });
+          }
         }
       }
       // Reverter crédito se mudando de "won" para qualquer outro status (pending ou lost)
