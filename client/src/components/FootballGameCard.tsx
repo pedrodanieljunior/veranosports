@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Selection } from "@shared/schema";
 import { useMarketSettings } from "@/hooks/use-market-settings";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 
 interface FootballFixture {
   id: number;
@@ -167,7 +168,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   {fixture.homeLogo && (
-                    <img src={fixture.homeLogo} alt="" className="w-8 h-8 object-contain" />
+                    <img src={proxyLogoUrl(fixture.homeLogo)} alt="" className="w-8 h-8 object-contain" />
                   )}
                   {!fixture.homeLogo && (
                     <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-xs font-bold">
@@ -180,7 +181,7 @@ export function FootballGameCard({ fixture, selections, onToggleSelection }: Foo
                 </div>
                 <div className="flex items-center gap-2">
                   {fixture.awayLogo && (
-                    <img src={fixture.awayLogo} alt="" className="w-8 h-8 object-contain" />
+                    <img src={proxyLogoUrl(fixture.awayLogo)} alt="" className="w-8 h-8 object-contain" />
                   )}
                   {!fixture.awayLogo && (
                     <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-xs font-bold">

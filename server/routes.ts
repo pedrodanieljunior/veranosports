@@ -12,6 +12,31 @@ import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
 
+// ─── Image Proxy (contorna bloqueio de hotlink do api-sports.io) ──────────────
+async function setupImageProxy(app: Express) {
+  app.get("/api/img-proxy", async (req: Request, res: Response) => {
+    const raw = req.query.url as string | undefined;
+    if (!raw) return res.status(400).send("missing url");
+    let url: URL;
+    try { url = new URL(raw); } catch { return res.status(400).send("invalid url"); }
+    const allowed = ["media.api-sports.io", "media-2.api-sports.io", "media-3.api-sports.io", "media-4.api-sports.io"];
+    if (!allowed.includes(url.hostname)) return res.status(403).send("forbidden host");
+    try {
+      const upstream = await fetch(url.toString(), {
+        headers: { "User-Agent": "Mozilla/5.0", "Referer": "https://api-sports.io/" },
+      });
+      if (!upstream.ok) return res.status(upstream.status).send("upstream error");
+      const ct = upstream.headers.get("content-type") ?? "image/png";
+      res.setHeader("Content-Type", ct);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      const buf = await upstream.arrayBuffer();
+      res.send(Buffer.from(buf));
+    } catch {
+      res.status(502).send("proxy error");
+    }
+  });
+}
+
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) return res.status(401).json({ message: "Não autenticado" });
   next();
@@ -1640,6 +1665,8 @@ export async function registerRoutes(
 ): Promise<Server> {
   
   // LEAGUE_MAPPING e CALENDAR_YEAR_LEAGUES declarados em escopo de módulo (antes de runCheckResults)
+
+  setupImageProxy(app);
 
   // ─── Auth Routes ──────────────────────────────────────────────────────────
   app.post("/api/auth/register", async (req, res) => {

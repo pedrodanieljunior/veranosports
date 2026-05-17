@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import copaTrofeuTab from "@assets/copa_trofeu_tab.png";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { BetSlip } from "@/components/BetSlip";
@@ -242,7 +243,7 @@ export default function Copa() {
     {
       key: "champions",
       label: "CHAMPIONS LEAGUE",
-      icon: <img src="https://media.api-sports.io/football/leagues/2.png" alt="UCL" className="w-5 h-5 object-contain" />,
+      icon: <img src={proxyLogoUrl("https://media.api-sports.io/football/leagues/2.png")} alt="UCL" className="w-5 h-5 object-contain" />,
     },
   ];
 

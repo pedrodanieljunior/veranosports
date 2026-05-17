@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { JerseyIcon } from "@/components/JerseyIcon";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 
 const badgeCache: Record<string, string | null> = {};
 
@@ -26,12 +27,13 @@ interface TeamBadgeProps {
 }
 
 export function TeamBadge({ teamName, logoUrl, size = 24 }: TeamBadgeProps) {
+  const proxied = proxyLogoUrl(logoUrl);
   const [badgeUrl, setBadgeUrl] = useState<string | null | undefined>(
-    logoUrl ?? (teamName in badgeCache ? badgeCache[teamName] : undefined)
+    proxied ?? (teamName in badgeCache ? badgeCache[teamName] : undefined)
   );
   const [failed, setFailed] = useState(false);
 
-  if (!logoUrl && badgeUrl === undefined) {
+  if (!proxied && badgeUrl === undefined) {
     fetchBadgeUrl(teamName).then(setBadgeUrl);
   }
 
