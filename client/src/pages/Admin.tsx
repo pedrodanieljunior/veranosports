@@ -62,13 +62,15 @@ import {
   Edit,
   Eye,
   EyeOff,
-
+  Gift,
+  Star,
   UserCheck,
   Search,
   Settings,
   RotateCcw,
   Shield,
   Pencil,
+  Filter,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -977,6 +979,10 @@ export default function Admin() {
             <TabsTrigger value="defesas" data-testid="tab-defesas">
               <Shield className="w-4 h-4 mr-2" />
               Defesas
+            </TabsTrigger>
+            <TabsTrigger value="recompensas" data-testid="tab-recompensas">
+              <Gift className="w-4 h-4 mr-2" />
+              Recompensas
             </TabsTrigger>
             <TabsTrigger value="configuracoes" data-testid="tab-configuracoes">
               <Settings className="w-4 h-4 mr-2" />
@@ -2434,6 +2440,9 @@ export default function Admin() {
           <TabsContent value="defesas">
             <DefesasTab onRefresh={refetchDefesas} />
           </TabsContent>
+          <TabsContent value="recompensas">
+            <RecompensasTab />
+          </TabsContent>
 
           <TabsContent value="configuracoes">
             <SettingsTab />
@@ -3823,11 +3832,16 @@ function UsersTab() {
                           <p className="font-semibold text-sm">{u.name}</p>
                           <p className="text-xs text-muted-foreground">{u.cpf}</p>
                           <div className="flex items-center justify-between mt-0.5">
-                            <p className="text-xs text-green-500 font-medium">Saldo: R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                            <p className="text-xs text-green-500 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
                             {userDeposits.length > 0 && (
                               <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
                             )}
                           </div>
+                          {u.bonusBalance > 0 && (
+                            <p className="text-xs text-yellow-400 font-medium mt-0.5 flex items-center gap-1">
+                              <Gift className="w-3 h-3" /> Bônus: R$ {u.bonusBalance.toFixed(2).replace(".", ",")}
+                            </p>
+                          )}
                         </button>
                       );
                     });
@@ -3848,7 +3862,8 @@ function UsersTab() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div><span className="text-muted-foreground">CPF:</span> {selectedUser.cpf}</div>
                     <div><span className="text-muted-foreground">Telefone:</span> {selectedUser.phone}</div>
-                    <div><span className="text-muted-foreground">Saldo:</span> <span className="font-bold text-green-600">R$ {selectedUser.balance.toFixed(2).replace(".", ",")}</span></div>
+                    <div><span className="text-muted-foreground">Saldo:</span> <span className="font-bold text-green-500">R$ {selectedUser.balance.toFixed(2).replace(".", ",")}</span></div>
+                    <div><span className="text-muted-foreground">Bônus disponível:</span> <span className="font-bold text-yellow-400">R$ {(selectedUser.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></div>
                     <div><span className="text-muted-foreground">1º depósito:</span> {selectedUser.firstDepositDone ? "Sim" : "Não"}</div>
                     <div><span className="text-muted-foreground">Cadastrado:</span> {new Date(selectedUser.createdAt).toLocaleDateString("pt-BR")}</div>
                     {selectedUser.referralCode && <div><span className="text-muted-foreground">Código:</span> {selectedUser.referralCode}</div>}
@@ -4834,3 +4849,228 @@ function CopaWorldCupTab() {
   );
 }
 
+// ─── Recompensas Tab ──────────────────────────────────────────────────────────
+type ClubFwClaim = {
+  id: number;
+  userId: string;
+  userName: string;
+  weekStart: string;
+  level: number;
+  bonusAmount: number;
+  createdAt: string;
+};
+
+function RecompensasTab() {
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
+  const [userFilter, setUserFilter] = useState("");
+
+  const { data: claims = [], isLoading } = useQuery<ClubFwClaim[]>({
+    queryKey: ["/api/admin/club-fw-claims", appliedFrom, appliedTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (appliedFrom) params.set("from", appliedFrom);
+      if (appliedTo) params.set("to", appliedTo);
+      const res = await apiRequest("GET", `/api/admin/club-fw-claims?${params.toString()}`);
+      return res.json();
+    },
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return res.json();
+    },
+  });
+
+  const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
+
+  const levelColors: Record<number, string> = {
+    1: "bg-gray-500/20 text-gray-300",
+    2: "bg-blue-500/20 text-blue-300",
+    3: "bg-purple-500/20 text-purple-300",
+    4: "bg-yellow-500/20 text-yellow-300",
+  };
+  const levelLabels: Record<number, string> = {
+    1: "Nível 1 · R$100",
+    2: "Nível 2 · R$250",
+    3: "Nível 3 · R$600",
+    4: "Nível 4 · R$1.000",
+  };
+
+  const filtered = claims.filter(c => {
+    if (!userFilter) return true;
+    const q = userFilter.toLowerCase();
+    return c.userName.toLowerCase().includes(q) || c.userId.includes(q);
+  });
+
+  const totalBonus = filtered.reduce((s, c) => s + c.bonusAmount, 0);
+  const uniqueUsers = new Set(filtered.map(c => c.userId)).size;
+
+  const byUser = users
+    .map(u => ({
+      ...u,
+      totalEarned: claims.filter(c => c.userId === u.cpf).reduce((s, c) => s + c.bonusAmount, 0),
+      claimCount: claims.filter(c => c.userId === u.cpf).length,
+    }))
+    .filter(u => u.bonusBalance > 0 || u.totalEarned > 0)
+    .sort((a, b) => b.bonusBalance - a.bonusBalance);
+
+  return (
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+              <Gift className="w-5 h-5 text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-yellow-400">{fmt(claims.reduce((s, c) => s + c.bonusAmount, 0))}</p>
+              <p className="text-xs text-muted-foreground">Total distribuído</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xl font-bold">{new Set(claims.map(c => c.userId)).size}</p>
+              <p className="text-xs text-muted-foreground">Usuários premiados</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center">
+              <Star className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <p className="text-xl font-bold">{claims.length}</p>
+              <p className="text-xs text-muted-foreground">Recompensas emitidas</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bônus disponível por usuário */}
+      {byUser.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-yellow-400" />
+              Bônus Disponível por Usuário
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {byUser.map(u => (
+                <div key={u.cpf} className="flex items-center justify-between px-4 py-2.5" data-testid={`row-bonus-${u.cpf}`}>
+                  <div>
+                    <p className="text-sm font-medium">{u.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {u.cpf} · {u.claimCount} recompensa{u.claimCount !== 1 ? "s" : ""} ganhas · total: {fmt(u.totalEarned)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-yellow-400">{fmt(u.bonusBalance)}</p>
+                    <p className="text-[10px] text-muted-foreground">disponível</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Histórico com filtros */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Filter className="w-4 h-4" />
+            Histórico de Recompensas – Clube FW
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3 mb-4 items-center">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Semana de:</span>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="text-sm bg-muted border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                data-testid="input-recompensas-from"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">até:</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="text-sm bg-muted border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                data-testid="input-recompensas-to"
+              />
+            </div>
+            <Button size="sm" onClick={() => { setAppliedFrom(fromDate); setAppliedTo(toDate); }} data-testid="button-recompensas-filter">
+              <Filter className="w-3.5 h-3.5 mr-1" /> Filtrar
+            </Button>
+            {(appliedFrom || appliedTo) && (
+              <Button size="sm" variant="ghost" onClick={() => { setFromDate(""); setToDate(""); setAppliedFrom(""); setAppliedTo(""); }} data-testid="button-recompensas-clear">
+                Limpar filtro
+              </Button>
+            )}
+            <div className="relative ml-auto">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar usuário..."
+                value={userFilter}
+                onChange={e => setUserFilter(e.target.value)}
+                className="pl-8 pr-3 py-1 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                data-testid="input-recompensas-search"
+              />
+            </div>
+          </div>
+
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma recompensa encontrada.</p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground mb-2">
+                {filtered.length} registro{filtered.length !== 1 ? "s" : ""} · {uniqueUsers} usuário{uniqueUsers !== 1 ? "s" : ""} · {fmt(totalBonus)} em bônus
+              </p>
+              <div className="divide-y divide-border rounded-md border">
+                {filtered.map(c => (
+                  <div key={c.id} className="flex items-center justify-between px-4 py-2.5" data-testid={`row-claim-${c.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium truncate">{c.userName}</p>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${levelColors[c.level] ?? "bg-muted text-muted-foreground"}`}>
+                          {levelLabels[c.level] ?? `Nível ${c.level}`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        CPF: {c.userId} · Semana: {c.weekStart} · {new Date(c.createdAt).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-yellow-400 shrink-0 ml-4">+{fmt(c.bonusAmount)}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

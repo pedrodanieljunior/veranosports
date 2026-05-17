@@ -2199,6 +2199,17 @@ export async function registerRoutes(
     res.json(result);
   });
 
+  // ─── Admin: Clube FW Claims ────────────────────────────────────────────────
+  app.get("/api/admin/club-fw-claims", requireAdmin, async (req, res) => {
+    try {
+      const { from, to } = req.query as { from?: string; to?: string };
+      const claims = await storage.getAllClubFwClaims(from, to);
+      res.json(claims);
+    } catch {
+      res.status(500).json({ message: "Erro ao buscar recompensas" });
+    }
+  });
+
   // ─── Admin: Deposits Management ────────────────────────────────────────────
   app.get("/api/admin/deposits", async (_req, res) => {
     const deposits = await storage.getAllDeposits();

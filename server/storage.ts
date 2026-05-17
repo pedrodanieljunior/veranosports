@@ -117,6 +117,7 @@ export interface IStorage {
   getClubFwClaimedLevels(userId: string, weekStart: string): Promise<number[]>;
   createClubFwClaim(userId: string, weekStart: string, level: number, bonusAmount: number): Promise<void>;
   checkAndAwardClubFw(userId: string): Promise<{ newLevels: number[]; totalBonus: number }>;
+  getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1010,6 +1011,26 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { newLevels: toAward.map(l => l.level), totalBonus };
+  }
+
+  async getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]> {
+    const allUsers = await this.getAllUsers();
+    const userMap = new Map(allUsers.map(u => [u.cpf, u.name]));
+    let query = db.select().from(clubFwClaimsTable).$dynamic();
+    const conditions = [];
+    if (fromDate) conditions.push(gte(clubFwClaimsTable.weekStart, fromDate));
+    if (toDate) conditions.push(lte(clubFwClaimsTable.weekStart, toDate));
+    if (conditions.length > 0) query = query.where(and(...conditions));
+    const rows = await query.orderBy(desc(clubFwClaimsTable.createdAt));
+    return rows.map(r => ({
+      id: r.id,
+      userId: r.userId,
+      userName: userMap.get(r.userId) ?? r.userId,
+      weekStart: r.weekStart,
+      level: r.level,
+      bonusAmount: r.bonusAmount,
+      createdAt: r.createdAt,
+    }));
   }
 
   private mapCopaCard(r: typeof copaWorldCupCardsTable.$inferSelect): CopaWorldCupCard {
