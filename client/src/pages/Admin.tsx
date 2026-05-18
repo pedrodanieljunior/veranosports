@@ -4719,7 +4719,9 @@ function CopaWorldCupTab() {
   };
 
   const handleSubmit = () => {
-    if (!form.title) return toast({ title: "Título obrigatório", variant: "destructive" });
+    const currentSubTabCheck = editingId != null ? form.subTab : activeSubTab;
+    const titleRequired = !(currentSubTabCheck === "grupos" && form.tableMode);
+    if (titleRequired && !form.title) return toast({ title: "Título obrigatório", variant: "destructive" });
     const currentSubTab = editingId != null ? form.subTab : activeSubTab;
     const isTeamsList = ["grupos", "longo", "especiais"].includes(currentSubTab);
     let payload: any = { ...form, odds: form.odds ? parseFloat(form.odds) : null };
