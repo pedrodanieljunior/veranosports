@@ -4638,7 +4638,7 @@ interface CopaCardForm {
   active: boolean;
   teams: { name: string; odds: string }[];
   tableMode: boolean;
-  tableColumns: string[];
+  tableColumns: { name: string; max: number }[];
   tableTeams: { name: string; odds: string[] }[];
 }
 
@@ -4649,7 +4649,7 @@ function CopaWorldCupTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: activeSubTab === "grupos" && activeGrupoAdmin !== "todos" ? `Grupo ${activeGrupoAdmin}` : "", imageUrl: "", active: true, teams: [{ name: "", odds: "" }], tableMode: false, tableColumns: [""], tableTeams: [{ name: "", odds: [""] }] };
+  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: activeSubTab === "grupos" && activeGrupoAdmin !== "todos" ? `Grupo ${activeGrupoAdmin}` : "", imageUrl: "", active: true, teams: [{ name: "", odds: "" }], tableMode: false, tableColumns: [{ name: "", max: 1 }], tableTeams: [{ name: "", odds: [""] }] };
   const [form, setForm] = useState<CopaCardForm>(emptyForm);
 
   const { data: allCards = [], isLoading, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/copa-world-cup-cards"] });
@@ -4693,14 +4693,17 @@ function CopaWorldCupTab() {
     setEditingId(card.id);
     let teams: { name: string; odds: string }[] = [{ name: "", odds: "" }];
     let tableMode = false;
-    let tableColumns: string[] = [""];
+    let tableColumns: { name: string; max: number }[] = [{ name: "", max: 1 }];
     let tableTeams: { name: string; odds: string[] }[] = [{ name: "", odds: [""] }];
     if (card.teamsJson) {
       try {
         const parsed = JSON.parse(card.teamsJson);
         if (parsed && !Array.isArray(parsed) && parsed.type === "table") {
           tableMode = true;
-          tableColumns = parsed.columns?.length ? parsed.columns : [""];
+          const rawCols = parsed.columns?.length ? parsed.columns : [{ name: "", max: 1 }];
+          tableColumns = rawCols.map((c: any) =>
+            typeof c === "string" ? { name: c, max: 1 } : { name: c.name || "", max: c.max || 1 }
+          );
           tableTeams = (parsed.teams || []).map((t: any) => ({
             name: t.name || "",
             odds: (t.odds || []).map((o: any) => o != null ? String(o) : ""),
@@ -4724,7 +4727,7 @@ function CopaWorldCupTab() {
       if (form.tableMode && currentSubTab === "grupos") {
         payload.teamsJson = JSON.stringify({
           type: "table",
-          columns: form.tableColumns.filter(c => c.trim()),
+          columns: form.tableColumns.filter(c => c.name.trim()).map(c => ({ name: c.name.trim(), max: c.max || 1 })),
           teams: form.tableTeams.filter(t => t.name.trim()).map(t => ({
             name: t.name.trim(),
             odds: t.odds.map(o => o ? parseFloat(o) : null),
@@ -4808,11 +4811,18 @@ function CopaWorldCupTab() {
                           <label className="text-xs font-medium text-muted-foreground">Colunas (mercados)</label>
                           {form.tableColumns.map((col, ci) => (
                             <div key={ci} className="flex gap-2 items-center mt-1.5">
-                              <input value={col}
-                                onChange={e => setForm(f => { const c = [...f.tableColumns]; c[ci] = e.target.value; return { ...f, tableColumns: c }; })}
-                                placeholder="Ex: Classificar Sim, Classificar Não, Líder..."
+                              <input value={col.name}
+                                onChange={e => setForm(f => { const c = [...f.tableColumns]; c[ci] = { ...c[ci], name: e.target.value }; return { ...f, tableColumns: c }; })}
+                                placeholder="Ex: Classificar Sim, Líder..."
                                 className="flex-1 px-3 py-1.5 rounded-md border bg-background text-sm"
                                 data-testid={`input-copa-col-${ci}`} />
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">Máx.</span>
+                                <input type="number" min="1" max="10" value={col.max}
+                                  onChange={e => setForm(f => { const c = [...f.tableColumns]; c[ci] = { ...c[ci], max: Math.max(1, parseInt(e.target.value) || 1) }; return { ...f, tableColumns: c }; })}
+                                  className="w-12 px-2 py-1.5 rounded-md border bg-background text-sm text-center"
+                                  data-testid={`input-copa-col-max-${ci}`} />
+                              </div>
                               {form.tableColumns.length > 1 && (
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-500 shrink-0"
                                   onClick={() => setForm(f => ({ ...f, tableColumns: f.tableColumns.filter((_, i) => i !== ci), tableTeams: f.tableTeams.map(t => ({ ...t, odds: t.odds.filter((_, i) => i !== ci) })) }))}
@@ -4821,7 +4831,7 @@ function CopaWorldCupTab() {
                             </div>
                           ))}
                           <Button size="sm" variant="outline" className="w-full mt-1.5 text-xs h-8"
-                            onClick={() => setForm(f => ({ ...f, tableColumns: [...f.tableColumns, ""], tableTeams: f.tableTeams.map(t => ({ ...t, odds: [...t.odds, ""] })) }))}
+                            onClick={() => setForm(f => ({ ...f, tableColumns: [...f.tableColumns, { name: "", max: 1 }], tableTeams: f.tableTeams.map(t => ({ ...t, odds: [...t.odds, ""] })) }))}
                             data-testid="button-copa-add-col">
                             <Plus className="w-3 h-3 mr-1" /> Adicionar coluna
                           </Button>
@@ -4846,7 +4856,7 @@ function CopaWorldCupTab() {
                               <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${Math.min(form.tableColumns.length, 4)}, 1fr)` }}>
                                 {form.tableColumns.map((col, ci) => (
                                   <div key={ci}>
-                                    <label className="text-[10px] text-muted-foreground block mb-0.5 truncate">{col || `Coluna ${ci + 1}`}</label>
+                                    <label className="text-[10px] text-muted-foreground block mb-0.5 truncate">{col.name || `Coluna ${ci + 1}`}</label>
                                     <input type="number" step="0.01" min="1"
                                       value={team.odds[ci] ?? ""}
                                       onChange={e => setForm(f => { const tt = [...f.tableTeams]; const odds = [...tt[ti].odds]; odds[ci] = e.target.value; tt[ti] = { ...tt[ti], odds }; return { ...f, tableTeams: tt }; })}

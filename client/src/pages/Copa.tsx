@@ -509,12 +509,17 @@ export default function Copa() {
                 )}
                 {visibleCards.map((card: any) => {
                   let parsedTeams: { name: string; odds: number | null }[] = [];
-                  let tableData: { type: string; columns: string[]; teams: { name: string; odds: (number | null)[] }[] } | null = null;
+                  let tableData: { type: string; columns: { name: string; max: number }[]; teams: { name: string; odds: (number | null)[] }[] } | null = null;
                   if (card.teamsJson) {
                     try {
                       const parsed = JSON.parse(card.teamsJson);
                       if (parsed && !Array.isArray(parsed) && parsed.type === "table") {
-                        tableData = parsed;
+                        tableData = {
+                          ...parsed,
+                          columns: (parsed.columns || []).map((c: any) =>
+                            typeof c === "string" ? { name: c, max: 1 } : { name: c.name || c, max: c.max || 1 }
+                          ),
+                        };
                       } else if (Array.isArray(parsed)) {
                         parsedTeams = parsed;
                       }
@@ -555,7 +560,7 @@ export default function Copa() {
                                 <tr>
                                   <th className="text-left pb-1.5 pr-2 font-normal text-white/40 text-[10px]">Seleção</th>
                                   {tableData!.columns.map((col, ci) => (
-                                    <th key={ci} className="text-center pb-1.5 px-1 font-bold text-white/70 text-[10px] whitespace-nowrap">{col}</th>
+                                    <th key={ci} className="text-center pb-1.5 px-1 font-bold text-white/70 text-[10px] whitespace-nowrap">{col.name}</th>
                                   ))}
                                 </tr>
                               </thead>
@@ -572,14 +577,16 @@ export default function Copa() {
                                         const selId = `copa-card-${card.id}-t${ti}-c${ci}`;
                                         const isSelected = selections.some(s => s.id === selId);
                                         const hasOdd = odd != null;
-                                        const colHasSelection = tableData!.teams.some((_, otherTi) =>
-                                          otherTi !== ti && selections.some(s => s.id === `copa-card-${card.id}-t${otherTi}-c${ci}`)
+                                        const colMax = col.max || 1;
+                                        const colSelectionCount = tableData!.teams.reduce((acc, _, otherTi) =>
+                                          acc + (selections.some(s => s.id === `copa-card-${card.id}-t${otherTi}-c${ci}`) ? 1 : 0), 0
                                         );
-                                        const isDisabled = !hasOdd || (!isSelected && (rowHasSelection || colHasSelection));
+                                        const colFull = colSelectionCount >= colMax;
+                                        const isDisabled = !hasOdd || (!isSelected && (rowHasSelection || colFull));
                                         return (
                                           <td key={ci} className="py-1 px-0.5">
                                             <button
-                                              onClick={() => !isDisabled ? handleToggleSelection(makeCopaSelection(`${team.name} – ${col}`, odd!, selId)) : undefined}
+                                              onClick={() => !isDisabled ? handleToggleSelection(makeCopaSelection(`${team.name} – ${col.name}`, odd!, selId)) : undefined}
                                               disabled={isDisabled}
                                               className={`w-full text-center rounded px-1.5 py-1.5 font-black text-xs transition-all ${!isDisabled ? "cursor-pointer active:scale-95" : "cursor-default opacity-30"}`}
                                               style={{ background: isSelected ? "#c9a227" : "rgba(0,0,0,0.35)", color: isSelected ? "#0b1f10" : "#f5c518", minWidth: "52px" }}>
