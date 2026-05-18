@@ -19,7 +19,7 @@ import { GamesList } from "@/components/GamesList";
 import { MobileNav } from "@/components/MobileNav";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History, Search, X, BookOpen, UserCircle, Calendar, Users, Globe, Hourglass, BarChart2, Lock } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
@@ -407,7 +407,7 @@ export default function Copa() {
                 {([
                   { key: "todos", label: "TODOS", Icon: Calendar },
                   { key: "grupos", label: "GRUPOS", Icon: Users },
-                  { key: "longo", label: "LONGO PRAZO", Icon: Hourglass },
+                  { key: "longo", label: "LONGO PRAZO", Icon: CalendarDays },
                   { key: "especiais", label: "ESPECIAIS", Icon: BarChart2 },
                 ] as { key: CopaSubTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => {
                   const isActive = copaSubTab === key;
