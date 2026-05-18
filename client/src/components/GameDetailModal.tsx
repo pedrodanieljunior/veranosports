@@ -138,7 +138,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const marketKeyToBoostKey = (mk: string): string => {
     if (mk === "h2h") return "h2h";
-    if (mk === "double_chance") return "h2h";
+    if (mk === "double_chance") return "double_chance"; // sem boost — usa odd raw do bookmaker
     if (mk === "totals") return "totals";
     const nameToBoostKey: Record<string, string> = {
       "Both Teams Score": "btts",
