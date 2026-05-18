@@ -437,7 +437,7 @@ export const copaWorldCupCardsTable = pgTable("copa_world_cup_cards", {
 
 export const copaWorldCupCardSchema = z.object({
   id: z.number(),
-  subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes"]),
+  subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes", "especiais"]),
   title: z.string(),
   description: z.string(),
   team1: z.string(),
@@ -453,7 +453,7 @@ export const copaWorldCupCardSchema = z.object({
 export type CopaWorldCupCard = z.infer<typeof copaWorldCupCardSchema>;
 
 export const insertCopaWorldCupCardSchema = z.object({
-  subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes"]),
+  subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes", "especiais"]),
   title: z.string().optional().default(""),
   description: z.string().optional().default(""),
   team1: z.string().optional().default(""),
