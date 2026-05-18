@@ -454,7 +454,7 @@ export type CopaWorldCupCard = z.infer<typeof copaWorldCupCardSchema>;
 
 export const insertCopaWorldCupCardSchema = z.object({
   subTab: z.enum(["grupos", "qualificatorias", "longo", "previsoes"]),
-  title: z.string().min(1, "Título obrigatório"),
+  title: z.string().optional().default(""),
   description: z.string().optional().default(""),
   team1: z.string().optional().default(""),
   team2: z.string().optional().default(""),
