@@ -5889,6 +5889,25 @@ function checkSelectionResult(
     console.log(`    Cards: outcome não reconhecido "${outcome}"`); return false;
   }
 
+  // ── Dupla Chance ─────────────────────────────────────────────────────────
+  if (marketKey === "double_chance") {
+    const ocTrim = outcome.replace(/^double_chance[-:\s]*/i, "").trim();
+    if (ocTrim === "1x") { const r = homeGoals >= awayGoals; console.log(`    Dupla Chance 1X: ${homeGoals}-${awayGoals} → ${r}`); return r; }
+    if (ocTrim === "x2") { const r = awayGoals >= homeGoals; console.log(`    Dupla Chance X2: ${homeGoals}-${awayGoals} → ${r}`); return r; }
+    if (ocTrim === "12") { const r = homeGoals !== awayGoals; console.log(`    Dupla Chance 12: ${homeGoals}-${awayGoals} → ${r}`); return r; }
+    console.log(`    Dupla Chance: outcome não reconhecido "${outcome}"`); return false;
+  }
+
+  // ── Mais/Menos Gols (totals) ──────────────────────────────────────────────
+  if (marketKey === "totals") {
+    const total = homeGoals + awayGoals;
+    const maisMatch  = outcome.match(/^mais\s*([\d.]+)$/i);
+    const menosMatch = outcome.match(/^menos\s*([\d.]+)$/i);
+    if (maisMatch)  { const r = total > parseFloat(maisMatch[1]);  console.log(`    Totals Mais ${maisMatch[1]}: total=${total} → ${r}`);  return r; }
+    if (menosMatch) { const r = total < parseFloat(menosMatch[1]); console.log(`    Totals Menos ${menosMatch[1]}: total=${total} → ${r}`); return r; }
+    console.log(`    Totals: outcome não reconhecido "${outcome}"`); return false;
+  }
+
   console.log(`    Mercado não reconhecido: mk="${marketKey}", outcome="${selection.outcome}"`);
   return false;
 }
