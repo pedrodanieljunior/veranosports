@@ -572,7 +572,10 @@ export default function Copa() {
                                         const selId = `copa-card-${card.id}-t${ti}-c${ci}`;
                                         const isSelected = selections.some(s => s.id === selId);
                                         const hasOdd = odd != null;
-                                        const isDisabled = !hasOdd || (rowHasSelection && !isSelected);
+                                        const colHasSelection = tableData!.teams.some((_, otherTi) =>
+                                          otherTi !== ti && selections.some(s => s.id === `copa-card-${card.id}-t${otherTi}-c${ci}`)
+                                        );
+                                        const isDisabled = !hasOdd || (!isSelected && (rowHasSelection || colHasSelection));
                                         return (
                                           <td key={ci} className="py-1 px-0.5">
                                             <button
@@ -636,7 +639,7 @@ export default function Copa() {
                                 </div>
                                 {card.odds ? (
                                   <button
-                                    onClick={() => handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), 0))}
+                                    onClick={() => handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), selId))}
                                     className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2 transition-all active:scale-95"
                                     style={{
                                       background: isSelected ? "rgba(201,162,39,0.3)" : "rgba(0,0,0,0.4)",
