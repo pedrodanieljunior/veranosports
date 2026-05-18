@@ -4698,9 +4698,10 @@ function CopaWorldCupTab() {
 
   const handleSubmit = () => {
     if (!form.title) return toast({ title: "Título obrigatório", variant: "destructive" });
-    const isGrupos = (editingId != null ? form.subTab : activeSubTab) === "grupos";
+    const currentSubTab = editingId != null ? form.subTab : activeSubTab;
+    const isTeamsList = ["grupos", "longo", "especiais"].includes(currentSubTab);
     let payload: any = { ...form, odds: form.odds ? parseFloat(form.odds) : null };
-    if (isGrupos) {
+    if (isTeamsList) {
       const validTeams = form.teams.filter(t => t.name.trim());
       payload.teamsJson = JSON.stringify(validTeams.map(t => ({ name: t.name.trim(), odds: t.odds ? parseFloat(t.odds) : null })));
     }
@@ -4741,21 +4742,23 @@ function CopaWorldCupTab() {
       <CardContent className="space-y-4">
         {/* Form */}
         {showForm && (() => {
-          const isGrupos = (editingId != null ? form.subTab : activeSubTab) === "grupos";
+          const currentSubTab = editingId != null ? form.subTab : activeSubTab;
+          const isGrupos = currentSubTab === "grupos";
+          const isTeamsList = ["grupos", "longo", "especiais"].includes(currentSubTab);
           return (
             <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-              <h3 className="font-semibold text-sm">{editingId != null ? "Editar Card" : "Novo Card"} — {COPA_SUBTABS.find(s => s.key === (editingId != null ? form.subTab : activeSubTab))?.label}</h3>
+              <h3 className="font-semibold text-sm">{editingId != null ? "Editar Card" : "Novo Card"} — {COPA_SUBTABS.find(s => s.key === currentSubTab)?.label}</h3>
               <div className="space-y-3">
                 {/* Título — sempre */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Título *</label>
-                  <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder={isGrupos ? "Ex: Grupo A" : "Ex: Brasil x Argentina"} className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-title" />
+                  <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder={isGrupos ? "Ex: Grupo A" : "Ex: Brasil campeão"} className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-title" />
                 </div>
 
-                {isGrupos ? (
-                  /* ── GRUPOS: times dinâmicos ── */
+                {isTeamsList ? (
+                  /* ── GRUPOS / LONGO / ESPECIAIS: times dinâmicos ── */
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">Times do Grupo</label>
+                    <label className="text-xs font-medium text-muted-foreground">{isGrupos ? "Times do Grupo" : "Seleções / Opções"}</label>
                     {form.teams.map((team, idx) => (
                       <div key={idx} className="flex gap-2 items-center">
                         <input
