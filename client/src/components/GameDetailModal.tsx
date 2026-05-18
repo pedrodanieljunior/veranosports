@@ -529,38 +529,61 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               const totBoosted = hasBoosted("totals");
               const totMult = getBoostMultiplier("totals");
               const totBoostPct = getBoostPercent("totals");
+
+              // Group into pairs: [{ line: "0.5", mais: outcome, menos: outcome }, ...]
+              const lineMap = new Map<string, { mais?: any; menos?: any }>();
+              totalsMarket.outcomes.forEach((o: any) => {
+                const parts = o.name.split(" ");
+                const line = parts[1];
+                if (!lineMap.has(line)) lineMap.set(line, {});
+                const entry = lineMap.get(line)!;
+                if (o.name.startsWith("Mais")) entry.mais = o;
+                else entry.menos = o;
+              });
+              const lines = Array.from(lineMap.entries()).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+
               return (
                 <div className="space-y-3">
                   <span className="text-sm font-semibold text-gray-200">Mais ou Menos Gols</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {totalsMarket.outcomes.map((outcome: any) => {
-                      const selected = isSelected(outcome.name, "totals");
-                      const displayOdd = Math.round((totBoosted ? outcome.price * totMult : outcome.price) * 100) / 100;
-                      const disabled = isButtonDisabled(outcome.name, "totals");
-                      return (
-                        <button
-                          key={outcome.name}
-                          onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "totals", totalsMarket.bookmaker)}
-                          disabled={disabled}
-                          className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
-                            disabled ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
-                              : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2" : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
-                          }`}
-                          data-testid={`button-modal-totals-${outcome.name}`}
-                        >
-                          <span className="text-xs text-gray-400 mb-1 text-center">{outcome.name}</span>
-                          <div className="flex flex-col items-center">
-                            <span className="font-bold text-base text-[#f5c518]">{displayOdd.toFixed(2)}</span>
-                            {totBoosted && (
-                              <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
-                                {outcome.price.toFixed(2)}
-                                {totBoostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-1.5">
+                    {/* Header row */}
+                    <div className="grid grid-cols-3 gap-2 mb-1">
+                      <div className="text-[10px] text-gray-500 text-center">Linha</div>
+                      <div className="text-[10px] text-gray-500 text-center">Mais</div>
+                      <div className="text-[10px] text-gray-500 text-center">Menos</div>
+                    </div>
+                    {lines.map(([line, { mais, menos }]) => (
+                      <div key={line} className="grid grid-cols-3 gap-2 items-center">
+                        <div className="text-xs text-gray-300 font-medium text-center">{line}</div>
+                        {[mais, menos].map((outcome, idx) => {
+                          if (!outcome) return <div key={idx} />;
+                          const selected = isSelected(outcome.name, "totals");
+                          const displayOdd = Math.round((totBoosted ? outcome.price * totMult : outcome.price) * 100) / 100;
+                          const disabled = isButtonDisabled(outcome.name, "totals");
+                          return (
+                            <button
+                              key={outcome.name}
+                              onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "totals", totalsMarket.bookmaker)}
+                              disabled={disabled}
+                              className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition-all ${
+                                disabled ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                                  : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
+                                  : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                              }`}
+                              data-testid={`button-modal-totals-${outcome.name}`}
+                            >
+                              <span className="font-bold text-sm text-[#f5c518]">{displayOdd.toFixed(2)}</span>
+                              {totBoosted && (
+                                <span className="text-[9px] text-gray-500 line-through flex items-center gap-0.5">
+                                  {outcome.price.toFixed(2)}
+                                  {totBoostPct > 0 ? <TrendingUp className="w-2 h-2 text-green-500" /> : <TrendingDown className="w-2 h-2 text-red-500" />}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );

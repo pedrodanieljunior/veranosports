@@ -447,8 +447,19 @@ function extractExtraMarketsFromBets(bets: any[]): any[] {
   const ou = bets.find((b: any) => b.name === "Goals Over/Under");
   if (ou) {
     const outcomes = ou.values
-      .filter((v: any) => v.value === "Over 2.5" || v.value === "Under 2.5")
-      .map((v: any) => ({ name: v.value.includes("Over") ? "Mais 2.5" : "Menos 2.5", price: parseFloat(v.odd) }));
+      .filter((v: any) => /^(Over|Under)\s+[\d.]+$/.test(v.value))
+      .map((v: any) => {
+        const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/);
+        const dir = m[1] === "Over" ? "Mais" : "Menos";
+        return { name: `${dir} ${m[2]}`, price: parseFloat(v.odd) };
+      })
+      .filter((o: any) => !isNaN(o.price) && o.price > 0)
+      .sort((a: any, b: any) => {
+        const lineA = parseFloat(a.name.split(" ")[1]);
+        const lineB = parseFloat(b.name.split(" ")[1]);
+        if (lineA !== lineB) return lineA - lineB;
+        return a.name.startsWith("Mais") ? -1 : 1;
+      });
     if (outcomes.length >= 2) extra.push({ key: "totals", outcomes });
   }
   return extra;
@@ -2523,10 +2534,20 @@ export async function registerRoutes(
           }
           const ou = bets.find((b: any) => b.name === "Goals Over/Under");
           if (ou) {
-            const outcomes = ou.values.filter((v: any) => v.value === "Over 2.5" || v.value === "Under 2.5").map((v: any) => ({
-              name: v.value.includes("Over") ? "Mais 2.5" : "Menos 2.5",
-              price: parseFloat(v.odd)
-            }));
+            const outcomes = ou.values
+              .filter((v: any) => /^(Over|Under)\s+[\d.]+$/.test(v.value))
+              .map((v: any) => {
+                const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/);
+                const dir = m[1] === "Over" ? "Mais" : "Menos";
+                return { name: `${dir} ${m[2]}`, price: parseFloat(v.odd) };
+              })
+              .filter((o: any) => !isNaN(o.price) && o.price > 0)
+              .sort((a: any, b: any) => {
+                const lineA = parseFloat(a.name.split(" ")[1]);
+                const lineB = parseFloat(b.name.split(" ")[1]);
+                if (lineA !== lineB) return lineA - lineB;
+                return a.name.startsWith("Mais") ? -1 : 1;
+              });
             if (outcomes.length >= 2) extra.push({ key: "totals", outcomes });
           }
           return extra;
