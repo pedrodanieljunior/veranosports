@@ -561,7 +561,9 @@ export function BetSlip({
                               <div className="flex items-center gap-2 min-w-0">
                                 <div className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
                                 <span className="text-muted-foreground text-xs truncate">
-                                  {translateMarket(sels[0].marketKey)} · {formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)}
+                                  {sels[0].marketKey.startsWith("copa_grupo")
+                                    ? formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)
+                                    : `${translateMarket(sels[0].marketKey)} · ${formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)}`}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
@@ -586,7 +588,9 @@ export function BetSlip({
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-0 relative">
                                         <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
-                                        <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                        {!sel.marketKey.startsWith("copa_grupo") && (
+                                          <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                        )}
                                       </div>
                                       <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                     </div>

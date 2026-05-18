@@ -4782,11 +4782,13 @@ function CopaWorldCupTab() {
             <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
               <h3 className="font-semibold text-sm">{editingId != null ? "Editar Card" : "Novo Card"} — {COPA_SUBTABS.find(s => s.key === currentSubTab)?.label}</h3>
               <div className="space-y-3">
-                {/* Título — sempre */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Título *</label>
-                  <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder={isGrupos ? "Ex: Grupo A" : "Ex: Brasil campeão"} className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-title" />
-                </div>
+                {/* Título — oculto em grupos */}
+                {!isGrupos && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Título *</label>
+                    <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Brasil campeão" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-title" />
+                  </div>
+                )}
 
                 {isTeamsList ? (
                   <div className="space-y-3">
