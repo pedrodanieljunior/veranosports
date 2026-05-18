@@ -57,7 +57,7 @@ const INTERVALOS_MARKETS = ["First Half Winner", "Both Teams Score - First Half"
 
 // Lock groups: selecting any market from one group blocks all others in that group
 // h2h (Resultado Final 1X2) belongs to the Gols group
-const GOLS_INTERVALOS_LOCK = new Set(["h2h", ...GOLS_MARKETS, ...INTERVALOS_MARKETS]);
+const GOLS_INTERVALOS_LOCK = new Set(["h2h", "double_chance", "totals", ...GOLS_MARKETS, ...INTERVALOS_MARKETS]);
 const ESCANTEIOS_LOCK = new Set(ESCANTEIOS_MARKETS);
 const CARTOES_LOCK = new Set(CARTOES_MARKETS);
 
@@ -138,6 +138,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   const marketKeyToBoostKey = (mk: string): string => {
     if (mk === "h2h") return "h2h";
+    if (mk === "double_chance") return "h2h";
+    if (mk === "totals") return "totals";
     const nameToBoostKey: Record<string, string> = {
       "Both Teams Score": "btts",
       "HT/FT Double": "ht_ft",
@@ -352,14 +354,19 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
     );
   };
 
-  const showH2h = activeTab === "todos" || activeTab === "gols";
+  const showBasicMarkets = activeTab === "todos" || activeTab === "gols";
+  const showH2h = showBasicMarkets;
+
+  const dcMarket = showBasicMarkets ? allMarkets["double_chance"] : null;
+  const totalsMarket = showBasicMarkets ? allMarkets["totals"] : null;
+
   const filteredExtraMarkets = (extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? []).sort((a, b) => {
     if (activeTab === "intervalos") {
       return INTERVALOS_MARKETS.indexOf(a.name) - INTERVALOS_MARKETS.indexOf(b.name);
     }
     return 0;
   });
-  const hasContent = (showH2h && !!h2hMarket) || filteredExtraMarkets.length > 0;
+  const hasContent = (showH2h && !!h2hMarket) || !!dcMarket || !!totalsMarket || filteredExtraMarkets.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -469,6 +476,95 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 </div>
               </div>
             )}
+
+            {/* Dupla Chance market */}
+            {dcMarket && (() => {
+              const dcBoosted = hasBoosted("h2h");
+              const dcMult = getBoostMultiplier("h2h");
+              const dcBoostPct = getBoostPercent("h2h");
+              const DC_LABELS: Record<string, string> = { "1X": "Casa ou Empate", "X2": "Empate ou Fora", "12": "Casa ou Fora" };
+              return (
+                <div className="space-y-3">
+                  <span className="text-sm font-semibold text-gray-200">Dupla Chance</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {dcMarket.outcomes.map((outcome: any) => {
+                      const selected = isSelected(outcome.name, "double_chance");
+                      const displayOdd = Math.round((dcBoosted ? outcome.price * dcMult : outcome.price) * 100) / 100;
+                      const disabled = isButtonDisabled(outcome.name, "double_chance");
+                      const correlatedLocked = !selected && isCorrelatedLocked("h2h");
+                      return (
+                        <button
+                          key={outcome.name}
+                          onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "double_chance", dcMarket.bookmaker)}
+                          disabled={disabled}
+                          className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
+                            disabled
+                              ? correlatedLocked ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed" : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                              : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2" : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                          }`}
+                          data-testid={`button-modal-dc-${outcome.name}`}
+                        >
+                          {correlatedLocked && !selected && <span className="absolute top-1 right-1"><Lock className="w-3 h-3 text-gray-400" /></span>}
+                          <span className="text-[10px] text-gray-400 mb-1 text-center font-bold">{outcome.name}</span>
+                          <span className="text-[9px] text-gray-500 mb-1 text-center leading-tight">{DC_LABELS[outcome.name] || outcome.name}</span>
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-base text-[#f5c518]">{displayOdd.toFixed(2)}</span>
+                            {dcBoosted && (
+                              <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
+                                {outcome.price.toFixed(2)}
+                                {dcBoostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Totals (+/- Gols) market */}
+            {totalsMarket && (() => {
+              const totBoosted = hasBoosted("totals");
+              const totMult = getBoostMultiplier("totals");
+              const totBoostPct = getBoostPercent("totals");
+              return (
+                <div className="space-y-3">
+                  <span className="text-sm font-semibold text-gray-200">Mais ou Menos Gols</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {totalsMarket.outcomes.map((outcome: any) => {
+                      const selected = isSelected(outcome.name, "totals");
+                      const displayOdd = Math.round((totBoosted ? outcome.price * totMult : outcome.price) * 100) / 100;
+                      const disabled = isButtonDisabled(outcome.name, "totals");
+                      return (
+                        <button
+                          key={outcome.name}
+                          onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "totals", totalsMarket.bookmaker)}
+                          disabled={disabled}
+                          className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
+                            disabled ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                              : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2" : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                          }`}
+                          data-testid={`button-modal-totals-${outcome.name}`}
+                        >
+                          <span className="text-xs text-gray-400 mb-1 text-center">{outcome.name}</span>
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-base text-[#f5c518]">{displayOdd.toFixed(2)}</span>
+                            {totBoosted && (
+                              <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
+                                {outcome.price.toFixed(2)}
+                                {totBoostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Divider between main and extra markets */}
             {showH2h && h2hMarket && filteredExtraMarkets.length > 0 && (

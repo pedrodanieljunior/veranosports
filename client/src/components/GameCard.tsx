@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Game, Selection } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronRight, Lock } from "lucide-react";
@@ -7,14 +6,6 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { useMarketSettings } from "@/hooks/use-market-settings";
 import { roundOdds } from "@/lib/formatOdds";
 import { useAuth } from "@/lib/auth";
-
-type CardMarket = "h2h" | "double_chance" | "totals";
-
-const MARKET_TABS: { key: CardMarket; label: string }[] = [
-  { key: "h2h", label: "1X2" },
-  { key: "double_chance", label: "Dupla Chance" },
-  { key: "totals", label: "+/- Gols" },
-];
 
 interface GameCardProps {
   game: Game;
@@ -27,66 +18,43 @@ interface GameCardProps {
 export function GameCard({ game, selections, onClick, onToggleSelection, isDark = false }: GameCardProps) {
   const { user } = useAuth();
   const { getBoostMultiplier, hasBoosted } = useMarketSettings();
-  const [activeMarket, setActiveMarket] = useState<CardMarket>("h2h");
 
   const isLoggedOut = !user;
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
   const bestBookmaker = game.bookmakers[0];
-
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
-  const dcMarket = bestBookmaker?.markets.find(m => m.key === "double_chance");
-  const totalsMarket = bestBookmaker?.markets.find(m => m.key === "totals");
-
-  const availableTabs = MARKET_TABS.filter(t =>
-    t.key === "h2h" ? !!h2hMarket :
-    t.key === "double_chance" ? !!dcMarket :
-    t.key === "totals" ? !!totalsMarket : false
-  );
 
   const selectionsForGame = selections.filter(s => s.gameId === game.id);
   const hasSelections = selectionsForGame.length > 0;
   const formattedDate = isValidDate ? format(gameDate, "dd/MM HH:mm") : "A definir";
 
-  const getDisplayOdd = (price: number, boostKey: string) => {
-    const mult = getBoostMultiplier(boostKey);
-    const boosted = hasBoosted(boostKey);
-    return roundOdds(boosted ? price * mult : price).toFixed(2);
-  };
+  const isBoosted = hasBoosted("h2h");
+  const mult = getBoostMultiplier("h2h");
 
-  const isOutcomeSelected = (outcomeName: string, marketKey: string) =>
-    selections.some(s => s.gameId === game.id && s.marketKey === marketKey && s.outcome === outcomeName);
+  const isOutcomeSelected = (outcomeName: string) =>
+    selections.some(s => s.gameId === game.id && s.marketKey === "h2h" && s.outcome === outcomeName);
 
-  const handleOddClick = (e: React.MouseEvent, outcomeName: string, price: number, marketKey: CardMarket) => {
+  const handleOddClick = (e: React.MouseEvent, outcome: any) => {
     e.stopPropagation();
     if (!user || !onToggleSelection) return;
-    const boostKey = marketKey === "totals" ? "totals" : "h2h";
-    const boosted = hasBoosted(boostKey);
-    const mult = getBoostMultiplier(boostKey);
-    const finalOdds = boosted ? Math.round(price * mult * 100) / 100 : price;
+    const finalOdds = isBoosted ? Math.round(outcome.price * mult * 100) / 100 : outcome.price;
     const selection: Selection = {
-      id: `${game.id}-${marketKey}-${outcomeName}`,
+      id: `${game.id}-h2h-${outcome.name}`,
       gameId: game.id,
       homeTeam: game.homeTeam,
       awayTeam: game.awayTeam,
       commenceTime: game.commenceTime,
       sportTitle: game.sportTitle,
-      marketKey,
-      bookmaker: bestBookmaker?.title || "API-Football",
-      outcome: outcomeName,
+      marketKey: "h2h",
+      bookmaker: bestBookmaker?.title || "Bet365",
+      outcome: outcome.name,
       odds: finalOdds,
-      originalOdds: price,
+      originalOdds: outcome.price,
       result: "pending",
     };
     onToggleSelection(selection);
   };
-
-  const activeMarketData =
-    activeMarket === "h2h" ? h2hMarket :
-    activeMarket === "double_chance" ? dcMarket :
-    activeMarket === "totals" ? totalsMarket : null;
-
-  const boostKeyForActive = activeMarket === "totals" ? "totals" : "h2h";
 
   return (
     <div
@@ -135,69 +103,39 @@ export function GameCard({ game, selections, onClick, onToggleSelection, isDark 
             Odds em breve
           </div>
         ) : (
-          <div onClick={e => e.stopPropagation()}>
-            {availableTabs.length > 1 && (
-              <div className="flex gap-1 mb-1.5">
-                {availableTabs.map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={e => { e.stopPropagation(); setActiveMarket(tab.key); }}
-                    className={`flex-1 text-[9px] font-bold py-1 px-0.5 rounded transition-all truncate ${
-                      activeMarket === tab.key
-                        ? isDark ? "bg-yellow-500/20 text-yellow-400" : "bg-green-100 text-green-700"
-                        : isDark ? "text-white/40 hover:text-white/60" : "text-gray-400 hover:text-gray-600"
-                    }`}
-                    style={{
-                      border: activeMarket === tab.key
-                        ? isDark ? "1px solid rgba(234,179,8,0.4)" : "1px solid rgba(34,197,94,0.4)"
-                        : "1px solid transparent"
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {activeMarketData && (
-              <div className={`flex gap-1 ${activeMarketData.outcomes.length > 3 ? "flex-wrap" : ""}`}>
-                {activeMarketData.outcomes.map((outcome: any) => {
-                  const selected = isOutcomeSelected(outcome.name, activeMarket);
-                  const displayOdd = getDisplayOdd(outcome.price, boostKeyForActive);
-                  const originalOdd = outcome.price.toFixed(2);
-                  const isBoosted = hasBoosted(boostKeyForActive);
-                  return (
-                    <button
-                      key={outcome.name}
-                      onClick={e => handleOddClick(e, outcome.name, outcome.price, activeMarket)}
-                      className={`flex-1 flex flex-col items-center py-1.5 px-1 rounded transition-all min-w-0 ${
-                        isLoggedOut ? "opacity-75" : "active:scale-95"
-                      }`}
-                      style={{
-                        background: selected ? "rgba(234,179,8,0.18)" : isDark ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.05)",
-                        border: selected ? "1px solid rgba(234,179,8,0.6)" : isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
-                      }}
-                      data-testid={`button-odd-${game.id}-${activeMarket}-${outcome.name}`}
-                    >
-                      <span className={`text-[9px] truncate w-full text-center ${isDark ? "text-white/45" : "text-gray-500"}`}>
-                        {outcome.name}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <span className={`text-xs font-bold ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
-                          {displayOdd}
-                        </span>
-                        {isLoggedOut && <Lock className="w-2 h-2 text-gray-400" />}
-                      </span>
-                      {isBoosted && (
-                        <span className={`text-[8px] line-through ${isDark ? "text-white/25" : "text-gray-400"}`}>
-                          {originalOdd}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+            {h2hMarket.outcomes.map((outcome: any) => {
+              const selected = isOutcomeSelected(outcome.name);
+              const displayOdd = roundOdds(isBoosted ? outcome.price * mult : outcome.price).toFixed(2);
+              const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
+              const isHome = outcome.name === game.homeTeam;
+              const label = isDraw ? "X" : isHome ? "1" : "2";
+              return (
+                <button
+                  key={outcome.name}
+                  onClick={e => handleOddClick(e, outcome)}
+                  className={`flex-1 flex flex-col items-center py-1.5 px-1 rounded transition-all ${isLoggedOut ? "opacity-75" : "active:scale-95"}`}
+                  style={{
+                    background: selected ? "rgba(234,179,8,0.18)" : isDark ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.05)",
+                    border: selected ? "1px solid rgba(234,179,8,0.6)" : isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+                  }}
+                  data-testid={`button-odd-${game.id}-h2h-${outcome.name}`}
+                >
+                  <span className={`text-[9px] ${isDark ? "text-white/45" : "text-gray-500"}`}>{label}</span>
+                  <span className="flex items-center gap-0.5">
+                    <span className={`text-xs font-bold ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
+                      {displayOdd}
+                    </span>
+                    {isLoggedOut && <Lock className="w-2 h-2 text-gray-400" />}
+                  </span>
+                  {isBoosted && (
+                    <span className={`text-[8px] line-through ${isDark ? "text-white/25" : "text-gray-400"}`}>
+                      {outcome.price.toFixed(2)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
