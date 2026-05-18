@@ -509,12 +509,23 @@ export default function Copa() {
                 )}
                 {visibleCards.map((card: any) => {
                   let parsedTeams: { name: string; odds: number | null }[] = [];
-                  if (card.teamsJson) { try { parsedTeams = JSON.parse(card.teamsJson); } catch {} }
+                  let tableData: { type: string; columns: string[]; teams: { name: string; odds: (number | null)[] }[] } | null = null;
+                  if (card.teamsJson) {
+                    try {
+                      const parsed = JSON.parse(card.teamsJson);
+                      if (parsed && !Array.isArray(parsed) && parsed.type === "table") {
+                        tableData = parsed;
+                      } else if (Array.isArray(parsed)) {
+                        parsedTeams = parsed;
+                      }
+                    } catch {}
+                  }
+                  const isTableCard = tableData !== null;
                   const isGrupoCard = parsedTeams.length > 0;
                   const WC_DATE = "2026-06-11T00:00:00.000Z";
 
-                  const makeCopaSelection = (outcome: string, odds: number, idx: number): Selection => ({
-                    id: `copa-card-${card.id}-${idx}`,
+                  const makeCopaSelection = (outcome: string, odds: number, selId: string): Selection => ({
+                    id: selId,
                     gameId: `copa-card-${card.id}`,
                     homeTeam: card.title,
                     awayTeam: "",
@@ -536,7 +547,45 @@ export default function Copa() {
                           </div>
                         </div>
 
-                        {isGrupoCard ? (
+                        {isTableCard ? (
+                          /* ── Tabela de grupo com múltiplos mercados ── */
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs border-collapse" style={{ minWidth: `${(tableData!.columns.length * 70) + 100}px` }}>
+                              <thead>
+                                <tr>
+                                  <th className="text-left pb-1.5 pr-2 font-normal text-white/40 text-[10px]">Seleção</th>
+                                  {tableData!.columns.map((col, ci) => (
+                                    <th key={ci} className="text-center pb-1.5 px-1 font-bold text-white/70 text-[10px] whitespace-nowrap">{col}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {tableData!.teams.map((team, ti) => (
+                                  <tr key={ti} className="border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                                    <td className="py-1.5 pr-2 text-white font-semibold whitespace-nowrap">{team.name}</td>
+                                    {tableData!.columns.map((col, ci) => {
+                                      const odd = team.odds[ci];
+                                      const selId = `copa-card-${card.id}-t${ti}-c${ci}`;
+                                      const isSelected = selections.some(s => s.id === selId);
+                                      const hasOdd = odd != null;
+                                      return (
+                                        <td key={ci} className="py-1 px-0.5">
+                                          <button
+                                            onClick={() => hasOdd ? handleToggleSelection(makeCopaSelection(`${team.name} – ${col}`, odd!, selId)) : undefined}
+                                            disabled={!hasOdd}
+                                            className={`w-full text-center rounded px-1.5 py-1.5 font-black text-xs transition-all ${hasOdd ? "cursor-pointer active:scale-95" : "cursor-default opacity-30"}`}
+                                            style={{ background: isSelected ? "#c9a227" : "rgba(0,0,0,0.35)", color: isSelected ? "#0b1f10" : "#f5c518", minWidth: "52px" }}>
+                                            {hasOdd ? Number(odd).toFixed(2) : "—"}
+                                          </button>
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : isGrupoCard ? (
                           /* Times do grupo com odds individuais — clicáveis */
                           <div className="space-y-1.5">
                             {parsedTeams.map((team, i) => {
@@ -546,7 +595,7 @@ export default function Copa() {
                               return (
                                 <button
                                   key={i}
-                                  onClick={() => hasOdd ? handleToggleSelection(makeCopaSelection(team.name, team.odds!, i)) : undefined}
+                                  onClick={() => hasOdd ? handleToggleSelection(makeCopaSelection(team.name, team.odds!, selId)) : undefined}
                                   disabled={!hasOdd}
                                   className={`w-full flex items-center justify-between rounded-lg px-2.5 py-2 transition-all ${hasOdd ? "cursor-pointer active:scale-95" : "cursor-default"}`}
                                   style={{

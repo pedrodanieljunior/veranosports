@@ -4637,6 +4637,9 @@ interface CopaCardForm {
   imageUrl: string;
   active: boolean;
   teams: { name: string; odds: string }[];
+  tableMode: boolean;
+  tableColumns: string[];
+  tableTeams: { name: string; odds: string[] }[];
 }
 
 function CopaWorldCupTab() {
@@ -4646,7 +4649,7 @@ function CopaWorldCupTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: activeSubTab === "grupos" && activeGrupoAdmin !== "todos" ? `Grupo ${activeGrupoAdmin}` : "", imageUrl: "", active: true, teams: [{ name: "", odds: "" }] };
+  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: activeSubTab === "grupos" && activeGrupoAdmin !== "todos" ? `Grupo ${activeGrupoAdmin}` : "", imageUrl: "", active: true, teams: [{ name: "", odds: "" }], tableMode: false, tableColumns: [""], tableTeams: [{ name: "", odds: [""] }] };
   const [form, setForm] = useState<CopaCardForm>(emptyForm);
 
   const { data: allCards = [], isLoading, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/copa-world-cup-cards"] });
@@ -4689,10 +4692,26 @@ function CopaWorldCupTab() {
   const handleEdit = (card: any) => {
     setEditingId(card.id);
     let teams: { name: string; odds: string }[] = [{ name: "", odds: "" }];
+    let tableMode = false;
+    let tableColumns: string[] = [""];
+    let tableTeams: { name: string; odds: string[] }[] = [{ name: "", odds: [""] }];
     if (card.teamsJson) {
-      try { teams = JSON.parse(card.teamsJson).map((t: any) => ({ name: t.name || "", odds: t.odds != null ? String(t.odds) : "" })); } catch {}
+      try {
+        const parsed = JSON.parse(card.teamsJson);
+        if (parsed && !Array.isArray(parsed) && parsed.type === "table") {
+          tableMode = true;
+          tableColumns = parsed.columns?.length ? parsed.columns : [""];
+          tableTeams = (parsed.teams || []).map((t: any) => ({
+            name: t.name || "",
+            odds: (t.odds || []).map((o: any) => o != null ? String(o) : ""),
+          }));
+          if (!tableTeams.length) tableTeams = [{ name: "", odds: tableColumns.map(() => "") }];
+        } else if (Array.isArray(parsed)) {
+          teams = parsed.map((t: any) => ({ name: t.name || "", odds: t.odds != null ? String(t.odds) : "" }));
+        }
+      } catch {}
     }
-    setForm({ subTab: card.subTab, title: card.title, description: card.description, team1: card.team1, team2: card.team2, odds: card.odds != null ? String(card.odds) : "", badge: card.badge, imageUrl: card.imageUrl, active: card.active, teams });
+    setForm({ subTab: card.subTab, title: card.title, description: card.description, team1: card.team1, team2: card.team2, odds: card.odds != null ? String(card.odds) : "", badge: card.badge, imageUrl: card.imageUrl, active: card.active, teams, tableMode, tableColumns, tableTeams });
     setShowForm(true);
   };
 
@@ -4702,8 +4721,19 @@ function CopaWorldCupTab() {
     const isTeamsList = ["grupos", "longo", "especiais"].includes(currentSubTab);
     let payload: any = { ...form, odds: form.odds ? parseFloat(form.odds) : null };
     if (isTeamsList) {
-      const validTeams = form.teams.filter(t => t.name.trim());
-      payload.teamsJson = JSON.stringify(validTeams.map(t => ({ name: t.name.trim(), odds: t.odds ? parseFloat(t.odds) : null })));
+      if (form.tableMode && currentSubTab === "grupos") {
+        payload.teamsJson = JSON.stringify({
+          type: "table",
+          columns: form.tableColumns.filter(c => c.trim()),
+          teams: form.tableTeams.filter(t => t.name.trim()).map(t => ({
+            name: t.name.trim(),
+            odds: t.odds.map(o => o ? parseFloat(o) : null),
+          })),
+        });
+      } else {
+        const validTeams = form.teams.filter(t => t.name.trim());
+        payload.teamsJson = JSON.stringify(validTeams.map(t => ({ name: t.name.trim(), odds: t.odds ? parseFloat(t.odds) : null })));
+      }
     }
     if (editingId != null) updateMutation.mutate({ id: editingId, data: payload });
     else createMutation.mutate({ ...payload, subTab: activeSubTab });
@@ -4756,40 +4786,114 @@ function CopaWorldCupTab() {
                 </div>
 
                 {isTeamsList ? (
-                  /* ── GRUPOS / LONGO / ESPECIAIS: times dinâmicos ── */
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">{isGrupos ? "Times do Grupo" : "Seleções / Opções"}</label>
-                    {form.teams.map((team, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <input
-                          value={team.name}
-                          onChange={e => setForm(f => { const t = [...f.teams]; t[idx] = { ...t[idx], name: e.target.value }; return { ...f, teams: t }; })}
-                          placeholder={`Time ${String.fromCharCode(65 + idx)}`}
-                          className="flex-1 px-3 py-2 rounded-md border bg-background text-sm"
-                          data-testid={`input-copa-team-name-${idx}`}
-                        />
-                        <input
-                          type="number" step="0.01" min="1"
-                          value={team.odds}
-                          onChange={e => setForm(f => { const t = [...f.teams]; t[idx] = { ...t[idx], odds: e.target.value }; return { ...f, teams: t }; })}
-                          placeholder="Odd"
-                          className="w-20 px-3 py-2 rounded-md border bg-background text-sm"
-                          data-testid={`input-copa-team-odds-${idx}`}
-                        />
-                        {form.teams.length > 1 && (
-                          <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-red-400 hover:text-red-500 shrink-0"
-                            onClick={() => setForm(f => ({ ...f, teams: f.teams.filter((_, i) => i !== idx) }))}
-                            data-testid={`button-copa-remove-team-${idx}`}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                  <div className="space-y-3">
+                    {/* Modo toggle — apenas para grupos */}
+                    {isGrupos && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">Modo:</span>
+                        <button type="button" onClick={() => setForm(f => ({ ...f, tableMode: false }))}
+                          className={`px-2.5 py-1 rounded text-xs font-bold border transition-all ${!form.tableMode ? "bg-yellow-500 text-black border-yellow-500" : "border-border text-muted-foreground hover:text-foreground"}`}
+                          data-testid="button-copa-mode-lista">Lista</button>
+                        <button type="button" onClick={() => setForm(f => ({ ...f, tableMode: true }))}
+                          className={`px-2.5 py-1 rounded text-xs font-bold border transition-all ${form.tableMode ? "bg-yellow-500 text-black border-yellow-500" : "border-border text-muted-foreground hover:text-foreground"}`}
+                          data-testid="button-copa-mode-tabela">Tabela</button>
                       </div>
-                    ))}
-                    <Button size="sm" variant="outline" className="w-full mt-1 text-xs h-8"
-                      onClick={() => setForm(f => ({ ...f, teams: [...f.teams, { name: "", odds: "" }] }))}
-                      data-testid="button-copa-add-team">
-                      <Plus className="w-3 h-3 mr-1" /> Adicionar time
-                    </Button>
+                    )}
+
+                    {isGrupos && form.tableMode ? (
+                      /* ── MODO TABELA ── */
+                      <div className="space-y-3">
+                        {/* Editor de colunas */}
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Colunas (mercados)</label>
+                          {form.tableColumns.map((col, ci) => (
+                            <div key={ci} className="flex gap-2 items-center mt-1.5">
+                              <input value={col}
+                                onChange={e => setForm(f => { const c = [...f.tableColumns]; c[ci] = e.target.value; return { ...f, tableColumns: c }; })}
+                                placeholder="Ex: Classificar Sim, Classificar Não, Líder..."
+                                className="flex-1 px-3 py-1.5 rounded-md border bg-background text-sm"
+                                data-testid={`input-copa-col-${ci}`} />
+                              {form.tableColumns.length > 1 && (
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-500 shrink-0"
+                                  onClick={() => setForm(f => ({ ...f, tableColumns: f.tableColumns.filter((_, i) => i !== ci), tableTeams: f.tableTeams.map(t => ({ ...t, odds: t.odds.filter((_, i) => i !== ci) })) }))}
+                                  data-testid={`button-copa-remove-col-${ci}`}><Trash2 className="w-3.5 h-3.5" /></Button>
+                              )}
+                            </div>
+                          ))}
+                          <Button size="sm" variant="outline" className="w-full mt-1.5 text-xs h-8"
+                            onClick={() => setForm(f => ({ ...f, tableColumns: [...f.tableColumns, ""], tableTeams: f.tableTeams.map(t => ({ ...t, odds: [...t.odds, ""] })) }))}
+                            data-testid="button-copa-add-col">
+                            <Plus className="w-3 h-3 mr-1" /> Adicionar coluna
+                          </Button>
+                        </div>
+                        {/* Times com odds por coluna */}
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Times / Seleções</label>
+                          {form.tableTeams.map((team, ti) => (
+                            <div key={ti} className="mt-1.5 border rounded-md p-2.5 space-y-2 bg-muted/20">
+                              <div className="flex gap-2 items-center">
+                                <input value={team.name}
+                                  onChange={e => setForm(f => { const t = [...f.tableTeams]; t[ti] = { ...t[ti], name: e.target.value }; return { ...f, tableTeams: t }; })}
+                                  placeholder="Nome do time / seleção"
+                                  className="flex-1 px-3 py-1.5 rounded-md border bg-background text-sm font-semibold"
+                                  data-testid={`input-copa-tteam-${ti}`} />
+                                {form.tableTeams.length > 1 && (
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-500 shrink-0"
+                                    onClick={() => setForm(f => ({ ...f, tableTeams: f.tableTeams.filter((_, i) => i !== ti) }))}
+                                    data-testid={`button-copa-remove-tteam-${ti}`}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                )}
+                              </div>
+                              <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${Math.min(form.tableColumns.length, 4)}, 1fr)` }}>
+                                {form.tableColumns.map((col, ci) => (
+                                  <div key={ci}>
+                                    <label className="text-[10px] text-muted-foreground block mb-0.5 truncate">{col || `Coluna ${ci + 1}`}</label>
+                                    <input type="number" step="0.01" min="1"
+                                      value={team.odds[ci] ?? ""}
+                                      onChange={e => setForm(f => { const tt = [...f.tableTeams]; const odds = [...tt[ti].odds]; odds[ci] = e.target.value; tt[ti] = { ...tt[ti], odds }; return { ...f, tableTeams: tt }; })}
+                                      placeholder="1.00"
+                                      className="w-full px-2 py-1.5 rounded-md border bg-background text-sm text-center"
+                                      data-testid={`input-copa-todd-${ti}-${ci}`} />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                          <Button size="sm" variant="outline" className="w-full mt-1.5 text-xs h-8"
+                            onClick={() => setForm(f => ({ ...f, tableTeams: [...f.tableTeams, { name: "", odds: f.tableColumns.map(() => "") }] }))}
+                            data-testid="button-copa-add-tteam">
+                            <Plus className="w-3 h-3 mr-1" /> Adicionar time
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── MODO LISTA (grupos/longo/especiais) ── */
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">{isGrupos ? "Times do Grupo" : "Seleções / Opções"}</label>
+                        {form.teams.map((team, idx) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input value={team.name}
+                              onChange={e => setForm(f => { const t = [...f.teams]; t[idx] = { ...t[idx], name: e.target.value }; return { ...f, teams: t }; })}
+                              placeholder={`Time ${String.fromCharCode(65 + idx)}`}
+                              className="flex-1 px-3 py-2 rounded-md border bg-background text-sm"
+                              data-testid={`input-copa-team-name-${idx}`} />
+                            <input type="number" step="0.01" min="1" value={team.odds}
+                              onChange={e => setForm(f => { const t = [...f.teams]; t[idx] = { ...t[idx], odds: e.target.value }; return { ...f, teams: t }; })}
+                              placeholder="Odd" className="w-20 px-3 py-2 rounded-md border bg-background text-sm"
+                              data-testid={`input-copa-team-odds-${idx}`} />
+                            {form.teams.length > 1 && (
+                              <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-red-400 hover:text-red-500 shrink-0"
+                                onClick={() => setForm(f => ({ ...f, teams: f.teams.filter((_, i) => i !== idx) }))}
+                                data-testid={`button-copa-remove-team-${idx}`}><Trash2 className="w-3.5 h-3.5" /></Button>
+                            )}
+                          </div>
+                        ))}
+                        <Button size="sm" variant="outline" className="w-full mt-1 text-xs h-8"
+                          onClick={() => setForm(f => ({ ...f, teams: [...f.teams, { name: "", odds: "" }] }))}
+                          data-testid="button-copa-add-team">
+                          <Plus className="w-3 h-3 mr-1" /> Adicionar time
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   /* ── OUTRAS SUB-ABAS: time + odd simples ── */
