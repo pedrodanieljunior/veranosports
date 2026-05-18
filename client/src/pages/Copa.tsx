@@ -434,7 +434,9 @@ export default function Copa() {
           <div className="mt-2 px-3 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl">📅</span>
+                <span className="text-xl">
+                  {activeTab === "copa" ? "🏆" : activeTab === "champions" ? "⭐" : "⚽"}
+                </span>
                 <p className="text-white font-bold text-sm">
                   {activeTab === "todos" ? "Jogos do Dia" : activeTab === "copa" ? "Copa do Mundo 2026" : "Champions League"}
                 </p>
