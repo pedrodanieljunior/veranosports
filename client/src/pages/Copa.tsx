@@ -571,20 +571,17 @@ export default function Copa() {
                                   <tr key={ti} className="border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                                     <td className="py-1.5 pr-2 text-white font-semibold whitespace-nowrap">{team.name}</td>
                                     {(() => {
-                                      const rowHasSelection = tableData!.columns.some((_, ci) =>
-                                        selections.some(s => s.id === `copa-card-${card.id}-t${ti}-c${ci}`)
+                                      const tableHasSelection = tableData!.teams.some((_, otherTi) =>
+                                        tableData!.columns.some((_, otherCi) =>
+                                          selections.some(s => s.id === `copa-card-${card.id}-t${otherTi}-c${otherCi}`)
+                                        )
                                       );
                                       return tableData!.columns.map((col, ci) => {
                                         const odd = team.odds[ci];
                                         const selId = `copa-card-${card.id}-t${ti}-c${ci}`;
                                         const isSelected = selections.some(s => s.id === selId);
                                         const hasOdd = odd != null;
-                                        const colMax = col.max || 1;
-                                        const colSelectionCount = tableData!.teams.reduce((acc, _, otherTi) =>
-                                          acc + (selections.some(s => s.id === `copa-card-${card.id}-t${otherTi}-c${ci}`) ? 1 : 0), 0
-                                        );
-                                        const colFull = colSelectionCount >= colMax;
-                                        const isDisabled = !hasOdd || (!isSelected && (rowHasSelection || colFull));
+                                        const isDisabled = !hasOdd || (!isSelected && tableHasSelection);
                                         return (
                                           <td key={ci} className="py-1 px-0.5">
                                             <button
