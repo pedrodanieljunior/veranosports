@@ -103,7 +103,7 @@ export function GameCard({ game, selections, onClick, onToggleSelection, isDark 
             Odds em breve
           </div>
         ) : (
-          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+          <div className="flex gap-1.5 mt-1" onClick={e => e.stopPropagation()}>
             {h2hMarket.outcomes.map((outcome: any) => {
               const selected = isOutcomeSelected(outcome.name);
               const displayOdd = roundOdds(isBoosted ? outcome.price * mult : outcome.price).toFixed(2);
@@ -114,22 +114,22 @@ export function GameCard({ game, selections, onClick, onToggleSelection, isDark 
                 <button
                   key={outcome.name}
                   onClick={e => handleOddClick(e, outcome)}
-                  className={`flex-1 flex flex-col items-center py-1.5 px-1 rounded transition-all ${isLoggedOut ? "opacity-75" : "active:scale-95"}`}
+                  className={`flex-1 flex flex-col items-center py-2 px-1 rounded-md transition-all ${isLoggedOut ? "opacity-75" : "active:scale-95"}`}
                   style={{
-                    background: selected ? "rgba(234,179,8,0.18)" : isDark ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.05)",
-                    border: selected ? "1px solid rgba(234,179,8,0.6)" : isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+                    background: selected ? "rgba(234,179,8,0.18)" : isDark ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.07)",
+                    border: selected ? "1px solid rgba(234,179,8,0.6)" : isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.10)",
                   }}
                   data-testid={`button-odd-${game.id}-h2h-${outcome.name}`}
                 >
-                  <span className={`text-[9px] ${isDark ? "text-white/45" : "text-gray-500"}`}>{label}</span>
+                  <span className={`text-[10px] font-medium mb-0.5 ${isDark ? "text-white/50" : "text-gray-500"}`}>{label}</span>
                   <span className="flex items-center gap-0.5">
-                    <span className={`text-xs font-bold ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
+                    <span className={`text-sm font-bold ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
                       {displayOdd}
                     </span>
-                    {isLoggedOut && <Lock className="w-2 h-2 text-gray-400" />}
+                    {isLoggedOut && <Lock className="w-2.5 h-2.5 text-gray-400" />}
                   </span>
                   {isBoosted && (
-                    <span className={`text-[8px] line-through ${isDark ? "text-white/25" : "text-gray-400"}`}>
+                    <span className={`text-[9px] line-through mt-0.5 ${isDark ? "text-white/25" : "text-gray-400"}`}>
                       {outcome.price.toFixed(2)}
                     </span>
                   )}
