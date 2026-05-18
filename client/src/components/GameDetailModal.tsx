@@ -360,7 +360,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
   const dcMarket = showBasicMarkets ? allMarkets["double_chance"] : null;
   const totalsMarket = showBasicMarkets ? allMarkets["totals"] : null;
 
-  const filteredExtraMarkets = (extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab)) ?? []).sort((a, b) => {
+  // Exclude "Goals Over/Under" from extra markets — already shown via totalsMarket
+  const filteredExtraMarkets = (extraMarkets?.markets.filter(m => matchesTab(m.name, activeTab) && m.name !== "Goals Over/Under") ?? []).sort((a, b) => {
     if (activeTab === "intervalos") {
       return INTERVALOS_MARKETS.indexOf(a.name) - INTERVALOS_MARKETS.indexOf(b.name);
     }
@@ -477,11 +478,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               </div>
             )}
 
-            {/* Dupla Chance market */}
+            {/* Dupla Chance market — no boost, always shows raw odds */}
             {dcMarket && (() => {
-              const dcBoosted = hasBoosted("h2h");
-              const dcMult = getBoostMultiplier("h2h");
-              const dcBoostPct = getBoostPercent("h2h");
               const DC_LABELS: Record<string, string> = { "1X": "Casa ou Empate", "X2": "Empate ou Fora", "12": "Casa ou Fora" };
               return (
                 <div className="space-y-3">
@@ -489,9 +487,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                   <div className="grid grid-cols-3 gap-2">
                     {dcMarket.outcomes.map((outcome: any) => {
                       const selected = isSelected(outcome.name, "double_chance");
-                      const displayOdd = Math.round((dcBoosted ? outcome.price * dcMult : outcome.price) * 100) / 100;
                       const disabled = isButtonDisabled(outcome.name, "double_chance");
-                      const correlatedLocked = !selected && isCorrelatedLocked("h2h");
+                      const groupLocked = isMarketGroupLocked("double_chance");
                       return (
                         <button
                           key={outcome.name}
@@ -499,23 +496,15 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                           disabled={disabled}
                           className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
                             disabled
-                              ? correlatedLocked ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed" : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                              ? groupLocked ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed" : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
                               : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2" : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
                           }`}
                           data-testid={`button-modal-dc-${outcome.name}`}
                         >
-                          {correlatedLocked && !selected && <span className="absolute top-1 right-1"><Lock className="w-3 h-3 text-gray-400" /></span>}
+                          {groupLocked && !selected && <span className="absolute top-1 right-1"><Lock className="w-3 h-3 text-gray-400" /></span>}
                           <span className="text-[10px] text-gray-400 mb-1 text-center font-bold">{outcome.name}</span>
                           <span className="text-[9px] text-gray-500 mb-1 text-center leading-tight">{DC_LABELS[outcome.name] || outcome.name}</span>
-                          <div className="flex flex-col items-center">
-                            <span className="font-bold text-base text-[#f5c518]">{displayOdd.toFixed(2)}</span>
-                            {dcBoosted && (
-                              <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
-                                {outcome.price.toFixed(2)}
-                                {dcBoostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
-                              </span>
-                            )}
-                          </div>
+                          <span className="font-bold text-base text-[#f5c518]">{outcome.price.toFixed(2)}</span>
                         </button>
                       );
                     })}

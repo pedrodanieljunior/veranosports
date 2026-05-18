@@ -1088,14 +1088,8 @@ function buildMarketsFromBookmakers(bookmakers: any[], bookmakerName: string, ho
     let label = g.label;
 
     if (g.name === "Goals Over/Under") {
-      // Mostrar apenas a linha 2.5 com rótulos Sim/Não
-      const over = values.find((v) => v.value === "Over 2.5");
-      const under = values.find((v) => v.value === "Under 2.5");
-      values = [
-        { value: "Sim", odd: over?.odd ?? 1.90 },
-        { value: "Não", odd: under?.odd ?? 1.90 },
-      ];
-      label = "Total de Gols mais de 2,5";
+      // Excluded — shown via the dedicated totals market on the game card
+      return null;
     } else if (g.name === "Goals Over/Under First Half" || g.name === "Goals Over/Under - Second Half") {
       values = values.filter(v => {
         const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
@@ -5161,6 +5155,32 @@ export async function registerRoutes(
             selResult = homeGoals > awayGoals ? "won" : "lost";
           } else if (teamsMatch(sel.outcome, awayTeam)) {
             selResult = awayGoals > homeGoals ? "won" : "lost";
+          } else {
+            resolved = false;
+          }
+
+        } else if (sel.marketKey === "double_chance") {
+          // Dupla Chance — "1X" (casa ou empate), "X2" (empate ou fora), "12" (casa ou fora)
+          const ocTrim = oc.replace(/^double_chance[-:\s]*/i, "").trim();
+          if (ocTrim === "1x") {
+            selResult = homeGoals >= awayGoals ? "won" : "lost";
+          } else if (ocTrim === "x2") {
+            selResult = awayGoals >= homeGoals ? "won" : "lost";
+          } else if (ocTrim === "12") {
+            selResult = homeGoals !== awayGoals ? "won" : "lost";
+          } else {
+            resolved = false;
+          }
+
+        } else if (sel.marketKey === "totals") {
+          // Mais/Menos Gols — outcome: "Mais 2.5", "Menos 1.5" etc.
+          const maisMatch = oc.match(/^mais\s*([\d.]+)$/i);
+          const menosMatch = oc.match(/^menos\s*([\d.]+)$/i);
+          const total = homeGoals + awayGoals;
+          if (maisMatch) {
+            selResult = total > parseFloat(maisMatch[1]) ? "won" : "lost";
+          } else if (menosMatch) {
+            selResult = total < parseFloat(menosMatch[1]) ? "won" : "lost";
           } else {
             resolved = false;
           }
