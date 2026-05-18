@@ -59,6 +59,7 @@ const MARKET_LABELS: Record<string, string> = {
 
 export function translateMarket(key: string): string {
   if (key === "boost") return "Super Boost";
+  if (key === "copa_grupo" || key.startsWith("copa_grupo_")) return "Copa do Mundo 2026";
   if (MARKET_LABELS[key]) return MARKET_LABELS[key];
   if (key.startsWith("extra-")) {
     return "Mercado Extra";
