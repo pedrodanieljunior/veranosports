@@ -36,7 +36,7 @@ const WC_QUALIFIER_KEYS = [
 ];
 
 type CopaTab = "todos" | "copa" | "champions";
-type CopaSubTab = "todos" | "grupos" | "qualificatorias" | "longo" | "previsoes";
+type CopaSubTab = "todos" | "grupos" | "longo" | "especiais";
 
 function useCountdown(target: Date) {
   const [diff, setDiff] = useState(() => target.getTime() - Date.now());
@@ -406,9 +406,8 @@ export default function Copa() {
                 {([
                   { key: "todos", label: "TODOS", Icon: Calendar },
                   { key: "grupos", label: "GRUPOS", Icon: Users },
-                  { key: "qualificatorias", label: "QUALIFICATÓRIAS", Icon: Globe },
                   { key: "longo", label: "LONGO PRAZO", Icon: ScanSearch },
-                  { key: "previsoes", label: "PREVISÕES", Icon: BarChart2 },
+                  { key: "especiais", label: "ESPECIAIS", Icon: BarChart2 },
                 ] as { key: CopaSubTab; label: string; Icon: React.ElementType }[]).map(({ key, label, Icon }) => {
                   const isActive = copaSubTab === key;
                   return (

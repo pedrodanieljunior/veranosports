@@ -4619,12 +4619,11 @@ function DefesasTab({ onRefresh }: DefesasTabProps) {
 }
 
 // ─── Copa do Mundo Tab ────────────────────────────────────────────────────────
-type CopaSubTabAdmin = "grupos" | "qualificatorias" | "longo" | "previsoes";
+type CopaSubTabAdmin = "grupos" | "longo" | "especiais";
 const COPA_SUBTABS: { key: CopaSubTabAdmin; label: string }[] = [
   { key: "grupos", label: "Grupos" },
-  { key: "qualificatorias", label: "Qualificatórias" },
   { key: "longo", label: "Longo Prazo" },
-  { key: "previsoes", label: "Previsões" },
+  { key: "especiais", label: "Especiais" },
 ];
 
 interface CopaCardForm {
