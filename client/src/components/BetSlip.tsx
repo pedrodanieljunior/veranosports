@@ -515,7 +515,7 @@ export function BetSlip({
                         : roundOdds(computeTotalOdds(sels, isComboCtx));
                       const isMulti = sels.length >= 2;
                       const isExpanded = expandedGames.has(gameId);
-                      const isCopaGrupoGame = sels.some(s => s.marketKey === "copa_grupo");
+                      const isCopaGrupoGame = sels.some(s => s.marketKey.startsWith("copa_grupo"));
                       const copaGroupBadge = isCopaGrupoGame ? copaBetBadgeMap.get(gameId) : undefined;
                       const betSlipGameLabel = copaGroupBadge
                         ? `${copaGroupBadge} — ${first.homeTeam}`

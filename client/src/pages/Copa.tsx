@@ -529,14 +529,14 @@ export default function Copa() {
                   const isGrupoCard = parsedTeams.length > 0;
                   const WC_DATE = "2026-06-11T00:00:00.000Z";
 
-                  const makeCopaSelection = (outcome: string, odds: number, selId: string): Selection => ({
+                  const makeCopaSelection = (outcome: string, odds: number, selId: string, marketKey = "copa_grupo"): Selection => ({
                     id: selId,
                     gameId: `copa-card-${card.id}`,
                     homeTeam: card.title,
                     awayTeam: "",
                     commenceTime: WC_DATE,
                     sportTitle: "Copa do Mundo 2026",
-                    marketKey: "copa_grupo",
+                    marketKey,
                     bookmaker: "FW Sports",
                     outcome,
                     odds,
@@ -586,7 +586,7 @@ export default function Copa() {
                                         return (
                                           <td key={ci} className="py-1 px-0.5">
                                             <button
-                                              onClick={() => !isDisabled ? handleToggleSelection(makeCopaSelection(`${team.name} – ${col.name}`, odd!, selId)) : undefined}
+                                              onClick={() => !isDisabled ? handleToggleSelection(makeCopaSelection(`${team.name} – ${col.name}`, odd!, selId, `copa_grupo_col${ci}`)) : undefined}
                                               disabled={isDisabled}
                                               className={`w-full text-center rounded px-1.5 py-1.5 font-black text-xs transition-all ${!isDisabled ? "cursor-pointer active:scale-95" : "cursor-default opacity-30"}`}
                                               style={{ background: isSelected ? "#c9a227" : "rgba(0,0,0,0.35)", color: isSelected ? "#0b1f10" : "#f5c518", minWidth: "52px" }}>
