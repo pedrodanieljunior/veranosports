@@ -11,53 +11,67 @@ interface GameCardProps {
   game: Game;
   selections: Selection[];
   onClick: () => void;
-  onToggleSelection?: (selection: Selection) => void;
+  onToggleSelection?: (selection: any) => void;
   isDark?: boolean;
 }
 
-export function GameCard({ game, selections, onClick, onToggleSelection, isDark = false }: GameCardProps) {
+function OddWithLock({ value, originalValue, isDark, locked }: { value: string; originalValue?: string; isDark: boolean; locked: boolean }) {
+  const inner = (
+    <span className="inline-flex flex-col items-end leading-tight">
+      {originalValue && (
+        <span className={`text-[10px] tabular-nums line-through ${isDark ? "text-white/40" : "text-gray-400"}`}>
+          {originalValue}
+        </span>
+      )}
+      <span className={`text-sm font-bold tabular-nums ${locked ? (isDark ? "text-[#f5c518]/70" : "text-green-600/70") : (isDark ? "text-[#f5c518]" : "text-green-600")} inline-flex items-center gap-0.5`}>
+        {value}
+        {locked && <Lock className={`w-2.5 h-2.5 ${isDark ? "text-white/40" : "text-gray-400"}`} />}
+      </span>
+    </span>
+  );
+
+  if (!locked) {
+    return <span className="ml-auto">{inner}</span>;
+  }
+
+  return (
+    <span className="relative group/odd ml-auto">
+      <span data-testid="span-locked-odd">{inner}</span>
+      <span
+        className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover/odd:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg"
+        role="tooltip"
+      >
+        Faça login para apostar
+      </span>
+    </span>
+  );
+}
+
+export function GameCard({ game, selections, onClick, isDark = false }: GameCardProps) {
   const { user } = useAuth();
   const { getBoostMultiplier, hasBoosted } = useMarketSettings();
-
+  const isBoosted = hasBoosted("h2h");
+  const multiplier = getBoostMultiplier("h2h");
   const isLoggedOut = !user;
+
   const gameDate = new Date(game.commenceTime);
   const isValidDate = !isNaN(gameDate.getTime());
   const bestBookmaker = game.bookmakers[0];
   const h2hMarket = bestBookmaker?.markets.find(m => m.key === "h2h");
-
+  
+  const homeOdd = h2hMarket?.outcomes.find(o => o.name === game.homeTeam);
+  const drawOdd = h2hMarket?.outcomes.find(o => o.name === "Draw" || o.name === "Empate");
+  const awayOdd = h2hMarket?.outcomes.find(o => o.name === game.awayTeam);
+  
   const selectionsForGame = selections.filter(s => s.gameId === game.id);
   const hasSelections = selectionsForGame.length > 0;
+
   const formattedDate = isValidDate ? format(gameDate, "dd/MM HH:mm") : "A definir";
 
-  const isBoosted = hasBoosted("h2h");
-  const mult = getBoostMultiplier("h2h");
-
-  const isOutcomeSelected = (outcomeName: string) =>
-    selections.some(s => s.gameId === game.id && s.marketKey === "h2h" && s.outcome === outcomeName);
-
-  const handleOddClick = (e: React.MouseEvent, outcome: any) => {
-    e.stopPropagation();
-    if (!user || !onToggleSelection) return;
-    const finalOdds = isBoosted ? Math.round(outcome.price * mult * 100) / 100 : outcome.price;
-    const selection: Selection = {
-      id: `${game.id}-h2h-${outcome.name}`,
-      gameId: game.id,
-      homeTeam: game.homeTeam,
-      awayTeam: game.awayTeam,
-      commenceTime: game.commenceTime,
-      sportTitle: game.sportTitle,
-      marketKey: "h2h",
-      bookmaker: bestBookmaker?.title || "Bet365",
-      outcome: outcome.name,
-      odds: finalOdds,
-      originalOdds: outcome.price,
-      result: "pending",
-    };
-    onToggleSelection(selection);
-  };
+  const displayOdd = (price: number) => roundOdds(isBoosted ? price * multiplier : price).toFixed(2);
 
   return (
-    <div
+    <div 
       className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-white hover:shadow-md"} ${hasSelections ? "border-yellow-400 ring-1 ring-yellow-400" : isDark ? "border-[#5a5a5a]" : "border-gray-200"}`}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
@@ -76,66 +90,48 @@ export function GameCard({ game, selections, onClick, onToggleSelection, isDark 
           <ChevronRight className={`w-4 h-4 ${isDark ? "text-white/40" : "text-gray-400"}`} />
         </div>
       </div>
-
+      
       <div className="p-2.5">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1.5">
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
             <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-home-team-${game.id}`}>
             {game.homeTeam}
           </span>
+          {homeOdd ? (
+            <OddWithLock value={displayOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
+          ) : (
+            <Lock className={`w-3.5 h-3.5 ml-auto shrink-0 ${isDark ? "text-white/20" : "text-gray-300"}`} />
+          )}
         </div>
-        <div className="flex items-center gap-2 mb-1 pl-8">
-          <span className={`text-[11px] ${isDark ? "text-white/30" : "text-gray-400"}`}>vs</span>
+
+        <div className="flex items-center gap-2 mb-1.5 pl-8">
+          <span className={`text-[11px] flex-1 ${isDark ? "text-white/40" : "text-gray-400"}`}>Empate</span>
+          {drawOdd ? (
+            <OddWithLock value={displayOdd(drawOdd.price)} isDark={isDark} locked={isLoggedOut} />
+          ) : (
+            <Lock className={`w-3.5 h-3.5 ml-auto shrink-0 ${isDark ? "text-white/20" : "text-gray-300"}`} />
+          )}
         </div>
-        <div className="flex items-center gap-2 mb-2">
+        
+        <div className="flex items-center gap-2">
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
             <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-away-team-${game.id}`}>
             {game.awayTeam}
           </span>
+          {awayOdd ? (
+            <OddWithLock value={displayOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />
+          ) : (
+            <Lock className={`w-3.5 h-3.5 ml-auto shrink-0 ${isDark ? "text-white/20" : "text-gray-300"}`} />
+          )}
         </div>
-
-        {!h2hMarket ? (
-          <div className={`text-center text-[9px] ${isDark ? "text-white/20" : "text-gray-300"}`}>
+        
+        {!h2hMarket && (
+          <div className={`text-center pt-1 text-[9px] ${isDark ? "text-white/20" : "text-gray-300"}`}>
             Odds em breve
-          </div>
-        ) : (
-          <div className="flex gap-1.5 mt-1" onClick={e => e.stopPropagation()}>
-            {h2hMarket.outcomes.map((outcome: any) => {
-              const selected = isOutcomeSelected(outcome.name);
-              const displayOdd = roundOdds(isBoosted ? outcome.price * mult : outcome.price).toFixed(2);
-              const isDraw = outcome.name === "Draw" || outcome.name === "Empate";
-              const isHome = outcome.name === game.homeTeam;
-              const label = isDraw ? "X" : isHome ? "1" : "2";
-              return (
-                <button
-                  key={outcome.name}
-                  onClick={e => handleOddClick(e, outcome)}
-                  className={`flex-1 flex flex-col items-center py-2 px-1 rounded-md transition-all ${isLoggedOut ? "opacity-75" : "active:scale-95"}`}
-                  style={{
-                    background: selected ? "rgba(234,179,8,0.18)" : isDark ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.07)",
-                    border: selected ? "1px solid rgba(234,179,8,0.6)" : isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.10)",
-                  }}
-                  data-testid={`button-odd-${game.id}-h2h-${outcome.name}`}
-                >
-                  <span className={`text-[10px] font-medium mb-0.5 ${isDark ? "text-white/50" : "text-gray-500"}`}>{label}</span>
-                  <span className="flex items-center gap-0.5">
-                    <span className={`text-sm font-bold ${isDark ? "text-[#f5c518]" : "text-green-600"}`}>
-                      {displayOdd}
-                    </span>
-                    {isLoggedOut && <Lock className="w-2.5 h-2.5 text-gray-400" />}
-                  </span>
-                  {isBoosted && (
-                    <span className={`text-[9px] line-through mt-0.5 ${isDark ? "text-white/25" : "text-gray-400"}`}>
-                      {outcome.price.toFixed(2)}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         )}
       </div>
