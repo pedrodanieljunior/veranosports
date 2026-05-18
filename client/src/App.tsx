@@ -14,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/"><Redirect to="/home" /></Route>
       <Route path="/home" component={Home} />
+      <Route path="/copa" component={Copa} />
       <Route path="/painel-gm7x9k2" component={Admin} />
       <Route component={NotFound} />
     </Switch>
