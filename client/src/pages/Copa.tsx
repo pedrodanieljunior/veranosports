@@ -509,7 +509,15 @@ export default function Copa() {
                     </div>
                   </div>
                 )}
-                {visibleCards.map((card: any) => {
+                {(() => {
+                  const isRestrictedSubTab = copaSubTab === "longo" || copaSubTab === "especiais";
+                  const subTabSelectedCardId = isRestrictedSubTab
+                    ? (visibleCards as any[]).find((c: any) =>
+                        selections.some(s => s.id.startsWith(`copa-card-${c.id}-`))
+                      )?.id ?? null
+                    : null;
+                  return (visibleCards as any[]).map((card: any) => {
+                  const subTabBlocked = isRestrictedSubTab && subTabSelectedCardId !== null && subTabSelectedCardId !== card.id;
                   let parsedTeams: { name: string; odds: number | null }[] = [];
                   let tableData: { type: string; columns: { name: string; max: number }[]; teams: { name: string; odds: (number | null)[] }[] } | null = null;
                   if (card.teamsJson) {
@@ -645,11 +653,14 @@ export default function Copa() {
                                 </div>
                                 {card.odds ? (
                                   <button
-                                    onClick={() => handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), selId))}
+                                    onClick={() => !subTabBlocked ? handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), selId)) : undefined}
+                                    disabled={subTabBlocked && !isSelected}
                                     className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2 transition-all active:scale-95"
                                     style={{
                                       background: isSelected ? "rgba(201,162,39,0.3)" : "rgba(0,0,0,0.4)",
                                       border: isSelected ? "1px solid #f5c518" : "1px solid rgba(201,162,39,0.4)",
+                                      opacity: subTabBlocked && !isSelected ? 0.3 : 1,
+                                      cursor: subTabBlocked && !isSelected ? "default" : "pointer",
                                     }}
                                   >
                                     <span className="text-[9px] text-white/50 font-bold">ODD</span>
@@ -670,7 +681,8 @@ export default function Copa() {
                       </div>
                     </div>
                   );
-                })}
+                  });
+                })()}
               </div>
             );
           })()
