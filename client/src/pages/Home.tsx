@@ -388,7 +388,7 @@ export default function Home() {
           </div>
         )}
         <div className="flex-1">
-          <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
+          <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} onToggleSelection={handleToggleSelection} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
         </div>
         {/* Mobile footer — Regras */}
         <div className="flex-shrink-0 py-4 px-4 text-center border-t border-white/10">
@@ -521,7 +521,7 @@ export default function Home() {
 
             {/* Games content */}
             <div className="pb-4" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-              <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
+              <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} onToggleSelection={handleToggleSelection} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
             </div>
 
             {/* Desktop footer — Regras */}

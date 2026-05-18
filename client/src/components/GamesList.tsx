@@ -11,6 +11,7 @@ interface GamesListProps {
   games: Game[];
   selections: Selection[];
   onGameClick: (game: Game) => void;
+  onToggleSelection?: (selection: Selection) => void;
   isLoading: boolean;
   error: Error | null;
   selectedSport: string | null;
@@ -22,7 +23,8 @@ interface GamesListProps {
 export function GamesList({ 
   games, 
   selections, 
-  onGameClick, 
+  onGameClick,
+  onToggleSelection,
   isLoading, 
   error,
   selectedSport,
@@ -226,7 +228,7 @@ export function GamesList({
       {isTodayGames && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 mb-6">
           {tabGames.map((game) => (
-            <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} isDark={isDark} />
+            <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} onToggleSelection={onToggleSelection} isDark={isDark} />
           ))}
         </div>
       )}
@@ -254,7 +256,7 @@ export function GamesList({
                 </button>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                   {leagueGames.map((game) => (
-                    <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} isDark={isDark} />
+                    <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} onToggleSelection={onToggleSelection} isDark={isDark} />
                   ))}
                 </div>
               </div>
@@ -267,7 +269,7 @@ export function GamesList({
       {!isTodayGames && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
           {games.map((game) => (
-            <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} isDark={isDark} />
+            <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} onToggleSelection={onToggleSelection} isDark={isDark} />
           ))}
         </div>
       )}

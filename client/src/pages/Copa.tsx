@@ -704,6 +704,7 @@ export default function Copa() {
               games={copaMundoGames}
               selections={selections}
               onGameClick={handleGameClick}
+              onToggleSelection={handleToggleSelection}
               isLoading={false}
               error={null}
               selectedSport={null}
@@ -716,6 +717,7 @@ export default function Copa() {
             games={filteredGames}
             selections={selections}
             onGameClick={handleGameClick}
+            onToggleSelection={handleToggleSelection}
             isLoading={isTyping || (isSearching ? searchLoading : todayLoading)}
             error={null}
             selectedSport={null}

@@ -434,6 +434,26 @@ function pickBestBookmaker(allBks: any[]): any {
   return allBks[0] || null;
 }
 
+function extractExtraMarketsFromBets(bets: any[]): any[] {
+  const extra: any[] = [];
+  const dc = bets.find((b: any) => b.name === "Double Chance");
+  if (dc && dc.values?.length >= 2) {
+    const outcomes = dc.values.map((v: any) => ({
+      name: v.value === "Home/Draw" ? "1X" : v.value === "Draw/Away" ? "X2" : v.value === "Home/Away" ? "12" : v.value,
+      price: parseFloat(v.odd)
+    })).filter((o: any) => !isNaN(o.price) && o.price > 0);
+    if (outcomes.length >= 2) extra.push({ key: "double_chance", outcomes });
+  }
+  const ou = bets.find((b: any) => b.name === "Goals Over/Under");
+  if (ou) {
+    const outcomes = ou.values
+      .filter((v: any) => v.value === "Over 2.5" || v.value === "Under 2.5")
+      .map((v: any) => ({ name: v.value.includes("Over") ? "Mais 2.5" : "Menos 2.5", price: parseFloat(v.odd) }));
+    if (outcomes.length >= 2) extra.push({ key: "totals", outcomes });
+  }
+  return extra;
+}
+
 // Helper para converter dados de múltiplos bookmakers da API-Football em formato de mercados
 // Estratégia: usar odds do melhor bookmaker disponível (Bet365 > Betano > ...).
 // Para cada mercado, usa o bookmaker de maior prioridade que tenha aquele mercado.
@@ -2491,17 +2511,41 @@ export async function registerRoutes(
         // Buscar odds sequencialmente por liga (evita throttling da API)
         const todayOddsMap = new Map<number, any[]>(); // fixtureId -> bookmakers
 
+        const extractAdditionalMarkets = (bets: any[]): any[] => {
+          const extra: any[] = [];
+          const dc = bets.find((b: any) => b.name === "Double Chance");
+          if (dc && dc.values?.length >= 2) {
+            const outcomes = dc.values.map((v: any) => ({
+              name: v.value === "Home/Draw" ? "1X" : v.value === "Draw/Away" ? "X2" : v.value === "Home/Away" ? "12" : v.value,
+              price: parseFloat(v.odd)
+            })).filter((o: any) => !isNaN(o.price) && o.price > 0);
+            if (outcomes.length >= 2) extra.push({ key: "double_chance", outcomes });
+          }
+          const ou = bets.find((b: any) => b.name === "Goals Over/Under");
+          if (ou) {
+            const outcomes = ou.values.filter((v: any) => v.value === "Over 2.5" || v.value === "Under 2.5").map((v: any) => ({
+              name: v.value.includes("Over") ? "Mais 2.5" : "Menos 2.5",
+              price: parseFloat(v.odd)
+            }));
+            if (outcomes.length >= 2) extra.push({ key: "totals", outcomes });
+          }
+          return extra;
+        };
+
         const extractH2hFromBk = (bk: any, title?: string) => {
           if (!bk) return null;
-          const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+          const bets: any[] = bk.bets || [];
+          const h2h = bets.find((b: any) => b.name === "Match Winner");
           if (!h2h || h2h.values?.length < 2) return null;
+          const markets: any[] = [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
+            name: v.value === "Home" ? "__HOME__" : v.value === "Away" ? "__AWAY__" : "Empate",
+            price: parseFloat(v.odd)
+          }))}];
+          markets.push(...extractAdditionalMarkets(bets));
           return [{
             key: "api-football",
             title: title || bk.name,
-            markets: [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
-              name: v.value === "Home" ? "__HOME__" : v.value === "Away" ? "__AWAY__" : "Empate",
-              price: parseFloat(v.odd)
-            }))}]
+            markets
           }];
         };
 
@@ -2695,19 +2739,17 @@ export async function registerRoutes(
         const bk = oddsMap.get(fid);
         let bookmakers: any[] = [];
         if (bk) {
-          const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+          const bets: any[] = bk.bets || [];
+          const h2h = bets.find((b: any) => b.name === "Match Winner");
           if (h2h && h2h.values?.length >= 2) {
-            bookmakers = [{
-              key: "api-football",
-              title: bk.name,
-              markets: [{
-                key: "h2h",
-                outcomes: h2h.values.map((v: any) => ({
-                  name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
-                  price: parseFloat(v.odd),
-                })),
-              }],
-            }];
+            const markets: any[] = [{
+              key: "h2h",
+              outcomes: h2h.values.map((v: any) => ({
+                name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                price: parseFloat(v.odd),
+              })),
+            }, ...extractExtraMarketsFromBets(bets)];
+            bookmakers = [{ key: "api-football", title: bk.name, markets }];
           }
         }
         return {
@@ -2766,19 +2808,17 @@ export async function registerRoutes(
           const oddsData = await oddsRes.json();
           const bk = pickBestBookmaker(oddsData.response?.[0]?.bookmakers || []);
           if (bk) {
-            const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+            const bets: any[] = bk.bets || [];
+            const h2h = bets.find((b: any) => b.name === "Match Winner");
             if (h2h && h2h.values?.length >= 2) {
-              bookmakers = [{
-                key: "api-football",
-                title: bk.name,
-                markets: [{
-                  key: "h2h",
-                  outcomes: h2h.values.map((v: any) => ({
-                    name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
-                    price: parseFloat(v.odd),
-                  })),
-                }],
-              }];
+              const markets: any[] = [{
+                key: "h2h",
+                outcomes: h2h.values.map((v: any) => ({
+                  name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                  price: parseFloat(v.odd),
+                })),
+              }, ...extractExtraMarketsFromBets(bets)];
+              bookmakers = [{ key: "api-football", title: bk.name, markets }];
             }
           }
         }
@@ -2867,18 +2907,15 @@ export async function registerRoutes(
             const h2h = bets.find((b: any) => b.name === "Match Winner");
             if (h2h && h2h.values?.length >= 2) {
               console.log(`[BR-bulk] ${fid} bookmaker: ${chosenBk.name}`);
-              oddsMap.set(fid, [{
-                key: "api-football",
-                title: chosenBk.name,
-                markets: [{
-                  key: "h2h",
-                  outcomes: h2h.values.map((v: any) => ({
-                    name: v.value === "Home" ? "HOME_PLACEHOLDER" :
-                          v.value === "Away" ? "AWAY_PLACEHOLDER" : "Empate",
-                    price: parseFloat(v.odd)
-                  }))
-                }]
-              }]);
+              const markets: any[] = [{
+                key: "h2h",
+                outcomes: h2h.values.map((v: any) => ({
+                  name: v.value === "Home" ? "HOME_PLACEHOLDER" :
+                        v.value === "Away" ? "AWAY_PLACEHOLDER" : "Empate",
+                  price: parseFloat(v.odd)
+                }))
+              }, ...extractExtraMarketsFromBets(bets)];
+              oddsMap.set(fid, [{ key: "api-football", title: chosenBk.name, markets }]);
             }
           }
         };
@@ -2910,14 +2947,11 @@ export async function registerRoutes(
                 const h2h = bets.find((b: any) => b.name === "Match Winner");
                 if (h2h && h2h.values?.length >= 2) {
                   console.log(`[BR-indiv] ${fid} bookmaker: ${chosenBk.name}`);
-                  oddsMap.set(fid, [{
-                    key: "api-football",
-                    title: chosenBk.name,
-                    markets: [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
-                      name: v.value === "Home" ? "HOME_PLACEHOLDER" : v.value === "Away" ? "AWAY_PLACEHOLDER" : "Empate",
-                      price: parseFloat(v.odd)
-                    }))}]
-                  }]);
+                  const markets: any[] = [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
+                    name: v.value === "Home" ? "HOME_PLACEHOLDER" : v.value === "Away" ? "AWAY_PLACEHOLDER" : "Empate",
+                    price: parseFloat(v.odd)
+                  }))}, ...extractExtraMarketsFromBets(bets)];
+                  oddsMap.set(fid, [{ key: "api-football", title: chosenBk.name, markets }]);
                 } else {
                   console.warn(`[BR-indiv] fixture ${fid} sem Match Winner, bookmakers: ${allBks.length}`);
                 }
@@ -3099,16 +3133,14 @@ export async function registerRoutes(
                   const allBks: any[] = entry.bookmakers || [];
                   const bk = pickBestBookmaker(allBks);
                   if (bk) {
-                    const h2h = bk.bets?.find((b: any) => b.name === "Match Winner");
+                    const bets: any[] = bk.bets || [];
+                    const h2h = bets.find((b: any) => b.name === "Match Winner");
                     if (h2h) {
-                      bookmakers = [{
-                        key: "api-football",
-                        title: bk.name,
-                        markets: [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
-                          name: v.value === "Home" ? f.teams?.home?.name : v.value === "Away" ? f.teams?.away?.name : "Empate",
-                          price: parseFloat(v.odd)
-                        }))}]
-                      }];
+                      const markets: any[] = [{ key: "h2h", outcomes: h2h.values.map((v: any) => ({
+                        name: v.value === "Home" ? f.teams?.home?.name : v.value === "Away" ? f.teams?.away?.name : "Empate",
+                        price: parseFloat(v.odd)
+                      }))}, ...extractExtraMarketsFromBets(bets)];
+                      bookmakers = [{ key: "api-football", title: bk.name, markets }];
                     }
                   }
                 }
@@ -3270,18 +3302,15 @@ export async function registerRoutes(
                       const bets = chosenBk2?.bets || [];
                       const h2h = bets.find((b: any) => b.name === "Match Winner");
                       if (h2h && h2h.values?.length >= 2) {
-                        bookmakers = [{
-                          key: "api-football",
-                          title: chosenBk2.name,
-                          markets: [{
-                            key: "h2h",
-                            outcomes: h2h.values.map((v: any) => ({
-                              name: v.value === "Home" ? formatTeamName(fixture.teams.home.name) : 
-                                    v.value === "Away" ? formatTeamName(fixture.teams.away.name) : "Empate",
-                              price: parseFloat(v.odd)
-                            }))
-                          }]
-                        }];
+                        const markets: any[] = [{
+                          key: "h2h",
+                          outcomes: h2h.values.map((v: any) => ({
+                            name: v.value === "Home" ? formatTeamName(fixture.teams.home.name) :
+                                  v.value === "Away" ? formatTeamName(fixture.teams.away.name) : "Empate",
+                            price: parseFloat(v.odd)
+                          }))
+                        }, ...extractExtraMarketsFromBets(bets)];
+                        bookmakers = [{ key: "api-football", title: chosenBk2.name, markets }];
                       } else {
                         bookmakers = [];
                       }
