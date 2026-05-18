@@ -4642,14 +4642,19 @@ interface CopaCardForm {
 function CopaWorldCupTab() {
   const { toast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState<CopaSubTabAdmin>("grupos");
+  const [activeGrupoAdmin, setActiveGrupoAdmin] = useState<string>("todos");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: "", imageUrl: "", active: true, teams: [{ name: "", odds: "" }] };
+  const emptyForm: CopaCardForm = { subTab: activeSubTab, title: "", description: "", team1: "", team2: "", odds: "", badge: activeSubTab === "grupos" && activeGrupoAdmin !== "todos" ? `Grupo ${activeGrupoAdmin}` : "", imageUrl: "", active: true, teams: [{ name: "", odds: "" }] };
   const [form, setForm] = useState<CopaCardForm>(emptyForm);
 
   const { data: allCards = [], isLoading, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/copa-world-cup-cards"] });
-  const cards = allCards.filter(c => c.subTab === activeSubTab);
+  const cards = allCards.filter((c: any) => {
+    if (c.subTab !== activeSubTab) return false;
+    if (activeSubTab === "grupos" && activeGrupoAdmin !== "todos") return c.badge === `Grupo ${activeGrupoAdmin}`;
+    return true;
+  });
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -4716,11 +4721,22 @@ function CopaWorldCupTab() {
         {/* Sub-tab selector */}
         <div className="flex gap-2 mt-3 flex-wrap">
           {COPA_SUBTABS.map(st => (
-            <button key={st.key} onClick={() => { setActiveSubTab(st.key); setShowForm(false); setEditingId(null); }}
+            <button key={st.key} onClick={() => { setActiveSubTab(st.key); setActiveGrupoAdmin("todos"); setShowForm(false); setEditingId(null); }}
               className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeSubTab === st.key ? "bg-yellow-500 text-black" : "bg-muted text-muted-foreground hover:text-foreground"}`}
               data-testid={`tab-copa-admin-${st.key}`}>{st.label}</button>
           ))}
         </div>
+        {activeSubTab === "grupos" && (
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            {(["todos", "A","B","C","D","E","F","G","H","I","J","K","L"] as string[]).map(g => (
+              <button key={g} onClick={() => { setActiveGrupoAdmin(g); setShowForm(false); setEditingId(null); }}
+                className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${activeGrupoAdmin === g ? "bg-yellow-500/90 text-black" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                data-testid={`tab-copa-grupo-admin-${g}`}>
+                {g === "todos" ? "TODOS" : `GRP ${g}`}
+              </button>
+            ))}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Form */}
@@ -4786,11 +4802,27 @@ function CopaWorldCupTab() {
                   </div>
                 )}
 
-                {/* Badge — sempre */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Badge (ex: GRUPO A, FAVORITO)</label>
-                  <input value={form.badge} onChange={e => setForm(f => ({ ...f, badge: e.target.value }))} placeholder="Ex: GRUPO A" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-badge" />
-                </div>
+                {/* Badge — grupo selector para grupos, texto livre para outras */}
+                {isGrupos ? (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Grupo *</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {["A","B","C","D","E","F","G","H","I","J","K","L"].map(g => (
+                        <button key={g} type="button"
+                          onClick={() => setForm(f => ({ ...f, badge: `Grupo ${g}` }))}
+                          className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border ${form.badge === `Grupo ${g}` ? "bg-yellow-500 text-black border-yellow-500" : "border-border text-muted-foreground hover:text-foreground"}`}
+                          data-testid={`button-copa-grupo-sel-${g}`}>
+                          GRUPO {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Badge (ex: FAVORITO)</label>
+                    <input value={form.badge} onChange={e => setForm(f => ({ ...f, badge: e.target.value }))} placeholder="Ex: FAVORITO" className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" data-testid="input-copa-badge" />
+                  </div>
+                )}
 
                 {/* Descrição — sempre */}
                 <div>

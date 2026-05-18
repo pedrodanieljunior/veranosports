@@ -67,6 +67,7 @@ export default function Copa() {
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CopaTab>("todos");
   const [copaSubTab, setCopaSubTab] = useState<CopaSubTab>("todos");
+  const [copaGrupoKey, setCopaGrupoKey] = useState<string>("todos");
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -413,7 +414,7 @@ export default function Copa() {
                   return (
                     <button
                       key={key}
-                      onClick={() => setCopaSubTab(key)}
+                      onClick={() => { setCopaSubTab(key); setCopaGrupoKey("todos"); }}
                       data-testid={`subtab-copa-${key}`}
                       className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 transition-all relative"
                       style={isActive ? { background: "#c9a227" } : {}}
@@ -453,17 +454,60 @@ export default function Copa() {
       <div className="px-0 pt-2 pb-4">
         {activeTab === "copa" && copaSubTab !== "todos" ? (
           (() => {
+            const COPA_GRUPOS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
             const subCards = copaCards.filter((c: any) => c.subTab === copaSubTab);
+            const visibleCards = copaSubTab === "grupos" && copaGrupoKey !== "todos"
+              ? subCards.filter((c: any) => c.badge === `Grupo ${copaGrupoKey}`)
+              : subCards;
+
             if (subCards.length === 0) return (
-              <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
-                <div className="text-4xl mb-3">🏆</div>
-                <p className="text-white font-bold text-sm mb-1">Em breve!</p>
-                <p className="text-white/50 text-xs">Os cards desta seção serão adicionados em breve.</p>
-              </div>
+              <>
+                {copaSubTab === "grupos" && (
+                  <div className="px-3 mb-3 overflow-x-auto">
+                    <div className="flex gap-1.5 pb-1" style={{ minWidth: "max-content" }}>
+                      <button onClick={() => setCopaGrupoKey("todos")} data-testid="grupo-todos"
+                        className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
+                        style={{ background: copaGrupoKey === "todos" ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === "todos" ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                        TODOS
+                      </button>
+                      {COPA_GRUPOS.map(g => (
+                        <button key={g} onClick={() => setCopaGrupoKey(g)} data-testid={`grupo-${g}`}
+                          className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
+                          style={{ background: copaGrupoKey === g ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === g ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                          GRUPO {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
+                  <div className="text-4xl mb-3">🏆</div>
+                  <p className="text-white font-bold text-sm mb-1">Em breve!</p>
+                  <p className="text-white/50 text-xs">Os cards desta seção serão adicionados em breve.</p>
+                </div>
+              </>
             );
             return (
               <div className="px-3 space-y-3">
-                {subCards.map((card: any) => {
+                {copaSubTab === "grupos" && (
+                  <div className="overflow-x-auto -mx-3 px-3 mb-1">
+                    <div className="flex gap-1.5 pb-1" style={{ minWidth: "max-content" }}>
+                      <button onClick={() => setCopaGrupoKey("todos")} data-testid="grupo-todos"
+                        className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
+                        style={{ background: copaGrupoKey === "todos" ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === "todos" ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                        TODOS
+                      </button>
+                      {COPA_GRUPOS.map(g => (
+                        <button key={g} onClick={() => setCopaGrupoKey(g)} data-testid={`grupo-${g}`}
+                          className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
+                          style={{ background: copaGrupoKey === g ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === g ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                          GRUPO {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {visibleCards.map((card: any) => {
                   let parsedTeams: { name: string; odds: number | null }[] = [];
                   if (card.teamsJson) { try { parsedTeams = JSON.parse(card.teamsJson); } catch {} }
                   const isGrupoCard = parsedTeams.length > 0;
