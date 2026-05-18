@@ -102,7 +102,7 @@ export default function Copa() {
     if (pendingSelectionRef.current) {
       const sel = pendingSelectionRef.current; pendingSelectionRef.current = null;
       setSelections(prev => prev.find(s => s.id === sel.id) ? prev : [...prev, sel]);
-      setShowBetSlip(true);
+      setShowBetSlip(true); setIsBetSlipMinimized(true);
     }
   }, [user]);
 
@@ -229,7 +229,7 @@ export default function Copa() {
       if (distinctMarkets >= 3) { toast({ title: "Máximo de 3 mercados por jogo", variant: "destructive" }); return prev; }
       return [...withoutSameMarket, selection];
     });
-    if (!selections.find(s => s.id === selection.id)) { setShowBetSlip(true); setShowHistory(false); if (selectedGame) setIsBetSlipMinimized(true); }
+    if (!selections.find(s => s.id === selection.id)) { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(true); }
   };
 
   const handleRemoveSelection = (id: string) => setSelections(prev => prev.filter(s => s.id !== id));
