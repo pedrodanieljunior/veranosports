@@ -510,14 +510,27 @@ export default function Copa() {
                   </div>
                 )}
                 {(() => {
-                  const isRestrictedSubTab = copaSubTab === "longo" || copaSubTab === "especiais";
-                  const subTabSelectedCardId = isRestrictedSubTab
-                    ? (visibleCards as any[]).find((c: any) =>
-                        selections.some(s => s.id.startsWith(`copa-card-${c.id}-`))
-                      )?.id ?? null
-                    : null;
+                  const selectedCopaCardIds = new Set(
+                    selections
+                      .filter(s => s.gameId.startsWith("copa-card-"))
+                      .map(s => s.gameId.replace("copa-card-", ""))
+                  );
+                  const selectedSubTabs = new Set(
+                    copaCards
+                      .filter((c: any) => selectedCopaCardIds.has(String(c.id)))
+                      .map((c: any) => c.subTab as string)
+                  );
+                  const hasLongoOrEspeciaisSelected = selectedSubTabs.has("longo") || selectedSubTabs.has("especiais");
+                  const hasGruposSelected = selectedSubTabs.has("grupos");
+
                   return (visibleCards as any[]).map((card: any) => {
-                  const subTabBlocked = isRestrictedSubTab && subTabSelectedCardId !== null && subTabSelectedCardId !== card.id;
+                  const cardIsSelected = selectedCopaCardIds.has(String(card.id));
+                  let cardBlocked = false;
+                  if (card.subTab === "grupos") {
+                    cardBlocked = hasLongoOrEspeciaisSelected;
+                  } else if (card.subTab === "longo" || card.subTab === "especiais") {
+                    cardBlocked = !cardIsSelected && (hasGruposSelected || hasLongoOrEspeciaisSelected);
+                  }
                   let parsedTeams: { name: string; odds: number | null }[] = [];
                   let tableData: { type: string; columns: { name: string; max: number }[]; teams: { name: string; odds: (number | null)[] }[] } | null = null;
                   if (card.teamsJson) {
@@ -589,7 +602,7 @@ export default function Copa() {
                                         const selId = `copa-card-${card.id}-t${ti}-c${ci}`;
                                         const isSelected = selections.some(s => s.id === selId);
                                         const hasOdd = odd != null;
-                                        const isDisabled = !hasOdd || (!isSelected && tableHasSelection);
+                                        const isDisabled = !hasOdd || (!isSelected && (tableHasSelection || cardBlocked));
                                         return (
                                           <td key={ci} className="py-1 px-0.5">
                                             <button
@@ -618,12 +631,13 @@ export default function Copa() {
                               return (
                                 <button
                                   key={i}
-                                  onClick={() => hasOdd ? handleToggleSelection(makeCopaSelection(team.name, team.odds!, selId)) : undefined}
-                                  disabled={!hasOdd}
-                                  className={`w-full flex items-center justify-between rounded-lg px-2.5 py-2 transition-all ${hasOdd ? "cursor-pointer active:scale-95" : "cursor-default"}`}
+                                  onClick={() => (hasOdd && !(cardBlocked && !isSelected)) ? handleToggleSelection(makeCopaSelection(team.name, team.odds!, selId)) : undefined}
+                                  disabled={!hasOdd || (cardBlocked && !isSelected)}
+                                  className={`w-full flex items-center justify-between rounded-lg px-2.5 py-2 transition-all ${(hasOdd && !(cardBlocked && !isSelected)) ? "cursor-pointer active:scale-95" : "cursor-default"}`}
                                   style={{
                                     background: isSelected ? "rgba(201,162,39,0.25)" : "rgba(0,0,0,0.3)",
                                     border: isSelected ? "1px solid rgba(201,162,39,0.7)" : "1px solid transparent",
+                                    opacity: (cardBlocked && !isSelected) ? 0.3 : 1,
                                   }}
                                 >
                                   <span className="text-white text-xs font-semibold text-left">{team.name}</span>
@@ -653,14 +667,14 @@ export default function Copa() {
                                 </div>
                                 {card.odds ? (
                                   <button
-                                    onClick={() => !subTabBlocked ? handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), selId)) : undefined}
-                                    disabled={subTabBlocked && !isSelected}
+                                    onClick={() => !cardBlocked ? handleToggleSelection(makeCopaSelection(card.team1 || card.title, Number(card.odds), selId)) : undefined}
+                                    disabled={cardBlocked && !isSelected}
                                     className="shrink-0 flex flex-col items-center rounded-lg px-2 py-1.5 ml-2 transition-all active:scale-95"
                                     style={{
                                       background: isSelected ? "rgba(201,162,39,0.3)" : "rgba(0,0,0,0.4)",
                                       border: isSelected ? "1px solid #f5c518" : "1px solid rgba(201,162,39,0.4)",
-                                      opacity: subTabBlocked && !isSelected ? 0.3 : 1,
-                                      cursor: subTabBlocked && !isSelected ? "default" : "pointer",
+                                      opacity: cardBlocked && !isSelected ? 0.3 : 1,
+                                      cursor: cardBlocked && !isSelected ? "default" : "pointer",
                                     }}
                                   >
                                     <span className="text-[9px] text-white/50 font-bold">ODD</span>
