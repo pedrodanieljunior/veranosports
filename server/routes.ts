@@ -1603,8 +1603,8 @@ async function runCheckResults() {
               cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
               cornerHomeCache.set(fixtureId, homeCorners);
               cornerAwayCache.set(fixtureId, awayCorners);
-              cardHomeCache.set(fixtureId, homeYellow + homeRed);
-              cardAwayCache.set(fixtureId, awayYellow + awayRed);
+              cardHomeCache.set(fixtureId, homeYellow + homeRed * 2);
+              cardAwayCache.set(fixtureId, awayYellow + awayRed * 2);
             }
           } catch (err) { console.log(`[CheckResults] Erro stats fixture ${fixtureId}:`, err); }
         }
@@ -5289,9 +5289,9 @@ export async function registerRoutes(
                 arCornerCache.set(fid, homeC + awayC);
                 arCornerHomeCache.set(fid, homeC);
                 arCornerAwayCache.set(fid, awayC);
-                arCardHomeCache.set(fid, homeYellow + homeRed);
-                arCardAwayCache.set(fid, awayYellow + awayRed);
-                console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed + awayYellow + awayRed} (${homeYellow + homeRed}/${awayYellow + awayRed})`);
+                arCardHomeCache.set(fid, homeYellow + homeRed * 2);
+                arCardAwayCache.set(fid, awayYellow + awayRed * 2);
+                console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed * 2 + awayYellow + awayRed * 2} (${homeYellow + homeRed * 2}/${awayYellow + awayRed * 2})`);
               }
             } catch (e) {
               console.log(`    [auto-resolve] Erro ao buscar stats fixture ${fid}:`, e);
@@ -5386,14 +5386,14 @@ export async function registerRoutes(
                     if (s.type === "Red Cards")    { if (isHome) homeRed = val; else awayRed = val; }
                   }
                 }
-                arCardHomeCache.set(fid, homeYellow + homeRed);
-                arCardAwayCache.set(fid, awayYellow + awayRed);
+                arCardHomeCache.set(fid, homeYellow + homeRed * 2);
+                arCardAwayCache.set(fid, awayYellow + awayRed * 2);
                 if (!arCornerCache.has(fid)) {
                   arCornerCache.set(fid, homeC + awayC);
                   arCornerHomeCache.set(fid, homeC);
                   arCornerAwayCache.set(fid, awayC);
                 }
-                console.log(`    [auto-resolve] Cartões fixture ${fid}: casa=${homeYellow + homeRed}, fora=${awayYellow + awayRed}`);
+                console.log(`    [auto-resolve] Cartões fixture ${fid}: casa=${homeYellow + homeRed * 2}, fora=${awayYellow + awayRed * 2}`);
               }
             } catch (e) {
               console.log(`    [auto-resolve] Erro ao buscar cartões fixture ${fid}:`, e);
