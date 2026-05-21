@@ -191,6 +191,9 @@ export default function Admin() {
   const [periodFilter, setPeriodFilter] = useState<"today" | "week" | "month" | "all">("all");
   const [betSearch, setBetSearch] = useState<string>("");
   const [betPage, setBetPage] = useState<number>(1);
+  const [userFilter, setUserFilter] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const BETS_PER_PAGE = 15;
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
@@ -688,8 +691,23 @@ export default function Admin() {
       const shortId = bet.id.replace(/-/g, "").substring(0, 8).toLowerCase();
       if (!shortId.includes(q) && !bet.id.toLowerCase().includes(q)) return false;
     }
+    if (userFilter.trim()) {
+      const q = userFilter.trim().toLowerCase();
+      const betUser = allUsers.find(u => u.cpf === bet.userId);
+      const nameMatch = betUser?.name?.toLowerCase().includes(q);
+      const cpfMatch = bet.userId?.toLowerCase().includes(q);
+      if (!nameMatch && !cpfMatch) return false;
+    }
+    const created = new Date(bet.createdAt);
+    if (dateFrom) {
+      const from = new Date(dateFrom + "T00:00:00");
+      if (created < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + "T23:59:59");
+      if (created > to) return false;
+    }
     if (periodFilter !== "all") {
-      const created = new Date(bet.createdAt);
       const now = new Date();
       if (periodFilter === "today") {
         return created.toDateString() === now.toDateString();
@@ -1803,8 +1821,35 @@ export default function Admin() {
           <TabsContent value="bilhetes">
           <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <CardTitle>Bilhetes ({filteredBets.length})</CardTitle>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <CardTitle>Bilhetes ({filteredBets.length})</CardTitle>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex rounded-md overflow-hidden border border-border text-xs">
+                    {(["today","week","month","all"] as const).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => { setPeriodFilter(p); setDateFrom(""); setDateTo(""); setBetPage(1); }}
+                        data-testid={`btn-period-${p}`}
+                        className={`px-3 py-1.5 transition-colors ${periodFilter === p ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+                      >
+                        {{ today:"Hoje", week:"Semana", month:"Mês", all:"Todos" }[p]}
+                      </button>
+                    ))}
+                  </div>
+                  <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setBetPage(1); }}>
+                    <SelectTrigger className="w-36" data-testid="select-status-filter">
+                      <SelectValue placeholder="Filtrar status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos status</SelectItem>
+                      <SelectItem value="pending">Pendentes</SelectItem>
+                      <SelectItem value="won">Ganhos</SelectItem>
+                      <SelectItem value="lost">Perdidos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
@@ -1814,32 +1859,46 @@ export default function Admin() {
                     value={betSearch}
                     onChange={e => { setBetSearch(e.target.value); setBetPage(1); }}
                     data-testid="input-bet-search"
-                    className="pl-8 pr-3 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-44"
+                    className="pl-8 pr-3 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-40"
                   />
                 </div>
-                <div className="flex rounded-md overflow-hidden border border-border text-xs">
-                  {(["today","week","month","all"] as const).map(p => (
-                    <button
-                      key={p}
-                      onClick={() => { setPeriodFilter(p); setBetPage(1); }}
-                      data-testid={`btn-period-${p}`}
-                      className={`px-3 py-1.5 transition-colors ${periodFilter === p ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
-                    >
-                      {{ today:"Hoje", week:"Semana", month:"Mês", all:"Todos" }[p]}
-                    </button>
-                  ))}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Usuário (nome ou CPF)..."
+                    value={userFilter}
+                    onChange={e => { setUserFilter(e.target.value); setBetPage(1); }}
+                    data-testid="input-user-filter"
+                    className="pl-8 pr-3 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-48"
+                  />
                 </div>
-                <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setBetPage(1); }}>
-                  <SelectTrigger className="w-36" data-testid="select-status-filter">
-                    <SelectValue placeholder="Filtrar status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos status</SelectItem>
-                    <SelectItem value="pending">Pendentes</SelectItem>
-                    <SelectItem value="won">Ganhos</SelectItem>
-                    <SelectItem value="lost">Perdidos</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => { setDateFrom(e.target.value); setPeriodFilter("all"); setBetPage(1); }}
+                    data-testid="input-date-from"
+                    className="py-1.5 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">até</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => { setDateTo(e.target.value); setPeriodFilter("all"); setBetPage(1); }}
+                    data-testid="input-date-to"
+                    className="py-1.5 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  {(dateFrom || dateTo || userFilter) && (
+                    <button
+                      onClick={() => { setDateFrom(""); setDateTo(""); setUserFilter(""); setBetPage(1); }}
+                      data-testid="btn-clear-filters"
+                      className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-md border border-border bg-background hover:bg-muted transition-colors"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
