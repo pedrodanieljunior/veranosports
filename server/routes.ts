@@ -5593,30 +5593,28 @@ export async function registerRoutes(
     return `${y}-${m}-${d}`;
   }
 
-  function isManausPayoutWindow(): boolean {
-    const now = new Date();
-    const manausNow = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-    // Segunda-feira a partir das 08:00 Manaus
-    return manausNow.getUTCDay() === 1 && manausNow.getUTCHours() >= 8;
-  }
-
   async function runClubFwPayoutIfDue() {
     try {
       const prevWeek = getPrevManausWeekStartStr();
       const lastPaid = await storage.getSetting("club_fw_last_payout_week");
       if (lastPaid === prevWeek) return; // já processado esta semana
 
-      // Se estiver dentro da janela de pagamento ou se houver semana pendente
-      if (isManausPayoutWindow() || (lastPaid !== prevWeek)) {
-        console.log(`[ClubeFW] Iniciando pagamento automático — semana ${prevWeek}`);
-        await storage.processAllUsersClubFwPayout(prevWeek);
-      }
+      // Janela de pagamento abre na segunda seguinte ao fim da semana às 08:00 Manaus
+      // prevWeek = "YYYY-MM-DD" (segunda da semana encerrada)
+      // Abertura = prevWeek + 7 dias às 08:00 Manaus = prevWeek + 7 dias + 12:00 UTC
+      const payoutOpensAt = new Date(`${prevWeek}T12:00:00.000Z`);
+      payoutOpensAt.setUTCDate(payoutOpensAt.getUTCDate() + 7);
+
+      if (new Date() < payoutOpensAt) return; // ainda não chegou a hora (antes das 08:00 de segunda)
+
+      console.log(`[ClubeFW] Iniciando pagamento automático — semana ${prevWeek}`);
+      await storage.processAllUsersClubFwPayout(prevWeek);
     } catch (e) {
       console.error("[ClubeFW] Erro no scheduler:", e);
     }
   }
 
-  // Executa imediatamente no startup (pega semanas perdidas)
+  // Executa no startup (pega semanas atrasadas caso o servidor tenha caído)
   setTimeout(runClubFwPayoutIfDue, 5000);
 
   // Verifica a cada 30 minutos
