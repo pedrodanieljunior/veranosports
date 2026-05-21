@@ -198,6 +198,8 @@ export default function Admin() {
   const [adminTab, setAdminTab] = useState<string>("bilhetes");
   const [riskSelected, setRiskSelected] = useState<"low" | "mid" | "high" | null>(null);
   const [finPeriod, setFinPeriod] = useState<"all" | "month" | "week" | "today">("month");
+  const [finDateFrom, setFinDateFrom] = useState<string>("");
+  const [finDateTo, setFinDateTo] = useState<string>("");
   const [marketBoosts, setMarketBoosts] = useState<Record<string, number>>({});
   const [withdrawalAmount, setWithdrawalAmount] = useState<string>("");
   const [withdrawalDesc, setWithdrawalDesc] = useState<string>("");
@@ -332,6 +334,16 @@ export default function Admin() {
   // ── Financeiro: dados calculados no nível do componente ──────────────────
   const periodBets = useMemo(() => {
     const now = new Date();
+    let filtered = bets;
+    if (finDateFrom) {
+      const from = new Date(finDateFrom + "T00:00:00");
+      filtered = filtered.filter(b => new Date(b.createdAt) >= from);
+    }
+    if (finDateTo) {
+      const to = new Date(finDateTo + "T23:59:59");
+      filtered = filtered.filter(b => new Date(b.createdAt) <= to);
+    }
+    if (finDateFrom || finDateTo) return filtered;
     if (finPeriod === "today") {
       const s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       return bets.filter(b => new Date(b.createdAt) >= s);
@@ -339,7 +351,7 @@ export default function Admin() {
     if (finPeriod === "week") return bets.filter(b => new Date(b.createdAt) >= startOfWeek(now, { locale: ptBR }));
     if (finPeriod === "month") return bets.filter(b => new Date(b.createdAt) >= startOfMonth(now));
     return bets;
-  }, [bets, finPeriod]);
+  }, [bets, finPeriod, finDateFrom, finDateTo]);
 
   const finDayData = useMemo(() => DAYS_PT.map((day, idx) => {
     const db = periodBets.filter(b => new Date(b.createdAt).getDay() === idx);
@@ -1647,21 +1659,47 @@ export default function Admin() {
 
               return (
                 <div className="space-y-5 print:space-y-3" id="financial-report">
-                  {/* Header: período + botão PDF */}
+                  {/* Header: período + filtro de data + botão PDF */}
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       {(["today","week","month","all"] as const).map(p => (
                         <Button
                           key={p}
                           size="sm"
-                          variant={finPeriod===p?"default":"outline"}
-                          onClick={()=>setFinPeriod(p)}
+                          variant={(finPeriod===p && !finDateFrom && !finDateTo)?"default":"outline"}
+                          onClick={() => { setFinPeriod(p); setFinDateFrom(""); setFinDateTo(""); }}
                           className="text-xs"
                           data-testid={`button-fin-period-${p}`}
                         >
                           {{ today:"Hoje", week:"Esta Semana", month:"Este Mês", all:"Todos" }[p]}
                         </Button>
                       ))}
+                      <div className="flex items-center gap-1.5 ml-1">
+                        <input
+                          type="date"
+                          value={finDateFrom}
+                          onChange={e => { setFinDateFrom(e.target.value); }}
+                          data-testid="input-fin-date-from"
+                          className="py-1.5 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <span className="text-xs text-muted-foreground">até</span>
+                        <input
+                          type="date"
+                          value={finDateTo}
+                          onChange={e => { setFinDateTo(e.target.value); }}
+                          data-testid="input-fin-date-to"
+                          className="py-1.5 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        {(finDateFrom || finDateTo) && (
+                          <button
+                            onClick={() => { setFinDateFrom(""); setFinDateTo(""); }}
+                            data-testid="button-fin-clear-dates"
+                            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-md border border-border bg-background hover:bg-muted transition-colors"
+                          >
+                            Limpar
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <Button size="sm" variant="outline" className="gap-2 print:hidden" onClick={handlePrint} data-testid="button-print-report">
                       <FileDown className="w-4 h-4" />
@@ -3753,6 +3791,7 @@ function UsersTab() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editBalance, setEditBalance] = useState("");
   const [editBalanceReason, setEditBalanceReason] = useState("");
+  const [editBonus, setEditBonus] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [userSearch, setUserSearch] = useState("");
@@ -3796,6 +3835,21 @@ function UsersTab() {
       refetchUsers();
     },
     onError: () => toast({ title: "Erro ao atualizar saldo", variant: "destructive" }),
+  });
+
+  const updateBonusMutation = useMutation({
+    mutationFn: async ({ cpf, bonusBalance }: { cpf: string; bonusBalance: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${encodeURIComponent(cpf)}`, { bonusBalance });
+      return res.json();
+    },
+    onSuccess: (updated: User) => {
+      toast({ title: "Bônus atualizado!" });
+      setSelectedUser(updated);
+      setEditBonus(updated.bonusBalance.toFixed(2));
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      refetchUsers();
+    },
+    onError: () => toast({ title: "Erro ao atualizar bônus", variant: "destructive" }),
   });
 
   const resetPasswordMutation = useMutation({
@@ -3885,7 +3939,7 @@ function UsersTab() {
                       const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
                       const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
                       return (
-                        <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setNewPassword(""); }}
+                        <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
                           className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
                           data-testid={`row-user-${u.cpf}`}>
                           <p className="font-semibold text-sm">{u.name}</p>
@@ -3954,6 +4008,28 @@ function UsersTab() {
                       data-testid="input-edit-balance-reason"
                       className="text-sm"
                     />
+                  </div>
+
+                  {/* Edit bonus */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Ajustar Bônus</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editBonus}
+                        onChange={e => setEditBonus(e.target.value)}
+                        className="w-36"
+                        data-testid="input-edit-bonus"
+                        placeholder="Novo bônus"
+                      />
+                      <Button size="sm" onClick={() => updateBonusMutation.mutate({ cpf: selectedUser.cpf, bonusBalance: parseFloat(editBonus) })}
+                        disabled={updateBonusMutation.isPending || isNaN(parseFloat(editBonus)) || parseFloat(editBonus) < 0}
+                        data-testid="button-save-bonus">
+                        <Save className="w-4 h-4 mr-1" /> Salvar
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Reset password */}

@@ -2149,12 +2149,11 @@ export async function registerRoutes(
 
   app.patch("/api/admin/users/:cpf", async (req, res) => {
     try {
-      const { name, phone, balance, reason } = req.body as { name?: string; phone?: string; balance?: number; reason?: string };
+      const { name, phone, balance, reason, bonusBalance } = req.body as { name?: string; phone?: string; balance?: number; reason?: string; bonusBalance?: number };
       const cpf = req.params.cpf;
       if (balance !== undefined) {
         const userBefore = await storage.getUserByCpf(cpf);
         await storage.updateUserBalance(cpf, balance);
-        // Registrar transação de ajuste com motivo
         if (userBefore) {
           const diff = Math.round((balance - userBefore.balance) * 100) / 100;
           const description = reason?.trim()
@@ -2169,6 +2168,9 @@ export async function registerRoutes(
             referenceId: null,
           });
         }
+      }
+      if (bonusBalance !== undefined) {
+        await storage.updateUserBonusBalance(cpf, Math.max(0, bonusBalance));
       }
       if (name || phone) {
         await storage.updateUserData(cpf, { name, phone });
