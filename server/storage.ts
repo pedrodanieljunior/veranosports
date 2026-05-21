@@ -975,15 +975,12 @@ export class DatabaseStorage implements IStorage {
     await db.insert(clubFwClaimsTable).values({ userId, weekStart, level, bonusAmount });
   }
 
-  async checkAndAwardClubFw(userId: string): Promise<{ newLevels: number[]; totalBonus: number }> {
-    // Crédito apenas na segunda-feira a partir das 08h horário de Manaus
-    if (!this.isManausPayoutTime()) return { newLevels: [], totalBonus: 0 };
-
-    // Verificar apostas da SEMANA ANTERIOR
-    const prevWeekStart = this.getPreviousManausWeekStart();
+  async checkAndAwardClubFw(userId: string, forWeekStart?: string): Promise<{ newLevels: number[]; totalBonus: number }> {
+    // Verifica apostas da semana especificada (ou semana anterior por padrão)
+    const weekStart = forWeekStart ?? this.getPreviousManausWeekStart();
     const [weeklyStake, claimedLevels] = await Promise.all([
-      this.getWeeklyStake(userId, prevWeekStart),
-      this.getClubFwClaimedLevels(userId, prevWeekStart),
+      this.getWeeklyStake(userId, weekStart),
+      this.getClubFwClaimedLevels(userId, weekStart),
     ]);
 
     const toAward = CLUB_FW_LEVELS.filter(
@@ -1000,17 +997,45 @@ export class DatabaseStorage implements IStorage {
     await this.updateUserBonusBalance(userId, newBonusBalance);
 
     for (const { level, bonus } of toAward) {
-      await this.createClubFwClaim(userId, prevWeekStart, level, bonus);
+      await this.createClubFwClaim(userId, weekStart, level, bonus);
       await this.createTransaction({
         userId,
         type: "bonus",
         amount: bonus,
         balanceAfter: user.balance,
-        description: `Clube FW — Nível ${level} (semana ${prevWeekStart}) +R$${bonus.toFixed(2)} bônus`,
+        description: `Clube FW — Nível ${level} (semana ${weekStart}) +R$${bonus.toFixed(2)} bônus`,
       });
     }
 
     return { newLevels: toAward.map(l => l.level), totalBonus };
+  }
+
+  async processAllUsersClubFwPayout(weekStart: string): Promise<{ processed: number; totalBonus: number }> {
+    const lastPaid = await this.getSetting("club_fw_last_payout_week");
+    if (lastPaid === weekStart) {
+      return { processed: 0, totalBonus: 0 };
+    }
+
+    const allUsers = await this.getAllUsers();
+    let processed = 0;
+    let totalBonus = 0;
+
+    for (const user of allUsers) {
+      try {
+        const result = await this.checkAndAwardClubFw(user.cpf, weekStart);
+        if (result.newLevels.length > 0) {
+          processed++;
+          totalBonus += result.totalBonus;
+          console.log(`[ClubeFW] Creditado R$${result.totalBonus} para ${user.name} (${user.cpf}) — semana ${weekStart}`);
+        }
+      } catch (e) {
+        console.error(`[ClubeFW] Erro ao processar usuário ${user.cpf}:`, e);
+      }
+    }
+
+    await this.setSetting("club_fw_last_payout_week", weekStart);
+    console.log(`[ClubeFW] Pagamento semana ${weekStart} concluído — ${processed} usuário(s) premiado(s), R$${totalBonus} em bônus`);
+    return { processed, totalBonus };
   }
 
   async getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]> {

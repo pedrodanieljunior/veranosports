@@ -5018,6 +5018,25 @@ function RecompensasTab() {
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
   const [userFilter, setUserFilter] = useState("");
+  const [payoutWeek, setPayoutWeek] = useState("2026-05-11");
+  const [payoutResult, setPayoutResult] = useState<{ processed: number; totalBonus: number; message: string } | null>(null);
+  const { toast } = useToast();
+
+  const payoutMutation = useMutation({
+    mutationFn: async (weekStart: string) => {
+      const res = await apiRequest("POST", "/api/admin/club-fw-payout", { weekStart });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setPayoutResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/club-fw-claims"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Pagamento processado", description: data.message });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Erro ao processar pagamento", variant: "destructive" });
+    },
+  });
 
   const { data: claims = [], isLoading } = useQuery<ClubFwClaim[]>({
     queryKey: ["/api/admin/club-fw-claims", appliedFrom, appliedTo],
@@ -5073,6 +5092,49 @@ function RecompensasTab() {
 
   return (
     <div className="space-y-4">
+      {/* Pagamento Retroativo */}
+      <Card className="border-yellow-500/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Gift className="w-4 h-4 text-yellow-400" />
+            Processar Pagamento Clube FW
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">
+            Credita automaticamente os bônus de todos os usuários elegíveis para a semana informada. Seguro para rodar múltiplas vezes — não duplica créditos.
+          </p>
+          <div className="flex gap-2 items-center flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Semana (segunda-feira):</span>
+              <input
+                type="date"
+                value={payoutWeek}
+                onChange={e => setPayoutWeek(e.target.value)}
+                className="text-sm bg-muted border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                data-testid="input-payout-week"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => payoutMutation.mutate(payoutWeek)}
+              disabled={payoutMutation.isPending || !payoutWeek}
+              data-testid="button-force-payout"
+            >
+              {payoutMutation.isPending ? "Processando..." : "Pagar Semana"}
+            </Button>
+          </div>
+          {payoutResult && (
+            <div className="mt-3 p-3 rounded-md bg-green-500/10 border border-green-500/20 text-sm">
+              <p className="font-medium text-green-400">✓ {payoutResult.message}</p>
+              <p className="text-muted-foreground text-xs mt-1">
+                {payoutResult.processed} usuário(s) premiado(s) · R$ {payoutResult.totalBonus.toFixed(2).replace(".", ",")} em bônus creditados
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card>
