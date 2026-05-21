@@ -2262,6 +2262,17 @@ export async function registerRoutes(
     }
   });
 
+  // Corrigir overcredit: remove claims de nível inferior quando nível superior também foi pago
+  app.post("/api/admin/club-fw-fix-overcredit", requireAdmin, async (req, res) => {
+    try {
+      const result = await storage.fixOvercreditedClubFw();
+      res.json({ message: `Correção concluída — ${result.fixed} usuário(s) corrigido(s), -R$${result.totalDeducted.toFixed(2)} estornados`, ...result });
+    } catch (e) {
+      console.error("[Admin ClubeFW fix] Erro:", e);
+      res.status(500).json({ message: "Erro ao corrigir overcredit" });
+    }
+  });
+
   // Forçar pagamento Clube FW para uma semana específica (retroativo)
   app.post("/api/admin/club-fw-payout", requireAdmin, async (req, res) => {
     try {

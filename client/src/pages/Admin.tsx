@@ -5038,6 +5038,23 @@ function RecompensasTab() {
     },
   });
 
+  const [fixResult, setFixResult] = useState<{ fixed: number; totalDeducted: number; message: string; details: string[] } | null>(null);
+  const fixMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/club-fw-fix-overcredit", {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setFixResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/club-fw-claims"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Correção concluída", description: data.message });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Erro ao corrigir overcredit", variant: "destructive" });
+    },
+  });
+
   const { data: claims = [], isLoading } = useQuery<ClubFwClaim[]>({
     queryKey: ["/api/admin/club-fw-claims", appliedFrom, appliedTo],
     queryFn: async () => {
@@ -5132,6 +5149,37 @@ function RecompensasTab() {
               </p>
             </div>
           )}
+
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2">
+              <span className="text-orange-400 font-medium">Corrigir overcredit:</span> remove bônus de níveis inferiores creditados indevidamente quando o usuário já recebeu um nível mais alto na mesma semana.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
+              onClick={() => fixMutation.mutate()}
+              disabled={fixMutation.isPending}
+              data-testid="button-fix-overcredit"
+            >
+              {fixMutation.isPending ? "Corrigindo..." : "Corrigir Overcredit"}
+            </Button>
+            {fixResult && (
+              <div className="mt-3 p-3 rounded-md bg-orange-500/10 border border-orange-500/20 text-sm">
+                <p className="font-medium text-orange-400">✓ {fixResult.message}</p>
+                {fixResult.details.length > 0 && (
+                  <ul className="mt-1 space-y-0.5">
+                    {fixResult.details.map((d, i) => (
+                      <li key={i} className="text-muted-foreground text-xs">{d}</li>
+                    ))}
+                  </ul>
+                )}
+                {fixResult.fixed === 0 && (
+                  <p className="text-muted-foreground text-xs mt-1">Nenhum overcredit encontrado.</p>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

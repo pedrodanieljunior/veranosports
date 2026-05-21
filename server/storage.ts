@@ -116,7 +116,9 @@ export interface IStorage {
   getWeeklyStake(userId: string, weekStart: string): Promise<number>;
   getClubFwClaimedLevels(userId: string, weekStart: string): Promise<number[]>;
   createClubFwClaim(userId: string, weekStart: string, level: number, bonusAmount: number): Promise<void>;
-  checkAndAwardClubFw(userId: string): Promise<{ newLevels: number[]; totalBonus: number }>;
+  checkAndAwardClubFw(userId: string, forWeekStart?: string): Promise<{ newLevels: number[]; totalBonus: number }>;
+  processAllUsersClubFwPayout(weekStart: string): Promise<{ processed: number; totalBonus: number }>;
+  fixOvercreditedClubFw(): Promise<{ fixed: number; totalDeducted: number; details: string[] }>;
   getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]>;
 }
 
@@ -983,31 +985,91 @@ export class DatabaseStorage implements IStorage {
       this.getClubFwClaimedLevels(userId, weekStart),
     ]);
 
-    const toAward = CLUB_FW_LEVELS.filter(
-      l => weeklyStake >= l.threshold && !claimedLevels.includes(l.level)
-    );
-
-    if (toAward.length === 0) return { newLevels: [], totalBonus: 0 };
+    // Premia apenas o NÍVEL MAIS ALTO atingido (não cumulativo)
+    const highestLevel = [...CLUB_FW_LEVELS].reverse().find(l => weeklyStake >= l.threshold);
+    if (!highestLevel) return { newLevels: [], totalBonus: 0 };
+    if (claimedLevels.includes(highestLevel.level)) return { newLevels: [], totalBonus: 0 };
 
     const user = await this.getUserByCpf(userId);
     if (!user) return { newLevels: [], totalBonus: 0 };
 
-    const totalBonus = toAward.reduce((s, l) => s + l.bonus, 0);
-    const newBonusBalance = Math.round((user.bonusBalance + totalBonus) * 100) / 100;
+    const newBonusBalance = Math.round((user.bonusBalance + highestLevel.bonus) * 100) / 100;
     await this.updateUserBonusBalance(userId, newBonusBalance);
+    await this.createClubFwClaim(userId, weekStart, highestLevel.level, highestLevel.bonus);
+    await this.createTransaction({
+      userId,
+      type: "bonus",
+      amount: highestLevel.bonus,
+      balanceAfter: user.balance,
+      description: `Clube FW — Nível ${highestLevel.level} (semana ${weekStart}) +R$${highestLevel.bonus.toFixed(2)} bônus`,
+    });
 
-    for (const { level, bonus } of toAward) {
-      await this.createClubFwClaim(userId, weekStart, level, bonus);
+    return { newLevels: [highestLevel.level], totalBonus: highestLevel.bonus };
+  }
+
+  async fixOvercreditedClubFw(): Promise<{ fixed: number; totalDeducted: number; details: string[] }> {
+    // Encontra usuários com múltiplos claims na mesma semana (overcredit)
+    const rows = await db.execute(sql`
+      SELECT c.user_id, c.week_start,
+             ARRAY_AGG(c.id ORDER BY c.level) AS ids,
+             ARRAY_AGG(c.level ORDER BY c.level) AS levels,
+             ARRAY_AGG(c.bonus_amount ORDER BY c.level) AS bonuses,
+             MAX(c.level) AS highest_level
+      FROM ${clubFwClaimsTable} c
+      GROUP BY c.user_id, c.week_start
+      HAVING COUNT(*) > 1
+    `);
+
+    const details: string[] = [];
+    let fixed = 0;
+    let totalDeducted = 0;
+
+    for (const row of rows.rows as any[]) {
+      const userId: string = row.user_id;
+      const weekStart: string = row.week_start;
+      const ids: number[] = row.ids;
+      const levels: number[] = row.levels;
+      const bonuses: number[] = row.bonuses;
+      const highestLevel: number = row.highest_level;
+
+      // IDs dos claims de nível INFERIOR que devem ser removidos
+      const toRemove = ids.filter((_id, i) => levels[i] !== highestLevel);
+      const overcredit = bonuses
+        .filter((_b, i) => levels[i] !== highestLevel)
+        .reduce((s, b) => s + b, 0);
+
+      if (toRemove.length === 0 || overcredit <= 0) continue;
+
+      // Remove claims incorretos
+      for (const claimId of toRemove) {
+        await db.delete(clubFwClaimsTable).where(eq(clubFwClaimsTable.id, claimId));
+      }
+
+      // Deduz overcredit do bonus_balance (não abaixo de 0)
+      const user = await this.getUserByCpf(userId);
+      if (!user) continue;
+      const deduct = Math.min(overcredit, user.bonusBalance);
+      const newBonusBalance = Math.round((user.bonusBalance - deduct) * 100) / 100;
+      await this.updateUserBonusBalance(userId, newBonusBalance);
+
+      // Registra correção como transação
       await this.createTransaction({
         userId,
         type: "bonus",
-        amount: bonus,
+        amount: -deduct,
         balanceAfter: user.balance,
-        description: `Clube FW — Nível ${level} (semana ${weekStart}) +R$${bonus.toFixed(2)} bônus`,
+        description: `Correção Clube FW — semana ${weekStart}: estorno de R$${deduct.toFixed(2)} (níveis inferiores indevidos)`,
       });
+
+      const msg = `${user.name} (${userId}) semana ${weekStart}: -R$${deduct.toFixed(2)} (níveis removidos: ${toRemove.join(",")})`;
+      details.push(msg);
+      console.log(`[ClubeFW Fix] ${msg}`);
+      fixed++;
+      totalDeducted += deduct;
     }
 
-    return { newLevels: toAward.map(l => l.level), totalBonus };
+    console.log(`[ClubeFW Fix] Concluído — ${fixed} usuário(s) corrigido(s), -R$${totalDeducted.toFixed(2)} devolvidos`);
+    return { fixed, totalDeducted, details };
   }
 
   async processAllUsersClubFwPayout(weekStart: string): Promise<{ processed: number; totalBonus: number }> {
