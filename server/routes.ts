@@ -1452,6 +1452,9 @@ const LEAGUE_MAPPING: Record<string, number> = {
   "soccer_wc_qualifiers_caf": 29,
   "soccer_wc_qualifiers_afc": 30,
   "soccer_wc_intercontinental": 43,
+  "soccer_fifa_world_cup": 1,
+  "soccer_copa_america": 9,
+  "soccer_africa_cup_of_nations": 6,
 };
 
 // Ligas com temporada no formato calendário (jan–dez), não europeu (ago–jul)
@@ -1461,6 +1464,7 @@ const CALENDAR_YEAR_LEAGUES = new Set([
   253, 262, 98,
   10,
   34, 32, 31, 29, 30, 43,
+  1, 9, 6,
 ]);
 
 async function runCheckResults() {
