@@ -5722,7 +5722,7 @@ function teamsMatch(name1: string, name2: string): boolean {
     return true;
   }
   
-  // Verificar aliases
+  // Verificar aliases de clubes
   for (const [canonical, aliases] of Object.entries(teamAliases)) {
     const allNames = [canonical, ...aliases].map(a => normalizeTeamName(a));
     const n1Match = allNames.some(a => n1.includes(a) || a.includes(n1));
@@ -5730,6 +5730,16 @@ function teamsMatch(name1: string, name2: string): boolean {
     if (n1Match && n2Match) {
       return true;
     }
+  }
+
+  // Verificar traduções de seleções nacionais (EN ↔ PT)
+  // Ex: "Ghana" (API) == "Gana" (aposta), "Ivory Coast" == "Costa do Marfim"
+  for (const [en, pt] of Object.entries(NATIONAL_TEAM_PT)) {
+    const nEn = normalizeTeamName(en);
+    const nPt = normalizeTeamName(pt);
+    const hits1 = n1 === nEn || n1 === nPt || nEn.includes(n1) || n1.includes(nEn) || nPt.includes(n1) || n1.includes(nPt);
+    const hits2 = n2 === nEn || n2 === nPt || nEn.includes(n2) || n2.includes(nEn) || nPt.includes(n2) || n2.includes(nPt);
+    if (hits1 && hits2) return true;
   }
   
   return false;
