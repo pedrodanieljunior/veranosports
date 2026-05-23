@@ -1717,11 +1717,28 @@ async function runCheckResults() {
       const newStatus = allSelectionsWon ? "won" : "lost";
       const updatedBetAuto = await storage.updateBetSlipStatus(bet.id, newStatus);
       if (newStatus === "won" && bet.userId) {
-        const winUser = await storage.getUserByCpf(bet.userId);
-        if (winUser && updatedBetAuto) {
-          const credited = Math.round((winUser.balance + updatedBetAuto.potentialWin) * 100) / 100;
-          await storage.updateUserBalance(bet.userId, credited);
-          await storage.createTransaction({ userId: bet.userId, type: "win", amount: updatedBetAuto.potentialWin, balanceAfter: credited, description: `Aposta ganha`, referenceId: bet.id });
+        // Proteção dupla contra race condition (timer + manual simultâneos):
+        // só credita se ainda não existe transação de ganho para este bilhete
+        const existingWinTx = await storage.getWinTransactionForBet(bet.id);
+        if (!existingWinTx) {
+          const winUser = await storage.getUserByCpf(bet.userId);
+          if (winUser && updatedBetAuto) {
+            // Descontar bônus usado (igual ao admin PATCH)
+            const bonusUsed = (updatedBetAuto as any).bonusUsed ?? 0;
+            const netPayout = Math.max(0, Math.round((updatedBetAuto.potentialWin - bonusUsed) * 100) / 100);
+            const credited = Math.round((winUser.balance + netPayout) * 100) / 100;
+            await storage.updateUserBalance(bet.userId, credited);
+            await storage.createTransaction({
+              userId: bet.userId,
+              type: "win",
+              amount: netPayout,
+              balanceAfter: credited,
+              description: `Aposta ganha${bonusUsed > 0 ? ` (R$${updatedBetAuto.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
+              referenceId: bet.id,
+            });
+          }
+        } else {
+          console.log(`[CheckResults] Bilhete ${bet.id} já creditado anteriormente — ignorando duplo crédito`);
         }
       }
       updatedCount++;
