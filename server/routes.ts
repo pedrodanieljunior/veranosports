@@ -1544,6 +1544,52 @@ async function runCheckResults() {
     }
   }
 
+  // ── Fallback por fixture ID ────────────────────────────────────────────────
+  // Para seleções pendentes cujo commenceTime + 3h já passou e não foram
+  // encontradas no pool por liga (ex: amistosos em liga diferente, atraso
+  // de atualização de status na API), busca diretamente pelo fixture ID.
+  {
+    const now = new Date();
+    const FINISHED_STATUSES = new Set(["FT","AET","PEN","AWD","WO"]);
+    const alreadyInPool = new Set(allFinishedFixtures.map((f: any) => f.fixture.id));
+    const fallbackIds = new Set<number>();
+
+    for (const bet of pendingBets) {
+      for (const sel of bet.selections) {
+        if (sel.result && sel.result !== "pending") continue;
+        if (!sel.gameId?.startsWith("api-football-")) continue;
+        const fid = parseInt(sel.gameId.replace("api-football-", "").split("-")[0]);
+        if (isNaN(fid) || alreadyInPool.has(fid)) continue;
+        // Só busca se o jogo deveria ter terminado (commenceTime + 3h < agora)
+        if (sel.commenceTime) {
+          const shouldEndBy = new Date(new Date(sel.commenceTime).getTime() + 3 * 60 * 60 * 1000);
+          if (shouldEndBy > now) continue;
+        }
+        fallbackIds.add(fid);
+      }
+    }
+
+    for (const fid of fallbackIds) {
+      try {
+        const resp = await fetch(`${API_FOOTBALL_BASE}/fixtures?id=${fid}`, {
+          headers: { "x-apisports-key": API_FOOTBALL_KEY! }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const fix = data?.response?.[0];
+          if (fix && FINISHED_STATUSES.has(fix.fixture?.status?.short)) {
+            allFinishedFixtures.push(fix);
+            console.log(`[CheckResults] Fallback fixture ${fid}: ${fix.teams.home.name} vs ${fix.teams.away.name} → ${fix.fixture.status.short} ✓`);
+          } else if (fix) {
+            console.log(`[CheckResults] Fallback fixture ${fid}: status=${fix.fixture?.status?.short} (ainda não finalizado)`);
+          }
+        }
+      } catch (err) {
+        console.log(`[CheckResults] Erro fallback fixture ${fid}:`, err);
+      }
+    }
+  }
+
   let updatedCount = 0;
   const results: any[] = [];
 
