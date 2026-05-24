@@ -8,7 +8,7 @@ class SimpleCache {
   private staleCache: Map<string, CacheEntry<any>> = new Map();
   private pending: Map<string, Promise<any>> = new Map();
   private defaultTTL: number = 5 * 60 * 1000;
-  private STALE_WINDOW = 30 * 60 * 1000; // mantém dado velho por até 30 min
+  private STALE_WINDOW = 10 * 60 * 1000; // mantém dado velho por até 10 min
 
   set<T>(key: string, data: T, ttl?: number): void {
     this.cache.set(key, {
