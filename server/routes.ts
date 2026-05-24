@@ -2461,6 +2461,31 @@ export async function registerRoutes(
         return res.json(blockedIds.size > 0 ? cached.filter((g: any) => !blockedIds.has(g.id)) : cached);
       }
 
+      // ── Stale-while-revalidate ────────────────────────────────────────────────
+      // Se há dado velho disponível, retornar imediatamente para o usuário nunca
+      // ver tela vazia, e continuar o refresh em background.
+      let respondedWithStale = false;
+      const staleGames = cache.getStale<any[]>(cacheKey);
+      if (staleGames) {
+        if (cache.isPending(cacheKey)) {
+          // Já há refresh em andamento — retornar stale e sair
+          const blockedIds = await storage.getBlockedGameIds();
+          return res.json(blockedIds.size > 0 ? staleGames.filter((g: any) => !blockedIds.has(g.id)) : staleGames);
+        }
+        // Retornar stale imediatamente; refresh vai correr em background
+        const blockedIds = await storage.getBlockedGameIds();
+        res.json(blockedIds.size > 0 ? staleGames.filter((g: any) => !blockedIds.has(g.id)) : staleGames);
+        respondedWithStale = true;
+        console.log("[games/today] Cache expirado — servindo dado velho, refresh em background iniciado");
+      } else if (cache.isPending(cacheKey)) {
+        // Sem stale e já há refresh em andamento — aguardar
+        const pending = await cache.waitForPending<any[]>(cacheKey);
+        if (pending) {
+          const blockedIds = await storage.getBlockedGameIds();
+          return res.json(blockedIds.size > 0 ? pending.filter((g: any) => !blockedIds.has(g.id)) : pending);
+        }
+      }
+
       // Registrar como em andamento — outros endpoints (ex: odds/:sportKey) vão aguardar
       // este resultado em vez de disparar chamadas simultâneas à API
       const { resolve: resolvePending, reject: rejectPending } = cache.registerPending<any[]>(cacheKey);
@@ -2772,12 +2797,18 @@ export async function registerRoutes(
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
       cache.set(cacheKey, finalGames, 5 * 60 * 1000); // cache 5 minutos
       resolvePending(finalGames); // Notificar endpoints que aguardavam este resultado
-      const blockedIds = await storage.getBlockedGameIds();
-      res.json(blockedIds.size > 0 ? finalGames.filter((g: any) => !blockedIds.has(g.id)) : finalGames);
+      if (!respondedWithStale) {
+        const blockedIds = await storage.getBlockedGameIds();
+        res.json(blockedIds.size > 0 ? finalGames.filter((g: any) => !blockedIds.has(g.id)) : finalGames);
+      } else {
+        console.log(`[games/today] Refresh em background concluído — ${finalGames.length} jogos no cache`);
+      }
     } catch (error) {
       rejectPending(error); // Liberar endpoints que aguardavam
       console.error("Error fetching today's games:", error);
-      res.status(500).json({ error: "Failed to fetch today's games" });
+      if (!respondedWithStale) {
+        res.status(500).json({ error: "Failed to fetch today's games" });
+      }
     }
   });
 

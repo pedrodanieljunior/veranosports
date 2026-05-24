@@ -5,26 +5,50 @@ interface CacheEntry<T> {
 
 class SimpleCache {
   private cache: Map<string, CacheEntry<any>> = new Map();
+  private staleCache: Map<string, CacheEntry<any>> = new Map();
   private pending: Map<string, Promise<any>> = new Map();
-  private defaultTTL: number = 5 * 60 * 1000; // 5 minutos
+  private defaultTTL: number = 5 * 60 * 1000;
+  private STALE_WINDOW = 30 * 60 * 1000; // mantém dado velho por até 30 min
 
   set<T>(key: string, data: T, ttl?: number): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now() + (ttl || this.defaultTTL),
     });
+    this.staleCache.delete(key); // dado fresco chegou, limpa o velho
   }
 
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() > entry.timestamp) {
+      // Mover para stale antes de deletar, para servir enquanto refresh ocorre
+      this.staleCache.set(key, {
+        data: entry.data,
+        timestamp: Date.now() + this.STALE_WINDOW,
+      });
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data as T;
+  }
+
+  /** Retorna dado expirado (stale) se disponível dentro da janela de 30 min */
+  getStale<T>(key: string): T | null {
+    const entry = this.staleCache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.timestamp) {
+      this.staleCache.delete(key);
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  /** Verifica se há um refresh em andamento para esta chave */
+  isPending(key: string): boolean {
+    return this.pending.has(key);
   }
 
   /**
@@ -61,7 +85,6 @@ class SimpleCache {
    * Isso permite que outros endpoints esperem a busca em andamento sem duplicar chamadas à API.
    */
   registerPending<T>(key: string): { resolve: (data: T) => void; reject: (err: any) => void } {
-    // Se já existe um pending para esta chave, não sobrescrever
     if (this.pending.has(key)) {
       return { resolve: () => {}, reject: () => {} };
     }
@@ -101,10 +124,12 @@ class SimpleCache {
 
   delete(key: string): void {
     this.cache.delete(key);
+    this.staleCache.delete(key);
   }
 
   clear(): void {
     this.cache.clear();
+    this.staleCache.clear();
     this.pending.clear();
   }
 }
