@@ -71,6 +71,8 @@ import {
   Shield,
   Pencil,
   Filter,
+  Check,
+  Timer,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -2048,7 +2050,7 @@ export default function Admin() {
                                           <div className="relative pl-5">
                                             {/* Linha vertical amarela */}
                                             <div
-                                              className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                                              className="absolute left-[5px] top-[6px] w-[2px] bg-border"
                                               style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
                                             />
                                             {sels.map((sel, idx) => (
@@ -2056,7 +2058,13 @@ export default function Admin() {
                                                 {/* Mercado + outcome */}
                                                 <div className="flex-1 min-w-0">
                                                   <div className="flex items-center relative">
-                                                    <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10 flex-shrink-0" />
+                                                    <div className="absolute -left-5 z-10 flex items-center justify-center w-4 h-4 -translate-x-0.5">
+                                                      {sel.result === "won"
+                                                        ? <Check className="w-3.5 h-3.5 text-green-400" />
+                                                        : sel.result === "lost"
+                                                        ? <XCircle className="w-3 h-3 text-red-400" />
+                                                        : <Timer className="w-3 h-3 text-yellow-400/50" />}
+                                                    </div>
                                                     <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                                   </div>
                                                   <div className="flex items-center gap-2 mt-0.5">
@@ -2082,7 +2090,7 @@ export default function Admin() {
                                                     })}
                                                     data-testid={`button-sel-won-${sel.id}`}
                                                   >
-                                                    <CheckCircle className={`w-3.5 h-3.5 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
+                                                    <Check className={`w-3.5 h-3.5 ${sel.result === "won" ? "text-white" : "text-green-500"}`} />
                                                   </Button>
                                                   <Button
                                                     size="icon"
