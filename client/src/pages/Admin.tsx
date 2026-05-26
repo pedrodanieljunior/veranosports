@@ -127,7 +127,7 @@ const PCT = (v: number, t: number) => t > 0 ? `${((v / t) * 100).toFixed(1)}%` :
 
 const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-type BetStatus = "pending" | "won" | "lost" | "anulado";
+type BetStatus = "pending" | "won" | "lost" | "anulado" | "cashed_out";
 
 interface GameLimitEntry {
   gameId: string;
@@ -756,6 +756,8 @@ export default function Admin() {
         return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Perdeu</Badge>;
       case "anulado":
         return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Anulado</Badge>;
+      case "cashed_out":
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Cash Out</Badge>;
       default:
         return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Em andamento</Badge>;
     }
@@ -1902,6 +1904,7 @@ export default function Admin() {
                       <SelectItem value="pending">Pendentes</SelectItem>
                       <SelectItem value="won">Ganhos</SelectItem>
                       <SelectItem value="lost">Perdidos</SelectItem>
+                      <SelectItem value="cashed_out">Cash Out</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2120,12 +2123,21 @@ export default function Admin() {
                                     <span className="flex items-center gap-1 whitespace-nowrap flex-wrap">
                                       <TrendingUp className="w-4 h-4 text-primary" />
                                       Retorno:&nbsp;
-                                      <span className="font-bold text-primary">R$&nbsp;{fmtBRL(bonusUsed > 0 ? netReturn : displayPotentialWin)}</span>
-                                      {bonusUsed > 0 && (
-                                        <span className="text-zinc-400 text-xs">(R$&nbsp;{fmtBRL(displayPotentialWin)}&nbsp;−&nbsp;R$&nbsp;{fmtBRL(bonusUsed)}&nbsp;bônus)</span>
-                                      )}
-                                      {bonusUsed === 0 && baseReturn !== null && bonusReturn !== null && (
-                                        <span className="text-green-400 text-xs">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel})</span>
+                                      {bet.status === "cashed_out" && (bet as any).cashOutValue != null ? (
+                                        <>
+                                          <span className="font-bold text-emerald-400">R$&nbsp;{fmtBRL((bet as any).cashOutValue)}</span>
+                                          <span className="text-zinc-500 text-xs line-through">R$&nbsp;{fmtBRL(bonusUsed > 0 ? netReturn : displayPotentialWin)}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="font-bold text-primary">R$&nbsp;{fmtBRL(bonusUsed > 0 ? netReturn : displayPotentialWin)}</span>
+                                          {bonusUsed > 0 && (
+                                            <span className="text-zinc-400 text-xs">(R$&nbsp;{fmtBRL(displayPotentialWin)}&nbsp;−&nbsp;R$&nbsp;{fmtBRL(bonusUsed)}&nbsp;bônus)</span>
+                                          )}
+                                          {bonusUsed === 0 && baseReturn !== null && bonusReturn !== null && (
+                                            <span className="text-green-400 text-xs">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel})</span>
+                                          )}
+                                        </>
                                       )}
                                     </span>
                                     <span className="text-muted-foreground whitespace-nowrap">
@@ -2143,11 +2155,17 @@ export default function Admin() {
                               onValueChange={(value: BetStatus) => 
                                 updateStatusMutation.mutate({ id: bet.id, status: value })
                               }
+                              disabled={bet.status === "cashed_out"}
                             >
                               <SelectTrigger className="w-32" data-testid={`select-status-${bet.id}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="cashed_out">
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-3 h-3 text-emerald-400">💸</span> Cash Out
+                                  </span>
+                                </SelectItem>
                                 <SelectItem value="pending">
                                   <span className="flex items-center gap-2">
                                     <AlertCircle className="w-3 h-3" /> Pendente
