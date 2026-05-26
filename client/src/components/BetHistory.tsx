@@ -163,23 +163,23 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                         style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }} />
                       {sels.map((sel, idx) => {
                         const selResult = (sel as any).result as "pending" | "won" | "lost" | undefined;
-                        const dotColor = selResult === "won" ? "bg-green-400 border-green-500" : selResult === "lost" ? "bg-red-400 border-red-500" : "bg-yellow-400 border-yellow-500";
                         return (
                           <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
                             <div className="flex items-center justify-between relative gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-0 relative">
-                                  <div className={`absolute -left-5 w-3 h-3 rounded-full border-2 border-muted z-10 ${dotColor}`} />
+                                  <div className="absolute -left-5 z-10 flex items-center justify-center w-4 h-4 -translate-x-0.5">
+                                    {selResult === "won"
+                                      ? <Check className="w-3.5 h-3.5 text-green-400" />
+                                      : selResult === "lost"
+                                      ? <X className="w-3.5 h-3.5 text-red-400" />
+                                      : <Hourglass className="w-3 h-3 text-yellow-400/50" />}
+                                  </div>
                                   <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                 </div>
                                 <p className={`font-semibold text-sm mt-0.5 ${selResult === "lost" ? "line-through text-muted-foreground" : "text-foreground"}`}>
                                   {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
                                 </p>
-                              </div>
-                              <div className="flex-shrink-0">
-                                {selResult === "won" && <Check className="w-4 h-4 text-green-400" />}
-                                {selResult === "lost" && <X className="w-4 h-4 text-red-400" />}
-                                {(!selResult || selResult === "pending") && <Hourglass className="w-3.5 h-3.5 text-yellow-400/40" />}
                               </div>
                             </div>
                           </div>
