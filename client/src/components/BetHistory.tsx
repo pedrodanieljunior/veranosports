@@ -241,13 +241,13 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             if (cashState.type === "ea") {
               return confirming === "ea" ? (
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-violet-600 hover:bg-violet-700 text-white" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
                     {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
                   <CircleDollarSign className="w-4 h-4 mr-2" />
                   Encerrar Aposta — R$ {cashState.offer.toFixed(2).replace(".", ",")}
                 </Button>
