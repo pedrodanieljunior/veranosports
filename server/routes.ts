@@ -5198,9 +5198,31 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Resultado inválido" });
       }
 
+      const prevBet = await storage.getBetSlip(betId);
       const updated = await storage.updateSelectionResult(betId, selectionId, result);
       if (!updated) {
         return res.status(404).json({ error: "Bilhete ou seleção não encontrada" });
+      }
+
+      // Se o bilhete virou "won" agora (não era "won" antes), creditar saldo do usuário
+      if (updated.status === "won" && prevBet?.status !== "won" && updated.userId) {
+        const existingWinTx = await storage.getWinTransactionForBet(betId);
+        if (!existingWinTx) {
+          const winUser = await storage.getUserByCpf(updated.userId);
+          if (winUser) {
+            const bonusUsed = updated.bonusUsed ?? 0;
+            const netPayout = Math.max(0, Math.round((updated.potentialWin - bonusUsed) * 100) / 100);
+            const newBalance = Math.round((winUser.balance + netPayout) * 100) / 100;
+            await storage.updateUserBalance(updated.userId, newBalance);
+            await storage.createTransaction({
+              userId: updated.userId,
+              type: "win",
+              amount: netPayout,
+              balanceAfter: newBalance,
+              description: `Ganhou bilhete #${betId.slice(0, 8).toUpperCase()}`,
+            });
+          }
+        }
       }
 
       res.json(updated);

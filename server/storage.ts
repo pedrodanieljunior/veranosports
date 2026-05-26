@@ -228,19 +228,23 @@ export class DatabaseStorage implements IStorage {
       return sel;
     });
 
-    // Calcular status do bilhete baseado nas seleções
-    const allResolved = updatedSelections.every(sel => sel.result !== "pending");
-    const anyLost = updatedSelections.some(sel => sel.result === "lost");
-    
-    let betStatus: "pending" | "won" | "lost" = "pending";
-    if (allResolved) {
-      betStatus = anyLost ? "lost" : "won";
+    // Não alterar status de bilhetes já encerrados (cashed_out)
+    const currentStatus = bet.status as string;
+    let newStatus: string = currentStatus;
+    if (currentStatus !== "cashed_out") {
+      const allResolved = updatedSelections.every(sel => sel.result !== "pending");
+      const anyLost = updatedSelections.some(sel => sel.result === "lost");
+      if (allResolved) {
+        newStatus = anyLost ? "lost" : "won";
+      } else {
+        newStatus = "pending";
+      }
     }
 
     const [updated] = await db.update(betSlipsTable)
       .set({ 
         selections: updatedSelections,
-        status: betStatus
+        status: newStatus as any,
       })
       .where(eq(betSlipsTable.id, betId))
       .returning();
