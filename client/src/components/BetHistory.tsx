@@ -65,6 +65,15 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       return res.json();
     },
     onSuccess: (data: any) => {
+      // Update cache directly for instant UI feedback
+      const updateBet = (old: BetSlipType[] | undefined) => {
+        if (!old) return old;
+        return old.map(b => b.id === bet.id
+          ? { ...b, status: "cashed_out" as const, cashOutValue: data.cashOutValue ?? null }
+          : b
+        );
+      };
+      queryClient.setQueryData(["/api/bets", bet.userId], updateBet);
       queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
       const val = typeof data?.cashOutValue === "number"
         ? data.cashOutValue.toFixed(2).replace(".", ",")
