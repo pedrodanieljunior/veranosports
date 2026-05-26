@@ -83,6 +83,20 @@ export function getCashOutState(
   const gameIds = Object.keys(grouped);
   const totalEvents = gameIds.length;
 
+  if (totalEvents <= 1) return { type: "none" };
+
+  const wonEvents = gameIds.filter(gameId =>
+    grouped[gameId].every(s => s.result === "won")
+  ).length;
+
+  // Se já tem jogos ganhos mas não todos → oferecer cash out imediatamente
+  if (wonEvents > 0 && wonEvents < totalEvents) {
+    const netPotentialWin = Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
+    const offer = computeCashOutOffer(bet.stake, netPotentialWin, totalEvents, wonEvents, cashOutPct);
+    if (offer !== null) return { type: "cashout", offer, wonEvents, totalEvents };
+  }
+
+  // Nenhum jogo ganho ainda: verificar se está pré-jogo ou em andamento
   const allNotStarted = bet.selections.every(s => new Date(s.commenceTime) > now);
   if (allNotStarted) {
     return { type: "ea", offer: computeEarlyExitOffer(bet.stake, earlyExitPct) };
@@ -96,18 +110,5 @@ export function getCashOutState(
   });
   if (anyInProgress) return { type: "unavailable" };
 
-  if (totalEvents <= 1) return { type: "none" };
-
-  const wonEvents = gameIds.filter(gameId =>
-    grouped[gameId].every(s => s.result === "won")
-  ).length;
-
-  if (wonEvents === 0) return { type: "none" };
-  if (wonEvents >= totalEvents) return { type: "none" };
-
-  const netPotentialWin = Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
-  const offer = computeCashOutOffer(bet.stake, netPotentialWin, totalEvents, wonEvents, cashOutPct);
-  if (offer === null) return { type: "unavailable" };
-
-  return { type: "cashout", offer, wonEvents, totalEvents };
+  return { type: "none" };
 }
