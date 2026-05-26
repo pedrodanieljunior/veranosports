@@ -1,0 +1,1 @@
+- [Cash Out system](cashout-system.md) — full cash-out/EA system live; uses shared/cashOutUtils.ts for both FE/BE logic; DB column cash_out_value (real) on bet_slips.

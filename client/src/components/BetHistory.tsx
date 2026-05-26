@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Share2, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { X, History, Receipt, Share2, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +11,8 @@ import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
 import { checkIsComboBonus, getComboBonus, computeTotalOdds } from "@shared/oddsUtils";
+import { getCashOutState } from "@shared/cashOutUtils";
+import { queryClient } from "@/lib/queryClient";
 
 interface BetHistoryProps {
   bets: BetSlipType[];
@@ -17,9 +20,10 @@ interface BetHistoryProps {
   onClose: () => void;
 }
 
-function BetCard({ bet }: { bet: BetSlipType }) {
+function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExitPct: number; cashOutPct: number }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState<"ea" | "cashout" | null>(null);
   const isCombo = checkIsComboBonus(bet.selections);
   const grouped: Record<string, Selection[]> = {};
   for (const sel of bet.selections) {
@@ -42,6 +46,37 @@ function BetCard({ bet }: { bet: BetSlipType }) {
   const comboBonusPctStr = (comboPct * 100) % 1 === 0
     ? `${(comboPct * 100).toFixed(0)}%`
     : `${(comboPct * 100).toFixed(1)}%`;
+
+  const cashState = bet.userId
+    ? getCashOutState(bet as any, new Date(), cashOutPct, earlyExitPct)
+    : { type: "none" as const };
+
+  const cashOutMutation = useMutation({
+    mutationFn: async (type: "ea" | "cashout") => {
+      const res = await fetch(`/api/bets/${bet.id}/cashout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error || "Erro no cash out");
+      }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+      const val = typeof data?.cashOutValue === "number"
+        ? data.cashOutValue.toFixed(2).replace(".", ",")
+        : "?";
+      toast({ title: "Cash out realizado!", description: `R$ ${val} creditados na sua conta.` });
+      setConfirming(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro no cash out", description: err?.message || "Tente novamente.", variant: "destructive" });
+      setConfirming(null);
+    },
+  });
 
   const shareBet = async () => {
     const gameGrouped: Record<string, Selection[]> = {};
@@ -104,16 +139,17 @@ function BetCard({ bet }: { bet: BetSlipType }) {
   };
 
   const statusConfig = {
-    won:     { label: "Ganhou",       icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-green-500/15 text-green-400 border-green-500/40" },
-    lost:    { label: "Perdeu",       icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-500/15 text-red-400 border-red-500/40" },
-    pending: { label: "Em Andamento", icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40" },
-    anulado: { label: "Anulado",      icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-gray-500/15 text-gray-400 border-gray-500/40" },
+    won:        { label: "Ganhou",       icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-green-500/15 text-green-400 border-green-500/40" },
+    lost:       { label: "Perdeu",       icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-500/15 text-red-400 border-red-500/40" },
+    pending:    { label: "Em Andamento", icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40" },
+    anulado:    { label: "Anulado",      icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-gray-500/15 text-gray-400 border-gray-500/40" },
+    cashed_out: { label: "Cash Out",     icon: <Banknote className="w-3.5 h-3.5" />,     cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40" },
   };
   const st = statusConfig[(bet.status as keyof typeof statusConfig)] ?? statusConfig.pending;
 
   return (
     <div data-testid={`bet-history-item-${bet.id}`} className="rounded-xl border overflow-hidden"
-      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : bet.status === "anulado" ? "rgba(156,163,175,0.25)" : "rgba(255,255,255,0.1)" }}>
+      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : bet.status === "anulado" ? "rgba(156,163,175,0.25)" : bet.status === "cashed_out" ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)" }}>
 
       {/* ── Preview (sempre visível) ── */}
       <button
@@ -123,9 +159,9 @@ function BetCard({ bet }: { bet: BetSlipType }) {
       >
         <div className="flex items-center gap-3 min-w-0">
           {/* status dot */}
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${bet.status === "won" ? "bg-green-400" : bet.status === "lost" ? "bg-red-400" : bet.status === "anulado" ? "bg-gray-400" : "bg-yellow-400"}`} />
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${bet.status === "won" ? "bg-green-400" : bet.status === "lost" ? "bg-red-400" : bet.status === "anulado" ? "bg-gray-400" : bet.status === "cashed_out" ? "bg-emerald-400" : "bg-yellow-400"}`} />
           <div className="min-w-0">
-            <p className={`font-mono text-sm font-bold leading-none ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : bet.status === "anulado" ? "text-gray-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
+            <p className={`font-mono text-sm font-bold leading-none ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400" : bet.status === "anulado" ? "text-gray-400" : bet.status === "cashed_out" ? "text-emerald-400" : "text-primary"}`} data-testid={`text-bet-id-${bet.id}`}>
               #{bet.id.slice(0, 8).toUpperCase()}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-[160px]">
@@ -143,7 +179,11 @@ function BetCard({ bet }: { bet: BetSlipType }) {
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${st.cls}`}>
                 {st.icon}{st.label}
               </span>
-              <span className="text-yellow-400 font-bold text-xs">R$ {netReturn.toFixed(2).replace(".", ",")}</span>
+              <span className={`font-bold text-xs ${bet.status === "cashed_out" ? "text-emerald-400" : "text-yellow-400"}`}>
+                R$ {bet.status === "cashed_out" && (bet as any).cashOutValue != null
+                  ? ((bet as any).cashOutValue as number).toFixed(2).replace(".", ",")
+                  : netReturn.toFixed(2).replace(".", ",")}
+              </span>
             </div>
           </div>
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -213,21 +253,68 @@ function BetCard({ bet }: { bet: BetSlipType }) {
             })()}
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-muted-foreground text-sm">
-                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : bet.status === "anulado" ? "Valor devolvido" : "Retorno potencial"}
+                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : bet.status === "anulado" ? "Valor devolvido" : bet.status === "cashed_out" ? "Cash Out recebido" : "Retorno potencial"}
               </span>
               <div className="text-right">
-                <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : bet.status === "anulado" ? "text-gray-400" : "text-yellow-400"}`}>
-                  R$ {netReturn.toFixed(2)}
-                </span>
-                {bonusUsed > 0 && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    R$ {displayPotentialWin.toFixed(2)} − R$ {bonusUsed.toFixed(2)} bônus
-                  </p>
+                {bet.status === "cashed_out" && (bet as any).cashOutValue != null ? (
+                  <>
+                    <span className="font-bold text-emerald-400">R$ {((bet as any).cashOutValue as number).toFixed(2)}</span>
+                    <p className="text-[10px] text-muted-foreground line-through opacity-60 mt-0.5">R$ {netReturn.toFixed(2)} potencial</p>
+                  </>
+                ) : (
+                  <>
+                    <span className={`font-bold ${bet.status === "won" ? "text-green-400" : bet.status === "lost" ? "text-red-400 line-through opacity-60" : bet.status === "anulado" ? "text-gray-400" : "text-yellow-400"}`}>
+                      R$ {netReturn.toFixed(2)}
+                    </span>
+                    {bonusUsed > 0 && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        R$ {displayPotentialWin.toFixed(2)} − R$ {bonusUsed.toFixed(2)} bônus
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           </div>
 
+          {bet.status === "pending" && (() => {
+            if (cashState.type === "ea") {
+              return confirming === "ea" ? (
+                <div className="flex gap-2">
+                  <Button size="sm" className="flex-1 bg-orange-600 hover:bg-orange-700 text-white" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
+                    {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" className="w-full border-orange-500/40 text-orange-400 hover:bg-orange-500/10" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
+                  ⏹ Encerrar Aposta — R$ {cashState.offer.toFixed(2).replace(".", ",")}
+                </Button>
+              );
+            }
+            if (cashState.type === "unavailable") {
+              return (
+                <Button size="sm" variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
+                  Cash out indisponível
+                </Button>
+              );
+            }
+            if (cashState.type === "cashout") {
+              return confirming === "cashout" ? (
+                <div className="flex gap-2">
+                  <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
+                    {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-cashout-cancel-${bet.id}`}>Cancelar</Button>
+                </div>
+              ) : (
+                <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
+                  💰 Cash Out — R$ {cashState.offer.toFixed(2).replace(".", ",")}
+                </Button>
+              );
+            }
+            return null;
+          })()}
           <Button className="w-full bg-green-600 text-white hover:bg-green-700" onClick={shareBet} data-testid={`button-share-history-${bet.id}`}>
             <Share2 className="w-4 h-4 mr-2" />
             Compartilhar Bilhete
@@ -239,6 +326,13 @@ function BetCard({ bet }: { bet: BetSlipType }) {
 }
 
 export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
+  const { data: cashoutSettings } = useQuery<{ earlyExitPct: number; cashOutPct: number }>({
+    queryKey: ["/api/cashout-settings"],
+    staleTime: 5 * 60 * 1000,
+  });
+  const earlyExitPct = cashoutSettings?.earlyExitPct ?? 20;
+  const cashOutPct = cashoutSettings?.cashOutPct ?? 20;
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
@@ -279,7 +373,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
             ) : (
               <div className="space-y-2">
                 {bets.map((bet) => (
-                  <BetCard key={bet.id} bet={bet} />
+                  <BetCard key={bet.id} bet={bet} earlyExitPct={earlyExitPct} cashOutPct={cashOutPct} />
                 ))}
               </div>
             )}

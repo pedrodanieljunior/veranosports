@@ -1,0 +1,105 @@
+Vamos implementar o sistema de cash out. Mas será um processo de cash out configurável. 
+1. Quando o cliente fizer um bilhete e o jogo( ou o primeiro jogo do bilhete) não estiverem começado, já mostrará para o usuário a opção de encerrar a aposta. Essa opção já desconta 20% do valor apostado do usuário(EA). No administrador, na aba configurações, vamos criar um card com duas variaveis editaveis: o EA (encerrar aposta) e Cash, ambos inicialmente já pré configurado 20%.
+
+2. No caso onde o jogo já começou, mudamos essa opção do botão de encerrar a aposta para sistema de cash out. Entende-se por evento cada jogo do bilhete. Se o bilhete, tiver 3 mercados no mesmo jogo, conta-se apenas como 1 evento, porque é apenas um jogo. O cash out somente é mostrado quando um evento é encerrado. Enquanto o jogo estiver acontecendo, é mostrado no botão Cash out indisponível. Quando um evento é encerrado e for dado como ganho, é disponibilizado o botão cash out conforme as regras a seguir:
+
+1 evento = não tem cash out, sempre mostra Cash out indisponível
+
+2 eventos = quando o primeiro evento for dado como ganho, oferece ao valor investido 
+
+3 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o valor investido 
+• quando o segundo evento for dado como ganho, oferece (variavel cash-1%) do retorno potencial + valor investido 
+
+4 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o valor investido
+• quando o terceiro evento for dado como ganho, oferece (variavel cash)  do retorno potencial + valor investido
+
+5 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash /2) do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o valor investido
+• quando o quarto evento for dado como ganho, oferece (variavel cash) do retorno potencial + valor investido 
+
+6 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash /2) do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o valor investido
+• quando o quarto evento for dado como ganho, oferece (variavel cash /2)  do retorno potencial + valor investido
+• quando o quinto evento for dado como ganho, oferece (variavel cash)  do retorno potencial + valor investido
+
+7 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash /2)  do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o desconto de (variavel cash /4)  do valor investido 
+• quando o quarto evento for dado como ganho, oferece valor investido
+• quando o quinto evento for dado como ganho, oferece (variavel cash /2)  do retorno potencial + valor investido
+• quando o sexto evento for dado como ganho, oferece variavel cash  do retorno potencial + valor investido 
+
+8 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de(variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash /2)  do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o desconto de (variavel cash/4) do valor investido 
+• quando o quarto evento for dado como ganho, oferece valor investido
+• quando o quinto evento for dado como ganho, oferece (variavel cash /4)  do retorno potencial + valor investido
+• quando o sexto evento for dado como ganho, oferece (variavel cash /2)  do retorno potencial + valor investido
+• quando o sétimo evento for dado como ganho, oferece (variavel cash)  do retorno potencial + valor investido 
+
+9 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash -1% )-((variavel cash-1%)/4) do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(variavel cash-1%)/2)  do valor investido 
+• quando o quarto evento for dado como ganho, oferece o desconto de (variavel cash -1% )- ((variavel cash -1% )-((variavel cash-1%)/4)) do valor investido 
+• quando o quinto evento for dado como ganho, oferece o  valor investido
+quando o sexto evento for dado como ganho, oferece (variavel cash/4)  do retorno potencial + valor investido
+• quando o sétimo evento for dado como ganho, oferece (variavel cash/2) do retorno potencial + valor investido
+• quando o oitavo evento for dado como ganho, oferece (variavel cash)  do retorno potencial + valor investido
+
+10 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash -1% )-((variavel cash-1%)/4) do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(variavel cash-1%)/2)  do valor investido 
+• quando o quarto evento for dado como ganho, oferece o desconto de (variavel cash -1% )- ((variavel cash -1% )-((variavel cash-1%)/4)) do valor investido
+• quando o quinto evento for dado como ganho, oferece o  valor investido
+• quando o sexto evento for dado como ganho, oferece(variavel cash/4) do retorno potencial + valor investido
+• quando o sétimo evento for dado como ganho, oferece (variavel cash/2)  do retorno potencial + valor investido
+• quando o oitavo evento for dado como ganho, oferece (variavel cash)-(variavel cash/4)  do retorno potencial + valor investido
+• quando o nono evento for dado como ganho, oferece (variavel cash) do retorno potencial + valor investido 
+
+11 eventos = 
+• quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash -1% )-((variavel cash-1%)/5)  do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(((variavel cash-1%)/5)*2)  do valor investido 
+• quando o quarto evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(((variavel cash-1%)/5)*3)   do valor investido 
+• quando o quinto evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(((variavel cash-1%)/5)*4)  do valor investido 
+• quando o sexto evento for dado como ganho, oferece o valor investido
+quando o sétimo evento for dado como ganho, oferece (variavel cash/4)  do retorno potencial + valor investido
+• quando o oitavo evento for dado como ganho, oferece (variavel cash/2)  do retorno potencial + valor investido
+• quando o nono evento for dado como ganho, oferece (variavel cash) - (variavel cash/4)  do retorno potencial + valor investido 
+• quando o décimo evento for dado como ganho, oferece (variavel cash)  do retorno potencial + valor investido 
+
+12 eventos =
+ • quando o primeiro evento for dado como ganho, oferece o desconto de (variavel cash-1%)  do valor investido 
+• quando o segundo evento for dado como ganho, oferece o desconto de (variavel cash -1% )-((variavel cash-1%)/5)  do valor investido 
+• quando o terceiro evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(((variavel cash-1%)/5)*2)  do valor investido 
+• quando o quarto evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(((variavel cash-1%)/5)*3)   do valor investido 
+• quando o quinto evento for dado como ganho, oferece o desconto de (variavel cash -1% )-(((variavel cash-1%)/5)*4)  do valor investido
+• quando o sexto evento for dado como ganho, oferece o valor investido
+• quando o sétimo evento for dado como ganho, oferece(variavel cash/5)  do retorno potencial + valor investido
+• quando o oitavo evento for dado como ganho, oferece ((variavel cash/5)*2) do retorno potencial + valor investido
+• quando o nono evento for dado como ganho, oferece ((variavel cash/5)*3)  do retorno potencial + valor investido 
+• quando o décimo evento for dado como ganho, oferece ((variavel cash/5)*4)  do retorno potencial + valor investido
+• quando o décimo primeiro evento for dado como ganho, oferece (variavel cash)  do retorno potencial + valor investido 
+
+Não coloquei os últimos eventos porque quando ultimo evento é dado como ganho, já deve pagar o retorno potencial do bilhete, logo não existe cash out para isso.
+
+Acima de 12 eventos, independente da quantidade de eventos, deve seguir a mesma regra de 12 eventos.
+
+Todo valor dado como cash out ou encerrar a aposta automaticamente irá para o saldo do cliente. 
+
+Quando é dado cash out, nos bilhetes, tanto do botão apostas do usuário, quanto no gerenciador, os valores do retorno potencial são riscados e substituídos pelo valor do cash out.
+
+Na aba caixa, vamos adicionar um campo chamado cash +, que será somado na formula atual do caixa. 
+
+Se o cash out foi menor do que o valor apostado, a diferença entre eles irá somar com o valor do campo cash +, da aba caixa

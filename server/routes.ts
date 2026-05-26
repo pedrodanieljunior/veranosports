@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, hashPassword, verifyPassword, getBrasiliaWeekStart } from "./storage";
 import { insertBetSlipSchema, insertUserSchema, insertDefesaSchema } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus, countH2HGames } from "@shared/oddsUtils";
+import { computeCashOutOffer } from "@shared/cashOutUtils";
 import { z } from "zod";
 import { cache } from "./cache";
 import { pool } from "./db";
@@ -3517,12 +3518,18 @@ export async function registerRoutes(
   let defensasInitialBalance = 1000;
   let defensasBalance = 1000;
   let defensasProfits = 0;
+  let earlyExitPct = 20;
+  let cashOutPct = 20;
   const savedDefesasInitial = await storage.getSetting("defensasInitialBalance");
   if (savedDefesasInitial) defensasInitialBalance = parseFloat(savedDefesasInitial) || 1000;
   const savedDefesasBalance = await storage.getSetting("defensasBalance");
   defensasBalance = savedDefesasBalance !== null ? (parseFloat(savedDefesasBalance) ?? defensasInitialBalance) : defensasInitialBalance;
   const savedDefesasProfits = await storage.getSetting("defensasProfits");
   if (savedDefesasProfits) defensasProfits = parseFloat(savedDefesasProfits) || 0;
+  const savedEarlyExitPct = await storage.getSetting("earlyExitPct");
+  if (savedEarlyExitPct) earlyExitPct = parseFloat(savedEarlyExitPct) || 20;
+  const savedCashOutPct = await storage.getSetting("cashOutPct");
+  if (savedCashOutPct) cashOutPct = parseFloat(savedCashOutPct) || 20;
 
   function startAutoCheckTimer() {
     if (autoCheckTimer) clearInterval(autoCheckTimer);
@@ -3941,6 +3948,84 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching bet:", error);
       res.status(500).json({ error: "Failed to fetch bet" });
+    }
+  });
+
+  // Configurações de Cash Out (público)
+  app.get("/api/cashout-settings", (_req, res) => {
+    res.json({ earlyExitPct, cashOutPct });
+  });
+
+  // Cashout / Encerrar Aposta
+  app.post("/api/bets/:id/cashout", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { type } = req.body as { type?: string };
+      if (!type || !["ea", "cashout"].includes(type)) {
+        return res.status(400).json({ error: "Tipo inválido. Use 'ea' ou 'cashout'." });
+      }
+      const bet = await storage.getBetSlip(id);
+      if (!bet) return res.status(404).json({ error: "Bilhete não encontrado" });
+      const sessionUserId = (req.session as any)?.userId;
+      if (!sessionUserId) return res.status(401).json({ error: "Não autenticado" });
+      if (bet.userId !== sessionUserId) return res.status(403).json({ error: "Não autorizado" });
+      if (bet.status !== "pending") return res.status(400).json({ error: "Bilhete não está pendente" });
+
+      const now = new Date();
+      const selections = bet.selections;
+      const grouped: Record<string, typeof selections> = {};
+      for (const sel of selections) {
+        if (!grouped[sel.gameId]) grouped[sel.gameId] = [];
+        grouped[sel.gameId].push(sel);
+      }
+      const gameIds = Object.keys(grouped);
+      const totalEvents = gameIds.length;
+
+      let cashOutValue: number;
+
+      if (type === "ea") {
+        const allNotStarted = selections.every(s => new Date(s.commenceTime) > now);
+        if (!allNotStarted) return res.status(400).json({ error: "Encerramento antecipado não disponível: jogos já iniciados" });
+        cashOutValue = Math.round(bet.stake * (1 - earlyExitPct / 100) * 100) / 100;
+      } else {
+        if (totalEvents <= 1) return res.status(400).json({ error: "Cash out indisponível para bilhetes simples" });
+        const anyInProgress = gameIds.some(gameId => {
+          const sels = grouped[gameId];
+          const started = sels.some(s => new Date(s.commenceTime) <= now);
+          const allResolved = sels.every(s => s.result !== "pending");
+          return started && !allResolved;
+        });
+        if (anyInProgress) return res.status(400).json({ error: "Cash out indisponível: partida em andamento" });
+        const wonEvents = gameIds.filter(gameId =>
+          grouped[gameId].every(s => s.result === "won")
+        ).length;
+        if (wonEvents === 0) return res.status(400).json({ error: "Cash out indisponível: nenhum evento encerrado" });
+        if (wonEvents >= totalEvents) return res.status(400).json({ error: "Bilhete já finalizado" });
+        const netPotWin = Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
+        const offer = computeCashOutOffer(bet.stake, netPotWin, totalEvents, wonEvents, cashOutPct);
+        if (offer === null) return res.status(400).json({ error: "Cash out indisponível" });
+        cashOutValue = offer;
+      }
+
+      const user = await storage.getUserByCpf(bet.userId!);
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+      const newBalance = Math.round((user.balance + cashOutValue) * 100) / 100;
+      await storage.updateUserBalance(bet.userId!, newBalance);
+      await storage.createTransaction({
+        userId: bet.userId!,
+        type: "cashout",
+        amount: cashOutValue,
+        balanceAfter: newBalance,
+        description: `Cash out bilhete #${bet.id.slice(0, 8).toUpperCase()}`,
+        referenceId: bet.id,
+      });
+      await storage.cashOutBet(bet.id, cashOutValue);
+
+      res.json({ success: true, cashOutValue, newBalance });
+    } catch (err) {
+      console.error("cashout error:", err);
+      res.status(500).json({ error: "Erro ao processar cash out" });
     }
   });
 
@@ -4812,7 +4897,7 @@ export async function registerRoutes(
       const aporteInicial = parseInt((await storage.getSetting("aporteInicial")) || "50000", 10);
       const checkIntervalMinutes = parseInt((await storage.getSetting("checkIntervalMinutes")) || "5", 10);
       const toasterDurationSeconds = parseInt((await storage.getSetting("toasterDurationSeconds")) || "3", 10);
-      res.json({ aporteInicial, checkIntervalMinutes, toasterDurationSeconds, defensasInitialBalance });
+      res.json({ aporteInicial, checkIntervalMinutes, toasterDurationSeconds, defensasInitialBalance, earlyExitPct, cashOutPct });
     } catch (err) {
       res.status(500).json({ error: "Erro ao buscar configurações" });
     }
@@ -4820,7 +4905,7 @@ export async function registerRoutes(
 
   app.patch("/api/admin/settings", requireAdmin, async (req, res) => {
     try {
-      const { aporteInicial, checkIntervalMinutes, toasterDurationSeconds, defensasInitialBalance: newDefesasInitial } = req.body;
+      const { aporteInicial, checkIntervalMinutes, toasterDurationSeconds, defensasInitialBalance: newDefesasInitial, earlyExitPct: newEarlyExitPct, cashOutPct: newCashOutPct } = req.body;
       if (aporteInicial !== undefined) {
         const val = parseInt(String(aporteInicial), 10);
         if (!isNaN(val) && val > 0) {
@@ -4849,11 +4934,27 @@ export async function registerRoutes(
           await storage.setSetting("defensasInitialBalance", String(val));
         }
       }
+      if (newEarlyExitPct !== undefined) {
+        const val = parseFloat(String(newEarlyExitPct));
+        if (!isNaN(val) && val > 0 && val < 100) {
+          earlyExitPct = val;
+          await storage.setSetting("earlyExitPct", String(val));
+        }
+      }
+      if (newCashOutPct !== undefined) {
+        const val = parseFloat(String(newCashOutPct));
+        if (!isNaN(val) && val > 0 && val < 100) {
+          cashOutPct = val;
+          await storage.setSetting("cashOutPct", String(val));
+        }
+      }
       const updated = {
         aporteInicial: DAILY_LIMIT,
         checkIntervalMinutes: autoCheckIntervalMs / 60000,
         toasterDurationSeconds: parseInt((await storage.getSetting("toasterDurationSeconds")) || "3", 10),
         defensasInitialBalance,
+        earlyExitPct,
+        cashOutPct,
       };
       res.json(updated);
     } catch (err) {

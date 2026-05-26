@@ -1242,13 +1242,17 @@ export default function Admin() {
 
                 // Fórmula principal
                 const defensasProfits = defensasData?.defensasProfits ?? 0;
+                const cashPlus = bets
+                  .filter(b => (b as any).cashOutValue != null)
+                  .reduce((s, b) => s + Math.max(0, b.stake - ((b as any).cashOutValue ?? b.stake)), 0);
                 const caixa = APORTE_INICIAL
                   + entradasPix
                   - saldosClientes
                   - exposicao
                   - totalSaquesAdmin
                   - pagamentosUsuarios
-                  + defensasProfits;
+                  + defensasProfits
+                  + cashPlus;
 
                 const isPositive = caixa >= 0;
 
@@ -1453,6 +1457,20 @@ export default function Admin() {
                           <ArrowDownCircle className="w-4 h-4 mx-auto mb-1 text-red-400" />
                           <p className="text-sm font-bold text-red-400">−R${fmt(pagamentosUsuarios)}</p>
                           <p className="text-xs text-muted-foreground">Pagamentos usuários</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        {/* Lucro Defesas */}
+                        <div className="bg-cyan-500/10 rounded-lg p-3 text-center">
+                          <Shield className="w-4 h-4 mx-auto mb-1 text-cyan-400" />
+                          <p className="text-sm font-bold text-cyan-400">+R${fmt(defensasProfits)}</p>
+                          <p className="text-xs text-muted-foreground">Lucro defesas</p>
+                        </div>
+                        {/* Cash + */}
+                        <div className="bg-emerald-500/10 rounded-lg p-3 text-center">
+                          <TrendingUp className="w-4 h-4 mx-auto mb-1 text-emerald-400" />
+                          <p className="text-sm font-bold text-emerald-400">+R${fmt(cashPlus)}</p>
+                          <p className="text-xs text-muted-foreground">Cash +</p>
                         </div>
                       </div>
                     </CardContent>
@@ -4425,16 +4443,16 @@ function ReferralsTab() {
 
 function SettingsTab() {
   const { toast } = useToast();
-  const [form, setForm] = useState({ aporteInicial: 50000, checkIntervalMinutes: 5, toasterDurationSeconds: 3, defensasInitialBalance: 1000 });
+  const [form, setForm] = useState({ aporteInicial: 50000, checkIntervalMinutes: 5, toasterDurationSeconds: 3, defensasInitialBalance: 1000, earlyExitPct: 20, cashOutPct: 20 });
   const [initialized, setInitialized] = useState(false);
 
-  const { data: settings } = useQuery<{ aporteInicial: number; checkIntervalMinutes: number; toasterDurationSeconds: number; defensasInitialBalance: number }>({
+  const { data: settings } = useQuery<{ aporteInicial: number; checkIntervalMinutes: number; toasterDurationSeconds: number; defensasInitialBalance: number; earlyExitPct: number; cashOutPct: number }>({
     queryKey: ["/api/admin/settings"],
   });
 
   useEffect(() => {
     if (settings && !initialized) {
-      setForm({ aporteInicial: settings.aporteInicial, checkIntervalMinutes: settings.checkIntervalMinutes, toasterDurationSeconds: settings.toasterDurationSeconds, defensasInitialBalance: settings.defensasInitialBalance ?? 1000 });
+      setForm({ aporteInicial: settings.aporteInicial, checkIntervalMinutes: settings.checkIntervalMinutes, toasterDurationSeconds: settings.toasterDurationSeconds, defensasInitialBalance: settings.defensasInitialBalance ?? 1000, earlyExitPct: settings.earlyExitPct ?? 20, cashOutPct: settings.cashOutPct ?? 20 });
       setInitialized(true);
     }
   }, [settings, initialized]);
@@ -4505,6 +4523,32 @@ function SettingsTab() {
             data-testid="input-defensas-initial"
             value={form.defensasInitialBalance}
             onChange={e => setForm(f => ({ ...f, defensasInitialBalance: parseFloat(e.target.value) || 1000 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Encerrar Aposta (EA) — desconto %</label>
+          <p className="text-xs text-muted-foreground">Desconto ao encerrar antes dos jogos. Ex: 20 = usuário recebe 80% do valor apostado.</p>
+          <Input
+            type="number"
+            min={1}
+            max={99}
+            step={0.5}
+            data-testid="input-early-exit-pct"
+            value={form.earlyExitPct}
+            onChange={e => setForm(f => ({ ...f, earlyExitPct: parseFloat(e.target.value) || 20 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Cash Out — variável %</label>
+          <p className="text-xs text-muted-foreground">Controla as ofertas escalonadas de cash out (descontos e prêmios progressivos por evento ganho).</p>
+          <Input
+            type="number"
+            min={1}
+            max={99}
+            step={0.5}
+            data-testid="input-cash-out-pct"
+            value={form.cashOutPct}
+            onChange={e => setForm(f => ({ ...f, cashOutPct: parseFloat(e.target.value) || 20 }))}
           />
         </div>
         <Button

@@ -45,6 +45,7 @@ export interface IStorage {
   updateBetSlipVerified(id: string, verified: boolean): Promise<BetSlip | undefined>;
   updateBetSlipTelegramChatId(id: string, telegramChatId: string): Promise<BetSlip | undefined>;
   updateBetSlipPixKey(id: string, pixKey: string): Promise<BetSlip | undefined>;
+  cashOutBet(id: string, cashOutValue: number): Promise<BetSlip | undefined>;
   getDailyBetSlips(): Promise<BetSlip[]>;
   getDailyTotalPotentialWin(): Promise<number>;
   getGameSimpleBetTotals(): Promise<GameSimpleBetTotal[]>;
@@ -135,9 +136,10 @@ export class DatabaseStorage implements IStorage {
       totalOdds: result.totalOdds,
       potentialWin: result.potentialWin,
       bonusUsed: result.bonusUsed ?? 0,
-      status: result.status as "pending" | "won" | "lost",
+      status: result.status as BetSlip["status"],
       verified: result.verified,
       createdAt: result.createdAt.toISOString(),
+      cashOutValue: result.cashOutValue ?? null,
     };
   }
 
@@ -273,6 +275,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(betSlipsTable.id, id))
       .returning();
 
+    if (!result) return undefined;
+    return this.mapBetSlip(result);
+  }
+
+  async cashOutBet(id: string, cashOutValue: number): Promise<BetSlip | undefined> {
+    const [result] = await db.update(betSlipsTable)
+      .set({ status: "cashed_out", cashOutValue })
+      .where(eq(betSlipsTable.id, id))
+      .returning();
     if (!result) return undefined;
     return this.mapBetSlip(result);
   }

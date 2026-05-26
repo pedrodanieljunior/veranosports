@@ -45,6 +45,7 @@ export const betSlipsTable = pgTable("bet_slips", {
   telegramChatId: text("telegram_chat_id"),
   pixKey: text("pix_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  cashOutValue: real("cash_out_value"),
 });
 
 export const sportSchema = z.object({
@@ -123,11 +124,12 @@ export const betSlipSchema = z.object({
   totalOdds: z.number(),
   potentialWin: z.number(),
   bonusUsed: z.number().default(0),
-  status: z.enum(["pending", "won", "lost"]).default("pending"),
+  status: z.enum(["pending", "won", "lost", "cashed_out"]).default("pending"),
   verified: z.boolean().default(false),
   telegramChatId: z.string().optional().nullable(),
   pixKey: z.string().optional().nullable(),
   createdAt: z.string(),
+  cashOutValue: z.number().nullable().optional(),
 });
 
 export type BetSlip = z.infer<typeof betSlipSchema>;
