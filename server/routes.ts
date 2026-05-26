@@ -1615,8 +1615,11 @@ async function runCheckResults() {
 
       if (!matchingFixture) { allSelectionsResolved = false; continue; }
 
-      const homeGoals = matchingFixture.goals.home;
-      const awayGoals = matchingFixture.goals.away;
+      // Usar placar do tempo regulamentar (90min) — score.fulltime é apenas 90min,
+      // enquanto goals.home/away inclui gols da prorrogação (status AET/PEN).
+      // Apostas h2h, gols, BTTS etc. são sempre liquidadas nos 90 minutos.
+      const homeGoals = matchingFixture.score?.fulltime?.home ?? matchingFixture.goals.home;
+      const awayGoals = matchingFixture.score?.fulltime?.away ?? matchingFixture.goals.away;
       const totalGoals = homeGoals + awayGoals;
       const htHomeGoals = matchingFixture.score?.halftime?.home ?? null;
       const htAwayGoals = matchingFixture.score?.halftime?.away ?? null;
