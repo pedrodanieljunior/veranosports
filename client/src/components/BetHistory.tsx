@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, BadgeCheck, BadgeX } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Hourglass } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -177,9 +177,9 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                                 </p>
                               </div>
                               <div className="flex-shrink-0">
-                                {selResult === "won" && <BadgeCheck className="w-4 h-4 text-green-400" />}
-                                {selResult === "lost" && <BadgeX className="w-4 h-4 text-red-400" />}
-                                {(!selResult || selResult === "pending") && <Clock className="w-4 h-4 text-yellow-400/40" />}
+                                {selResult === "won" && <Check className="w-4 h-4 text-green-400" />}
+                                {selResult === "lost" && <X className="w-4 h-4 text-red-400" />}
+                                {(!selResult || selResult === "pending") && <Hourglass className="w-3.5 h-3.5 text-yellow-400/40" />}
                               </div>
                             </div>
                           </div>
