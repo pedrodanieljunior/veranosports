@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Share2, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,66 +77,6 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       setConfirming(null);
     },
   });
-
-  const shareBet = async () => {
-    const gameGrouped: Record<string, Selection[]> = {};
-    for (const sel of bet.selections) {
-      const gameLabel = sel.awayTeam ? `${sel.homeTeam} vs ${sel.awayTeam}` : sel.homeTeam;
-      if (!gameGrouped[gameLabel]) gameGrouped[gameLabel] = [];
-      gameGrouped[gameLabel].push(sel);
-    }
-    const isCombo = checkIsComboBonus(bet.selections);
-    const distinctGames = new Set(bet.selections.map(s => s.gameId)).size;
-    const comboPct = isCombo ? getComboBonus(distinctGames) : 0;
-    // computeTotalOdds correctly handles combo (originalOdds), multi-market h2h (originalOdds), single boost
-    const shareComputedBaseOdds = computeTotalOdds(bet.selections);
-    const displayedShareBaseOdds = Math.round(shareComputedBaseOdds * 100) / 100;
-    const baseReturn = isCombo ? bet.stake * displayedShareBaseOdds : 0;
-    const bonusPctStr = (comboPct * 100) % 1 === 0
-      ? `${(comboPct * 100).toFixed(0)}%`
-      : `${(comboPct * 100).toFixed(1)}%`;
-
-    let lines = [`🎯 Bilhete FW Sports\n`];
-    for (const [game, sels] of Object.entries(gameGrouped)) {
-      lines.push(`⚽ ${game}`);
-      for (const s of sels) {
-        lines.push(`  • ${translateMarket(s.marketKey)}: ${formatOutcome(s.outcome, s.marketKey, s.homeTeam, s.awayTeam)}`);
-      }
-      lines.push("");
-    }
-    lines.push(`📊 Odds Total: ${fmtOdds(shareComputedBaseOdds)}`);
-    lines.push(`💰 Apostado: R$ ${bet.stake.toFixed(2)}`);
-    const isSingleH2H = bet.selections.length === 1 &&
-      (bet.selections[0].marketKey === "h2h" || bet.selections[0].marketKey === "match_winner");
-    const sel0 = bet.selections[0];
-    const historicalBoostPct = (isSingleH2H && sel0?.originalOdds && sel0?.odds && sel0.odds > sel0.originalOdds)
-      ? Math.round((sel0.odds / sel0.originalOdds - 1) * 100) : 0;
-    const superPct = historicalBoostPct;
-    const superBase = isSingleH2H && sel0?.originalOdds
-      ? bet.stake * sel0.originalOdds : 0;
-    if (isSingleH2H && superPct > 0 && superBase > 0) {
-      lines.push(`⚡ SUPER AUMENTADA +${superPct}%`);
-      lines.push(`  Odd normal: R$ ${superBase.toFixed(2)}`);
-      lines.push(`  Super Aumentada: R$ ${bet.potentialWin.toFixed(2)}`);
-    }
-    if (isCombo && comboPct > 0) {
-      lines.push(`⚡ BÔNUS COMBINADA +${bonusPctStr} (${distinctGames} jogos)`);
-      lines.push(`  Sem bônus: R$ ${baseReturn.toFixed(2)}`);
-      lines.push(`  Com bônus: R$ ${displayPotentialWin.toFixed(2)}`);
-    }
-    lines.push(`🏆 Retorno: R$ ${netReturn.toFixed(2)}`);
-    lines.push(`📋 ID: #${bet.id.slice(0, 8).toUpperCase()}`);
-    lines.push(`📅 Data: ${format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}`);
-    const shareText = lines.join("\n");
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Bilhete FW Sports", text: shareText });
-      } catch (err) {}
-    } else {
-      navigator.clipboard.writeText(shareText);
-      toast({ title: "Bilhete copiado!", description: "Cole onde quiser para compartilhar." });
-    }
-  };
 
   const statusConfig = {
     won:        { label: "Ganhou",       icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: "bg-green-500/15 text-green-400 border-green-500/40" },
@@ -281,20 +221,20 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             if (cashState.type === "ea") {
               return confirming === "ea" ? (
                 <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 bg-orange-600 hover:bg-orange-700 text-white" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
+                  <Button className="flex-1 bg-orange-600 hover:bg-orange-700 text-white" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
                     {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
+                  <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button size="sm" variant="outline" className="w-full border-orange-500/40 text-orange-400 hover:bg-orange-500/10" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
+                <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
                   ⏹ Encerrar Aposta — R$ {cashState.offer.toFixed(2).replace(".", ",")}
                 </Button>
               );
             }
             if (cashState.type === "unavailable") {
               return (
-                <Button size="sm" variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
+                <Button variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
                   Cash out indisponível
                 </Button>
               );
@@ -302,23 +242,19 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             if (cashState.type === "cashout") {
               return confirming === "cashout" ? (
                 <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
                     {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-cashout-cancel-${bet.id}`}>Cancelar</Button>
+                  <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-cashout-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
                   💰 Cash Out — R$ {cashState.offer.toFixed(2).replace(".", ",")}
                 </Button>
               );
             }
             return null;
           })()}
-          <Button className="w-full bg-green-600 text-white hover:bg-green-700" onClick={shareBet} data-testid={`button-share-history-${bet.id}`}>
-            <Share2 className="w-4 h-4 mr-2" />
-            Compartilhar Bilhete
-          </Button>
         </div>
       )}
     </div>
