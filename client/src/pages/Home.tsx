@@ -184,7 +184,7 @@ export default function Home() {
       if (!res.ok) throw new Error("Erro ao buscar histórico");
       return res.json();
     },
-    refetchInterval: user ? 10 * 1000 : false,
+    refetchInterval: user ? 5 * 1000 : false,
   });
 
   const placeBetMutation = useMutation({

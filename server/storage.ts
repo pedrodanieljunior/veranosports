@@ -232,10 +232,13 @@ export class DatabaseStorage implements IStorage {
     const currentStatus = bet.status as string;
     let newStatus: string = currentStatus;
     if (currentStatus !== "cashed_out") {
-      const allResolved = updatedSelections.every(sel => sel.result !== "pending");
       const anyLost = updatedSelections.some(sel => sel.result === "lost");
-      if (allResolved) {
-        newStatus = anyLost ? "lost" : "won";
+      const allResolved = updatedSelections.every(sel => sel.result !== "pending");
+      if (anyLost) {
+        // Uma seleção perdida = bilhete perdido imediatamente (regra de múltipla)
+        newStatus = "lost";
+      } else if (allResolved) {
+        newStatus = "won";
       } else {
         newStatus = "pending";
       }

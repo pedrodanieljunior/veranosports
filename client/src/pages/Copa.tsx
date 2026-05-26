@@ -162,7 +162,7 @@ export default function Copa() {
       const url = user?.cpf ? `/api/bets?userId=${encodeURIComponent(user.cpf)}` : `/api/bets?sessionId=${encodeURIComponent(sessionId)}`;
       return fetch(url).then(r => r.json());
     },
-    refetchInterval: user ? 10_000 : false,
+    refetchInterval: user ? 5_000 : false,
   });
 
   const isSearching = debouncedSearch.trim().length >= 2;
