@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Hourglass } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -173,7 +173,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                                       ? <Check className="w-3.5 h-3.5 text-green-400" />
                                       : selResult === "lost"
                                       ? <X className="w-3.5 h-3.5 text-red-400" />
-                                      : <Hourglass className="w-3 h-3 text-yellow-400/50" />}
+                                      : <Timer className="w-3 h-3 text-yellow-400/50" />}
                                   </div>
                                   <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                 </div>
