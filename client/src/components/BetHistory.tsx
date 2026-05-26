@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -159,21 +159,32 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                   </div>
                   <div className="px-4 py-3">
                     <div className="relative pl-5">
-                      <div className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
+                      <div className="absolute left-[5px] top-[6px] w-[2px] bg-border"
                         style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }} />
-                      {sels.map((sel, idx) => (
-                        <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
-                          <div className="flex items-center justify-between relative">
-                            <div>
-                              <div className="flex items-center gap-0 relative">
-                                <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
-                                <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                      {sels.map((sel, idx) => {
+                        const selResult = (sel as any).result as "pending" | "won" | "lost" | undefined;
+                        const dotColor = selResult === "won" ? "bg-green-400 border-green-500" : selResult === "lost" ? "bg-red-400 border-red-500" : "bg-yellow-400 border-yellow-500";
+                        return (
+                          <div key={sel.id} className={idx > 0 ? "mt-4" : ""}>
+                            <div className="flex items-center justify-between relative gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-0 relative">
+                                  <div className={`absolute -left-5 w-3 h-3 rounded-full border-2 border-muted z-10 ${dotColor}`} />
+                                  <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                </div>
+                                <p className={`font-semibold text-sm mt-0.5 ${selResult === "lost" ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                  {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
+                                </p>
                               </div>
-                              <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
+                              <div className="flex-shrink-0">
+                                {selResult === "won" && <CheckCircle className="w-4 h-4 text-green-400" />}
+                                {selResult === "lost" && <XCircle className="w-4 h-4 text-red-400" />}
+                                {(!selResult || selResult === "pending") && <AlertCircle className="w-4 h-4 text-yellow-400/50" />}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
