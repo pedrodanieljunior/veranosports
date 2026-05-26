@@ -4103,14 +4103,28 @@ function UsersTab() {
                             <div key={bet.id} className="p-2 border rounded text-xs">
                               <div className="flex justify-between">
                                 <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
-                                <Badge variant={bet.status === "won" ? "default" : bet.status === "lost" ? "destructive" : "secondary"} className={`text-[10px] ${bet.status === "anulado" ? "bg-gray-500/20 text-gray-400 border-gray-500/30" : ""}`}>
-                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : "Pendente"}
+                                <Badge variant="secondary" className={`text-[10px] ${
+                                  bet.status === "won" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
+                                  bet.status === "lost" ? "bg-red-500/20 text-red-500 border-red-500/30" :
+                                  bet.status === "anulado" ? "bg-gray-500/20 text-gray-400 border-gray-500/30" :
+                                  bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                  "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                }`}>
+                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente"}
                                 </Badge>
                               </div>
                               <div className="flex justify-between mt-1 flex-wrap gap-1">
                                 <span>Stake: R$ {bet.stake.toFixed(2).replace(".", ",")}</span>
                                 {(() => {
                                   const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet);
+                                  if (bet.status === "cashed_out" && (bet as any).cashOutValue != null) {
+                                    return (
+                                      <span className="text-emerald-400">
+                                        Cash Out: R$ {fmtBRL((bet as any).cashOutValue)}
+                                        <span className="text-zinc-500 text-[10px] ml-1 line-through">R$&nbsp;{fmtBRL(displayPotentialWin)}</span>
+                                      </span>
+                                    );
+                                  }
                                   return (
                                     <span className="text-green-600">
                                       Retorno: R$ {fmtBRL(displayPotentialWin)}
