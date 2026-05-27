@@ -285,15 +285,15 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             if (cashState.type === "ea") {
               return confirming === "ea" ? (
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
-                    {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
+                    {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span></>}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
-                  <CircleDollarSign className="w-4 h-4 mr-2" />
-                  Encerrar Aposta — R$ {cashState.offer.toFixed(2).replace(".", ",")}
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
+                  <span>Encerrar Aposta</span>
+                  <span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>
               );
             }
@@ -307,14 +307,15 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             if (cashState.type === "cashout") {
               return confirming === "cashout" ? (
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
-                    {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${cashState.offer.toFixed(2).replace(".", ",")}`}
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
+                    {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span></>}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-cashout-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
-                  💰 Cash Out — R$ {cashState.offer.toFixed(2).replace(".", ",")}
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
+                  <span>Cash Out</span>
+                  <span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>
               );
             }
