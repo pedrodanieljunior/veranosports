@@ -125,21 +125,6 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Botão de cash out no preview — só para bilhetes pendentes com oferta disponível */}
-          {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout") && (
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                setExpanded(true);
-                setConfirming(cashState.type as "ea" | "cashout");
-              }}
-              data-testid={`button-preview-cashout-${bet.id}`}
-              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors flex-shrink-0"
-            >
-              <CircleDollarSign className="w-3 h-3" />
-              {cashState.type === "ea" ? "Encerrar" : "Cash Out"}
-            </button>
-          )}
           <div className="text-right">
             <p className="text-xs text-muted-foreground">{format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}</p>
             <div className="flex items-center justify-end gap-1.5 mt-0.5">
@@ -156,6 +141,24 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
       </div>
+
+      {/* ── Faixa de cash out (preview, fora do botão expand) ── */}
+      {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout") && (
+        <div className="px-4 pb-2.5 -mt-1">
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              setExpanded(true);
+              setConfirming(cashState.type as "ea" | "cashout");
+            }}
+            data-testid={`button-preview-cashout-${bet.id}`}
+            className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
+          >
+            <CircleDollarSign className="w-3.5 h-3.5" />
+            {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"} — R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
+          </button>
+        </div>
+      )}
 
       {/* ── Detalhe expandido ── */}
       {expanded && (
