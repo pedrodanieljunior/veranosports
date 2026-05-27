@@ -151,9 +151,16 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                 onClick={e => { e.stopPropagation(); cashOutMutation.mutate(cashState.type as "ea" | "cashout"); }}
                 disabled={cashOutMutation.isPending}
                 data-testid={`button-preview-cashout-confirm-${bet.id}`}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                className="flex-1 inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
               >
-                {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${(cashState as any).offer?.toFixed(2).replace(".", ",")}`}
+                {cashOutMutation.isPending ? (
+                  "Processando..."
+                ) : (
+                  <>
+                    <span>Confirmar</span>
+                    <span>R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={e => { e.stopPropagation(); setConfirming(null); }}
