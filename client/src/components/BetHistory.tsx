@@ -167,7 +167,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             <button
               onClick={e => { e.stopPropagation(); setConfirming(cashState.type as "ea" | "cashout"); }}
               data-testid={`button-preview-cashout-${bet.id}`}
-              className="w-full inline-flex items-center justify-between text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
+              className="w-full inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
             >
               <span>{cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"}</span>
               <span>R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}</span>
