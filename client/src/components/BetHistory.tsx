@@ -150,7 +150,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
               <div className="w-full inline-flex items-center justify-center gap-2 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gray-500/10 text-gray-400 border border-gray-500/25 opacity-70 cursor-not-allowed">
                 <span>Cash out indisponível</span>
               </div>
-              <div className="flex items-center gap-1.5 px-1 min-w-0">
+              <div className="flex items-center justify-center gap-1.5 px-1 min-w-0">
                 <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
                 <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cash out disponível ao finalizar.</span>
               </div>
