@@ -759,7 +759,7 @@ export default function Admin() {
       case "anulado":
         return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Anulado</Badge>;
       case "cashed_out":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Cash Out</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Cashout</Badge>;
       default:
         return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Em andamento</Badge>;
     }
@@ -2171,7 +2171,7 @@ export default function Admin() {
                               <SelectContent>
                                 <SelectItem value="cashed_out">
                                   <span className="flex items-center gap-2">
-                                    <span className="w-3 h-3 text-emerald-400">💸</span> Cash Out
+                                    <span className="w-3 h-3 text-emerald-400">💸</span> Cashout
                                   </span>
                                 </SelectItem>
                                 <SelectItem value="pending">
@@ -4579,8 +4579,8 @@ function SettingsTab() {
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Cash Out — variável %</label>
-          <p className="text-xs text-muted-foreground">Controla as ofertas escalonadas de cash out (descontos e prêmios progressivos por evento ganho).</p>
+          <label className="text-sm font-medium">Cashout — variável %</label>
+          <p className="text-xs text-muted-foreground">Controla as ofertas escalonadas de cashout (descontos e prêmios progressivos por evento ganho).</p>
           <Input
             type="number"
             min={1}
