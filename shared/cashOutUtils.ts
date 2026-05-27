@@ -83,8 +83,6 @@ export function getCashOutState(
   const gameIds = Object.keys(grouped);
   const totalEvents = gameIds.length;
 
-  if (totalEvents <= 1) return { type: "none" };
-
   const wonEvents = gameIds.filter(gameId =>
     grouped[gameId].every(s => s.result === "won")
   ).length;
