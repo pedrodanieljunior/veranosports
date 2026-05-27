@@ -78,11 +78,11 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       const val = typeof data?.cashOutValue === "number"
         ? data.cashOutValue.toFixed(2).replace(".", ",")
         : "?";
-      toast({ title: "Cash out realizado!", description: `R$ ${val} creditados na sua conta.` });
+      toast({ title: "Cashout realizado!", description: `R$ ${val} creditados na sua conta.` });
       setConfirming(null);
     },
     onError: (err: any) => {
-      toast({ title: "Erro no cash out", description: err?.message || "Tente novamente.", variant: "destructive" });
+      toast({ title: "Erro no cashout", description: err?.message || "Tente novamente.", variant: "destructive" });
       setConfirming(null);
     },
   });
@@ -92,7 +92,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
     lost:       { label: "Perdeu",       icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-red-500/15 text-red-400 border-red-500/40" },
     pending:    { label: "Em Andamento", icon: <Clock className="w-3.5 h-3.5" />,        cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40" },
     anulado:    { label: "Anulado",      icon: <XCircle className="w-3.5 h-3.5" />,      cls: "bg-gray-500/15 text-gray-400 border-gray-500/40" },
-    cashed_out: { label: "Cash Out",     icon: <Banknote className="w-3.5 h-3.5" />,     cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40" },
+    cashed_out: { label: "Cashout",     icon: <Banknote className="w-3.5 h-3.5" />,     cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40" },
   };
   const st = statusConfig[(bet.status as keyof typeof statusConfig)] ?? statusConfig.pending;
 
@@ -148,11 +148,11 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
           {cashState.type === "unavailable" ? (
             <div className="w-full flex flex-col gap-1">
               <div className="w-full inline-flex items-center justify-center gap-2 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gray-500/10 text-gray-400 border border-gray-500/25 opacity-70 cursor-not-allowed">
-                <span>Cash out indisponível</span>
+                <span>Cashout indisponível</span>
               </div>
               <div className="flex items-center justify-center gap-1.5 px-1 min-w-0">
                 <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cash out disponível ao finalizar.</span>
+                <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cashout disponível ao finalizar.</span>
               </div>
             </div>
           ) : confirming === cashState.type ? (
@@ -186,7 +186,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
               data-testid={`button-preview-cashout-${bet.id}`}
               className="w-full inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
             >
-              <span>{cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"}</span>
+              <span>{cashState.type === "ea" ? "Encerrar Aposta" : "Cashout"}</span>
               <span>R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}</span>
             </button>
           )}
@@ -267,7 +267,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             })()}
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-muted-foreground text-sm">
-                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : bet.status === "anulado" ? "Valor devolvido" : bet.status === "cashed_out" ? "Cash Out recebido" : "Retorno potencial"}
+                {bet.status === "won" ? "Retorno ganho" : bet.status === "lost" ? "Retorno perdido" : bet.status === "anulado" ? "Valor devolvido" : bet.status === "cashed_out" ? "Cashout recebido" : "Retorno potencial"}
               </span>
               <div className="text-right">
                 {bet.status === "cashed_out" && (bet as any).cashOutValue != null ? (
@@ -311,11 +311,11 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
               return (
                 <div className="flex flex-col gap-1">
                   <Button variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
-                    Cash out indisponível
+                    Cashout indisponível
                   </Button>
                   <div className="flex items-center justify-center gap-1.5 px-1">
                     <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cash out disponível ao finalizar.</span>
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cashout disponível ao finalizar.</span>
                   </div>
                 </div>
               );
@@ -330,7 +330,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                 </div>
               ) : (
                 <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
-                  <span>Cash Out</span>
+                  <span>Cashout</span>
                   <span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>
               );
