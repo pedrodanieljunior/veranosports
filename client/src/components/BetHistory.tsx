@@ -145,18 +145,34 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       {/* ── Faixa de cash out (preview, fora do botão expand) ── */}
       {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout") && (
         <div className="px-4 pb-2.5 -mt-1">
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              setExpanded(true);
-              setConfirming(cashState.type as "ea" | "cashout");
-            }}
-            data-testid={`button-preview-cashout-${bet.id}`}
-            className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
-          >
-            <CircleDollarSign className="w-3.5 h-3.5" />
-            {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"} — R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
-          </button>
+          {confirming === cashState.type ? (
+            <div className="flex gap-2">
+              <button
+                onClick={e => { e.stopPropagation(); cashOutMutation.mutate(cashState.type as "ea" | "cashout"); }}
+                disabled={cashOutMutation.isPending}
+                data-testid={`button-preview-cashout-confirm-${bet.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+              >
+                {cashOutMutation.isPending ? "Processando..." : `Confirmar — R$ ${(cashState as any).offer?.toFixed(2).replace(".", ",")}`}
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setConfirming(null); }}
+                data-testid={`button-preview-cashout-cancel-${bet.id}`}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-muted-foreground hover:bg-white/10 transition-colors border border-white/10"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={e => { e.stopPropagation(); setConfirming(cashState.type as "ea" | "cashout"); }}
+              data-testid={`button-preview-cashout-${bet.id}`}
+              className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
+            >
+              <CircleDollarSign className="w-3.5 h-3.5" />
+              {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"} — R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
+            </button>
+          )}
         </div>
       )}
 
