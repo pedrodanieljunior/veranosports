@@ -3765,8 +3765,9 @@ export async function registerRoutes(
         totalOdds = Math.floor(rawTotalOdds * 100) / 100;
         potentialWin = Math.round(validatedData.stake * rawTotalOdds * 100) / 100;
       } else {
+        const isMultiGame = byGameForSGP.size > 1;
         const baseOdds = Array.from(byGameForSGP.entries())
-          .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, false), 1);
+          .reduce((acc, [gid, sels]) => acc * gameContribution(gid, sels, isMultiGame), 1);
         totalOdds = Math.round(baseOdds * 100) / 100;
         potentialWin = Math.round(validatedData.stake * baseOdds * 100) / 100;
       }
