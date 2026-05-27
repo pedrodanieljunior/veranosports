@@ -48,7 +48,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
     : `${(comboPct * 100).toFixed(1)}%`;
 
   const cashState = bet.userId
-    ? getCashOutState(bet as any, new Date(), cashOutPct, earlyExitPct)
+    ? getCashOutState({ ...bet, potentialWin: displayPotentialWin } as any, new Date(), cashOutPct, earlyExitPct)
     : { type: "none" as const };
 
   const cashOutMutation = useMutation({
