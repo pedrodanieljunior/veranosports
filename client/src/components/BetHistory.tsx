@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight, Info } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -146,8 +146,14 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout" || cashState.type === "unavailable") && (
         <div className="px-4 pb-2.5 -mt-1">
           {cashState.type === "unavailable" ? (
-            <div className="w-full inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gray-500/10 text-gray-400 border border-gray-500/25 opacity-70 cursor-not-allowed">
-              <span>Cash out indisponível</span>
+            <div className="w-full flex flex-col gap-1">
+              <div className="w-full inline-flex items-center justify-center gap-2 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gray-500/10 text-gray-400 border border-gray-500/25 opacity-70 cursor-not-allowed">
+                <span>Cash out indisponível</span>
+              </div>
+              <div className="flex items-start gap-1.5 px-1">
+                <Info className="w-3 h-3 text-gray-500 flex-shrink-0 mt-0.5" />
+                <span className="text-[10px] text-gray-500 leading-tight">Jogos em andamento. Ao finalizar, o cash out estará disponível.</span>
+              </div>
             </div>
           ) : confirming === cashState.type ? (
             <div className="flex gap-2">
