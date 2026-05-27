@@ -143,9 +143,13 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       </div>
 
       {/* ── Faixa de cash out (preview, fora do botão expand) ── */}
-      {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout") && (
+      {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout" || cashState.type === "unavailable") && (
         <div className="px-4 pb-2.5 -mt-1">
-          {confirming === cashState.type ? (
+          {cashState.type === "unavailable" ? (
+            <div className="w-full inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gray-500/10 text-gray-400 border border-gray-500/25 opacity-70 cursor-not-allowed">
+              <span>Cash out indisponível</span>
+            </div>
+          ) : confirming === cashState.type ? (
             <div className="flex gap-2">
               <button
                 onClick={e => { e.stopPropagation(); cashOutMutation.mutate(cashState.type as "ea" | "cashout"); }}
