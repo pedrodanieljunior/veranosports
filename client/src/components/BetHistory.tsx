@@ -309,9 +309,15 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             }
             if (cashState.type === "unavailable") {
               return (
-                <Button variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
-                  Cash out indisponível
-                </Button>
+                <div className="flex flex-col gap-1">
+                  <Button variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
+                    Cash out indisponível
+                  </Button>
+                  <div className="flex items-center justify-center gap-1.5 px-1">
+                    <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cash out disponível ao finalizar.</span>
+                  </div>
+                </div>
               );
             }
             if (cashState.type === "cashout") {
