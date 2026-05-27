@@ -170,7 +170,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
               className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
             >
               <CircleDollarSign className="w-3.5 h-3.5" />
-              {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"} — R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
+              {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"} R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
             </button>
           )}
         </div>
