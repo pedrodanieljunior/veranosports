@@ -101,9 +101,12 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : bet.status === "anulado" ? "rgba(156,163,175,0.25)" : bet.status === "cashed_out" ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)" }}>
 
       {/* ── Preview (sempre visível) ── */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left"
+        onKeyDown={e => e.key === "Enter" && setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer"
         data-testid={`button-expand-bet-${bet.id}`}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -122,6 +125,21 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Botão de cash out no preview — só para bilhetes pendentes com oferta disponível */}
+          {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout") && (
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                setExpanded(true);
+                setConfirming(cashState.type as "ea" | "cashout");
+              }}
+              data-testid={`button-preview-cashout-${bet.id}`}
+              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors flex-shrink-0"
+            >
+              <CircleDollarSign className="w-3 h-3" />
+              {cashState.type === "ea" ? "Encerrar" : "Cash Out"}
+            </button>
+          )}
           <div className="text-right">
             <p className="text-xs text-muted-foreground">{format(new Date(bet.createdAt), "dd/MM • HH:mm", { locale: ptBR })}</p>
             <div className="flex items-center justify-end gap-1.5 mt-0.5">
@@ -137,7 +155,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
           </div>
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
-      </button>
+      </div>
 
       {/* ── Detalhe expandido ── */}
       {expanded && (
