@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -169,8 +169,9 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
               data-testid={`button-preview-cashout-${bet.id}`}
               className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
             >
-              <CircleDollarSign className="w-3.5 h-3.5" />
-              {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"} R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
+              {cashState.type === "ea" ? "Encerrar Aposta" : "Cash Out"}
+              <ArrowRight className="w-3.5 h-3.5" />
+              R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}
             </button>
           )}
         </div>
