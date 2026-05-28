@@ -75,13 +75,15 @@ export function getCashOutState(
   const anyLost = bet.selections.some(s => s.result === "lost");
   if (anyLost) return { type: "none" };
 
-  // Elegibilidade: em bilhetes com 2+ seleções, a soma das demais odds
-  // deve ser >= a maior odd individual. Se não passar, cashout indisponível.
+  // Elegibilidade: em bilhetes com 2+ seleções, verifica se a soma das
+  // demais odds >= maior odd. Se não, o cashout funciona mas é limitado
+  // ao valor apostado (sem lucro — trava no empate).
+  let capAtStake = false;
   if (bet.selections.length > 1) {
     const selOdds = bet.selections.map(s => s.originalOdds ?? s.odds ?? 1);
     const maxOdd = Math.max(...selOdds);
     const sumOthers = selOdds.reduce((acc, o) => acc + o, 0) - maxOdd;
-    if (sumOthers < maxOdd) return { type: "unavailable" };
+    capAtStake = sumOthers < maxOdd;
   }
 
   const grouped: Record<string, typeof bet.selections> = {};
@@ -99,8 +101,11 @@ export function getCashOutState(
   // Se já tem jogos ganhos mas não todos → oferecer cash out imediatamente
   if (wonEvents > 0 && wonEvents < totalEvents) {
     const netPotentialWin = Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
-    const offer = computeCashOutOffer(bet.stake, netPotentialWin, totalEvents, wonEvents, cashOutPct);
-    if (offer !== null) return { type: "cashout", offer, wonEvents, totalEvents };
+    const rawOffer = computeCashOutOffer(bet.stake, netPotentialWin, totalEvents, wonEvents, cashOutPct);
+    if (rawOffer !== null) {
+      const offer = capAtStake ? Math.min(rawOffer, bet.stake) : rawOffer;
+      return { type: "cashout", offer, wonEvents, totalEvents };
+    }
   }
 
   // Nenhum jogo ganho ainda: verificar se está pré-jogo ou em andamento

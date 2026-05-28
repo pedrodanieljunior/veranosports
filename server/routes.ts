@@ -4003,9 +4003,14 @@ export async function registerRoutes(
         if (wonEvents === 0) return res.status(400).json({ error: "Cash out indisponível: nenhum evento encerrado" });
         if (wonEvents >= totalEvents) return res.status(400).json({ error: "Bilhete já finalizado" });
         const netPotWin = Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
-        const offer = computeCashOutOffer(bet.stake, netPotWin, totalEvents, wonEvents, cashOutPct);
-        if (offer === null) return res.status(400).json({ error: "Cash out indisponível" });
-        cashOutValue = offer;
+        const rawOffer = computeCashOutOffer(bet.stake, netPotWin, totalEvents, wonEvents, cashOutPct);
+        if (rawOffer === null) return res.status(400).json({ error: "Cash out indisponível" });
+        // Verificar elegibilidade: se soma das demais odds < maior odd, limitar ao valor apostado
+        const selOdds = selections.map((s: any) => s.originalOdds ?? s.odds ?? 1);
+        const maxOdd = Math.max(...selOdds);
+        const sumOthers = selOdds.reduce((acc: number, o: number) => acc + o, 0) - maxOdd;
+        const capAtStake = selections.length > 1 && sumOthers < maxOdd;
+        cashOutValue = capAtStake ? Math.min(rawOffer, bet.stake) : rawOffer;
       }
 
       const user = await storage.getUserByCpf(bet.userId!);
