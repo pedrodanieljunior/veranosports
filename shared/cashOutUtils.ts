@@ -63,7 +63,7 @@ export function getCashOutState(
     potentialWin: number;
     bonusUsed?: number | null;
     cashOutValue?: number | null;
-    selections: Array<{ gameId: string; commenceTime: string; result?: string | null }>;
+    selections: Array<{ gameId: string; commenceTime: string; result?: string | null; odds?: number; originalOdds?: number }>;
   },
   now: Date,
   cashOutPct: number,
@@ -74,6 +74,15 @@ export function getCashOutState(
 
   const anyLost = bet.selections.some(s => s.result === "lost");
   if (anyLost) return { type: "none" };
+
+  // Elegibilidade: em bilhetes com 2+ seleções, a soma das demais odds
+  // deve ser >= a maior odd individual. Se não passar, cashout indisponível.
+  if (bet.selections.length > 1) {
+    const selOdds = bet.selections.map(s => s.originalOdds ?? s.odds ?? 1);
+    const maxOdd = Math.max(...selOdds);
+    const sumOthers = selOdds.reduce((acc, o) => acc + o, 0) - maxOdd;
+    if (sumOthers < maxOdd) return { type: "unavailable" };
+  }
 
   const grouped: Record<string, typeof bet.selections> = {};
   for (const sel of bet.selections) {
