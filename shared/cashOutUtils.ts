@@ -94,11 +94,27 @@ export function getCashOutState(
   const gameIds = Object.keys(grouped);
   const totalEvents = gameIds.length;
 
+  // Opção C: jogo que já começou mas ainda não encerrou → indisponível (aguardar)
+  // Jogos futuros (não iniciados) não bloqueiam.
+  const anyInProgress = gameIds.some(gameId => {
+    const sels = grouped[gameId];
+    const started = sels.some(s => new Date(s.commenceTime) <= now);
+    const allResolved = sels.every(s => s.result !== "pending");
+    return started && !allResolved;
+  });
+  if (anyInProgress) return { type: "unavailable" };
+
+  // Nenhum jogo em andamento: verificar pré-jogo ou cashout
+  const allNotStarted = bet.selections.every(s => new Date(s.commenceTime) > now);
+  if (allNotStarted) {
+    return { type: "ea", offer: computeEarlyExitOffer(bet.stake, earlyExitPct) };
+  }
+
   const wonEvents = gameIds.filter(gameId =>
     grouped[gameId].every(s => s.result === "won")
   ).length;
 
-  // Se já tem jogos ganhos mas não todos → oferecer cash out imediatamente
+  // Jogos ganhos + restantes ainda não iniciados → oferecer cashout
   if (wonEvents > 0 && wonEvents < totalEvents) {
     const netPotentialWin = Math.max(0, bet.potentialWin - (bet.bonusUsed ?? 0));
     const rawOffer = computeCashOutOffer(bet.stake, netPotentialWin, totalEvents, wonEvents, cashOutPct);
@@ -107,20 +123,6 @@ export function getCashOutState(
       return { type: "cashout", offer, wonEvents, totalEvents };
     }
   }
-
-  // Nenhum jogo ganho ainda: verificar se está pré-jogo ou em andamento
-  const allNotStarted = bet.selections.every(s => new Date(s.commenceTime) > now);
-  if (allNotStarted) {
-    return { type: "ea", offer: computeEarlyExitOffer(bet.stake, earlyExitPct) };
-  }
-
-  const anyInProgress = gameIds.some(gameId => {
-    const sels = grouped[gameId];
-    const started = sels.some(s => new Date(s.commenceTime) <= now);
-    const allResolved = sels.every(s => s.result !== "pending");
-    return started && !allResolved;
-  });
-  if (anyInProgress) return { type: "unavailable" };
 
   return { type: "none" };
 }
