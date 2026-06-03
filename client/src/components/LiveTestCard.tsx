@@ -97,9 +97,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     }),
-    refetchInterval: 30 * 1000,
+    refetchInterval: 15 * 1000,
     refetchIntervalInBackground: false,
-    staleTime: 25 * 1000,
+    staleTime: 12 * 1000,
     retry: 2,
   });
 
