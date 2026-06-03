@@ -308,7 +308,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       <div className="px-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-1 text-gray-600 text-[9px]">
           <Zap className="w-2.5 h-2.5" />
-          <span>Atualiza a cada 30s</span>
+          <span>Atualiza a cada 15s</span>
         </div>
         <span className="text-gray-600 text-[9px]">
           {new Date(data.fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
