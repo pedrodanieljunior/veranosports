@@ -237,9 +237,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
             });
 
             return (
-              <div key={market.id}>
+              <div key={market.id} className="text-center">
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 justify-center">
                   {showValues.map(v => {
                     const rawOdd = v.odd;
                     const id = selId(GAME_ID, market.id, v.value);
