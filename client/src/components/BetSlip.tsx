@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle, ChevronDown, ChevronUp, Zap } from "lucide-react";
+import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, AlertTriangle, ChevronUp, Zap } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,15 +60,6 @@ export function BetSlip({
   gameLimitRemaining,
 }: BetSlipProps) {
   const [stake, setStake] = useState<string>("10");
-  const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
-  const toggleGameExpand = (gameId: string) => {
-    setExpandedGames(prev => {
-      const next = new Set(prev);
-      if (next.has(gameId)) next.delete(gameId);
-      else next.add(gameId);
-      return next;
-    });
-  };
   const [useBonus, setUseBonus] = useState(false);
   const { toast } = useToast();
   const { fractionTable: comboBonusTable } = useComboBonus();
@@ -501,119 +492,78 @@ export function BetSlip({
         ) : (
           <>
             <ScrollArea className="flex-1 -mx-4 px-4">
-              {(() => {
-                return (
-                  <div className="space-y-3">
-                    {Object.entries(grouped).map(([gameId, sels]) => {
-                      const first = sels[0];
-                      const sgpOdd = sgpOddsMap.get(gameId);
-                      const isSGPGame = !!sgpOdd && sels.filter(s => isSGPEligible(s.marketKey)).length >= 2;
-                      const isSGPQueryLoading = sgpLoading && sgpGames.some(g => g.gameId === gameId);
-                      const isComboCtx = distinctGameCount > 1;
-                      const gameOdds = isSGPGame
-                        ? roundOdds(computeGameContrib(gameId, sels, isComboCtx))
-                        : roundOdds(computeTotalOdds(sels, isComboCtx));
-                      const isMulti = sels.length >= 2;
-                      const isExpanded = expandedGames.has(gameId);
-                      const isCopaGrupoGame = sels.some(s => s.marketKey.startsWith("copa_grupo"));
-                      const copaGroupBadge = isCopaGrupoGame ? copaBetBadgeMap.get(gameId) : undefined;
-                      const betSlipGameLabel = copaGroupBadge
-                        ? `${copaGroupBadge} — ${first.homeTeam}`
-                        : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
-                      return (
-                        <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
-                          <div
-                            className={`flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border ${isMulti ? "cursor-pointer select-none active:opacity-70" : ""}`}
-                            onClick={() => isMulti && toggleGameExpand(gameId)}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-sm">⚽</span>
-                              <span className="font-semibold text-foreground text-sm truncate">
-                                {betSlipGameLabel}
+              <div className="space-y-2">
+                {Object.entries(grouped).map(([gameId, sels]) => {
+                  const first = sels[0];
+                  const sgpOdd = sgpOddsMap.get(gameId);
+                  const isSGPGame = !!sgpOdd && sels.filter(s => isSGPEligible(s.marketKey)).length >= 2;
+                  const isSGPQueryLoading = sgpLoading && sgpGames.some(g => g.gameId === gameId);
+                  const isComboCtx = distinctGameCount > 1;
+                  const gameOdds = isSGPGame
+                    ? roundOdds(computeGameContrib(gameId, sels, isComboCtx))
+                    : roundOdds(computeTotalOdds(sels, isComboCtx));
+                  const isCopaGrupoGame = sels.some(s => s.marketKey.startsWith("copa_grupo"));
+                  const copaGroupBadge = isCopaGrupoGame ? copaBetBadgeMap.get(gameId) : undefined;
+                  const betSlipGameLabel = copaGroupBadge
+                    ? `${copaGroupBadge} — ${first.homeTeam}`
+                    : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
+                  const gameTime = first.commenceTime
+                    ? format(new Date(first.commenceTime), "dd/MM • HH:mm", { locale: ptBR })
+                    : "";
+
+                  return (
+                    <div key={gameId} className="rounded-lg bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
+                      {/* Header: tempo + jogo + odd */}
+                      <div className="flex items-start justify-between px-3 pt-2 pb-1.5 border-b border-border/50">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[9px] text-muted-foreground/70 uppercase tracking-wide">{gameTime}</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[11px]">⚽</span>
+                            <span className="text-[11px] font-semibold text-foreground truncate leading-tight">{betSlipGameLabel}</span>
+                            {isSGPGame && (
+                              <span className="flex-shrink-0 text-[9px] font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1 py-0.5 rounded-full tracking-wide" data-testid={`badge-sgp-${gameId}`}>
+                                SGP
                               </span>
-                              {isSGPGame && (
-                                <span className="flex-shrink-0 text-[10px] font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full tracking-wide" data-testid={`badge-sgp-${gameId}`}>
-                                  SGP
-                                </span>
-                              )}
-                              {isSGPQueryLoading && !isSGPGame && (
-                                <span className="flex-shrink-0 w-3 h-3 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                              <span className={`font-bold text-sm ${isSGPGame ? "text-purple-400" : "text-yellow-400"}`}>
-                                {fmtOdds(gameOdds)}
-                              </span>
-                              {isMulti && (
-                                isExpanded
-                                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                              )}
-                            </div>
+                            )}
+                            {isSGPQueryLoading && !isSGPGame && (
+                              <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+                            )}
                           </div>
+                        </div>
+                        <span className={`flex-shrink-0 ml-2 mt-3 font-bold text-sm ${isSGPGame ? "text-purple-400" : "text-yellow-400"}`}>
+                          {fmtOdds(gameOdds)}
+                        </span>
+                      </div>
 
-                          {/* Collapsed preview */}
-                          {isMulti && !isExpanded && (
-                            <button
-                              className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/80 transition-colors"
-                              onClick={() => toggleGameExpand(gameId)}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
-                                <span className="text-muted-foreground text-xs truncate">
-                                  {sels[0].marketKey.startsWith("copa_grupo")
-                                    ? formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)
-                                    : `${translateMarket(sels[0].marketKey)} · ${formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)}`}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-600/30 border border-purple-500/50 text-purple-300 leading-none tracking-wide">
-                                  CA
-                                </span>
-                                <span className="text-xs text-muted-foreground">+{sels.length - 1} mais</span>
-                              </div>
-                            </button>
-                          )}
-
-                          {/* Expanded list */}
-                          {(!isMulti || isExpanded) && (
-                            <div className="px-3 py-2.5">
-                              <div className="relative pl-5">
-                                <div
-                                  className="absolute left-[5px] top-[6px] w-[2px] bg-yellow-400"
-                                  style={{ height: sels.length > 1 ? `calc(100% - 12px)` : "0px" }}
-                                />
-                                {sels.map((sel, idx) => (
-                                  <div key={sel.id} className={`flex items-start justify-between ${idx > 0 ? "mt-3" : ""}`}>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-0 relative">
-                                        <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
-                                        {!sel.marketKey.startsWith("copa_grupo") && (
-                                          <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
-                                        )}
-                                      </div>
-                                      <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
-                                      <button
-                                        onClick={() => onRemoveSelection(sel.id)}
-                                        className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/40 transition-colors"
-                                        data-testid={`button-remove-selection-${sel.id}`}
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
+                      {/* Seleções */}
+                      <div className="px-3 py-1.5 space-y-1">
+                        {sels.map((sel) => (
+                          <div key={sel.id} className="flex items-center justify-between gap-2">
+                            <div className="flex items-start gap-1.5 min-w-0">
+                              <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0 mt-[5px]" />
+                              <div className="min-w-0">
+                                {!sel.marketKey.startsWith("copa_grupo") && (
+                                  <span className="text-[9px] text-muted-foreground leading-none block">{translateMarket(sel.marketKey)}</span>
+                                )}
+                                <p className="text-[11px] font-semibold text-foreground leading-snug">
+                                  {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
+                                </p>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+                            <button
+                              onClick={() => onRemoveSelection(sel.id)}
+                              className="flex-shrink-0 w-4 h-4 rounded-full text-muted-foreground/50 flex items-center justify-center hover:text-red-400 hover:bg-red-500/20 transition-colors"
+                              data-testid={`button-remove-selection-${sel.id}`}
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </ScrollArea>
 
             {/* Fixed bottom: stats + banners + stake input + alerts + submit */}
