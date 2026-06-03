@@ -4,7 +4,6 @@ import { Zap, Clock } from "lucide-react";
 
 const FIXTURE_ID = 1536930;
 const GAME_ID = `api-football-${FIXTURE_ID}`;
-const BOOST = 1.2;
 
 const MARKET_LABELS: Record<number, string> = {
   1: "Resultado Final",
@@ -47,9 +46,6 @@ interface LiveData {
   fetchedAt: number;
 }
 
-function boostOdd(raw: number) {
-  return Math.round(raw * BOOST * 100) / 100;
-}
 
 function selId(gameId: string, marketId: number, value: string) {
   return `live-${gameId}-m${marketId}-${value.replace(/\s+/g, "_")}`;
@@ -214,7 +210,6 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 <div className="flex flex-wrap gap-1.5">
                   {showValues.map(v => {
                     const rawOdd = v.odd;
-                    const boosted = boostOdd(rawOdd);
                     const id = selId(GAME_ID, market.id, v.value);
                     const sel: Selection = {
                       id,
@@ -226,8 +221,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                       marketKey: `live_m${market.id}`,
                       bookmaker: "API-Football",
                       outcome: v.value,
-                      odds: boosted,
-                      originalOdds: rawOdd,
+                      odds: rawOdd,
                       result: "pending",
                     };
                     const active = isSelected(selections, id);
@@ -247,8 +241,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                         }`}
                       >
                         <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
-                        <span className="text-sm font-black">{boosted.toFixed(2)}</span>
-                        <span className={`text-[9px] line-through ${active ? "opacity-60" : "opacity-40"}`}>{rawOdd.toFixed(2)}</span>
+                        <span className="text-sm font-black">{rawOdd.toFixed(2)}</span>
                       </button>
                     );
                   })}
