@@ -51,6 +51,14 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
     ? getCashOutState({ ...bet, potentialWin: displayPotentialWin } as any, new Date(), cashOutPct, earlyExitPct)
     : { type: "none" as const };
 
+  // Regra de bônus: se bonusUsed > 0, cashout só é permitido quando o valor supera o bônus usado
+  const effectiveCashState: typeof cashState = (() => {
+    if (bonusUsed <= 0) return cashState;
+    if (cashState.type === "ea") return { type: "unavailable" };
+    if (cashState.type === "cashout" && cashState.offer <= bonusUsed) return { type: "unavailable" };
+    return cashState;
+  })();
+
   const cashOutMutation = useMutation({
     mutationFn: async (type: "ea" | "cashout") => {
       const res = await fetch(`/api/bets/${bet.id}/cashout`, {
@@ -143,22 +151,26 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       </div>
 
       {/* ── Faixa de cash out (preview, fora do botão expand) ── */}
-      {bet.status === "pending" && bonusUsed === 0 && (cashState.type === "ea" || cashState.type === "cashout" || cashState.type === "unavailable") && (
+      {bet.status === "pending" && (effectiveCashState.type === "ea" || effectiveCashState.type === "cashout" || effectiveCashState.type === "unavailable") && (
         <div className="px-4 pb-2.5 -mt-1">
-          {cashState.type === "unavailable" ? (
+          {effectiveCashState.type === "unavailable" ? (
             <div className="w-full flex flex-col gap-1">
               <div className="w-full inline-flex items-center justify-center gap-2 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gray-500/10 text-gray-400 border border-gray-500/25 opacity-70 cursor-not-allowed">
                 <span>Cashout indisponível</span>
               </div>
               <div className="flex items-center justify-center gap-1.5 px-1 min-w-0">
                 <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cashout disponível ao finalizar.</span>
+                <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">
+                  {bonusUsed > 0 && cashState.type !== "unavailable"
+                    ? "Cashout disponível apenas quando o valor superar o bônus utilizado."
+                    : "Jogos em andamento. Cashout disponível ao finalizar."}
+                </span>
               </div>
             </div>
-          ) : confirming === cashState.type ? (
+          ) : confirming === effectiveCashState.type ? (
             <div className="flex gap-2">
               <button
-                onClick={e => { e.stopPropagation(); cashOutMutation.mutate(cashState.type as "ea" | "cashout"); }}
+                onClick={e => { e.stopPropagation(); cashOutMutation.mutate(effectiveCashState.type as "ea" | "cashout"); }}
                 disabled={cashOutMutation.isPending}
                 data-testid={`button-preview-cashout-confirm-${bet.id}`}
                 className="flex-1 inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
@@ -168,7 +180,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                 ) : (
                   <>
                     <span>Confirmar</span>
-                    <span>R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}</span>
+                    <span>R$ {(effectiveCashState as any).offer?.toFixed(2).replace(".", ",")}</span>
                   </>
                 )}
               </button>
@@ -182,12 +194,12 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             </div>
           ) : (
             <button
-              onClick={e => { e.stopPropagation(); setConfirming(cashState.type as "ea" | "cashout"); }}
+              onClick={e => { e.stopPropagation(); setConfirming(effectiveCashState.type as "ea" | "cashout"); }}
               data-testid={`button-preview-cashout-${bet.id}`}
               className="w-full inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
             >
-              <span>{cashState.type === "ea" ? "Encerrar Aposta" : "Cashout"}</span>
-              <span>R$ {(cashState as any).offer?.toFixed(2).replace(".", ",")}</span>
+              <span>{effectiveCashState.type === "ea" ? "Encerrar Aposta" : "Cashout"}</span>
+              <span>R$ {(effectiveCashState as any).offer?.toFixed(2).replace(".", ",")}</span>
             </button>
           )}
         </div>
@@ -291,23 +303,23 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             </div>
           </div>
 
-          {bet.status === "pending" && bonusUsed === 0 && (() => {
-            if (cashState.type === "ea") {
+          {bet.status === "pending" && (() => {
+            if (effectiveCashState.type === "ea") {
               return confirming === "ea" ? (
                 <div className="flex gap-2">
                   <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
-                    {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span></>}
+                    {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span></>}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
                 <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
                   <span>Encerrar Aposta</span>
-                  <span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span>
+                  <span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>
               );
             }
-            if (cashState.type === "unavailable") {
+            if (effectiveCashState.type === "unavailable") {
               return (
                 <div className="flex flex-col gap-1">
                   <Button variant="outline" disabled className="w-full border-gray-500/40 text-gray-400 opacity-60">
@@ -315,23 +327,27 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                   </Button>
                   <div className="flex items-center justify-center gap-1.5 px-1">
                     <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cashout disponível ao finalizar.</span>
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">
+                      {bonusUsed > 0 && cashState.type !== "unavailable"
+                        ? "Cashout disponível apenas quando o valor superar o bônus utilizado."
+                        : "Jogos em andamento. Cashout disponível ao finalizar."}
+                    </span>
                   </div>
                 </div>
               );
             }
-            if (cashState.type === "cashout") {
+            if (effectiveCashState.type === "cashout") {
               return confirming === "cashout" ? (
                 <div className="flex gap-2">
                   <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
-                    {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span></>}
+                    {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span></>}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-cashout-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
                 <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
                   <span>Cashout</span>
-                  <span>R$ {cashState.offer.toFixed(2).replace(".", ",")}</span>
+                  <span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>
               );
             }
