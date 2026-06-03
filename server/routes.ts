@@ -4903,7 +4903,7 @@ export async function registerRoutes(
             fetch(`${API_FOOTBALL_BASE}/fixtures?id=${FIXTURE_ID}`, {
               headers: { "x-apisports-key": API_FOOTBALL_KEY! },
             }),
-            fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`, {
+            fetch(`${API_FOOTBALL_BASE}/odds/live?fixture=${FIXTURE_ID}`, {
               headers: { "x-apisports-key": API_FOOTBALL_KEY! },
             }),
           ]);
@@ -4918,20 +4918,62 @@ export async function registerRoutes(
           const fixture = fixtureData.response?.[0];
           if (!fixture) throw new Error("Fixture not found");
 
-          const bkList: any[] = oddsData.response?.[0]?.bookmakers ?? [];
-          const bookmaker = bkList[0] ?? { bets: [] };
+          // Live odds: response[0].odds is a flat array {id, name, values:[{value,odd,handicap,suspended}]}
+          // Map live market IDs → frontend market IDs (same used by LiveTestCard.tsx MARKET_LABELS)
+          const LIVE_TO_FRONTEND: Record<number, number> = {
+            59: 1,  // Fulltime Result → Match Winner
+            35: 3,  // To Win 2nd Half → Second Half Winner
+            36: 5,  // Over/Under Line → Goals Over/Under
+            49: 6,  // Over/Under (1st Half) → Goals Over/Under First Half
+            69: 8,  // Both Teams to Score → Both Teams Score
+            72: 12, // Double Chance → Double Chance
+            19: 13, // 1x2 (1st Half) → First Half Winner
+          };
+          // Double Chance label normalisation (live API uses "Home or Draw" etc.)
+          const DC_LABELS: Record<string, string> = {
+            "Home or Draw": "Home/Draw",
+            "Away or Draw": "Draw/Away",
+            "Home or Away": "Home/Away",
+          };
+          const liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
+          const markets: any[] = [];
 
-          const WANTED_IDS = new Set([1, 5, 8, 13, 12, 3, 6]);
-          const markets = ((bookmaker.bets ?? []) as any[])
-            .filter((b: any) => WANTED_IDS.has(b.id))
-            .map((b: any) => ({
-              id: b.id,
-              name: b.name,
-              values: b.values.map((v: any) => ({
-                value: v.value,
-                odd: parseFloat(v.odd),
-              })),
-            }));
+          for (const [liveId, frontendId] of Object.entries(LIVE_TO_FRONTEND)) {
+            const market = liveOdds.find((o: any) => o.id === Number(liveId));
+            if (!market) continue;
+
+            const isHandicap = frontendId === 5 || frontendId === 6;
+
+            let values: { value: string; odd: number }[] = [];
+
+            if (isHandicap) {
+              // Group by handicap, pick the target line (prefer 2.5 for goals, 0.5 for 1st half)
+              const target = frontendId === 5 ? "2.5" : "0.5";
+              const byHc: Record<string, { value: string; odd: string; suspended: boolean }[]> = {};
+              for (const v of (market.values ?? [])) {
+                if (!byHc[v.handicap]) byHc[v.handicap] = [];
+                byHc[v.handicap].push(v);
+              }
+              // Try target handicap first, then fallback to first available
+              const hcKey = byHc[target] ? target : Object.keys(byHc)[0];
+              if (hcKey) {
+                values = (byHc[hcKey] ?? [])
+                  .filter((v: any) => !v.suspended)
+                  .map((v: any) => ({ value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd) }));
+              }
+            } else {
+              values = (market.values ?? [])
+                .filter((v: any) => !v.suspended)
+                .map((v: any) => ({
+                  value: DC_LABELS[v.value] ?? v.value,
+                  odd: parseFloat(v.odd),
+                }));
+            }
+
+            if (values.length > 0) {
+              markets.push({ id: frontendId, name: market.name, values });
+            }
+          }
 
           const result = {
             fixture: {
@@ -4947,7 +4989,7 @@ export async function registerRoutes(
             goals: fixture.goals,
             score: fixture.score,
             markets,
-            bookmakerName: bookmaker.name ?? "API-Football",
+            bookmakerName: "API-Football Live",
             fetchedAt: Date.now(),
           };
 

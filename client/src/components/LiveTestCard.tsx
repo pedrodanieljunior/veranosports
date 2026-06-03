@@ -228,13 +228,8 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
           {data.markets.map(market => {
             const label = MARKET_LABELS[market.id] ?? market.name;
-            const showValues = market.values.filter(v => {
-              if (market.id === 5) {
-                // Over/Under: only show 2.5
-                return v.value === "Over 2.5" || v.value === "Under 2.5";
-              }
-              return true;
-            });
+            // Server already filters to the main handicap line for markets 5 and 6
+            const showValues = market.values;
 
             return (
               <div key={market.id} className="text-center">
