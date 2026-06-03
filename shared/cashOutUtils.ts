@@ -105,8 +105,10 @@ export function getCashOutState(
   if (anyInProgress) return { type: "unavailable" };
 
   // Nenhum jogo em andamento: verificar pré-jogo ou cashout
+  // Se alguma seleção já foi resolvida como "won", o bilhete não é mais pré-jogo
+  const anyResolved = bet.selections.some(s => s.result === "won");
   const allNotStarted = bet.selections.every(s => new Date(s.commenceTime) > now);
-  if (allNotStarted) {
+  if (allNotStarted && !anyResolved) {
     return { type: "ea", offer: computeEarlyExitOffer(bet.stake, earlyExitPct) };
   }
 
