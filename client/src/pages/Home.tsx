@@ -24,6 +24,7 @@ import { translateLeagueName } from "@/lib/leagueTranslations";
 import { getSessionId } from "@/lib/session";
 import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
+import { LiveTestCard } from "@/components/LiveTestCard";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
@@ -380,6 +381,11 @@ export default function Home() {
         <div className="px-3 pt-2">
           <MobileBannerCarousel />
         </div>
+        {!isSearching && !isTyping && (
+          <div className="px-3 pt-2">
+            <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={true} />
+          </div>
+        )}
         {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
           <div className="pt-2">
             {boostCards.map(card => (
@@ -509,6 +515,13 @@ export default function Home() {
             <div className="pb-4 flex-shrink-0" style={{ paddingRight: "8vw" }}>
               <DesktopBannerCarousel />
             </div>
+
+            {/* Live test card */}
+            {!isSearching && !isTyping && (
+              <div className="pb-3" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+                <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+              </div>
+            )}
 
             {/* Boost cards */}
             {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (

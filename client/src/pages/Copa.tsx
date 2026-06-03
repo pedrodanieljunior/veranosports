@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSessionId } from "@/lib/session";
 import { GamesList } from "@/components/GamesList";
 import { MobileNav } from "@/components/MobileNav";
+import { LiveTestCard } from "@/components/LiveTestCard";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
@@ -364,6 +365,13 @@ export default function Copa() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===== LIVE TEST CARD ===== */}
+      {!isSearching && !isTyping && (
+        <div className="px-3 pt-3">
+          <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={true} />
         </div>
       )}
 

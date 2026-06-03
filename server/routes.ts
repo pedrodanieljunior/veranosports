@@ -4880,6 +4880,81 @@ export async function registerRoutes(
     }
   });
 
+  // Live test: Netherlands vs Algeria (fixture 1536930) — polling 30s
+  app.get("/api/football/live-test", async (_req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) {
+        return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      }
+
+      const FIXTURE_ID = 1536930;
+      const cacheKey = "live_test_1536930";
+      const LIVE_TTL = 30 * 1000; // 30 seconds
+
+      const cached = cache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
+
+      const [fixtureResp, oddsResp] = await Promise.all([
+        fetch(`${API_FOOTBALL_BASE}/fixtures?id=${FIXTURE_ID}`, {
+          headers: { "x-apisports-key": API_FOOTBALL_KEY },
+        }),
+        fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`, {
+          headers: { "x-apisports-key": API_FOOTBALL_KEY },
+        }),
+      ]);
+
+      if (!fixtureResp.ok || !oddsResp.ok) {
+        return res.status(502).json({ error: "API-Football unavailable" });
+      }
+
+      const fixtureData = await fixtureResp.json();
+      const oddsData = await oddsResp.json();
+
+      const fixture = fixtureData.response?.[0];
+      if (!fixture) return res.status(404).json({ error: "Fixture not found" });
+
+      const bkList: any[] = oddsData.response?.[0]?.bookmakers ?? [];
+      const bookmaker = bkList[0] ?? { bets: [] };
+
+      // Extract key markets: 1 (1X2), 5 (Over/Under), 8 (BTTS), 13 (First Half Winner), 12 (Double Chance)
+      const WANTED_IDS = new Set([1, 5, 8, 13, 12, 3, 6]);
+      const markets = (bookmaker.bets as any[])
+        .filter((b: any) => WANTED_IDS.has(b.id))
+        .map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          values: b.values.map((v: any) => ({
+            value: v.value,
+            odd: parseFloat(v.odd),
+          })),
+        }));
+
+      const result = {
+        fixture: {
+          id: fixture.fixture.id,
+          date: fixture.fixture.date,
+          status: fixture.fixture.status,
+          elapsed: fixture.fixture.status.elapsed,
+        },
+        teams: {
+          home: { name: fixture.teams.home.name, logo: fixture.teams.home.logo },
+          away: { name: fixture.teams.away.name, logo: fixture.teams.away.logo },
+        },
+        goals: fixture.goals,
+        score: fixture.score,
+        markets,
+        bookmakerName: bookmaker.name ?? "API-Football",
+        fetchedAt: Date.now(),
+      };
+
+      cache.set(cacheKey, result, LIVE_TTL);
+      return res.json(result);
+    } catch (err) {
+      console.error("[live-test]", err);
+      return res.status(500).json({ error: "Internal error" });
+    }
+  });
+
   // Admin: Verificar resultados e atualizar bilhetes automaticamente
   app.post("/api/admin/check-results", async (_req, res) => {
     try {
