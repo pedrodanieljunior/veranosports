@@ -96,10 +96,14 @@ interface Props {
 export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
   const { data, isLoading, error } = useQuery<LiveData>({
     queryKey: ["/api/football/live-test"],
-    queryFn: () => fetch("/api/football/live-test").then(r => r.json()),
+    queryFn: () => fetch("/api/football/live-test").then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }),
     refetchInterval: 30 * 1000,
     refetchIntervalInBackground: false,
     staleTime: 25 * 1000,
+    retry: 2,
   });
 
   const containerCls = isDark
@@ -123,7 +127,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !data.fixture) {
     return (
       <div className={containerCls}>
         <div className={`flex items-center gap-2 px-4 py-2 ${headerCls}`}>
