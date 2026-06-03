@@ -143,7 +143,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
       </div>
 
       {/* ── Faixa de cash out (preview, fora do botão expand) ── */}
-      {bet.status === "pending" && (cashState.type === "ea" || cashState.type === "cashout" || cashState.type === "unavailable") && (
+      {bet.status === "pending" && bonusUsed === 0 && (cashState.type === "ea" || cashState.type === "cashout" || cashState.type === "unavailable") && (
         <div className="px-4 pb-2.5 -mt-1">
           {cashState.type === "unavailable" ? (
             <div className="w-full flex flex-col gap-1">
@@ -291,7 +291,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
             </div>
           </div>
 
-          {bet.status === "pending" && (() => {
+          {bet.status === "pending" && bonusUsed === 0 && (() => {
             if (cashState.type === "ea") {
               return confirming === "ea" ? (
                 <div className="flex gap-2">
