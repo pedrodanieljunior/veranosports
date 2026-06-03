@@ -160,11 +160,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
               </div>
               <div className="flex items-center justify-center gap-1.5 px-1 min-w-0">
                 <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">
-                  {bonusUsed > 0 && cashState.type !== "unavailable"
-                    ? "Cashout disponível apenas quando o valor superar o bônus utilizado."
-                    : "Jogos em andamento. Cashout disponível ao finalizar."}
-                </span>
+                <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cashout disponível ao finalizar.</span>
               </div>
             </div>
           ) : confirming === effectiveCashState.type ? (
@@ -327,11 +323,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
                   </Button>
                   <div className="flex items-center justify-center gap-1.5 px-1">
                     <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">
-                      {bonusUsed > 0 && cashState.type !== "unavailable"
-                        ? "Cashout disponível apenas quando o valor superar o bônus utilizado."
-                        : "Jogos em andamento. Cashout disponível ao finalizar."}
-                    </span>
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap truncate">Jogos em andamento. Cashout disponível ao finalizar.</span>
                   </div>
                 </div>
               );
