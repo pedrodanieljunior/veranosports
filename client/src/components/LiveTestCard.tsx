@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useRef, useEffect, useState } from "react";
 import { Selection } from "@shared/schema";
-import { Zap, Clock } from "lucide-react";
+import { Zap, Clock, TrendingUp, TrendingDown } from "lucide-react";
 
 const FIXTURE_ID = 1536930;
 const GAME_ID = `api-football-${FIXTURE_ID}`;
@@ -101,6 +102,37 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     staleTime: 25 * 1000,
     retry: 2,
   });
+
+  // Track odd movements: key = "m{marketId}-{value}", value = "up"|"down"|null
+  const prevOdds = useRef<Record<string, number>>({});
+  const [oddMovements, setOddMovements] = useState<Record<string, "up" | "down">>({});
+  const clearTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    if (!data?.markets) return;
+    const changes: Record<string, "up" | "down"> = {};
+
+    for (const market of data.markets) {
+      for (const v of market.values) {
+        const key = `m${market.id}-${v.value}`;
+        const prev = prevOdds.current[key];
+        if (prev !== undefined && prev !== v.odd) {
+          changes[key] = v.odd > prev ? "up" : "down";
+          // Clear any existing timer for this key
+          if (clearTimers.current[key]) clearTimeout(clearTimers.current[key]);
+          // Remove the indicator after 4 seconds
+          clearTimers.current[key] = setTimeout(() => {
+            setOddMovements(m => { const next = { ...m }; delete next[key]; return next; });
+          }, 4000);
+        }
+        prevOdds.current[key] = v.odd;
+      }
+    }
+
+    if (Object.keys(changes).length > 0) {
+      setOddMovements(prev => ({ ...prev, ...changes }));
+    }
+  }, [data?.fetchedAt]);
 
   const containerCls = isDark
     ? "bg-[#1a1a2e]/80 border border-white/10 rounded-xl overflow-hidden"
@@ -211,6 +243,8 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                   {showValues.map(v => {
                     const rawOdd = v.odd;
                     const id = selId(GAME_ID, market.id, v.value);
+                    const moveKey = `m${market.id}-${v.value}`;
+                    const movement = oddMovements[moveKey];
                     const sel: Selection = {
                       id,
                       gameId: GAME_ID,
@@ -232,8 +266,12 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                         key={v.value}
                         data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
                         onClick={() => onToggleSelection(sel)}
-                        className={`flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
-                          active
+                        className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
+                          movement === "up"
+                            ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 " + (isDark ? "bg-green-500/10 text-white" : "bg-green-50 text-gray-800")
+                            : movement === "down"
+                            ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 " + (isDark ? "bg-red-500/10 text-white" : "bg-red-50 text-gray-800")
+                            : active
                             ? "bg-yellow-400 border-yellow-400 text-black"
                             : isDark
                             ? "bg-white/5 border-white/15 text-white hover:bg-white/10"
@@ -241,7 +279,15 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                         }`}
                       >
                         <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
-                        <span className="text-sm font-black">{rawOdd.toFixed(2)}</span>
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-sm font-black">{rawOdd.toFixed(2)}</span>
+                          {movement === "up" && (
+                            <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />
+                          )}
+                          {movement === "down" && (
+                            <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />
+                          )}
+                        </div>
                       </button>
                     );
                   })}
