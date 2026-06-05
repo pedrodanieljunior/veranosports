@@ -4899,78 +4899,99 @@ export async function registerRoutes(
 
       if (!liveTestInflight) {
         liveTestInflight = (async () => {
-          const [fixtureResp, oddsResp] = await Promise.all([
-            fetch(`${API_FOOTBALL_BASE}/fixtures?id=${FIXTURE_ID}`, {
-              headers: { "x-apisports-key": API_FOOTBALL_KEY! },
-            }),
-            fetch(`${API_FOOTBALL_BASE}/odds/live?fixture=${FIXTURE_ID}`, {
-              headers: { "x-apisports-key": API_FOOTBALL_KEY! },
-            }),
-          ]);
-
-          if (!fixtureResp.ok || !oddsResp.ok) {
-            throw new Error("API-Football unavailable");
-          }
-
+          // Step 1: fetch fixture to know status
+          const fixtureResp = await fetch(`${API_FOOTBALL_BASE}/fixtures?id=${FIXTURE_ID}`, {
+            headers: { "x-apisports-key": API_FOOTBALL_KEY! },
+          });
+          if (!fixtureResp.ok) throw new Error("API-Football unavailable");
           const fixtureData = await fixtureResp.json();
-          const oddsData = await oddsResp.json();
-
           const fixture = fixtureData.response?.[0];
           if (!fixture) throw new Error("Fixture not found");
 
-          // Live odds: response[0].odds is a flat array {id, name, values:[{value,odd,handicap,suspended}]}
-          // Map live market IDs → frontend market IDs (same used by LiveTestCard.tsx MARKET_LABELS)
-          const LIVE_TO_FRONTEND: Record<number, number> = {
-            59: 1,  // Fulltime Result → Match Winner
-            35: 3,  // To Win 2nd Half → Second Half Winner
-            36: 5,  // Over/Under Line → Goals Over/Under
-            49: 6,  // Over/Under (1st Half) → Goals Over/Under First Half
-            69: 8,  // Both Teams to Score → Both Teams Score
-            72: 12, // Double Chance → Double Chance
-            19: 13, // 1x2 (1st Half) → First Half Winner
-          };
+          const status = fixture.fixture.status.short as string;
+          const isLiveStatus = ["1H","HT","2H","ET","BT","P","INT"].includes(status);
+
+          // Step 2: fetch odds — live endpoint when in-play, pre-match otherwise
+          const oddsUrl = isLiveStatus
+            ? `${API_FOOTBALL_BASE}/odds/live?fixture=${FIXTURE_ID}`
+            : `${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`;
+
+          const oddsResp = await fetch(oddsUrl, {
+            headers: { "x-apisports-key": API_FOOTBALL_KEY! },
+          });
+          if (!oddsResp.ok) throw new Error("Odds API unavailable");
+          const oddsData = await oddsResp.json();
+
           // Double Chance label normalisation (live API uses "Home or Draw" etc.)
           const DC_LABELS: Record<string, string> = {
             "Home or Draw": "Home/Draw",
             "Away or Draw": "Draw/Away",
             "Home or Away": "Home/Away",
           };
-          const liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
-          const markets: any[] = [];
 
-          for (const [liveId, frontendId] of Object.entries(LIVE_TO_FRONTEND)) {
-            const market = liveOdds.find((o: any) => o.id === Number(liveId));
-            if (!market) continue;
+          let markets: any[] = [];
 
-            const isHandicap = frontendId === 5 || frontendId === 6;
-
-            let values: { value: string; odd: number }[] = [];
-
-            if (isHandicap) {
-              // Group by handicap, pick the target line (prefer 2.5 for goals, 0.5 for 1st half)
-              const target = frontendId === 5 ? "2.5" : "0.5";
-              const byHc: Record<string, { value: string; odd: string; suspended: boolean }[]> = {};
-              for (const v of (market.values ?? [])) {
-                if (!byHc[v.handicap]) byHc[v.handicap] = [];
-                byHc[v.handicap].push(v);
-              }
-              // Try target handicap first, then fallback to first available
-              const hcKey = byHc[target] ? target : Object.keys(byHc)[0];
-              if (hcKey) {
-                values = (byHc[hcKey] ?? [])
-                  .map((v: any) => ({ value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd), suspended: !!v.suspended }));
-              }
-            } else {
-              values = (market.values ?? [])
-                .map((v: any) => ({
-                  value: DC_LABELS[v.value] ?? v.value,
-                  odd: parseFloat(v.odd),
-                  suspended: !!v.suspended,
+          if (isLiveStatus) {
+            // Live odds: response[0].odds is a flat array {id, name, values:[{value,odd,handicap,suspended}]}
+            const LIVE_TO_FRONTEND: Record<number, number> = {
+              59: 1,  // Fulltime Result
+              35: 3,  // To Win 2nd Half
+              36: 5,  // Over/Under Line
+              49: 6,  // Over/Under (1st Half)
+              69: 8,  // Both Teams to Score
+              72: 12, // Double Chance
+              19: 13, // 1x2 (1st Half)
+            };
+            const liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
+            for (const [liveId, frontendId] of Object.entries(LIVE_TO_FRONTEND)) {
+              const market = liveOdds.find((o: any) => o.id === Number(liveId));
+              if (!market) continue;
+              const isHandicap = frontendId === 5 || frontendId === 6;
+              let values: any[] = [];
+              if (isHandicap) {
+                const target = frontendId === 5 ? "2.5" : "0.5";
+                const byHc: Record<string, any[]> = {};
+                for (const v of (market.values ?? [])) {
+                  if (!byHc[v.handicap]) byHc[v.handicap] = [];
+                  byHc[v.handicap].push(v);
+                }
+                const hcKey = byHc[target] ? target : Object.keys(byHc)[0];
+                if (hcKey) {
+                  values = (byHc[hcKey] ?? []).map((v: any) => ({
+                    value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd), suspended: !!v.suspended,
+                  }));
+                }
+              } else {
+                values = (market.values ?? []).map((v: any) => ({
+                  value: DC_LABELS[v.value] ?? v.value, odd: parseFloat(v.odd), suspended: !!v.suspended,
                 }));
+              }
+              if (values.length > 0) markets.push({ id: frontendId, name: market.name, values });
             }
-
-            if (values.length > 0) {
-              markets.push({ id: frontendId, name: market.name, values });
+          } else {
+            // Pre-match odds: response[0].bookmakers[0].bets — IDs match frontend market IDs directly
+            const PREMATCH_IDS = new Set([1, 3, 5, 6, 8, 12, 13]);
+            const bkList: any[] = oddsData.response?.[0]?.bookmakers ?? [];
+            const bk = bkList[0];
+            for (const bet of (bk?.bets ?? [])) {
+              if (!PREMATCH_IDS.has(bet.id)) continue;
+              let values: any[] = [];
+              if (bet.id === 5) {
+                // Goals O/U: show only 2.5 line
+                values = (bet.values ?? [])
+                  .filter((v: any) => v.value === "Over 2.5" || v.value === "Under 2.5")
+                  .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
+              } else if (bet.id === 6) {
+                // O/U 1st Half: show only 0.5 line
+                values = (bet.values ?? [])
+                  .filter((v: any) => v.value === "Over 0.5" || v.value === "Under 0.5")
+                  .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
+              } else {
+                values = (bet.values ?? []).map((v: any) => ({
+                  value: v.value, odd: parseFloat(v.odd), suspended: false,
+                }));
+              }
+              if (values.length > 0) markets.push({ id: bet.id, name: bet.name, values });
             }
           }
 
@@ -4988,11 +5009,13 @@ export async function registerRoutes(
             goals: fixture.goals,
             score: fixture.score,
             markets,
-            bookmakerName: "API-Football Live",
+            isLive: isLiveStatus,
+            bookmakerName: isLiveStatus ? "API-Football Live" : "Pré-Jogo",
             fetchedAt: Date.now(),
           };
 
-          cache.set(cacheKey, result, LIVE_TTL);
+          // Shorter cache for live, longer for pre-match (changes less often)
+          cache.set(cacheKey, result, isLiveStatus ? LIVE_TTL : 60 * 1000);
           return result;
         })().finally(() => { liveTestInflight = null; });
       }

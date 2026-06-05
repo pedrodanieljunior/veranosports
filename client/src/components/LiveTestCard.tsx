@@ -91,17 +91,26 @@ interface Props {
 }
 
 export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
+  const [refetchMs, setRefetchMs] = useState(15_000);
   const { data, isLoading, error } = useQuery<LiveData>({
     queryKey: ["/api/football/live-test"],
     queryFn: () => fetch("/api/football/live-test").then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     }),
-    refetchInterval: 15 * 1000,
+    refetchInterval: refetchMs,
     refetchIntervalInBackground: false,
-    staleTime: 12 * 1000,
+    staleTime: refetchMs - 3_000,
     retry: 2,
   });
+
+  // Adjust polling rate based on game status
+  useEffect(() => {
+    if (!data) return;
+    const st = data.fixture.status.short;
+    const live = ["1H","HT","2H","ET","BT","P","INT"].includes(st);
+    setRefetchMs(live ? 15_000 : 60_000);
+  }, [data?.fixture.status.short]);
 
   // Track odd movements: key = "m{marketId}-{value}", value = "up"|"down"|null
   const prevOdds = useRef<Record<string, number>>({});
@@ -180,8 +189,10 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       {/* Header */}
       <div className={`flex items-center justify-between px-4 py-2 ${headerCls}`}>
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isLive ? "bg-red-400 animate-pulse" : "bg-gray-400"}`} />
-          <span className="text-red-400 font-bold text-xs tracking-widest">JOGOS AO VIVO</span>
+          <span className={`w-2 h-2 rounded-full ${isLive ? "bg-red-400 animate-pulse" : "bg-yellow-400"}`} />
+          <span className={`font-bold text-xs tracking-widest ${isLive ? "text-red-400" : "text-yellow-400"}`}>
+            {isLive ? "AO VIVO" : "PRÉ-JOGO"}
+          </span>
           <span className="text-gray-500 text-[10px]">• Teste em Tempo Real</span>
         </div>
         <StatusBadge status={st} elapsed={data.fixture.elapsed} />
@@ -309,7 +320,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       <div className="px-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-1 text-gray-600 text-[9px]">
           <Zap className="w-2.5 h-2.5" />
-          <span>Atualiza a cada 15s</span>
+          <span>Atualiza a cada {isLive ? "15s" : "60s"}</span>
         </div>
         <span className="text-gray-600 text-[9px]">
           {new Date(data.fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
