@@ -3610,10 +3610,11 @@ export async function registerRoutes(
         odds: Math.round(sel.odds * 100) / 100,
       }));
 
-      // Verificar se algum jogo já iniciou
+      // Verificar se algum jogo já iniciou (seleções ao vivo são permitidas)
       const now = new Date();
       for (const sel of validatedData.selections) {
-        if (sel.commenceTime) {
+        const isLiveSel = sel.marketKey?.startsWith("live_");
+        if (!isLiveSel && sel.commenceTime) {
           const gameStart = new Date(sel.commenceTime);
           if (gameStart <= now) {
             return res.status(400).json({
