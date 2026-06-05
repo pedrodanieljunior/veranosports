@@ -4893,7 +4893,7 @@ export async function registerRoutes(
 
       const FIXTURE_ID = 1520716;
       const cacheKey = "live_test_1520716";
-      const LIVE_TTL = 15 * 1000;
+      const LIVE_TTL = 5 * 1000;
 
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);

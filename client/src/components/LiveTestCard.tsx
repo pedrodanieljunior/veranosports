@@ -109,7 +109,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     if (!data) return;
     const st = data.fixture.status.short;
     const live = ["1H","HT","2H","ET","BT","P","INT"].includes(st);
-    setRefetchMs(live ? 15_000 : 60_000);
+    setRefetchMs(live ? 5_000 : 60_000);
   }, [data?.fixture.status.short]);
 
   // Track odd movements: key = "m{marketId}-{value}", value = "up"|"down"|null
@@ -320,7 +320,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       <div className="px-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-1 text-gray-600 text-[9px]">
           <Zap className="w-2.5 h-2.5" />
-          <span>Atualiza a cada {isLive ? "15s" : "60s"}</span>
+          <span>Atualiza a cada {isLive ? "5s" : "60s"}</span>
         </div>
         <span className="text-gray-600 text-[9px]">
           {new Date(data.fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
