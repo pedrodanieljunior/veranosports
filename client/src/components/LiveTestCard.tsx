@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect, useState } from "react";
 import { Selection } from "@shared/schema";
-import { Zap, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { Zap, Clock, TrendingUp, TrendingDown, Lock } from "lucide-react";
 
-const FIXTURE_ID = 1536930;
+const FIXTURE_ID = 1520716;
 const GAME_ID = `api-football-${FIXTURE_ID}`;
 
 const MARKET_LABELS: Record<number, string> = {
@@ -42,7 +42,7 @@ interface LiveData {
   markets: Array<{
     id: number;
     name: string;
-    values: Array<{ value: string; odd: number }>;
+    values: Array<{ value: string; odd: number; suspended?: boolean }>;
   }>;
   fetchedAt: number;
 }
@@ -237,9 +237,10 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {showValues.map(v => {
                     const rawOdd = v.odd;
+                    const isSuspended = !!v.suspended;
                     const id = selId(GAME_ID, market.id, v.value);
                     const moveKey = `m${market.id}-${v.value}`;
-                    const movement = oddMovements[moveKey];
+                    const movement = isSuspended ? undefined : oddMovements[moveKey];
                     const sel: Selection = {
                       id,
                       gameId: GAME_ID,
@@ -253,16 +254,19 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                       odds: rawOdd,
                       result: "pending",
                     };
-                    const active = isSelected(selections, id);
+                    const active = !isSuspended && isSelected(selections, id);
                     const outcomeLabel = OUTCOME_LABELS[v.value] ?? v.value;
 
                     return (
                       <button
                         key={v.value}
                         data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
-                        onClick={() => onToggleSelection(sel)}
+                        onClick={() => !isSuspended && onToggleSelection(sel)}
+                        disabled={isSuspended}
                         className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
-                          movement === "up"
+                          isSuspended
+                            ? "opacity-40 cursor-not-allowed " + (isDark ? "bg-white/5 border-white/10 text-gray-500" : "bg-gray-100 border-gray-200 text-gray-400")
+                            : movement === "up"
                             ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 " + (isDark ? "bg-green-500/10 text-white" : "bg-green-50 text-gray-800")
                             : movement === "down"
                             ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 " + (isDark ? "bg-red-500/10 text-white" : "bg-red-50 text-gray-800")
@@ -275,12 +279,14 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                       >
                         <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
                         <div className="flex items-center gap-0.5">
-                          <span className="text-sm font-black">{rawOdd.toFixed(2)}</span>
-                          {movement === "up" && (
-                            <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />
-                          )}
-                          {movement === "down" && (
-                            <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />
+                          {isSuspended ? (
+                            <Lock className="w-3.5 h-3.5 text-gray-500" />
+                          ) : (
+                            <>
+                              <span className="text-sm font-black">{rawOdd.toFixed(2)}</span>
+                              {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
+                              {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
+                            </>
                           )}
                         </div>
                       </button>

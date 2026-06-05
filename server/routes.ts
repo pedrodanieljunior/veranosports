@@ -4890,8 +4890,8 @@ export async function registerRoutes(
         return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
 
-      const FIXTURE_ID = 1536930;
-      const cacheKey = "live_test_1536930";
+      const FIXTURE_ID = 1520716;
+      const cacheKey = "live_test_1520716";
       const LIVE_TTL = 15 * 1000;
 
       const cached = cache.get<any>(cacheKey);
@@ -4958,15 +4958,14 @@ export async function registerRoutes(
               const hcKey = byHc[target] ? target : Object.keys(byHc)[0];
               if (hcKey) {
                 values = (byHc[hcKey] ?? [])
-                  .filter((v: any) => !v.suspended)
-                  .map((v: any) => ({ value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd) }));
+                  .map((v: any) => ({ value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd), suspended: !!v.suspended }));
               }
             } else {
               values = (market.values ?? [])
-                .filter((v: any) => !v.suspended)
                 .map((v: any) => ({
                   value: DC_LABELS[v.value] ?? v.value,
                   odd: parseFloat(v.odd),
+                  suspended: !!v.suspended,
                 }));
             }
 
