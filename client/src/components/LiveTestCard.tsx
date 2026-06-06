@@ -535,11 +535,22 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
           {data.markets.map(market => {
             const label = MARKET_LABELS[market.id] ?? market.name;
+            // Goals markets: only show .5 lines (remove 0.75, 1.25, 1.75, etc.)
+            const GOALS_MARKET_IDS = [5, 25, 6];
+            const filteredValues = GOALS_MARKET_IDS.includes(market.id)
+              ? market.values.filter(v => {
+                  const m = v.value.match(/[\d.]+/);
+                  if (!m) return true;
+                  const n = parseFloat(m[0]);
+                  return (n * 2) % 1 === 0; // keeps .0 and .5 only
+                })
+              : market.values;
+            if (filteredValues.length === 0) return null;
             return (
               <div key={market.id} className="text-center">
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
-                  {market.values.map(v => {
+                  {filteredValues.map(v => {
                     const rawOdd = v.odd;
                     const isSuspended = !!v.suspended;
                     const id = selId(GAME_ID, market.id, v.value);
