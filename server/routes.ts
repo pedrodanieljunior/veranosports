@@ -4914,15 +4914,31 @@ export async function registerRoutes(
       const allFixtures = [...(liveData.response ?? []), ...(rangeData.response ?? [])];
       const seen = new Set<number>();
 
-      // Filter: only Série B and national-team (seleções) competitions
-      const isSerieB = (f: any) => {
-        const name: string = (f.league?.name ?? "").toLowerCase();
-        return name.includes("série b") || name.includes("serie b") || f.league?.id === 72;
-      };
-      const isSelecoes = (f: any) => {
-        // API-Football marks international competitions with country "World"
-        return f.league?.country === "World";
-      };
+      // Allowed senior national-team league IDs (API-Football)
+      // These are real senior men's national team competitions
+      const SELECOES_LEAGUE_IDS = new Set([
+        1,   // FIFA World Cup
+        4,   // UEFA Euro Championship
+        5,   // UEFA Nations League A/B/C/D
+        6,   // Africa Cup of Nations
+        7,   // Asian Cup
+        8,   // CONCACAF Gold Cup
+        9,   // Copa América
+        10,  // Friendlies (international, senior national teams)
+        29,  // WC Qualifiers - South America
+        30,  // WC Qualifiers - Asia
+        31,  // WC Qualifiers - Africa
+        32,  // WC Qualifiers - CONCACAF
+        33,  // WC Qualifiers - Europe
+        34,  // WC Qualifiers - Europe (play-offs)
+        35,  // WC Qualifiers - Oceania
+        175, // Nations League - CONMEBOL
+        732, // Copa América Qualifiers (when applicable)
+      ]);
+
+      // Filter: only Brazil Série B (ID 72) and approved senior national-team competitions
+      const isSerieB = (f: any) => f.league?.id === 72;
+      const isSelecoes = (f: any) => SELECOES_LEAGUE_IDS.has(f.league?.id);
 
       const fixtures = allFixtures.filter(f => {
         if (seen.has(f.fixture.id)) return false;
