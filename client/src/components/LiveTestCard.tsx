@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect, useState } from "react";
 import { Selection } from "@shared/schema";
 import { Zap, Clock, TrendingUp, TrendingDown, Lock, ChevronDown, ChevronUp } from "lucide-react";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 
 const FIXTURE_ID = 1520716;
 const GAME_ID = `api-football-${FIXTURE_ID}`;
@@ -397,7 +398,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       <div className="flex items-center justify-between px-4 py-4 gap-3">
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           {data.teams.home.logo && (
-            <img src={data.teams.home.logo} alt={data.teams.home.name} className="w-10 h-10 object-contain" />
+            <img src={proxyLogoUrl(data.teams.home.logo)} alt={data.teams.home.name} className="w-10 h-10 object-contain" />
           )}
           <span className={`text-sm ${teamCls} text-center leading-tight`}>{data.teams.home.name}</span>
         </div>
@@ -418,7 +419,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         </div>
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           {data.teams.away.logo && (
-            <img src={data.teams.away.logo} alt={data.teams.away.name} className="w-10 h-10 object-contain" />
+            <img src={proxyLogoUrl(data.teams.away.logo)} alt={data.teams.away.name} className="w-10 h-10 object-contain" />
           )}
           <span className={`text-sm ${teamCls} text-center leading-tight`}>{data.teams.away.name}</span>
         </div>
