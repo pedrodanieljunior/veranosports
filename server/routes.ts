@@ -11,6 +11,7 @@ import QRCode from "qrcode";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { randomBytes } from "crypto";
 import nodemailer from "nodemailer";
 
 // ─── Image Proxy (contorna bloqueio de hotlink do api-sports.io) ──────────────
@@ -5094,7 +5095,6 @@ export async function registerRoutes(
 
   // Admin: generate a mobile control token (24h)
   app.post("/api/admin/live-control/generate-token", requireAdmin, (_req, res) => {
-    const { randomBytes } = require("crypto") as typeof import("crypto");
     mobileControlToken = randomBytes(20).toString("hex");
     mobileTokenExpiry = Date.now() + 24 * 60 * 60 * 1000;
     console.log(`[live-control] Mobile token generated, expires in 24h`);
