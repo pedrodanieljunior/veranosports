@@ -371,6 +371,7 @@ interface Props {
 export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
   const [refetchMs, setRefetchMs] = useState(5_000);
   const [showMap, setShowMap] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const { data: mapData, isLoading: mapLoading } = useQuery<MapData>({
     queryKey: ["/api/football/live-map"],
@@ -477,8 +478,12 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         <StatusBadge status={st} elapsed={data.fixture.elapsed} />
       </div>
 
-      {/* Score row */}
-      <div className="flex items-center justify-between px-4 py-4 gap-3">
+      {/* Score row — always visible, click to expand/collapse */}
+      <button
+        onClick={() => setCollapsed(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-4 gap-3 text-left"
+        data-testid="button-toggle-live-card"
+      >
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           {data.teams.home.logo && (
             <img src={proxyLogoUrl(data.teams.home.logo)} alt={data.teams.home.name} className="w-10 h-10 object-contain" />
@@ -499,6 +504,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               {new Date(commenceTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} (Manaus)
             </span>
           )}
+          <span className="mt-1 text-gray-400">
+            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </span>
         </div>
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           {data.teams.away.logo && (
@@ -506,7 +514,10 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
           )}
           <span className={`text-sm ${teamCls} text-center leading-tight`}>{data.teams.away.name}</span>
         </div>
-      </div>
+      </button>
+
+      {/* Expandable content */}
+      {!collapsed && <>
 
       {/* Match Map toggle */}
       {(isLive || isFinished) && (
@@ -625,6 +636,8 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
           {new Date(data.fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
         </span>
       </div>
+
+      </>}
     </div>
   );
 }
