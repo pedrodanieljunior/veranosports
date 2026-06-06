@@ -5610,6 +5610,7 @@ function AdminLiveGameTab() {
   });
 
   const [searchLive, setSearchLive] = useState("");
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   const activeGame = data?.games.find(g => g.id === data.activeFixtureId);
   const isLocked = data?.isLocked ?? false;
@@ -5702,15 +5703,36 @@ function AdminLiveGameTab() {
                   {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                   {isLocked ? "Liberar Mercados" : "Bloquear Mercados"}
                 </button>
-                <button
-                  onClick={() => deactivateMut.mutate()}
-                  disabled={deactivateMut.isPending}
-                  data-testid="button-deactivate-live"
-                  className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                >
-                  <StopCircle className="w-4 h-4" />
-                  Desativar Jogo
-                </button>
+                {confirmDeactivate ? (
+                  <div className="flex items-stretch divide-x divide-border">
+                    <button
+                      onClick={() => { deactivateMut.mutate(); setConfirmDeactivate(false); }}
+                      disabled={deactivateMut.isPending}
+                      data-testid="button-deactivate-confirm"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                    >
+                      <StopCircle className="w-4 h-4" />
+                      Confirmar
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeactivate(false)}
+                      data-testid="button-deactivate-cancel"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm text-muted-foreground hover:bg-muted/30 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeactivate(true)}
+                    disabled={deactivateMut.isPending}
+                    data-testid="button-deactivate-live"
+                    className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <StopCircle className="w-4 h-4" />
+                    Desativar Jogo
+                  </button>
+                )}
               </div>
             </div>
           ) : (
