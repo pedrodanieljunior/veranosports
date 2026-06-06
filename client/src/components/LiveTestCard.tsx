@@ -593,7 +593,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                             <Lock className="w-3.5 h-3.5 text-gray-500" />
                           ) : (
                             <>
-                              <span className={`text-sm font-black ${active ? "text-black" : "text-blue-700"}`}>{rawOdd.toFixed(2)}</span>
+                              <span className={`text-sm font-black ${active ? "text-black" : "text-orange-500"}`}>{rawOdd.toFixed(2)}</span>
                               {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
                               {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
                             </>
