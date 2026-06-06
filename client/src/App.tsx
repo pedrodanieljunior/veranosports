@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth";
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import Admin from "@/pages/Admin";
+import LiveControl from "@/pages/LiveControl";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/home" component={Home} />
       <Route path="/copa" component={Copa} />
       <Route path="/painel-gm7x9k2" component={Admin} />
+      <Route path="/live-control" component={LiveControl} />
       <Route component={NotFound} />
     </Switch>
   );

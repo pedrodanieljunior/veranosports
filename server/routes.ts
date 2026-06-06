@@ -4886,6 +4886,10 @@ export async function registerRoutes(
   let activeLiveGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null = null;
   let liveMarketsLocked = false;
 
+  // Mobile control token (valid 24h)
+  let mobileControlToken: string | null = null;
+  let mobileTokenExpiry = 0;
+
   const FINISHED_STATUSES = new Set(["FT","AET","PEN","CANC","ABD","AWD","WO"]);
 
   // Helper: clear all live state
@@ -5085,6 +5089,48 @@ export async function registerRoutes(
   app.post("/api/admin/live-game/toggle-lock", requireAdmin, (_req, res) => {
     liveMarketsLocked = !liveMarketsLocked;
     console.log(`[live-game] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"}`);
+    return res.json({ ok: true, isLocked: liveMarketsLocked });
+  });
+
+  // Admin: generate a mobile control token (24h)
+  app.post("/api/admin/live-control/generate-token", requireAdmin, (_req, res) => {
+    const { randomBytes } = require("crypto") as typeof import("crypto");
+    mobileControlToken = randomBytes(20).toString("hex");
+    mobileTokenExpiry = Date.now() + 24 * 60 * 60 * 1000;
+    console.log(`[live-control] Mobile token generated, expires in 24h`);
+    return res.json({ token: mobileControlToken });
+  });
+
+  // Helper: validate mobile token
+  const validateMobileToken = (token: string | undefined) => {
+    if (!token || !mobileControlToken) return false;
+    if (token !== mobileControlToken) return false;
+    if (Date.now() > mobileTokenExpiry) { mobileControlToken = null; return false; }
+    return true;
+  };
+
+  // Mobile: get live game status (token-protected, no session required)
+  app.get("/api/live-control/status", (req, res) => {
+    const token = req.query.t as string;
+    if (!validateMobileToken(token)) return res.status(401).json({ error: "Invalid or expired token" });
+    if (!activeLiveFixtureId || !activeLiveGameInfo) {
+      return res.json({ active: false });
+    }
+    return res.json({
+      active: true,
+      fixtureId: activeLiveFixtureId,
+      gameInfo: activeLiveGameInfo,
+      isLocked: liveMarketsLocked,
+    });
+  });
+
+  // Mobile: toggle lock (token-protected, no session required)
+  app.post("/api/live-control/toggle-lock", (req, res) => {
+    const token = req.query.t as string;
+    if (!validateMobileToken(token)) return res.status(401).json({ error: "Invalid or expired token" });
+    if (!activeLiveFixtureId) return res.status(404).json({ error: "No active live game" });
+    liveMarketsLocked = !liveMarketsLocked;
+    console.log(`[live-control/mobile] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"}`);
     return res.json({ ok: true, isLocked: liveMarketsLocked });
   });
 

@@ -78,6 +78,8 @@ import {
   Signal,
   PlayCircle,
   StopCircle,
+  Smartphone,
+  ExternalLink,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -5609,6 +5611,24 @@ function AdminLiveGameTab() {
     onSuccess: () => refetch(),
   });
 
+  const mobileTokenMut = useMutation({
+    mutationFn: () =>
+      fetch("/api/admin/live-control/generate-token", { method: "POST", credentials: "include" }).then(r => r.json()),
+  });
+
+  const [mobileLinkCopied, setMobileLinkCopied] = useState(false);
+  const mobileLink = mobileTokenMut.data?.token
+    ? `${window.location.origin}/live-control?t=${mobileTokenMut.data.token}`
+    : null;
+
+  const copyMobileLink = () => {
+    if (!mobileLink) return;
+    navigator.clipboard.writeText(mobileLink).then(() => {
+      setMobileLinkCopied(true);
+      setTimeout(() => setMobileLinkCopied(false), 2500);
+    });
+  };
+
   const [searchLive, setSearchLive] = useState("");
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
@@ -5643,6 +5663,55 @@ function AdminLiveGameTab() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Mobile control link */}
+          {data?.activeFixtureId && (
+            <div className="mb-4 rounded-xl border border-border bg-muted/20 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Smartphone className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Controle Mobile</span>
+              </div>
+              {!mobileLink ? (
+                <button
+                  onClick={() => mobileTokenMut.mutate()}
+                  disabled={mobileTokenMut.isPending}
+                  data-testid="button-generate-mobile-link"
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border border-dashed border-border text-muted-foreground hover:bg-muted/40 transition-colors"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  {mobileTokenMut.isPending ? "Gerando..." : "Gerar Link Mobile"}
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center gap-1.5 bg-background rounded-lg px-3 py-2 border border-border overflow-hidden">
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs text-muted-foreground truncate">{mobileLink}</span>
+                  </div>
+                  <button
+                    onClick={copyMobileLink}
+                    data-testid="button-copy-mobile-link"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      mobileLinkCopied
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-muted/40 text-muted-foreground hover:bg-muted/70"
+                    }`}
+                  >
+                    {mobileLinkCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {mobileLinkCopied ? "Copiado!" : "Copiar"}
+                  </button>
+                  <button
+                    onClick={() => mobileTokenMut.mutate()}
+                    data-testid="button-refresh-mobile-link"
+                    title="Gerar novo link"
+                    className="flex items-center px-2.5 py-2 rounded-lg bg-muted/40 text-muted-foreground hover:bg-muted/70 transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground/50 mt-1.5">Link válido por 24h. Abre no celular sem precisar de senha.</p>
+            </div>
+          )}
+
           {data?.activeFixtureId && activeGame ? (
             <div className={`rounded-xl border-2 overflow-hidden ${isLocked ? "border-red-500/60" : "border-green-500/50"}`}>
               {/* Status bar */}
