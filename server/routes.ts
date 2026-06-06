@@ -5268,9 +5268,17 @@ export async function registerRoutes(
                 if (v.value === "Over") byHc[v.handicap].over = v;
                 if (v.value === "Under") byHc[v.handicap].under = v;
               }
-              // Prefer .5 lines, fallback to whole numbers
-              const preferred = ["8.5","9.5","7.5","10.5","6.5","8","9","7","10","6"];
-              const hcKey = preferred.find(h => byHc[h]?.over && byHc[h]?.under) ?? Object.keys(byHc).find(h => byHc[h]?.over && byHc[h]?.under);
+              // Pick most balanced .5 line (odds closest to each other), fallback to whole numbers
+              const pickBestLine = (hcs: string[]) => hcs
+                .filter(h => byHc[h]?.over && byHc[h]?.under)
+                .sort((a, b) => {
+                  const diffA = Math.abs(parseFloat(byHc[a].over.odd) - parseFloat(byHc[a].under.odd));
+                  const diffB = Math.abs(parseFloat(byHc[b].over.odd) - parseFloat(byHc[b].under.odd));
+                  return diffA - diffB;
+                })[0];
+              const halfLines = Object.keys(byHc).filter(h => parseFloat(h) % 1 === 0.5);
+              const wholeLines = Object.keys(byHc).filter(h => parseFloat(h) % 1 === 0);
+              const hcKey = pickBestLine(halfLines) ?? pickBestLine(wholeLines);
               if (hcKey && byHc[hcKey]) {
                 const vals: any[] = [];
                 if (byHc[hcKey].over) vals.push({ value: `Over ${hcKey}`, odd: parseFloat(byHc[hcKey].over.odd), suspended: !!byHc[hcKey].over.suspended });
