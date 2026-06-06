@@ -537,7 +537,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       {/* Markets */}
       {data.markets.length > 0 && !isFinished && (
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
-          {data.markets.map(market => {
+          {data.markets.map((market, idx) => {
             const label = MARKET_LABELS[market.id] ?? market.name;
             // Goals markets: only show .5 lines (remove 0.75, 1.25, 1.75, etc.)
             const GOALS_MARKET_IDS = [5, 25, 6];
@@ -551,7 +551,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               : market.values;
             if (filteredValues.length === 0) return null;
             return (
-              <div key={market.id} className="text-center">
+              <div key={market.id} className={`text-center ${idx > 0 ? `border-t pt-3 ${dividerCls}` : ""}`}>
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {filteredValues.map(v => {
@@ -601,7 +601,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                             <Lock className="w-3.5 h-3.5 text-gray-500" />
                           ) : (
                             <>
-                              <span className="text-sm font-black">{rawOdd.toFixed(2)}</span>
+                              <span className={`text-sm font-black ${active ? "text-black" : "text-yellow-400"}`}>{rawOdd.toFixed(2)}</span>
                               {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
                               {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
                             </>
