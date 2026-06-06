@@ -425,10 +425,8 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     }
   }, [data?.fetchedAt]);
 
-  const containerCls = isDark
-    ? "bg-gradient-to-b from-white to-orange-400 border border-orange-300 rounded-xl overflow-hidden"
-    : "bg-gradient-to-b from-white to-orange-400 border border-orange-300 rounded-xl overflow-hidden shadow-sm";
-  const headerCls = isDark ? "bg-white/60 border-b border-orange-200" : "bg-white/60 border-b border-orange-200";
+  const containerCls = "bg-gradient-to-b from-white to-blue-400 border border-blue-200 rounded-xl overflow-hidden shadow-sm";
+  const headerCls = "bg-white/60 border-b border-blue-200";
   const teamCls = "text-gray-900 font-bold";
   const scoreCls = "text-gray-900 font-black text-2xl";
   const marketTitleCls = "text-gray-600 font-semibold text-[11px] uppercase tracking-wide";
@@ -595,7 +593,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                             <Lock className="w-3.5 h-3.5 text-gray-500" />
                           ) : (
                             <>
-                              <span className={`text-sm font-black ${active ? "text-black" : "text-orange-600"}`}>{rawOdd.toFixed(2)}</span>
+                              <span className={`text-sm font-black ${active ? "text-black" : "text-blue-700"}`}>{rawOdd.toFixed(2)}</span>
                               {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
                               {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
                             </>
