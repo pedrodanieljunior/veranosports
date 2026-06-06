@@ -504,7 +504,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               {new Date(commenceTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} (Manaus)
             </span>
           )}
-          <span className="mt-1 text-gray-400">
+          <span className="mt-1 text-gray-900">
             {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </span>
         </div>
