@@ -429,7 +429,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const headerCls = "bg-white/60 border-b border-blue-200";
   const teamCls = "text-gray-900 font-bold";
   const scoreCls = "text-gray-900 font-black text-2xl";
-  const marketTitleCls = "text-gray-600 font-semibold text-[11px] uppercase tracking-wide";
+  const marketTitleCls = "text-orange-500 font-semibold text-[11px] uppercase tracking-wide";
   const dividerCls = "border-black/10";
 
   if (isLoading) {
