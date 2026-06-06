@@ -4881,7 +4881,97 @@ export async function registerRoutes(
     }
   });
 
-  // Live test: Netherlands vs Algeria (fixture 1536930) — polling 30s
+  // ── Live Game Admin State ───────────────────────────────────────────────────
+  let activeLiveFixtureId: number | null = null;
+  let activeLiveGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null = null;
+  let liveMarketsLocked = false;
+
+  // Public: frontend reads this to know if a live card should be shown
+  app.get("/api/football/live-status", (_req, res) => {
+    res.json({ fixtureId: activeLiveFixtureId, gameInfo: activeLiveGameInfo, isLocked: liveMarketsLocked });
+  });
+
+  // Admin: list today's games + currently live games from API-Football
+  app.get("/api/admin/live-games", requireAdmin, async (_req, res) => {
+    try {
+      if (!API_FOOTBALL_KEY) return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      const now = new Date();
+      const brazilMs = now.getTime() + (-3 * 60 - now.getTimezoneOffset()) * 60000;
+      const brazilDate = new Date(brazilMs).toISOString().slice(0, 10);
+      const [liveRes, todayRes] = await Promise.all([
+        fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?date=${brazilDate}&timezone=America%2FSao_Paulo`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+      ]);
+      const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
+      const allFixtures = [...(liveData.response ?? []), ...(todayData.response ?? [])];
+      const seen = new Set<number>();
+      const fixtures = allFixtures.filter(f => { if (seen.has(f.fixture.id)) return false; seen.add(f.fixture.id); return true; });
+      const LIVE_STATUSES = ["1H","HT","2H","ET","BT","P","INT"];
+      const games = fixtures.map(f => ({
+        id: f.fixture.id,
+        date: f.fixture.date,
+        status: f.fixture.status.short as string,
+        statusLong: f.fixture.status.long as string,
+        elapsed: f.fixture.status.elapsed as number | null,
+        home: f.teams.home.name as string,
+        homeLogo: f.teams.home.logo as string,
+        away: f.teams.away.name as string,
+        awayLogo: f.teams.away.logo as string,
+        league: f.league.name as string,
+        leagueLogo: f.league.logo as string,
+        goalsHome: f.goals.home as number | null,
+        goalsAway: f.goals.away as number | null,
+        isLive: LIVE_STATUSES.includes(f.fixture.status.short),
+      }));
+      games.sort((a, b) => {
+        if (a.isLive && !b.isLive) return -1;
+        if (!a.isLive && b.isLive) return 1;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+      return res.json({ games, activeFixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked });
+    } catch (err) {
+      console.error("[admin/live-games]", err);
+      return res.status(500).json({ error: "Erro ao buscar jogos" });
+    }
+  });
+
+  // Admin: activate a live game
+  app.post("/api/admin/live-game/activate", requireAdmin, async (req, res) => {
+    const { fixtureId, home, away, league, homeLogo, awayLogo } = req.body as any;
+    if (!fixtureId) return res.status(400).json({ error: "fixtureId required" });
+    // Clear any stale cache for previous fixture
+    if (activeLiveFixtureId && activeLiveFixtureId !== fixtureId) {
+      cache.delete(`live_test_${activeLiveFixtureId}`);
+      cache.delete(`live_map_${activeLiveFixtureId}`);
+    }
+    activeLiveFixtureId = Number(fixtureId);
+    activeLiveGameInfo = { home, away, league, homeLogo, awayLogo };
+    liveMarketsLocked = false;
+    console.log(`[live-game] Activated fixture ${activeLiveFixtureId}: ${home} vs ${away}`);
+    return res.json({ ok: true, fixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked });
+  });
+
+  // Admin: deactivate live game
+  app.post("/api/admin/live-game/deactivate", requireAdmin, (_req, res) => {
+    if (activeLiveFixtureId) {
+      cache.delete(`live_test_${activeLiveFixtureId}`);
+      cache.delete(`live_map_${activeLiveFixtureId}`);
+    }
+    activeLiveFixtureId = null;
+    activeLiveGameInfo = null;
+    liveMarketsLocked = false;
+    console.log("[live-game] Deactivated");
+    return res.json({ ok: true });
+  });
+
+  // Admin: toggle global market lock
+  app.post("/api/admin/live-game/toggle-lock", requireAdmin, (_req, res) => {
+    liveMarketsLocked = !liveMarketsLocked;
+    console.log(`[live-game] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"}`);
+    return res.json({ ok: true, isLocked: liveMarketsLocked });
+  });
+
+  // Live test: dynamic fixture set by admin — polling 5s when live
   // In-flight dedup to avoid double API calls when two requests arrive before cache is set
   let liveTestInflight: Promise<any> | null = null;
 
@@ -4890,13 +4980,28 @@ export async function registerRoutes(
       if (!API_FOOTBALL_KEY) {
         return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       }
+      if (!activeLiveFixtureId) {
+        return res.status(404).json({ error: "No active live game" });
+      }
 
-      const FIXTURE_ID = 1520716;
-      const cacheKey = "live_test_1520716";
+      const FIXTURE_ID = activeLiveFixtureId;
+      const cacheKey = `live_test_${FIXTURE_ID}`;
       const LIVE_TTL = 5 * 1000;
 
+      const applyLock = (result: any) => {
+        if (!liveMarketsLocked) return result;
+        return {
+          ...result,
+          isLocked: true,
+          markets: (result.markets ?? []).map((m: any) => ({
+            ...m,
+            values: m.values.map((v: any) => ({ ...v, suspended: true })),
+          })),
+        };
+      };
+
       const cached = cache.get<any>(cacheKey);
-      if (cached) return res.json(cached);
+      if (cached) return res.json(applyLock(cached));
 
       if (!liveTestInflight) {
         liveTestInflight = (async () => {
@@ -5090,7 +5195,7 @@ export async function registerRoutes(
       }
 
       const result = await liveTestInflight;
-      return res.json(result);
+      return res.json(applyLock(result));
     } catch (err: any) {
       console.error("[live-test]", err);
       const msg = err?.message ?? "Internal error";
@@ -5100,10 +5205,11 @@ export async function registerRoutes(
     }
   });
 
-  // Live match map: statistics + events for fixture 1520716
+  // Live match map: statistics + events for active fixture
   app.get("/api/football/live-map", async (_req, res) => {
-    const FIXTURE_ID = 1520716;
-    const cacheKey = "live_map_1520716";
+    if (!activeLiveFixtureId) return res.status(404).json({ error: "No active live game" });
+    const FIXTURE_ID = activeLiveFixtureId;
+    const cacheKey = `live_map_${FIXTURE_ID}`;
     const MAP_TTL = 30 * 1000;
     const cached = cache.get<any>(cacheKey);
     if (cached) return res.json(cached);

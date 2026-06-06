@@ -173,6 +173,12 @@ export default function Home() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
+    queryKey: ["/api/football/live-status"],
+    refetchInterval: 10_000,
+    staleTime: 8_000,
+  });
+
   const sessionId = getSessionId();
 
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
@@ -381,7 +387,7 @@ export default function Home() {
         <div className="px-3 pt-2">
           <MobileBannerCarousel />
         </div>
-        {!isSearching && !isTyping && (
+        {!isSearching && !isTyping && liveStatus?.fixtureId && (
           <div className="px-3 pt-2">
             <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={true} />
           </div>
@@ -517,7 +523,7 @@ export default function Home() {
             </div>
 
             {/* Live test card */}
-            {!isSearching && !isTyping && (
+            {!isSearching && !isTyping && liveStatus?.fixtureId && (
               <div className="pb-3" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
                 <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
               </div>

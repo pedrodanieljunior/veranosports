@@ -137,6 +137,12 @@ export default function Copa() {
     queryKey: ["/api/boost-cards"], staleTime: 0, refetchInterval: 30_000,
   });
 
+  const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
+    queryKey: ["/api/football/live-status"],
+    refetchInterval: 10_000,
+    staleTime: 8_000,
+  });
+
   const { data: copaCards = [] } = useQuery<any[]>({
     queryKey: ["/api/copa-world-cup-cards"], staleTime: 60_000, refetchInterval: 60_000,
   });
@@ -369,7 +375,7 @@ export default function Copa() {
       )}
 
       {/* ===== LIVE TEST CARD ===== */}
-      {!isSearching && !isTyping && (
+      {!isSearching && !isTyping && liveStatus?.fixtureId && (
         <div className="px-3 pt-3">
           <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={true} />
         </div>

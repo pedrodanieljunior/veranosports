@@ -73,6 +73,11 @@ import {
   Filter,
   Check,
   Timer,
+  Lock,
+  Unlock,
+  Signal,
+  PlayCircle,
+  StopCircle,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -1021,6 +1026,10 @@ export default function Admin() {
             <TabsTrigger value="configuracoes" data-testid="tab-configuracoes">
               <Settings className="w-4 h-4 mr-2" />
               Configurações
+            </TabsTrigger>
+            <TabsTrigger value="ao-vivo" data-testid="tab-ao-vivo">
+              <Signal className="w-4 h-4 mr-2 text-red-500" />
+              Ao Vivo
             </TabsTrigger>
           </TabsList>
 
@@ -2587,6 +2596,10 @@ export default function Admin() {
 
           <TabsContent value="configuracoes">
             <SettingsTab />
+          </TabsContent>
+
+          <TabsContent value="ao-vivo">
+            <AdminLiveGameTab />
           </TabsContent>
 
         </Tabs>
@@ -5549,6 +5562,214 @@ function RecompensasTab() {
                 ))}
               </div>
             </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Admin Live Game Tab ───────────────────────────────────────────────────────
+type AdminGame = {
+  id: number; date: string; status: string; statusLong: string; elapsed: number | null;
+  home: string; homeLogo: string; away: string; awayLogo: string;
+  league: string; leagueLogo: string; goalsHome: number | null; goalsAway: number | null; isLive: boolean;
+};
+type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean };
+
+function AdminLiveGameTab() {
+  const { data, isLoading, refetch } = useQuery<LiveGamesResp>({
+    queryKey: ["/api/admin/live-games"],
+    queryFn: () => fetch("/api/admin/live-games", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
+
+  const fmt = (n: number | null) => n == null ? "?" : n;
+
+  const activateMut = useMutation({
+    mutationFn: (game: AdminGame) =>
+      fetch("/api/admin/live-game/activate", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fixtureId: game.id, home: game.home, away: game.away, league: game.league, homeLogo: game.homeLogo, awayLogo: game.awayLogo }),
+      }).then(r => r.json()),
+    onSuccess: () => refetch(),
+  });
+
+  const deactivateMut = useMutation({
+    mutationFn: () =>
+      fetch("/api/admin/live-game/deactivate", { method: "POST", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => refetch(),
+  });
+
+  const lockMut = useMutation({
+    mutationFn: () =>
+      fetch("/api/admin/live-game/toggle-lock", { method: "POST", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => refetch(),
+  });
+
+  const activeGame = data?.games.find(g => g.id === data.activeFixtureId);
+  const isLocked = data?.isLocked ?? false;
+
+  const LIVE_ST = ["1H","HT","2H","ET","BT","P","INT"];
+  const statusLabel = (g: AdminGame) => {
+    if (LIVE_ST.includes(g.status)) return `${g.elapsed ?? "?"}′`;
+    if (g.status === "FT") return "Enc.";
+    if (g.status === "NS") {
+      const d = new Date(g.date);
+      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+    }
+    return g.status;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ── Status atual ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Signal className="w-5 h-5 text-red-500" />
+            Jogo Ao Vivo no Site
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data?.activeFixtureId && activeGame ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-500 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> AO VIVO
+                </span>
+                <div className="flex-1 text-sm font-semibold">
+                  {activeGame.home} × {activeGame.away}
+                </div>
+                <span className="text-xs text-muted-foreground">{activeGame.league}</span>
+                {activeGame.isLive && (
+                  <span className="text-xs font-bold text-green-400">{activeGame.elapsed}′ {fmt(activeGame.goalsHome)}–{fmt(activeGame.goalsAway)}</span>
+                )}
+              </div>
+
+              {/* Botão de trava global */}
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => lockMut.mutate()}
+                  disabled={lockMut.isPending}
+                  variant={isLocked ? "destructive" : "outline"}
+                  className={`gap-2 font-bold flex-1 ${isLocked ? "" : "border-green-500 text-green-500 hover:bg-green-500/10"}`}
+                  data-testid="button-toggle-lock"
+                >
+                  {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                  {isLocked ? "🔒 Mercados BLOQUEADOS — Clique para Liberar" : "🔓 Mercados Liberados — Clique para Bloquear Tudo"}
+                </Button>
+              </div>
+
+              {isLocked && (
+                <p className="text-xs text-red-400 text-center font-medium">
+                  ⚠️ Todos os mercados estão suspensos. Usuários não conseguem apostar neste jogo.
+                </p>
+              )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground gap-1 w-full"
+                onClick={() => deactivateMut.mutate()}
+                disabled={deactivateMut.isPending}
+                data-testid="button-deactivate-live"
+              >
+                <StopCircle className="w-3.5 h-3.5" />
+                Remover jogo ao vivo do site
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Signal className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nenhum jogo ao vivo ativo no site.</p>
+              <p className="text-xs mt-1">Selecione um jogo abaixo para ativar.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Lista de jogos do dia ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="w-4 h-4" />
+              Jogos de Hoje
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-refresh-live-games">
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1,2,3,4].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+            </div>
+          ) : !data?.games.length ? (
+            <p className="text-sm text-center text-muted-foreground py-4">Nenhum jogo encontrado para hoje.</p>
+          ) : (
+            <div className="space-y-2">
+              {/* Live first */}
+              {data.games.filter(g => g.isLive).length > 0 && (
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-1">Ao Vivo Agora</p>
+              )}
+              {data.games.map(g => {
+                const isActive = g.id === data.activeFixtureId;
+                return (
+                  <div
+                    key={g.id}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border transition-colors ${isActive ? "border-red-500/50 bg-red-500/5" : "border-border hover:border-muted-foreground/30"}`}
+                    data-testid={`row-live-game-${g.id}`}
+                  >
+                    {/* Status */}
+                    <div className="w-12 shrink-0 text-center">
+                      {g.isLive ? (
+                        <span className="text-[10px] font-bold text-red-500 animate-pulse">{statusLabel(g)}</span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">{statusLabel(g)}</span>
+                      )}
+                    </div>
+
+                    {/* Placar/Times */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <img src={g.homeLogo} className="w-4 h-4 object-contain" alt="" />
+                        <span className="truncate">{g.home}</span>
+                        {g.isLive && <span className="font-bold mx-1">{fmt(g.goalsHome)}–{fmt(g.goalsAway)}</span>}
+                        <span className="text-muted-foreground">×</span>
+                        <span className="truncate">{g.away}</span>
+                        <img src={g.awayLogo} className="w-4 h-4 object-contain" alt="" />
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <img src={g.leagueLogo} className="w-3 h-3 object-contain" alt="" />
+                        <span className="text-[10px] text-muted-foreground truncate">{g.league}</span>
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    {isActive ? (
+                      <Badge variant="destructive" className="text-[10px] shrink-0">Ativo</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs gap-1 shrink-0 h-7"
+                        onClick={() => activateMut.mutate(g)}
+                        disabled={activateMut.isPending}
+                        data-testid={`button-activate-${g.id}`}
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" />
+                        Ativar
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
