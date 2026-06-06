@@ -504,10 +504,16 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               {new Date(commenceTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} (Manaus)
             </span>
           )}
-          <span className="mt-1 text-gray-900">
-            {collapsed
-              ? <ChevronDown className="w-4 h-4 animate-bounce" />
-              : <ChevronUp className="w-4 h-4 animate-bounce" />}
+          <span className="mt-1 flex flex-col items-center -space-y-2">
+            {collapsed ? (<>
+              <ChevronDown className="w-4 h-4 text-gray-900 animate-bounce [animation-delay:0ms]" />
+              <ChevronDown className="w-4 h-4 text-gray-600 animate-bounce [animation-delay:150ms]" />
+              <ChevronDown className="w-4 h-4 text-gray-400 animate-bounce [animation-delay:300ms]" />
+            </>) : (<>
+              <ChevronUp className="w-4 h-4 text-gray-400 animate-bounce [animation-delay:300ms]" />
+              <ChevronUp className="w-4 h-4 text-gray-600 animate-bounce [animation-delay:150ms]" />
+              <ChevronUp className="w-4 h-4 text-gray-900 animate-bounce [animation-delay:0ms]" />
+            </>)}
           </span>
         </div>
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
