@@ -5587,6 +5587,14 @@ function AdminLiveGameTab() {
     staleTime: 20_000,
   });
 
+  // Lightweight lock-status polling every 5s — picks up changes from mobile link instantly
+  const { data: lockStatus } = useQuery<{ isLocked: boolean; activeFixtureId: number | null }>({
+    queryKey: ["/api/admin/live-game/lock-status"],
+    queryFn: () => fetch("/api/admin/live-game/lock-status", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 5_000,
+    staleTime: 4_000,
+  });
+
   const fmt = (n: number | null) => n == null ? "?" : n;
 
   const activateMut = useMutation({
@@ -5650,7 +5658,8 @@ function AdminLiveGameTab() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   const activeGame = data?.games.find(g => g.id === data.activeFixtureId);
-  const isLocked = data?.isLocked ?? false;
+  // Prefer fast-polling lockStatus (5s) over the 30s live-games response
+  const isLocked = lockStatus?.isLocked ?? data?.isLocked ?? false;
 
   const filteredGames = (data?.games ?? []).filter(g => {
     if (!searchLive.trim()) return true;

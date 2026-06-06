@@ -5093,6 +5093,11 @@ export async function registerRoutes(
     return res.json({ ok: true, isLocked: liveMarketsLocked });
   });
 
+  // Admin: lightweight lock status — no external API calls, polls every 5s from admin panel
+  app.get("/api/admin/live-game/lock-status", requireAdmin, (_req, res) => {
+    return res.json({ isLocked: liveMarketsLocked, activeFixtureId: activeLiveFixtureId });
+  });
+
   // Admin: generate a mobile control token (24h)
   app.post("/api/admin/live-control/generate-token", requireAdmin, (_req, res) => {
     mobileControlToken = randomBytes(20).toString("hex");
