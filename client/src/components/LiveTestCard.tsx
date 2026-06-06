@@ -202,11 +202,15 @@ function MatchMapSection({ data, isLoading, isDark }: { data: MapData | undefine
   const events = data?.events ?? [];
   const recentEvents = [...events].reverse().slice(0, 8);
 
-  // No stats available — show events only if any, otherwise a message
+  // No stats available — always show unavailable notice + events if any
   if (!data?.home || !data?.away) {
     return (
-      <div className="space-y-2">
-        {recentEvents.length > 0 ? (
+      <div className="space-y-3">
+        <div className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs ${isDark ? "bg-white/5 text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+          <span>📊</span>
+          <span>Estatísticas indisponíveis para este jogo</span>
+        </div>
+        {recentEvents.length > 0 && (
           <div>
             <p className={`text-[10px] uppercase tracking-wide mb-1.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Eventos</p>
             <div className="space-y-1">
@@ -224,10 +228,6 @@ function MatchMapSection({ data, isLoading, isDark }: { data: MapData | undefine
                 );
               })}
             </div>
-          </div>
-        ) : (
-          <div className={`text-center py-3 text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-            Estatísticas ainda não disponíveis
           </div>
         )}
       </div>
