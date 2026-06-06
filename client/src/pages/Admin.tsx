@@ -5571,7 +5571,7 @@ function RecompensasTab() {
 
 // ── Admin Live Game Tab ───────────────────────────────────────────────────────
 type AdminGame = {
-  id: number; date: string; status: string; statusLong: string; elapsed: number | null;
+  id: number; date: string; dateLabel: string; status: string; statusLong: string; elapsed: number | null;
   home: string; homeLogo: string; away: string; awayLogo: string;
   league: string; leagueLogo: string; goalsHome: number | null; goalsAway: number | null; isLive: boolean;
 };
@@ -5705,7 +5705,7 @@ function AdminLiveGameTab() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <CalendarDays className="w-4 h-4" />
-              Jogos de Hoje
+              Jogos
               {data?.games.length ? <span className="text-xs font-normal text-muted-foreground">({filteredGames.length}/{data.games.length})</span> : null}
             </CardTitle>
             <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-refresh-live-games">
@@ -5743,13 +5743,21 @@ function AdminLiveGameTab() {
             <p className="text-sm text-center text-muted-foreground py-4">Nenhum jogo corresponde à pesquisa.</p>
           ) : (
             <div className="space-y-2">
-              {/* Live first */}
-              {filteredGames.some(g => g.isLive) && (
-                <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-1">Ao Vivo Agora</p>
-              )}
-              {filteredGames.map(g => {
-                const isActive = g.id === data.activeFixtureId;
-                return (
+              {(() => {
+                const items: JSX.Element[] = [];
+                let lastLabel = "";
+                filteredGames.forEach(g => {
+                  const label = g.isLive ? "🔴 Ao Vivo Agora" : g.dateLabel;
+                  if (label !== lastLabel) {
+                    lastLabel = label;
+                    items.push(
+                      <p key={`sep-${label}`} className={`text-xs font-semibold uppercase tracking-wide pt-1 ${g.isLive ? "text-red-400" : "text-muted-foreground"}`}>
+                        {label}
+                      </p>
+                    );
+                  }
+                  const isActive = g.id === data.activeFixtureId;
+                  items.push(
                   <div
                     key={g.id}
                     className={`flex items-center gap-3 p-2.5 rounded-lg border transition-colors ${isActive ? "border-red-500/50 bg-red-500/5" : "border-border hover:border-muted-foreground/30"}`}
@@ -5797,8 +5805,10 @@ function AdminLiveGameTab() {
                       </Button>
                     )}
                   </div>
-                );
-              })}
+                  );
+                });
+                return items;
+              })()}
             </div>
           )}
         </CardContent>

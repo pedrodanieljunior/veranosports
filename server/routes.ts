@@ -4896,20 +4896,43 @@ export async function registerRoutes(
     try {
       if (!API_FOOTBALL_KEY) return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
       const now = new Date();
-      const brazilMs = now.getTime() + (-3 * 60 - now.getTimezoneOffset()) * 60000;
-      const brazilDate = new Date(brazilMs).toISOString().slice(0, 10);
-      const [liveRes, todayRes] = await Promise.all([
+      // Brazil date helpers (UTC-3)
+      const brazilOffset = -3 * 60;
+      const toBrazilDate = (d: Date) => {
+        const ms = d.getTime() + (brazilOffset - d.getTimezoneOffset()) * 60000;
+        return new Date(ms).toISOString().slice(0, 10);
+      };
+      const todayDate = toBrazilDate(now);
+      const futureDate = toBrazilDate(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+
+      const [liveRes, rangeRes] = await Promise.all([
         fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
-        fetch(`${API_FOOTBALL_BASE}/fixtures?date=${brazilDate}&timezone=America%2FSao_Paulo`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?from=${todayDate}&to=${futureDate}&timezone=America%2FSao_Paulo`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
       ]);
-      const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
-      const allFixtures = [...(liveData.response ?? []), ...(todayData.response ?? [])];
+      const [liveData, rangeData] = await Promise.all([liveRes.json(), rangeRes.json()]);
+      const allFixtures = [...(liveData.response ?? []), ...(rangeData.response ?? [])];
       const seen = new Set<number>();
       const fixtures = allFixtures.filter(f => { if (seen.has(f.fixture.id)) return false; seen.add(f.fixture.id); return true; });
+
       const LIVE_STATUSES = ["1H","HT","2H","ET","BT","P","INT"];
+      const WEEKDAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+      const getDateLabel = (isoDate: string) => {
+        const gameDate = toBrazilDate(new Date(isoDate));
+        if (gameDate === todayDate) return "Hoje";
+        const tomorrow = toBrazilDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+        if (gameDate === tomorrow) return "Amanhã";
+        const d = new Date(isoDate);
+        const dayName = WEEKDAYS[d.getUTCDay()];
+        const dd = String(d.getUTCDate()).padStart(2, "0");
+        const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+        return `${dayName} ${dd}/${mm}`;
+      };
+
       const games = fixtures.map(f => ({
         id: f.fixture.id,
         date: f.fixture.date,
+        dateLabel: getDateLabel(f.fixture.date),
         status: f.fixture.status.short as string,
         statusLong: f.fixture.status.long as string,
         elapsed: f.fixture.status.elapsed as number | null,
