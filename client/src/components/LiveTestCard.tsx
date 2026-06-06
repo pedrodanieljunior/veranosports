@@ -542,7 +542,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                   const m = v.value.match(/[\d.]+/);
                   if (!m) return true;
                   const n = parseFloat(m[0]);
-                  return (n * 2) % 1 === 0; // keeps .0 and .5 only
+                  return n % 1 === 0.5; // keeps only .5 lines (0.5, 1.5, 2.5...)
                 })
               : market.values;
             if (filteredValues.length === 0) return null;
