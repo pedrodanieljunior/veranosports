@@ -4903,7 +4903,8 @@ export async function registerRoutes(
         return new Date(ms).toISOString().slice(0, 10);
       };
       const todayDate = toBrazilDate(now);
-      const futureDate = toBrazilDate(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+      // Only 48 hours ahead
+      const futureDate = toBrazilDate(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
 
       const [liveRes, rangeRes] = await Promise.all([
         fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
@@ -4912,7 +4913,22 @@ export async function registerRoutes(
       const [liveData, rangeData] = await Promise.all([liveRes.json(), rangeRes.json()]);
       const allFixtures = [...(liveData.response ?? []), ...(rangeData.response ?? [])];
       const seen = new Set<number>();
-      const fixtures = allFixtures.filter(f => { if (seen.has(f.fixture.id)) return false; seen.add(f.fixture.id); return true; });
+
+      // Filter: only Série B and national-team (seleções) competitions
+      const isSerieB = (f: any) => {
+        const name: string = (f.league?.name ?? "").toLowerCase();
+        return name.includes("série b") || name.includes("serie b") || f.league?.id === 72;
+      };
+      const isSelecoes = (f: any) => {
+        // API-Football marks international competitions with country "World"
+        return f.league?.country === "World";
+      };
+
+      const fixtures = allFixtures.filter(f => {
+        if (seen.has(f.fixture.id)) return false;
+        seen.add(f.fixture.id);
+        return isSerieB(f) || isSelecoes(f);
+      });
 
       const LIVE_STATUSES = ["1H","HT","2H","ET","BT","P","INT"];
       const WEEKDAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
