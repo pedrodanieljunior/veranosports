@@ -5717,25 +5717,25 @@ function AdminLiveGameTab() {
                   </div>
                 ) : (
                   /* Normal state — two side-by-side buttons */
-                  <div className="grid grid-cols-2 divide-x divide-border">
+                  <div className="flex gap-2 p-3">
                     <button
                       onClick={() => lockMut.mutate()}
                       disabled={lockMut.isPending}
                       data-testid="button-toggle-lock"
-                      className={`flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-white transition-colors
                         ${isLocked
-                          ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                          : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-red-600 hover:bg-red-700"
                         }`}
                     >
                       {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                      {isLocked ? "Liberar" : "Bloquear"}
+                      {isLocked ? "Liberar Mercados" : "Bloquear Mercados"}
                     </button>
                     <button
                       onClick={() => setConfirmDeactivate(true)}
                       disabled={deactivateMut.isPending}
                       data-testid="button-deactivate-live"
-                      className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:bg-muted/40 transition-colors"
                     >
                       <StopCircle className="w-4 h-4" />
                       Desativar
