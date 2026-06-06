@@ -5258,7 +5258,7 @@ export async function registerRoutes(
               if (values.length > 0) markets.push({ id: frontendId, name: market.name, values });
             }
 
-            // --- ID 20: Match Corners (Over/Under, pick main line) ---
+            // --- ID 20: Match Corners (Over/Under, prefer .5 lines) ---
             const cornersM = liveOdds.find((o: any) => o.id === 20);
             if (cornersM) {
               const byHc: Record<string, { over?: any; under?: any }> = {};
@@ -5268,8 +5268,9 @@ export async function registerRoutes(
                 if (v.value === "Over") byHc[v.handicap].over = v;
                 if (v.value === "Under") byHc[v.handicap].under = v;
               }
-              const preferred = ["8", "9", "7", "10", "6"];
-              const hcKey = preferred.find(h => byHc[h]?.over && byHc[h]?.under) ?? Object.keys(byHc)[0];
+              // Prefer .5 lines, fallback to whole numbers
+              const preferred = ["8.5","9.5","7.5","10.5","6.5","8","9","7","10","6"];
+              const hcKey = preferred.find(h => byHc[h]?.over && byHc[h]?.under) ?? Object.keys(byHc).find(h => byHc[h]?.over && byHc[h]?.under);
               if (hcKey && byHc[hcKey]) {
                 const vals: any[] = [];
                 if (byHc[hcKey].over) vals.push({ value: `Over ${hcKey}`, odd: parseFloat(byHc[hcKey].over.odd), suspended: !!byHc[hcKey].over.suspended });
@@ -5278,14 +5279,24 @@ export async function registerRoutes(
               }
             }
 
-            // --- ID 119: Total Cards ---
+            // --- ID 119: Total Cards (prefer .5 lines) ---
             const cardsM = liveOdds.find((o: any) => o.id === 119);
             if (cardsM) {
-              const vals = (cardsM.values ?? []).map((v: any) => ({
-                value: `${v.value} ${v.handicap}`,
-                odd: parseFloat(v.odd),
-                suspended: !!v.suspended,
-              }));
+              // Group by handicap, prefer .5 lines
+              const byHc: Record<string, { over?: any; under?: any }> = {};
+              for (const v of (cardsM.values ?? [])) {
+                if (!byHc[v.handicap]) byHc[v.handicap] = {};
+                if (v.value === "Over") byHc[v.handicap].over = v;
+                if (v.value === "Under") byHc[v.handicap].under = v;
+              }
+              const halfLines = Object.keys(byHc).filter(h => parseFloat(h) % 1 === 0.5).sort((a,b) => parseFloat(a)-parseFloat(b));
+              const wholeLines = Object.keys(byHc).filter(h => parseFloat(h) % 1 === 0).sort((a,b) => parseFloat(a)-parseFloat(b));
+              const lines = halfLines.length > 0 ? halfLines : wholeLines;
+              const vals: any[] = [];
+              for (const hc of lines) {
+                if (byHc[hc].over) vals.push({ value: `Over ${hc}`, odd: parseFloat(byHc[hc].over.odd), suspended: !!byHc[hc].over.suspended });
+                if (byHc[hc].under) vals.push({ value: `Under ${hc}`, odd: parseFloat(byHc[hc].under.odd), suspended: !!byHc[hc].under.suspended });
+              }
               if (vals.length > 0) markets.push({ id: 119, name: "Total Cartões", values: vals });
             }
 
