@@ -551,7 +551,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               : market.values;
             if (filteredValues.length === 0) return null;
             return (
-              <div key={market.id} className={`text-center ${idx > 0 ? `border-t pt-3 ${dividerCls}` : ""}`}>
+              <div key={market.id} className={`text-center ${idx > 0 ? `border-t pt-3 ${isDark ? "border-white/20" : "border-black/15"}` : ""}`}>
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {filteredValues.map(v => {
