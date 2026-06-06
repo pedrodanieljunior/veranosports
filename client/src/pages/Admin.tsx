@@ -5587,12 +5587,13 @@ function AdminLiveGameTab() {
     staleTime: 20_000,
   });
 
-  // Lightweight lock-status polling every 2s — picks up changes from mobile link fast
-  const { data: lockStatus } = useQuery<{ isLocked: boolean; activeFixtureId: number | null }>({
+  // Lightweight lock-status polling every 2s — works even when tab is not focused
+  const { data: lockStatus, refetch: refetchLockStatus } = useQuery<{ isLocked: boolean; activeFixtureId: number | null }>({
     queryKey: ["/api/admin/live-game/lock-status"],
     queryFn: () => fetch("/api/admin/live-game/lock-status", { credentials: "include" }).then(r => r.json()),
     refetchInterval: 2_000,
-    staleTime: 1_500,
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
 
   const fmt = (n: number | null) => n == null ? "?" : n;
