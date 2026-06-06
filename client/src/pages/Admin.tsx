@@ -5587,14 +5587,20 @@ function AdminLiveGameTab() {
     staleTime: 20_000,
   });
 
-  // Lightweight lock-status polling every 2s — works even when tab is not focused
-  const { data: lockStatus, refetch: refetchLockStatus } = useQuery<{ isLocked: boolean; activeFixtureId: number | null }>({
-    queryKey: ["/api/admin/live-game/lock-status"],
-    queryFn: () => fetch("/api/admin/live-game/lock-status", { credentials: "include" }).then(r => r.json()),
-    refetchInterval: 2_000,
-    refetchIntervalInBackground: true,
-    staleTime: 0,
-  });
+  // Native interval polling for lock status — bypasses React Query throttling
+  const [lockStatus, setLockStatus] = useState<{ isLocked: boolean } | null>(null);
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      try {
+        const r = await fetch("/api/admin/live-game/lock-status", { credentials: "include" });
+        if (r.ok && active) setLockStatus(await r.json());
+      } catch { /* ignore */ }
+    };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => { active = false; clearInterval(id); };
+  }, []);
 
   const fmt = (n: number | null) => n == null ? "?" : n;
 
@@ -5618,11 +5624,7 @@ function AdminLiveGameTab() {
     mutationFn: () =>
       fetch("/api/admin/live-game/toggle-lock", { method: "POST", credentials: "include" }).then(r => r.json()),
     onSuccess: (data) => {
-      // Instantly update the lock-status cache with the returned value — no need to wait for poll
-      queryClient.setQueryData(["/api/admin/live-game/lock-status"], (old: any) => ({
-        ...old,
-        isLocked: data.isLocked,
-      }));
+      setLockStatus({ isLocked: data.isLocked });
       refetch();
     },
   });
