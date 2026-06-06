@@ -5609,8 +5609,16 @@ function AdminLiveGameTab() {
     onSuccess: () => refetch(),
   });
 
+  const [searchLive, setSearchLive] = useState("");
+
   const activeGame = data?.games.find(g => g.id === data.activeFixtureId);
   const isLocked = data?.isLocked ?? false;
+
+  const filteredGames = (data?.games ?? []).filter(g => {
+    if (!searchLive.trim()) return true;
+    const q = searchLive.toLowerCase();
+    return g.home.toLowerCase().includes(q) || g.away.toLowerCase().includes(q) || g.league.toLowerCase().includes(q);
+  });
 
   const LIVE_ST = ["1H","HT","2H","ET","BT","P","INT"];
   const statusLabel = (g: AdminGame) => {
@@ -5698,10 +5706,30 @@ function AdminLiveGameTab() {
             <CardTitle className="text-base flex items-center gap-2">
               <CalendarDays className="w-4 h-4" />
               Jogos de Hoje
+              {data?.games.length ? <span className="text-xs font-normal text-muted-foreground">({filteredGames.length}/{data.games.length})</span> : null}
             </CardTitle>
             <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-refresh-live-games">
               <RefreshCw className="w-4 h-4" />
             </Button>
+          </div>
+          <div className="relative mt-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={searchLive}
+              onChange={e => setSearchLive(e.target.value)}
+              placeholder="Buscar por time ou liga..."
+              className="w-full pl-8 pr-8 py-1.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="input-search-live-games"
+            />
+            {searchLive && (
+              <button
+                onClick={() => setSearchLive("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -5711,13 +5739,15 @@ function AdminLiveGameTab() {
             </div>
           ) : !data?.games.length ? (
             <p className="text-sm text-center text-muted-foreground py-4">Nenhum jogo encontrado para hoje.</p>
+          ) : filteredGames.length === 0 ? (
+            <p className="text-sm text-center text-muted-foreground py-4">Nenhum jogo corresponde à pesquisa.</p>
           ) : (
             <div className="space-y-2">
               {/* Live first */}
-              {data.games.filter(g => g.isLive).length > 0 && (
+              {filteredGames.some(g => g.isLive) && (
                 <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-1">Ao Vivo Agora</p>
               )}
-              {data.games.map(g => {
+              {filteredGames.map(g => {
                 const isActive = g.id === data.activeFixtureId;
                 return (
                   <div
