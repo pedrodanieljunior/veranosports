@@ -5261,14 +5261,14 @@ export async function registerRoutes(
             // --- ID 20: Match Corners (Over/Under, prefer .5 lines) ---
             const cornersM = liveOdds.find((o: any) => o.id === 20);
             if (cornersM) {
-              const byHc: Record<string, { over?: any; under?: any }> = {};
+              const byHc: Record<string, { over?: any; exactly?: any; under?: any }> = {};
               for (const v of (cornersM.values ?? [])) {
-                if (v.value === "Exactly") continue;
                 if (!byHc[v.handicap]) byHc[v.handicap] = {};
                 if (v.value === "Over") byHc[v.handicap].over = v;
+                if (v.value === "Exactly") byHc[v.handicap].exactly = v;
                 if (v.value === "Under") byHc[v.handicap].under = v;
               }
-              // Pick most balanced .5 line (odds closest to each other), fallback to whole numbers
+              // Pick most balanced line (Over & Under odds closest to each other)
               const pickBestLine = (hcs: string[]) => hcs
                 .filter(h => byHc[h]?.over && byHc[h]?.under)
                 .sort((a, b) => {
@@ -5282,6 +5282,7 @@ export async function registerRoutes(
               if (hcKey && byHc[hcKey]) {
                 const vals: any[] = [];
                 if (byHc[hcKey].over) vals.push({ value: `Over ${hcKey}`, odd: parseFloat(byHc[hcKey].over.odd), suspended: !!byHc[hcKey].over.suspended });
+                if (byHc[hcKey].exactly) vals.push({ value: `Exactly ${hcKey}`, odd: parseFloat(byHc[hcKey].exactly.odd), suspended: !!byHc[hcKey].exactly.suspended });
                 if (byHc[hcKey].under) vals.push({ value: `Under ${hcKey}`, odd: parseFloat(byHc[hcKey].under.odd), suspended: !!byHc[hcKey].under.suspended });
                 if (vals.length > 0) markets.push({ id: 20, name: "Escanteios Over/Under", values: vals });
               }

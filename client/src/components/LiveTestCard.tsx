@@ -47,7 +47,11 @@ function translateOutcome(value: string): string {
   const underMatch = value.match(/^Under\s+(.+)$/i);
   if (underMatch) return `Abaixo ${underMatch[1]}`;
   // "Home/Over 1.5" → "Casa/Acima 1.5"
+  // "Exactly 13" → "Exato 13"
+  const exactlyMatch = value.match(/^Exactly\s+(.+)$/i);
+  if (exactlyMatch) return `Exato ${exactlyMatch[1]}`;
   return value
+    .replace(/\bExactly\b/gi, "Exato")
     .replace(/\bOver\b/gi, "Acima")
     .replace(/\bUnder\b/gi, "Abaixo")
     .replace(/\bHome\b/gi, "Casa")
