@@ -426,9 +426,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   }, [data?.fetchedAt]);
 
   const containerCls = isDark
-    ? "bg-[#1a1a2e]/80 border border-white/10 rounded-xl overflow-hidden"
+    ? "bg-[#4a4a4a] border border-[#5a5a5a] rounded-xl overflow-hidden"
     : "bg-white/90 border border-black/10 rounded-xl overflow-hidden shadow-sm";
-  const headerCls = isDark ? "bg-red-500/10 border-b border-red-500/20" : "bg-red-50 border-b border-red-200";
+  const headerCls = isDark ? "bg-[#3d3d3d] border-b border-[#5a5a5a]" : "bg-red-50 border-b border-red-200";
   const teamCls = isDark ? "text-white font-bold" : "text-gray-900 font-bold";
   const scoreCls = isDark ? "text-white font-black text-2xl" : "text-gray-900 font-black text-2xl";
   const marketTitleCls = isDark ? "text-gray-400 font-semibold text-[11px] uppercase tracking-wide" : "text-gray-500 font-semibold text-[11px] uppercase tracking-wide";
