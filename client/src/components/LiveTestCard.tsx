@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect, useState } from "react";
 import { Selection } from "@shared/schema";
-import { Zap, Clock, TrendingUp, TrendingDown, Lock } from "lucide-react";
+import { Zap, Clock, TrendingUp, TrendingDown, Lock, ChevronDown, ChevronUp } from "lucide-react";
 
 const FIXTURE_ID = 1520716;
 const GAME_ID = `api-football-${FIXTURE_ID}`;
@@ -57,6 +57,41 @@ interface LiveData {
   fetchedAt: number;
 }
 
+interface TeamStats {
+  name: string;
+  logo: string;
+  id: number;
+  possession: number;
+  shotsOnGoal: number;
+  shotsOffGoal: number;
+  totalShots: number;
+  corners: number;
+  fouls: number;
+  yellowCards: number;
+  redCards: number;
+  saves: number;
+  xg: number | null;
+  passes: number;
+  passAccuracy: string | null;
+}
+
+interface MatchEvent {
+  minute: number;
+  extra: number | null;
+  teamName: string;
+  teamId: number;
+  type: string;
+  detail: string;
+  player: string | null;
+  assist: string | null;
+}
+
+interface MapData {
+  home: TeamStats | null;
+  away: TeamStats | null;
+  events: MatchEvent[];
+  fetchedAt: number;
+}
 
 function selId(gameId: string, marketId: number, value: string) {
   return `live-${gameId}-m${marketId}-${value.replace(/\s+/g, "_")}`;
@@ -70,7 +105,6 @@ function StatusBadge({ status, elapsed }: { status: string; elapsed: number | nu
   const live = ["1H", "HT", "2H", "ET", "BT", "P", "INT"].includes(status);
   const finished = ["FT", "AET", "PEN"].includes(status);
   const upcoming = status === "NS";
-
   if (upcoming) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 text-[10px] font-bold border border-yellow-500/30">
       <Clock className="w-2.5 h-2.5" /> Em breve
@@ -94,6 +128,161 @@ function StatusBadge({ status, elapsed }: { status: string; elapsed: number | nu
   );
 }
 
+function eventIcon(type: string, detail: string) {
+  if (type === "Goal") return "⚽";
+  if (type === "Card" && detail.includes("Yellow")) return "🟨";
+  if (type === "Card" && detail.includes("Red")) return "🟥";
+  if (type === "subst") return "🔄";
+  if (type === "Var") return "📺";
+  return "•";
+}
+
+function StatBar({ label, home, away, isDark }: { label: string; home: number; away: number; isDark: boolean }) {
+  const total = home + away || 1;
+  const homePct = Math.round((home / total) * 100);
+  const awayPct = 100 - homePct;
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center justify-between text-[10px]">
+        <span className={`font-bold w-5 text-right ${isDark ? "text-white" : "text-gray-900"}`}>{home}</span>
+        <span className={`flex-1 text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>{label}</span>
+        <span className={`font-bold w-5 text-left ${isDark ? "text-white" : "text-gray-900"}`}>{away}</span>
+      </div>
+      <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+        <div className="h-full rounded-l-full bg-blue-500 transition-all duration-700" style={{ width: `${homePct}%` }} />
+        <div className="h-full rounded-r-full bg-orange-400 transition-all duration-700" style={{ width: `${awayPct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function MiniPitch({ attackPct, isDark }: { attackPct: number; isDark: boolean }) {
+  const arrowLeft = `${Math.round(attackPct)}%`;
+  return (
+    <div
+      className="relative w-full h-16 rounded-lg overflow-hidden flex items-center justify-center"
+      style={{ background: "linear-gradient(135deg, #2d6a1f 0%, #3a8a28 50%, #2d6a1f 100%)" }}
+    >
+      {/* Pitch lines */}
+      <div className="absolute inset-0">
+        {/* Center line */}
+        <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/30" />
+        {/* Center circle */}
+        <div className="absolute top-1/2 left-1/2 w-8 h-8 -translate-x-1/2 -translate-y-1/2 border border-white/30 rounded-full" />
+        {/* Left penalty box */}
+        <div className="absolute top-1/4 left-0 w-6 h-1/2 border border-white/30 border-l-0" />
+        {/* Right penalty box */}
+        <div className="absolute top-1/4 right-0 w-6 h-1/2 border border-white/30 border-r-0" />
+      </div>
+      {/* Ball position indicator */}
+      <div
+        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-lg transition-all duration-1000 flex items-center justify-center"
+        style={{ left: arrowLeft, marginLeft: "-8px", background: "rgba(255,255,255,0.9)" }}
+      >
+        <span className="text-[8px]">⚽</span>
+      </div>
+      {/* Home label */}
+      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/60 text-[8px] font-bold">CASA</span>
+      {/* Away label */}
+      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 text-[8px] font-bold">FORA</span>
+    </div>
+  );
+}
+
+function MatchMapSection({ isDark }: { isDark: boolean }) {
+  const { data } = useQuery<MapData>({
+    queryKey: ["/api/football/live-map"],
+    queryFn: () => fetch("/api/football/live-map").then(r => r.json()),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  });
+
+  if (!data || !data.home || !data.away) {
+    return (
+      <div className={`text-center py-3 text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+        Carregando estatísticas...
+      </div>
+    );
+  }
+
+  const { home, away, events } = data;
+  const totalShots = (home.totalShots + away.totalShots) || 1;
+  // Ball position: weighted by shots on goal (recent pressure)
+  const attackPct = Math.min(85, Math.max(15, Math.round((home.shotsOnGoal / (home.shotsOnGoal + away.shotsOnGoal || 1)) * 100)));
+
+  const recentEvents = [...events].reverse().slice(0, 8);
+
+  return (
+    <div className="space-y-3">
+      {/* Possession bar */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className={`text-[10px] font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{home.possession}%</span>
+          </div>
+          <span className={`text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}>Posse de Bola</span>
+          <div className="flex items-center gap-1">
+            <span className={`text-[10px] font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{away.possession}%</span>
+            <div className="w-2 h-2 rounded-full bg-orange-400" />
+          </div>
+        </div>
+        <div className="flex h-2 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-500 transition-all duration-700" style={{ width: `${home.possession}%` }} />
+          <div className="h-full bg-orange-400 transition-all duration-700" style={{ width: `${away.possession}%` }} />
+        </div>
+      </div>
+
+      {/* Mini pitch */}
+      <MiniPitch attackPct={attackPct} isDark={isDark} />
+
+      {/* Stats */}
+      <div className="space-y-2">
+        <StatBar label="Finalizações" home={home.totalShots} away={away.totalShots} isDark={isDark} />
+        <StatBar label="No Gol" home={home.shotsOnGoal} away={away.shotsOnGoal} isDark={isDark} />
+        <StatBar label="Escanteios" home={home.corners} away={away.corners} isDark={isDark} />
+        <StatBar label="Faltas" home={home.fouls} away={away.fouls} isDark={isDark} />
+        <StatBar label="Defesas" home={home.saves} away={away.saves} isDark={isDark} />
+        {home.xg != null && away.xg != null && (
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className={`font-bold w-8 text-right text-green-400`}>{home.xg.toFixed(2)}</span>
+              <span className={`flex-1 text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>xG</span>
+              <span className={`font-bold w-8 text-left text-green-400`}>{away.xg.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Events timeline */}
+      {recentEvents.length > 0 && (
+        <div>
+          <p className={`text-[10px] uppercase tracking-wide mb-1.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Eventos</p>
+          <div className="space-y-1">
+            {recentEvents.map((e, i) => {
+              const isHome = e.teamName === home.name;
+              const icon = eventIcon(e.type, e.detail);
+              const min = `${e.minute}${e.extra ? "+" + e.extra : ""}`;
+              return (
+                <div key={i} className={`flex items-center gap-2 text-[10px] ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                  <span className={`w-7 text-right shrink-0 font-mono ${isDark ? "text-gray-500" : "text-gray-400"}`}>{min}'</span>
+                  <span className="text-sm leading-none">{icon}</span>
+                  <span className={`flex-1 truncate ${isHome ? "text-blue-400" : "text-orange-400"}`}>
+                    {e.player ?? e.detail}
+                  </span>
+                  <span className={`shrink-0 text-[9px] ${isDark ? "text-gray-600" : "text-gray-400"}`}>
+                    {isHome ? home.name.split(" ")[0] : away.name.split(" ")[0]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   selections: Selection[];
   onToggleSelection: (sel: Selection) => void;
@@ -101,7 +290,9 @@ interface Props {
 }
 
 export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
-  const [refetchMs, setRefetchMs] = useState(15_000);
+  const [refetchMs, setRefetchMs] = useState(5_000);
+  const [showMap, setShowMap] = useState(false);
+
   const { data, isLoading, error } = useQuery<LiveData>({
     queryKey: ["/api/football/live-test"],
     queryFn: () => fetch("/api/football/live-test").then(r => {
@@ -114,15 +305,13 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     retry: 2,
   });
 
-  // Adjust polling rate based on game status
   useEffect(() => {
     if (!data) return;
     const st = data.fixture.status.short;
-    const live = ["1H","HT","2H","ET","BT","P","INT"].includes(st);
+    const live = ["1H", "HT", "2H", "ET", "BT", "P", "INT"].includes(st);
     setRefetchMs(live ? 5_000 : 60_000);
   }, [data?.fixture.status.short]);
 
-  // Track odd movements: key = "m{marketId}-{value}", value = "up"|"down"|null
   const prevOdds = useRef<Record<string, number>>({});
   const [oddMovements, setOddMovements] = useState<Record<string, "up" | "down">>({});
   const clearTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -130,16 +319,13 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   useEffect(() => {
     if (!data?.markets) return;
     const changes: Record<string, "up" | "down"> = {};
-
     for (const market of data.markets) {
       for (const v of market.values) {
         const key = `m${market.id}-${v.value}`;
         const prev = prevOdds.current[key];
         if (prev !== undefined && prev !== v.odd) {
           changes[key] = v.odd > prev ? "up" : "down";
-          // Clear any existing timer for this key
           if (clearTimers.current[key]) clearTimeout(clearTimers.current[key]);
-          // Remove the indicator after 4 seconds
           clearTimers.current[key] = setTimeout(() => {
             setOddMovements(m => { const next = { ...m }; delete next[key]; return next; });
           }, 4000);
@@ -147,7 +333,6 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         prevOdds.current[key] = v.odd;
       }
     }
-
     if (Object.keys(changes).length > 0) {
       setOddMovements(prev => ({ ...prev, ...changes }));
     }
@@ -156,11 +341,11 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const containerCls = isDark
     ? "bg-[#1a1a2e]/80 border border-white/10 rounded-xl overflow-hidden"
     : "bg-white/90 border border-black/10 rounded-xl overflow-hidden shadow-sm";
-
   const headerCls = isDark ? "bg-red-500/10 border-b border-red-500/20" : "bg-red-50 border-b border-red-200";
   const teamCls = isDark ? "text-white font-bold" : "text-gray-900 font-bold";
   const scoreCls = isDark ? "text-white font-black text-2xl" : "text-gray-900 font-black text-2xl";
   const marketTitleCls = isDark ? "text-gray-400 font-semibold text-[11px] uppercase tracking-wide" : "text-gray-500 font-semibold text-[11px] uppercase tracking-wide";
+  const dividerCls = isDark ? "border-white/5" : "border-black/5";
 
   if (isLoading) {
     return (
@@ -191,7 +376,6 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const isFinished = ["FT", "AET", "PEN"].includes(st);
   const homeGoals = data.goals.home ?? 0;
   const awayGoals = data.goals.away ?? 0;
-
   const commenceTime = data.fixture.date;
 
   return (
@@ -210,15 +394,12 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
 
       {/* Score row */}
       <div className="flex items-center justify-between px-4 py-4 gap-3">
-        {/* Home team */}
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           {data.teams.home.logo && (
             <img src={data.teams.home.logo} alt={data.teams.home.name} className="w-10 h-10 object-contain" />
           )}
           <span className={`text-sm ${teamCls} text-center leading-tight`}>{data.teams.home.name}</span>
         </div>
-
-        {/* Score */}
         <div className="flex flex-col items-center shrink-0 px-2">
           {isLive || isFinished ? (
             <span className={scoreCls}>{homeGoals} – {awayGoals}</span>
@@ -234,8 +415,6 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
             </span>
           )}
         </div>
-
-        {/* Away team */}
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
           {data.teams.away.logo && (
             <img src={data.teams.away.logo} alt={data.teams.away.name} className="w-10 h-10 object-contain" />
@@ -244,19 +423,40 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         </div>
       </div>
 
+      {/* Match Map toggle */}
+      {(isLive || isFinished) && (
+        <div className={`border-t ${dividerCls}`}>
+          <button
+            onClick={() => setShowMap(v => !v)}
+            className={`w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold transition-colors ${
+              isDark
+                ? "text-gray-400 hover:text-white hover:bg-white/5"
+                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+            }`}
+            data-testid="button-toggle-match-map"
+          >
+            {showMap ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showMap ? "Ocultar mapa" : "📊 Mapa do Jogo"}
+          </button>
+
+          {showMap && (
+            <div className={`px-4 pb-4 border-t ${dividerCls} pt-3`}>
+              <MatchMapSection isDark={isDark} />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Markets */}
       {data.markets.length > 0 && !isFinished && (
-        <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+        <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
           {data.markets.map(market => {
             const label = MARKET_LABELS[market.id] ?? market.name;
-            // Server already filters to the main handicap line for markets 5 and 6
-            const showValues = market.values;
-
             return (
               <div key={market.id} className="text-center">
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
-                  {showValues.map(v => {
+                  {market.values.map(v => {
                     const rawOdd = v.odd;
                     const isSuspended = !!v.suspended;
                     const id = selId(GAME_ID, market.id, v.value);
@@ -277,7 +477,6 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                     };
                     const active = !isSuspended && isSelected(selections, id);
                     const outcomeLabel = OUTCOME_LABELS[v.value] ?? v.value;
-
                     return (
                       <button
                         key={v.value}
@@ -321,12 +520,12 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       )}
 
       {isFinished && (
-        <div className="px-4 pb-4 text-center text-gray-500 text-xs border-t border-white/5 pt-3">
+        <div className={`px-4 pb-4 text-center text-gray-500 text-xs border-t ${dividerCls} pt-3`}>
           Jogo encerrado · {homeGoals} – {awayGoals}
         </div>
       )}
 
-      {/* Footer: updated at */}
+      {/* Footer */}
       <div className="px-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-1 text-gray-600 text-[9px]">
           <Zap className="w-2.5 h-2.5" />

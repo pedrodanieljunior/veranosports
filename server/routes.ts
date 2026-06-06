@@ -5100,6 +5100,65 @@ export async function registerRoutes(
     }
   });
 
+  // Live match map: statistics + events for fixture 1520716
+  app.get("/api/football/live-map", async (_req, res) => {
+    const FIXTURE_ID = 1520716;
+    const cacheKey = "live_map_1520716";
+    const MAP_TTL = 30 * 1000;
+    const cached = cache.get<any>(cacheKey);
+    if (cached) return res.json(cached);
+    try {
+      if (!API_FOOTBALL_KEY) return res.status(500).json({ error: "API_FOOTBALL_KEY not configured" });
+      const [statsRes, eventsRes] = await Promise.all([
+        fetch(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${FIXTURE_ID}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`https://v3.football.api-sports.io/fixtures/events?fixture=${FIXTURE_ID}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+      ]);
+      const [statsData, eventsData] = await Promise.all([statsRes.json(), eventsRes.json()]);
+      const parseTeam = (t: any) => {
+        const s: Record<string, any> = {};
+        for (const item of (t?.statistics ?? [])) s[item.type] = item.value;
+        return {
+          name: t.team.name,
+          logo: t.team.logo,
+          id: t.team.id,
+          possession: parseInt(s["Ball Possession"] ?? "0"),
+          shotsOnGoal: s["Shots on Goal"] ?? 0,
+          shotsOffGoal: s["Shots off Goal"] ?? 0,
+          totalShots: s["Total Shots"] ?? 0,
+          corners: s["Corner Kicks"] ?? 0,
+          fouls: s["Fouls"] ?? 0,
+          yellowCards: s["Yellow Cards"] ?? 0,
+          redCards: s["Red Cards"] ?? 0,
+          saves: s["Goalkeeper Saves"] ?? 0,
+          xg: s["expected_goals"] ? parseFloat(s["expected_goals"]) : null,
+          passes: s["Total passes"] ?? 0,
+          passAccuracy: s["Passes %"] ?? null,
+        };
+      };
+      const teams = statsData.response ?? [];
+      const result = {
+        home: teams[0] ? parseTeam(teams[0]) : null,
+        away: teams[1] ? parseTeam(teams[1]) : null,
+        events: (eventsData.response ?? []).map((e: any) => ({
+          minute: e.time.elapsed,
+          extra: e.time.extra ?? null,
+          teamName: e.team.name,
+          teamId: e.team.id,
+          type: e.type,
+          detail: e.detail,
+          player: e.player?.name ?? null,
+          assist: e.assist?.name ?? null,
+        })),
+        fetchedAt: Date.now(),
+      };
+      cache.set(cacheKey, result, MAP_TTL);
+      return res.json(result);
+    } catch (err) {
+      console.error("[live-map]", err);
+      return res.status(500).json({ error: "Erro ao buscar mapa" });
+    }
+  });
+
   // Admin: Verificar resultados e atualizar bilhetes automaticamente
   app.post("/api/admin/check-results", async (_req, res) => {
     try {
