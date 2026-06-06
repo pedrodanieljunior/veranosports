@@ -32,11 +32,61 @@ const OUTCOME_LABELS: Record<string, string> = {
   "Draw/Away": "X2",
   "Goals/Over 0.5": "Gol +0.5",
   "Goals/Under 0.5": "Gol -0.5",
-  "Corners 3-Way/Over 0.5": "Cant +0.5",
-  "Corners 3-Way/Under 0.5": "Cant -0.5",
+  "Corners 3-Way/Over 0.5": "Escan +0.5",
+  "Corners 3-Way/Under 0.5": "Escan -0.5",
   "Cards/Over 0.5": "Cart +0.5",
   "Cards/Under 0.5": "Cart -0.5",
 };
+
+function translateOutcome(value: string): string {
+  if (OUTCOME_LABELS[value]) return OUTCOME_LABELS[value];
+  // "Over 1.5" → "Acima 1.5"
+  const overMatch = value.match(/^Over\s+(.+)$/i);
+  if (overMatch) return `Acima ${overMatch[1]}`;
+  // "Under 1.5" → "Abaixo 1.5"
+  const underMatch = value.match(/^Under\s+(.+)$/i);
+  if (underMatch) return `Abaixo ${underMatch[1]}`;
+  // "Home/Over 1.5" → "Casa/Acima 1.5"
+  return value
+    .replace(/\bOver\b/gi, "Acima")
+    .replace(/\bUnder\b/gi, "Abaixo")
+    .replace(/\bHome\b/gi, "Casa")
+    .replace(/\bAway\b/gi, "Fora")
+    .replace(/\bDraw\b/gi, "Empate")
+    .replace(/\bGoals\b/gi, "Gols")
+    .replace(/\bCorners\b/gi, "Escanteios")
+    .replace(/\bCards\b/gi, "Cartões")
+    .replace(/\bYellow Card\b/gi, "Cartão Amarelo")
+    .replace(/\bRed Card\b/gi, "Cartão Vermelho")
+    .replace(/\bWin\b/gi, "Vencer")
+    .replace(/\bLose\b/gi, "Perder")
+    .replace(/\bHalf\b/gi, "Tempo")
+    .replace(/\b3-Way\b/gi, "")
+    .trim();
+}
+
+const EVENT_DETAILS: Record<string, string> = {
+  "Yellow Card": "Cartão Amarelo",
+  "Red Card": "Cartão Vermelho",
+  "Second Yellow card": "2º Amarelo",
+  "Normal Goal": "Gol",
+  "Own Goal": "Gol Contra",
+  "Penalty": "Pênalti",
+  "Missed Penalty": "Pênalti Perdido",
+  "Substitution 1": "Substituição",
+  "Substitution 2": "Substituição",
+  "Substitution 3": "Substituição",
+  "Substitution 4": "Substituição",
+  "Substitution 5": "Substituição",
+  "VAR - Goal": "VAR - Gol",
+  "VAR - Cancel Goal": "VAR - Gol Cancelado",
+  "VAR - Penalty confirmed": "VAR - Pênalti Confirmado",
+  "VAR - Red Card": "VAR - Cartão Vermelho",
+};
+
+function translateDetail(detail: string): string {
+  return EVENT_DETAILS[detail] ?? detail;
+}
 
 interface LiveData {
   fixture: {
@@ -222,7 +272,7 @@ function MatchMapSection({ data, isLoading, isDark }: { data: MapData | undefine
                     <span className={`w-7 text-right shrink-0 font-mono ${isDark ? "text-gray-500" : "text-gray-400"}`}>{min}'</span>
                     <span className="text-sm leading-none">{icon}</span>
                     <span className={`flex-1 truncate ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                      {e.player ?? e.detail} · {e.teamName}
+                      {e.player ?? translateDetail(e.detail)} · {e.teamName}
                     </span>
                   </div>
                 );
@@ -293,7 +343,7 @@ function MatchMapSection({ data, isLoading, isDark }: { data: MapData | undefine
                   <span className={`w-7 text-right shrink-0 font-mono ${isDark ? "text-gray-500" : "text-gray-400"}`}>{min}'</span>
                   <span className="text-sm leading-none">{icon}</span>
                   <span className={`flex-1 truncate ${isHome ? "text-blue-400" : "text-orange-400"}`}>
-                    {e.player ?? e.detail}
+                    {e.player ?? translateDetail(e.detail)}
                   </span>
                   <span className={`shrink-0 text-[9px] ${isDark ? "text-gray-600" : "text-gray-400"}`}>
                     {isHome ? home.name.split(" ")[0] : away.name.split(" ")[0]}
@@ -509,7 +559,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                       result: "pending",
                     };
                     const active = !isSuspended && isSelected(selections, id);
-                    const outcomeLabel = OUTCOME_LABELS[v.value] ?? v.value;
+                    const outcomeLabel = translateOutcome(v.value);
                     return (
                       <button
                         key={v.value}
