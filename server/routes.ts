@@ -5134,6 +5134,13 @@ export async function registerRoutes(
           const status = fixture.fixture.status.short as string;
           const isLiveStatus = ["1H","HT","2H","ET","BT","P","INT"].includes(status);
 
+          // Auto-deactivate immediately when game ends
+          if (FINISHED_STATUSES.has(status)) {
+            console.log(`[live-test] Game finished (${status}) — auto-deactivating fixture ${FIXTURE_ID}`);
+            deactivateLiveGame();
+            throw new Error("GAME_FINISHED");
+          }
+
           // Step 2: fetch odds — live endpoint when in-play, pre-match otherwise
           const oddsUrl = isLiveStatus
             ? `${API_FOOTBALL_BASE}/odds/live?fixture=${FIXTURE_ID}`
@@ -5314,10 +5321,12 @@ export async function registerRoutes(
       const result = await liveTestInflight;
       return res.json(applyLock(result));
     } catch (err: any) {
-      console.error("[live-test]", err);
+      liveTestInflight = null;
       const msg = err?.message ?? "Internal error";
+      if (msg === "GAME_FINISHED") return res.status(404).json({ error: "Game finished" });
       if (msg === "Fixture not found") return res.status(404).json({ error: msg });
       if (msg === "API-Football unavailable") return res.status(502).json({ error: msg });
+      console.error("[live-test]", err);
       return res.status(500).json({ error: "Internal error" });
     }
   });
