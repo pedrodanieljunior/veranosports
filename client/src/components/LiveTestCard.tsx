@@ -505,7 +505,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
             </span>
           )}
           <span className="mt-1 text-gray-900">
-            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            {collapsed
+              ? <ChevronDown className="w-4 h-4 animate-bounce" />
+              : <ChevronUp className="w-4 h-4 animate-bounce" />}
           </span>
         </div>
         <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
