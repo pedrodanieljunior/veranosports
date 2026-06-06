@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 import { Lock, Unlock, Signal, WifiOff, RefreshCw } from "lucide-react";
 
 interface LiveControlStatus {
@@ -19,7 +20,8 @@ interface LiveControlStatus {
 
 function TeamLogo({ src, name }: { src?: string; name: string }) {
   const [err, setErr] = useState(false);
-  if (!src || err) {
+  const proxied = proxyLogoUrl(src);
+  if (!proxied || err) {
     return (
       <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center text-3xl font-bold text-white/60">
         {name.charAt(0)}
@@ -28,7 +30,7 @@ function TeamLogo({ src, name }: { src?: string; name: string }) {
   }
   return (
     <img
-      src={src}
+      src={proxied}
       alt={name}
       onError={() => setErr(true)}
       className="w-20 h-20 object-contain drop-shadow-lg"

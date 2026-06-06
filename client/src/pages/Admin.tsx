@@ -102,6 +102,7 @@ import { format, startOfWeek, startOfMonth, subDays, isWithinInterval } from "da
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -5773,7 +5774,7 @@ function AdminLiveGameTab() {
               <div className="px-4 py-4 bg-card">
                 {/* League */}
                 <div className="flex items-center gap-1.5 mb-3">
-                  <img src={activeGame.leagueLogo} className="w-4 h-4 object-contain" alt="" />
+                  <img src={proxyLogoUrl(activeGame.leagueLogo)} className="w-4 h-4 object-contain" alt="" />
                   <span className="text-xs text-muted-foreground">{activeGame.league}</span>
                   {activeGame.isLive && (
                     <span className="ml-auto text-sm font-bold tabular-nums text-white">
@@ -5789,12 +5790,12 @@ function AdminLiveGameTab() {
                 {/* Teams */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <img src={activeGame.homeLogo} className="w-12 h-12 object-contain" alt="" />
+                    <img src={proxyLogoUrl(activeGame.homeLogo)} className="w-12 h-12 object-contain" alt="" />
                     <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.home}</span>
                   </div>
                   <div className="text-2xl font-black text-muted-foreground px-2">×</div>
                   <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <img src={activeGame.awayLogo} className="w-12 h-12 object-contain" alt="" />
+                    <img src={proxyLogoUrl(activeGame.awayLogo)} className="w-12 h-12 object-contain" alt="" />
                     <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.away}</span>
                   </div>
                 </div>
@@ -5942,15 +5943,15 @@ function AdminLiveGameTab() {
                     {/* Placar/Times */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <img src={g.homeLogo} className="w-4 h-4 object-contain" alt="" />
+                        <img src={proxyLogoUrl(g.homeLogo)} className="w-4 h-4 object-contain" alt="" />
                         <span className="truncate">{g.home}</span>
                         {g.isLive && <span className="font-bold mx-1">{fmt(g.goalsHome)}–{fmt(g.goalsAway)}</span>}
                         <span className="text-muted-foreground">×</span>
                         <span className="truncate">{g.away}</span>
-                        <img src={g.awayLogo} className="w-4 h-4 object-contain" alt="" />
+                        <img src={proxyLogoUrl(g.awayLogo)} className="w-4 h-4 object-contain" alt="" />
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <img src={g.leagueLogo} className="w-3 h-3 object-contain" alt="" />
+                        <img src={proxyLogoUrl(g.leagueLogo)} className="w-3 h-3 object-contain" alt="" />
                         <span className="text-[10px] text-muted-foreground truncate">{g.league}</span>
                       </div>
                     </div>
