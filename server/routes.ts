@@ -5089,7 +5089,12 @@ export async function registerRoutes(
   // Admin: toggle global market lock
   app.post("/api/admin/live-game/toggle-lock", requireAdmin, (_req, res) => {
     liveMarketsLocked = !liveMarketsLocked;
-    console.log(`[live-game] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"}`);
+    // Clear live-test cache so next client poll gets fresh data immediately
+    if (activeLiveFixtureId) {
+      cache.delete(`live_test_${activeLiveFixtureId}`);
+      cache.delete(`live_map_${activeLiveFixtureId}`);
+    }
+    console.log(`[live-game] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"} — cache cleared`);
     return res.json({ ok: true, isLocked: liveMarketsLocked });
   });
 
@@ -5135,7 +5140,10 @@ export async function registerRoutes(
     if (!validateMobileToken(token)) return res.status(401).json({ error: "Invalid or expired token" });
     if (!activeLiveFixtureId) return res.status(404).json({ error: "No active live game" });
     liveMarketsLocked = !liveMarketsLocked;
-    console.log(`[live-control/mobile] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"}`);
+    // Clear live-test cache so next client poll gets fresh data immediately
+    cache.delete(`live_test_${activeLiveFixtureId}`);
+    cache.delete(`live_map_${activeLiveFixtureId}`);
+    console.log(`[live-control/mobile] Markets ${liveMarketsLocked ? "LOCKED" : "UNLOCKED"} — cache cleared`);
     return res.json({ ok: true, isLocked: liveMarketsLocked });
   });
 
