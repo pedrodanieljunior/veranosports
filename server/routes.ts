@@ -4902,16 +4902,32 @@ export async function registerRoutes(
         const ms = d.getTime() + (brazilOffset - d.getTimezoneOffset()) * 60000;
         return new Date(ms).toISOString().slice(0, 10);
       };
+      // 48h window cutoff
+      const cutoffMs = now.getTime() + 48 * 60 * 60 * 1000;
       const todayDate = toBrazilDate(now);
-      // Only 48 hours ahead
-      const futureDate = toBrazilDate(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
 
-      const [liveRes, rangeRes] = await Promise.all([
+      // Fetch in parallel: live games + upcoming per key league
+      // Using ?next=N because ?from/to requires season context and returns 0 without it
+      const [liveRes, serieB_upRes, wc_upRes, friendly_upRes] = await Promise.all([
         fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
-        fetch(`${API_FOOTBALL_BASE}/fixtures?from=${todayDate}&to=${futureDate}&timezone=America%2FSao_Paulo`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&next=20`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=1&season=2026&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=10&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
       ]);
-      const [liveData, rangeData] = await Promise.all([liveRes.json(), rangeRes.json()]);
-      const allFixtures = [...(liveData.response ?? []), ...(rangeData.response ?? [])];
+      const [liveData, serieB_upData, wc_upData, friendly_upData] = await Promise.all([
+        liveRes.json(), serieB_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
+      ]);
+
+      // Live: all live fixtures (will be filtered below)
+      const liveFixtures = liveData.response ?? [];
+      // Upcoming: only within 48h window
+      const upcomingAll = [
+        ...(serieB_upData.response ?? []),
+        ...(wc_upData.response ?? []),
+        ...(friendly_upData.response ?? []),
+      ].filter(f => new Date(f.fixture.date).getTime() <= cutoffMs);
+
+      const allFixtures = [...liveFixtures, ...upcomingAll];
       const seen = new Set<number>();
 
       // Allowed senior national-team league IDs (API-Football)
@@ -4937,8 +4953,12 @@ export async function registerRoutes(
       ]);
 
       // Filter: only Brazil Série B (ID 72) and approved senior national-team competitions
+      // Also exclude youth fixtures (U17 / U19 / U20 / U21 / U23 in team names)
+      const YOUTH_RE = /\bU\d{2}\b/i;
+      const isYouth = (f: any) =>
+        YOUTH_RE.test(f.teams?.home?.name ?? "") || YOUTH_RE.test(f.teams?.away?.name ?? "");
       const isSerieB = (f: any) => f.league?.id === 72;
-      const isSelecoes = (f: any) => SELECOES_LEAGUE_IDS.has(f.league?.id);
+      const isSelecoes = (f: any) => SELECOES_LEAGUE_IDS.has(f.league?.id) && !isYouth(f);
 
       const fixtures = allFixtures.filter(f => {
         if (seen.has(f.fixture.id)) return false;
