@@ -5643,57 +5643,81 @@ function AdminLiveGameTab() {
         </CardHeader>
         <CardContent>
           {data?.activeFixtureId && activeGame ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-500 animate-pulse">
-                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> AO VIVO
+            <div className={`rounded-xl border-2 overflow-hidden ${isLocked ? "border-red-500/60" : "border-green-500/50"}`}>
+              {/* Status bar */}
+              <div className={`flex items-center justify-between px-4 py-2 text-xs font-bold ${isLocked ? "bg-red-500/20 text-red-400" : "bg-green-500/15 text-green-400"}`}>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
+                  AO VIVO NO SITE
                 </span>
-                <div className="flex-1 text-sm font-semibold">
-                  {activeGame.home} × {activeGame.away}
-                </div>
-                <span className="text-xs text-muted-foreground">{activeGame.league}</span>
-                {activeGame.isLive && (
-                  <span className="text-xs font-bold text-green-400">{activeGame.elapsed}′ {fmt(activeGame.goalsHome)}–{fmt(activeGame.goalsAway)}</span>
-                )}
+                <span className="flex items-center gap-1.5">
+                  {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                  {isLocked ? "MERCADOS BLOQUEADOS" : "MERCADOS ABERTOS"}
+                </span>
               </div>
 
-              {/* Botão de trava global */}
-              <div className="flex items-center gap-3">
-                <Button
+              {/* Game info */}
+              <div className="px-4 py-4 bg-card">
+                {/* League */}
+                <div className="flex items-center gap-1.5 mb-3">
+                  <img src={activeGame.leagueLogo} className="w-4 h-4 object-contain" alt="" />
+                  <span className="text-xs text-muted-foreground">{activeGame.league}</span>
+                  {activeGame.isLive && (
+                    <span className="ml-auto text-sm font-bold tabular-nums text-white">
+                      {activeGame.elapsed}′ &nbsp;
+                      <span className="text-green-400">{fmt(activeGame.goalsHome)}–{fmt(activeGame.goalsAway)}</span>
+                    </span>
+                  )}
+                  {!activeGame.isLive && (
+                    <span className="ml-auto text-xs text-muted-foreground">{statusLabel(activeGame)}</span>
+                  )}
+                </div>
+
+                {/* Teams */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                    <img src={activeGame.homeLogo} className="w-12 h-12 object-contain" alt="" />
+                    <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.home}</span>
+                  </div>
+                  <div className="text-2xl font-black text-muted-foreground px-2">×</div>
+                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                    <img src={activeGame.awayLogo} className="w-12 h-12 object-contain" alt="" />
+                    <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.away}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="grid grid-cols-2 border-t border-border">
+                <button
                   onClick={() => lockMut.mutate()}
                   disabled={lockMut.isPending}
-                  variant={isLocked ? "destructive" : "outline"}
-                  className={`gap-2 font-bold flex-1 ${isLocked ? "" : "border-green-500 text-green-500 hover:bg-green-500/10"}`}
                   data-testid="button-toggle-lock"
+                  className={`flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors border-r border-border
+                    ${isLocked
+                      ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                      : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                    }`}
                 >
-                  {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                  {isLocked ? "🔒 Mercados BLOQUEADOS — Clique para Liberar" : "🔓 Mercados Liberados — Clique para Bloquear Tudo"}
-                </Button>
+                  {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  {isLocked ? "Liberar Mercados" : "Bloquear Mercados"}
+                </button>
+                <button
+                  onClick={() => deactivateMut.mutate()}
+                  disabled={deactivateMut.isPending}
+                  data-testid="button-deactivate-live"
+                  className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <StopCircle className="w-4 h-4" />
+                  Desativar Jogo
+                </button>
               </div>
-
-              {isLocked && (
-                <p className="text-xs text-red-400 text-center font-medium">
-                  ⚠️ Todos os mercados estão suspensos. Usuários não conseguem apostar neste jogo.
-                </p>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground gap-1 w-full"
-                onClick={() => deactivateMut.mutate()}
-                disabled={deactivateMut.isPending}
-                data-testid="button-deactivate-live"
-              >
-                <StopCircle className="w-3.5 h-3.5" />
-                Remover jogo ao vivo do site
-              </Button>
             </div>
           ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <Signal className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Nenhum jogo ao vivo ativo no site.</p>
-              <p className="text-xs mt-1">Selecione um jogo abaixo para ativar.</p>
+            <div className="text-center py-8 text-muted-foreground">
+              <Signal className="w-10 h-10 mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-medium">Nenhum jogo ativo no site.</p>
+              <p className="text-xs mt-1 opacity-70">Selecione um jogo na lista abaixo para ativar.</p>
             </div>
           )}
         </CardContent>
