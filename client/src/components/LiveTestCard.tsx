@@ -190,8 +190,8 @@ function MiniPitch({ attackPct, isDark }: { attackPct: number; isDark: boolean }
   );
 }
 
-function MatchMapSection({ data, isDark }: { data: MapData | undefined; isDark: boolean }) {
-  if (!data || !data.home || !data.away) {
+function MatchMapSection({ data, isLoading, isDark }: { data: MapData | undefined; isLoading: boolean; isDark: boolean }) {
+  if (isLoading && !data) {
     return (
       <div className={`text-center py-3 text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>
         Carregando estatísticas...
@@ -199,12 +199,43 @@ function MatchMapSection({ data, isDark }: { data: MapData | undefined; isDark: 
     );
   }
 
-  const { home, away, events } = data;
-  const totalShots = (home.totalShots + away.totalShots) || 1;
-  // Ball position: weighted by shots on goal (recent pressure)
-  const attackPct = Math.min(85, Math.max(15, Math.round((home.shotsOnGoal / (home.shotsOnGoal + away.shotsOnGoal || 1)) * 100)));
-
+  const events = data?.events ?? [];
   const recentEvents = [...events].reverse().slice(0, 8);
+
+  // No stats available — show events only if any, otherwise a message
+  if (!data?.home || !data?.away) {
+    return (
+      <div className="space-y-2">
+        {recentEvents.length > 0 ? (
+          <div>
+            <p className={`text-[10px] uppercase tracking-wide mb-1.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Eventos</p>
+            <div className="space-y-1">
+              {recentEvents.map((e, i) => {
+                const icon = eventIcon(e.type, e.detail);
+                const min = `${e.minute}${e.extra ? "+" + e.extra : ""}`;
+                return (
+                  <div key={i} className={`flex items-center gap-2 text-[10px] ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                    <span className={`w-7 text-right shrink-0 font-mono ${isDark ? "text-gray-500" : "text-gray-400"}`}>{min}'</span>
+                    <span className="text-sm leading-none">{icon}</span>
+                    <span className={`flex-1 truncate ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                      {e.player ?? e.detail} · {e.teamName}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className={`text-center py-3 text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+            Estatísticas ainda não disponíveis
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const { home, away } = data;
+  const attackPct = Math.min(85, Math.max(15, Math.round((home.shotsOnGoal / (home.shotsOnGoal + away.shotsOnGoal || 1)) * 100)));
 
   return (
     <div className="space-y-3">
@@ -240,9 +271,9 @@ function MatchMapSection({ data, isDark }: { data: MapData | undefined; isDark: 
         {home.xg != null && away.xg != null && (
           <div className="space-y-0.5">
             <div className="flex items-center justify-between text-[10px]">
-              <span className={`font-bold w-8 text-right text-green-400`}>{home.xg.toFixed(2)}</span>
+              <span className="font-bold w-8 text-right text-green-400">{home.xg.toFixed(2)}</span>
               <span className={`flex-1 text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>xG</span>
-              <span className={`font-bold w-8 text-left text-green-400`}>{away.xg.toFixed(2)}</span>
+              <span className="font-bold w-8 text-left text-green-400">{away.xg.toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -287,7 +318,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const [refetchMs, setRefetchMs] = useState(5_000);
   const [showMap, setShowMap] = useState(false);
 
-  const { data: mapData } = useQuery<MapData>({
+  const { data: mapData, isLoading: mapLoading } = useQuery<MapData>({
     queryKey: ["/api/football/live-map"],
     queryFn: () => fetch("/api/football/live-map").then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
     refetchInterval: 30_000,
@@ -443,7 +474,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
 
           {showMap && (
             <div className={`px-4 pb-4 border-t ${dividerCls} pt-3`}>
-              <MatchMapSection data={mapData} isDark={isDark} />
+              <MatchMapSection data={mapData} isLoading={mapLoading} isDark={isDark} />
             </div>
           )}
         </div>
