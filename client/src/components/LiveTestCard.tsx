@@ -189,14 +189,7 @@ function MiniPitch({ attackPct, isDark }: { attackPct: number; isDark: boolean }
   );
 }
 
-function MatchMapSection({ isDark }: { isDark: boolean }) {
-  const { data } = useQuery<MapData>({
-    queryKey: ["/api/football/live-map"],
-    queryFn: () => fetch("/api/football/live-map").then(r => r.json()),
-    refetchInterval: 30_000,
-    staleTime: 25_000,
-  });
-
+function MatchMapSection({ data, isDark }: { data: MapData | undefined; isDark: boolean }) {
   if (!data || !data.home || !data.away) {
     return (
       <div className={`text-center py-3 text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>
@@ -292,6 +285,14 @@ interface Props {
 export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
   const [refetchMs, setRefetchMs] = useState(5_000);
   const [showMap, setShowMap] = useState(false);
+
+  const { data: mapData } = useQuery<MapData>({
+    queryKey: ["/api/football/live-map"],
+    queryFn: () => fetch("/api/football/live-map").then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    retry: 2,
+  });
 
   const { data, isLoading, error } = useQuery<LiveData>({
     queryKey: ["/api/football/live-test"],
@@ -441,7 +442,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
 
           {showMap && (
             <div className={`px-4 pb-4 border-t ${dividerCls} pt-3`}>
-              <MatchMapSection isDark={isDark} />
+              <MatchMapSection data={mapData} isDark={isDark} />
             </div>
           )}
         </div>
