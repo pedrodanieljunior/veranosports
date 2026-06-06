@@ -426,13 +426,13 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   }, [data?.fetchedAt]);
 
   const containerCls = isDark
-    ? "bg-[#4a4a4a] border border-[#5a5a5a] rounded-xl overflow-hidden"
-    : "bg-white/90 border border-black/10 rounded-xl overflow-hidden shadow-sm";
-  const headerCls = isDark ? "bg-[#3d3d3d] border-b border-[#5a5a5a]" : "bg-red-50 border-b border-red-200";
-  const teamCls = isDark ? "text-white font-bold" : "text-gray-900 font-bold";
-  const scoreCls = isDark ? "text-white font-black text-2xl" : "text-gray-900 font-black text-2xl";
-  const marketTitleCls = isDark ? "text-gray-400 font-semibold text-[11px] uppercase tracking-wide" : "text-gray-500 font-semibold text-[11px] uppercase tracking-wide";
-  const dividerCls = isDark ? "border-white/5" : "border-black/5";
+    ? "bg-gradient-to-b from-white to-orange-400 border border-orange-300 rounded-xl overflow-hidden"
+    : "bg-gradient-to-b from-white to-orange-400 border border-orange-300 rounded-xl overflow-hidden shadow-sm";
+  const headerCls = isDark ? "bg-white/60 border-b border-orange-200" : "bg-white/60 border-b border-orange-200";
+  const teamCls = "text-gray-900 font-bold";
+  const scoreCls = "text-gray-900 font-black text-2xl";
+  const marketTitleCls = "text-gray-600 font-semibold text-[11px] uppercase tracking-wide";
+  const dividerCls = "border-black/10";
 
   if (isLoading) {
     return (
@@ -515,11 +515,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         <div className={`border-t ${dividerCls}`}>
           <button
             onClick={() => setShowMap(v => !v)}
-            className={`w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold transition-colors ${
-              isDark
-                ? "text-gray-400 hover:text-white hover:bg-white/5"
-                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
+            className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold transition-colors text-gray-600 hover:text-gray-900 hover:bg-black/5"
             data-testid="button-toggle-match-map"
           >
             {showMap ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -528,7 +524,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
 
           {showMap && (
             <div className={`px-4 pb-4 border-t ${dividerCls} pt-3`}>
-              <MatchMapSection data={mapData} isLoading={mapLoading} isDark={isDark} />
+              <MatchMapSection data={mapData} isLoading={mapLoading} isDark={false} />
             </div>
           )}
         </div>
@@ -551,7 +547,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               : market.values;
             if (filteredValues.length === 0) return null;
             return (
-              <div key={market.id} className={`text-center ${idx > 0 ? `border-t pt-3 ${isDark ? "border-white/20" : "border-black/15"}` : ""}`}>
+              <div key={market.id} className={`text-center ${idx > 0 ? "border-t pt-3 border-black/15" : ""}`}>
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {filteredValues.map(v => {
@@ -583,16 +579,14 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                         disabled={isSuspended}
                         className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
                           isSuspended
-                            ? "opacity-40 cursor-not-allowed " + (isDark ? "bg-white/5 border-white/10 text-gray-500" : "bg-gray-100 border-gray-200 text-gray-400")
+                            ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
                             : movement === "up"
-                            ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 " + (isDark ? "bg-green-500/10 text-white" : "bg-green-50 text-gray-800")
+                            ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-green-50 text-gray-800"
                             : movement === "down"
-                            ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 " + (isDark ? "bg-red-500/10 text-white" : "bg-red-50 text-gray-800")
+                            ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 bg-red-50 text-gray-800"
                             : active
                             ? "bg-yellow-400 border-yellow-400 text-black"
-                            : isDark
-                            ? "bg-white/5 border-white/15 text-white hover:bg-white/10"
-                            : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"
+                            : "bg-white/60 border-black/15 text-gray-900 hover:bg-white/80"
                         }`}
                       >
                         <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
@@ -601,7 +595,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                             <Lock className="w-3.5 h-3.5 text-gray-500" />
                           ) : (
                             <>
-                              <span className={`text-sm font-black ${active ? "text-black" : "text-yellow-400"}`}>{rawOdd.toFixed(2)}</span>
+                              <span className={`text-sm font-black ${active ? "text-black" : "text-orange-600"}`}>{rawOdd.toFixed(2)}</span>
                               {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
                               {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
                             </>
