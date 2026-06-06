@@ -4886,6 +4886,40 @@ export async function registerRoutes(
   let activeLiveGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null = null;
   let liveMarketsLocked = false;
 
+  const FINISHED_STATUSES = new Set(["FT","AET","PEN","CANC","ABD","AWD","WO"]);
+
+  // Helper: clear all live state
+  const deactivateLiveGame = () => {
+    if (activeLiveFixtureId) {
+      cache.delete(`live_test_${activeLiveFixtureId}`);
+      cache.delete(`live_map_${activeLiveFixtureId}`);
+    }
+    activeLiveFixtureId = null;
+    activeLiveGameInfo = null;
+    liveMarketsLocked = false;
+  };
+
+  // Background watcher: auto-deactivate when the active fixture finishes
+  const AUTO_CHECK_INTERVAL = 60 * 1000; // 60 s
+  setInterval(async () => {
+    if (!activeLiveFixtureId || !API_FOOTBALL_KEY) return;
+    try {
+      const r = await fetch(`${API_FOOTBALL_BASE}/fixtures?id=${activeLiveFixtureId}`, {
+        headers: { "x-apisports-key": API_FOOTBALL_KEY },
+      });
+      const data = await r.json();
+      const fixture = data?.response?.[0];
+      if (!fixture) return;
+      const statusShort: string = fixture.fixture?.status?.short ?? "";
+      if (FINISHED_STATUSES.has(statusShort)) {
+        console.log(`[live-game] Auto-deactivated fixture ${activeLiveFixtureId} — status: ${statusShort}`);
+        deactivateLiveGame();
+      }
+    } catch (err) {
+      console.error("[live-game] Auto-check error:", err);
+    }
+  }, AUTO_CHECK_INTERVAL);
+
   // Public: frontend reads this to know if a live card should be shown
   app.get("/api/football/live-status", (_req, res) => {
     res.json({ fixtureId: activeLiveFixtureId, gameInfo: activeLiveGameInfo, isLocked: liveMarketsLocked });
@@ -4998,12 +5032,26 @@ export async function registerRoutes(
         goalsAway: f.goals.away as number | null,
         isLive: LIVE_STATUSES.includes(f.fixture.status.short),
       }));
-      games.sort((a, b) => {
+      // Auto-deactivate if the active fixture appears finished in this response
+      if (activeLiveFixtureId) {
+        const activeInList = games.find(g => g.id === activeLiveFixtureId);
+        if (activeInList && FINISHED_STATUSES.has(activeInList.status)) {
+          console.log(`[live-game] Auto-deactivated fixture ${activeLiveFixtureId} on list refresh — status: ${activeInList.status}`);
+          deactivateLiveGame();
+        }
+      }
+
+      // Remove finished/cancelled games from the list (keep only live or upcoming)
+      const visibleGames = games.filter(g =>
+        g.isLive || g.status === "NS" || g.status === "TBD" || g.id === activeLiveFixtureId
+      );
+
+      visibleGames.sort((a, b) => {
         if (a.isLive && !b.isLive) return -1;
         if (!a.isLive && b.isLive) return 1;
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
-      return res.json({ games, activeFixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked });
+      return res.json({ games: visibleGames, activeFixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked });
     } catch (err) {
       console.error("[admin/live-games]", err);
       return res.status(500).json({ error: "Erro ao buscar jogos" });
@@ -5028,14 +5076,8 @@ export async function registerRoutes(
 
   // Admin: deactivate live game
   app.post("/api/admin/live-game/deactivate", requireAdmin, (_req, res) => {
-    if (activeLiveFixtureId) {
-      cache.delete(`live_test_${activeLiveFixtureId}`);
-      cache.delete(`live_map_${activeLiveFixtureId}`);
-    }
-    activeLiveFixtureId = null;
-    activeLiveGameInfo = null;
-    liveMarketsLocked = false;
-    console.log("[live-game] Deactivated");
+    deactivateLiveGame();
+    console.log("[live-game] Deactivated manually");
     return res.json({ ok: true });
   });
 
