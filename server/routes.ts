@@ -4969,6 +4969,74 @@ export async function registerRoutes(
               }
               if (values.length > 0) markets.push({ id: frontendId, name: market.name, values });
             }
+
+            // --- ID 20: Match Corners (Over/Under, pick main line) ---
+            const cornersM = liveOdds.find((o: any) => o.id === 20);
+            if (cornersM) {
+              const byHc: Record<string, { over?: any; under?: any }> = {};
+              for (const v of (cornersM.values ?? [])) {
+                if (v.value === "Exactly") continue;
+                if (!byHc[v.handicap]) byHc[v.handicap] = {};
+                if (v.value === "Over") byHc[v.handicap].over = v;
+                if (v.value === "Under") byHc[v.handicap].under = v;
+              }
+              const preferred = ["8", "9", "7", "10", "6"];
+              const hcKey = preferred.find(h => byHc[h]?.over && byHc[h]?.under) ?? Object.keys(byHc)[0];
+              if (hcKey && byHc[hcKey]) {
+                const vals: any[] = [];
+                if (byHc[hcKey].over) vals.push({ value: `Over ${hcKey}`, odd: parseFloat(byHc[hcKey].over.odd), suspended: !!byHc[hcKey].over.suspended });
+                if (byHc[hcKey].under) vals.push({ value: `Under ${hcKey}`, odd: parseFloat(byHc[hcKey].under.odd), suspended: !!byHc[hcKey].under.suspended });
+                if (vals.length > 0) markets.push({ id: 20, name: "Escanteios Over/Under", values: vals });
+              }
+            }
+
+            // --- ID 119: Total Cards ---
+            const cardsM = liveOdds.find((o: any) => o.id === 119);
+            if (cardsM) {
+              const vals = (cardsM.values ?? []).map((v: any) => ({
+                value: `${v.value} ${v.handicap}`,
+                odd: parseFloat(v.odd),
+                suspended: !!v.suspended,
+              }));
+              if (vals.length > 0) markets.push({ id: 119, name: "Total Cartões", values: vals });
+            }
+
+            // --- ID 25: Match Goals (all lines, sorted) ---
+            const goalsM = liveOdds.find((o: any) => o.id === 25);
+            if (goalsM) {
+              const byHc: Record<string, any[]> = {};
+              for (const v of (goalsM.values ?? [])) {
+                if (!byHc[v.handicap]) byHc[v.handicap] = [];
+                byHc[v.handicap].push(v);
+              }
+              const sortedHcs = Object.keys(byHc).sort((a, b) => parseFloat(a) - parseFloat(b));
+              const vals: any[] = [];
+              for (const hc of sortedHcs) {
+                for (const v of byHc[hc]) {
+                  vals.push({ value: `${v.value} ${hc}`, odd: parseFloat(v.odd), suspended: !!v.suspended });
+                }
+              }
+              if (vals.length > 0) markets.push({ id: 25, name: "Gols Over/Under", values: vals });
+            }
+
+            // --- ID 65: Next 10 Minutes Total ---
+            const next10M = liveOdds.find((o: any) => o.id === 65);
+            if (next10M) {
+              const elapsed = fixture.fixture.status.elapsed ?? 0;
+              const availableHcs = [...new Set((next10M.values ?? []).map((v: any) => Number(v.handicap)))].sort((a: number, b: number) => a - b) as number[];
+              const nextTarget = Math.ceil((elapsed + 1) / 10) * 10;
+              const targetHc = availableHcs.find(h => h >= nextTarget) ?? availableHcs[0];
+              if (targetHc != null) {
+                const groupVals = (next10M.values ?? []).filter((v: any) => Number(v.handicap) === targetHc);
+                const vals = groupVals.map((v: any) => ({
+                  value: v.value.trim().replace(/\s+/g, " "),
+                  odd: parseFloat(v.odd),
+                  suspended: !!v.suspended,
+                }));
+                if (vals.length > 0) markets.push({ id: 65, name: `Próx. ${targetHc} min`, values: vals });
+              }
+            }
+
           } else {
             // Pre-match odds: response[0].bookmakers[0].bets — IDs match frontend market IDs directly
             const PREMATCH_IDS = new Set([1, 3, 5, 6, 8, 12, 13]);

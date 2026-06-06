@@ -14,6 +14,10 @@ const MARKET_LABELS: Record<number, string> = {
   12: "Dupla Chance",
   3: "Vencedor 2º Tempo",
   6: "Over/Under 1º Tempo",
+  20: "Escanteios Over/Under",
+  119: "Total Cartões",
+  25: "Gols Over/Under",
+  65: "Próximos 10 min",
 };
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -25,6 +29,12 @@ const OUTCOME_LABELS: Record<string, string> = {
   "Home/Draw": "1X",
   "Home/Away": "12",
   "Draw/Away": "X2",
+  "Goals/Over 0.5": "Gol +0.5",
+  "Goals/Under 0.5": "Gol -0.5",
+  "Corners 3-Way/Over 0.5": "Cant +0.5",
+  "Corners 3-Way/Under 0.5": "Cant -0.5",
+  "Cards/Over 0.5": "Cart +0.5",
+  "Cards/Under 0.5": "Cart -0.5",
 };
 
 interface LiveData {
