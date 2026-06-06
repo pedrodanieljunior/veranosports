@@ -5611,14 +5611,31 @@ function AdminLiveGameTab() {
     onSuccess: () => refetch(),
   });
 
+  const [mobileToken, setMobileToken] = useState<string | null>(null);
+  const [mobileLinkCopied, setMobileLinkCopied] = useState(false);
+  const [mobileTokenError, setMobileTokenError] = useState<string | null>(null);
+
   const mobileTokenMut = useMutation({
-    mutationFn: () =>
-      fetch("/api/admin/live-control/generate-token", { method: "POST", credentials: "include" }).then(r => r.json()),
+    mutationFn: async () => {
+      const r = await fetch("/api/admin/live-control/generate-token", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.message ?? "Erro ao gerar link");
+      return body as { token: string };
+    },
+    onSuccess: (data) => {
+      setMobileToken(data.token);
+      setMobileTokenError(null);
+    },
+    onError: (err: Error) => {
+      setMobileTokenError(err.message);
+    },
   });
 
-  const [mobileLinkCopied, setMobileLinkCopied] = useState(false);
-  const mobileLink = mobileTokenMut.data?.token
-    ? `${window.location.origin}/live-control?t=${mobileTokenMut.data.token}`
+  const mobileLink = mobileToken
+    ? `${window.location.origin}/live-control?t=${mobileToken}`
     : null;
 
   const copyMobileLink = () => {
@@ -5671,15 +5688,22 @@ function AdminLiveGameTab() {
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Controle Mobile</span>
               </div>
               {!mobileLink ? (
-                <button
-                  onClick={() => mobileTokenMut.mutate()}
-                  disabled={mobileTokenMut.isPending}
-                  data-testid="button-generate-mobile-link"
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border border-dashed border-border text-muted-foreground hover:bg-muted/40 transition-colors"
-                >
-                  <Smartphone className="w-4 h-4" />
-                  {mobileTokenMut.isPending ? "Gerando..." : "Gerar Link Mobile"}
-                </button>
+                <>
+                  <button
+                    onClick={() => mobileTokenMut.mutate()}
+                    disabled={mobileTokenMut.isPending}
+                    data-testid="button-generate-mobile-link"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border border-dashed border-border text-muted-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
+                  >
+                    {mobileTokenMut.isPending
+                      ? <RefreshCw className="w-4 h-4 animate-spin" />
+                      : <Smartphone className="w-4 h-4" />}
+                    {mobileTokenMut.isPending ? "Gerando..." : "Gerar Link Mobile"}
+                  </button>
+                  {mobileTokenError && (
+                    <p className="text-[11px] text-red-400 mt-1.5 text-center">{mobileTokenError}</p>
+                  )}
+                </>
               ) : (
                 <div className="flex gap-2">
                   <div className="flex-1 flex items-center gap-1.5 bg-background rounded-lg px-3 py-2 border border-border overflow-hidden">
