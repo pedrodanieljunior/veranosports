@@ -5587,12 +5587,12 @@ function AdminLiveGameTab() {
     staleTime: 20_000,
   });
 
-  // Lightweight lock-status polling every 5s — picks up changes from mobile link instantly
+  // Lightweight lock-status polling every 2s — picks up changes from mobile link fast
   const { data: lockStatus } = useQuery<{ isLocked: boolean; activeFixtureId: number | null }>({
     queryKey: ["/api/admin/live-game/lock-status"],
     queryFn: () => fetch("/api/admin/live-game/lock-status", { credentials: "include" }).then(r => r.json()),
-    refetchInterval: 5_000,
-    staleTime: 4_000,
+    refetchInterval: 2_000,
+    staleTime: 1_500,
   });
 
   const fmt = (n: number | null) => n == null ? "?" : n;
@@ -5616,7 +5616,14 @@ function AdminLiveGameTab() {
   const lockMut = useMutation({
     mutationFn: () =>
       fetch("/api/admin/live-game/toggle-lock", { method: "POST", credentials: "include" }).then(r => r.json()),
-    onSuccess: () => refetch(),
+    onSuccess: (data) => {
+      // Instantly update the lock-status cache with the returned value — no need to wait for poll
+      queryClient.setQueryData(["/api/admin/live-game/lock-status"], (old: any) => ({
+        ...old,
+        isLocked: data.isLocked,
+      }));
+      refetch();
+    },
   });
 
   const [mobileToken, setMobileToken] = useState<string | null>(null);
