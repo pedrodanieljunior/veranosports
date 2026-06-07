@@ -260,9 +260,35 @@ export default function Copa() {
   return (
     <div className="min-h-screen bg-white">
       {/* ===== HEADER ===== */}
-      <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "radial-gradient(ellipse at 90% 0%, rgba(0,140,255,0.45) 0%, transparent 55%), radial-gradient(ellipse at 75% 100%, rgba(0,80,200,0.3) 0%, transparent 50%), repeating-linear-gradient(38deg, transparent, transparent 38px, rgba(0,160,255,0.07) 38px, rgba(0,160,255,0.07) 39px), repeating-linear-gradient(38deg, transparent, transparent 70px, rgba(0,200,255,0.04) 70px, rgba(0,200,255,0.04) 71px), linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)", borderBottom: "2px solid #e87c1e" }}>
+      <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2 overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)", borderBottom: "2px solid #e87c1e" }}>
+        {/* Neon streaks overlay */}
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 92% 20%, rgba(0,160,255,0.55) 0%, rgba(0,100,220,0.25) 30%, transparent 65%)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 80% 90%, rgba(0,80,200,0.3) 0%, transparent 45%)" }} />
+          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="neon-m">
+                <feGaussianBlur stdDeviation="1.8" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+              <filter id="neon-m2">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+            <line x1="200" y1="160" x2="420" y2="-15" stroke="rgba(80,180,255,0.9)" strokeWidth="1.5" filter="url(#neon-m)" />
+            <line x1="220" y1="160" x2="440" y2="-15" stroke="rgba(100,200,255,0.7)" strokeWidth="1" filter="url(#neon-m)" />
+            <line x1="240" y1="160" x2="460" y2="-15" stroke="rgba(60,160,255,0.8)" strokeWidth="2" filter="url(#neon-m2)" />
+            <line x1="262" y1="160" x2="482" y2="-15" stroke="rgba(120,210,255,0.65)" strokeWidth="1" filter="url(#neon-m)" />
+            <line x1="285" y1="160" x2="505" y2="-15" stroke="rgba(80,180,255,0.85)" strokeWidth="1.5" filter="url(#neon-m)" />
+            <line x1="308" y1="160" x2="528" y2="-15" stroke="rgba(40,140,255,0.5)" strokeWidth="1" filter="url(#neon-m)" />
+            <line x1="175" y1="160" x2="395" y2="-15" stroke="rgba(60,160,255,0.4)" strokeWidth="1" filter="url(#neon-m)" />
+            <line x1="250" y1="160" x2="470" y2="-15" stroke="rgba(180,230,255,1)" strokeWidth="0.8" />
+            <line x1="275" y1="160" x2="495" y2="-15" stroke="rgba(180,230,255,0.9)" strokeWidth="0.6" />
+          </svg>
+        </div>
         {/* Row 1: Logo + Copa badge + Auth */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2" style={{ position: "relative", zIndex: 1 }}>
           <div className="flex items-center gap-2">
             <img src={fwSportsLogo} alt="Verano Sports" className="h-12 w-auto object-contain" />
             <img src={copaLogo} alt="Copa do Mundo 2026" className="h-12 w-auto object-contain" />
@@ -294,7 +320,7 @@ export default function Copa() {
         </div>
 
         {/* Row 2: Ligas + Principais Ligas */}
-        <div className="flex flex-row flex-nowrap items-center gap-1">
+        <div className="flex flex-row flex-nowrap items-center gap-1" style={{ position: "relative", zIndex: 1 }}>
           <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={(key) => { setSelectedSport(key); setActiveTab("todos"); }} isLoading={sportsLoading} />
           <Popover>
             <PopoverTrigger asChild>
@@ -329,7 +355,7 @@ export default function Copa() {
         </div>
 
         {/* Row 3: Search */}
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-2 shadow-sm" style={{ position: "relative", zIndex: 1 }}>
           <Search className="w-4 h-4 shrink-0 text-gray-400" />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar time ou seleção..." className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none" data-testid="input-search-copa" />
           {searchQuery && <button onClick={() => setSearchQuery("")}><X className="w-4 h-4 text-gray-400" /></button>}
