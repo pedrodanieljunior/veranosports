@@ -258,7 +258,7 @@ export default function Copa() {
   const pendingBets = betHistory.filter(b => b.status === "pending").length;
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(to bottom, #0d1629 0%, #12204a 25%, #1a3a7a 50%, #e8f0ff 80%, #ffffff 100%)" }}>
+    <div className="min-h-screen bg-white">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)", borderBottom: "2px solid #e87c1e" }}>
         {/* Row 1: Logo + Copa badge + Auth */}
@@ -329,27 +329,26 @@ export default function Copa() {
         </div>
 
         {/* Row 3: Search */}
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(201,162,39,0.25)" }}>
-          <Search className="w-4 h-4 shrink-0" style={{ color: "#c9a227" }} />
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar time ou seleção..." className="flex-1 bg-transparent text-white text-sm placeholder-white/40 outline-none" data-testid="input-search-copa" />
-          {searchQuery && <button onClick={() => setSearchQuery("")}><X className="w-4 h-4 text-white/50" /></button>}
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-2 shadow-sm">
+          <Search className="w-4 h-4 shrink-0 text-gray-400" />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar time ou seleção..." className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none" data-testid="input-search-copa" />
+          {searchQuery && <button onClick={() => setSearchQuery("")}><X className="w-4 h-4 text-gray-400" /></button>}
         </div>
       </header>
 
       {/* ===== COUNTDOWN BANNER ===== */}
       {!countdown.started && (
         <div className="px-3 pt-3">
-          <div className="rounded-xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.4)" }}>
-            <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 80% 50%, #ffd700 0%, transparent 60%)" }} />
-            <div className="relative px-3 pt-2 pb-2 flex flex-col gap-2">
-              <div className="flex items-start gap-2">
-                <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-14 w-auto object-contain shrink-0 mt-0.5" style={{ filter: "drop-shadow(0 0 6px rgba(201,162,39,0.5))" }} />
+          <div className="rounded-xl overflow-hidden bg-white shadow-sm border border-gray-100">
+            <div className="px-3 pt-3 pb-3 flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-16 w-auto object-contain shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(11px, 3.2vw, 15px)" }}>VERANO SPORTS RUMO À COPA DO MUNDO 2026</h2>
-                  <p className="text-white/45 text-[9px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</p>
+                  <h2 className="font-black leading-tight" style={{ color: "#1565C0", fontSize: "clamp(11px, 3.2vw, 14px)" }}>VERANO SPORTS RUMO À COPA DO MUNDO 2026</h2>
+                  <p className="text-gray-400 text-[9px] font-bold tracking-widest mt-0.5">EUA · CANADÁ · MÉXICO</p>
                   <div className="flex items-center gap-3 mt-1 overflow-hidden">
-                    <span className="flex items-center gap-1 text-white/60 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-400 text-[10px]">✓</span>Cobertura completa</span>
-                    <span className="flex items-center gap-1 text-white/60 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-400 text-[10px]">✓</span>Odds especiais e mercados exclusivos</span>
+                    <span className="flex items-center gap-1 text-gray-500 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-500 text-[10px]">✓</span>Cobertura completa</span>
+                    <span className="flex items-center gap-1 text-gray-500 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-500 text-[10px]">✓</span>Odds especiais e mercados exclusivos</span>
                   </div>
                 </div>
               </div>
@@ -361,11 +360,11 @@ export default function Copa() {
                   { v: countdown.seconds, l: "S" },
                 ].map(({ v, l }, i, arr) => (
                   <div key={l} className="flex items-center gap-1">
-                    <div className="flex flex-col items-center rounded px-2 py-0.5 min-w-[32px]" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(201,162,39,0.4)" }}>
-                      <span className="text-sm font-black leading-none" style={{ color: "#f5c518" }}>{String(v).padStart(2, "0")}</span>
-                      <span className="text-white/45 text-[8px] font-bold">{l}</span>
+                    <div className="flex flex-col items-center rounded-lg px-2.5 py-1 min-w-[36px]" style={{ background: "#1565C0" }}>
+                      <span className="text-sm font-black leading-none text-white">{String(v).padStart(2, "0")}</span>
+                      <span className="text-white/60 text-[8px] font-bold">{l}</span>
                     </div>
-                    {i < arr.length - 1 && <span className="text-white/30 text-xs font-bold">:</span>}
+                    {i < arr.length - 1 && <span className="text-gray-300 text-xs font-bold">:</span>}
                   </div>
                 ))}
               </div>
@@ -377,7 +376,7 @@ export default function Copa() {
       {/* ===== LIVE TEST CARD ===== */}
       {!isSearching && !isTyping && liveStatus?.fixtureId && (
         <div className="px-3 pt-3">
-          <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={true} />
+          <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
         </div>
       )}
 
@@ -403,8 +402,8 @@ export default function Copa() {
                   data-testid={`tab-copa-${tab.key}`}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[10px] whitespace-nowrap transition-all shrink-0"
                   style={activeTab === tab.key
-                    ? { background: "#c9a227", color: "#0b1f10" }
-                    : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }
+                    ? { background: "#1565C0", color: "#ffffff" }
+                    : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }
                   }
                 >
                   <span>{tab.icon}</span>
@@ -737,7 +736,7 @@ export default function Copa() {
               error={null}
               selectedSport={null}
               isTodayGames={false}
-              isDark={true}
+              isDark={false}
             />
           )
         ) : (
@@ -751,7 +750,7 @@ export default function Copa() {
             selectedSport={null}
             isTodayGames={!isSearching && !isTyping && activeTab !== "champions"}
             hideHeader={activeTab === "champions"}
-            isDark={true}
+            isDark={false}
           />
         )}
       </div>

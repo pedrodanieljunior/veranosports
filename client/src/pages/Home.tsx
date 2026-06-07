@@ -302,7 +302,7 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
-      <div className="md:hidden flex flex-col min-h-screen" style={{ background: "linear-gradient(to bottom, #0d1629 0%, #12204a 25%, #1a3a7a 50%, #e8f0ff 80%, #ffffff 100%)" }}>
+      <div className="md:hidden flex flex-col min-h-screen bg-white">
         <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)" }}>
           {/* Row 1: Logo + Auth buttons */}
           <div className="flex items-center justify-between">
@@ -366,18 +366,18 @@ export default function Home() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="flex items-center gap-1.5 bg-black/30 border border-white/40 rounded-lg px-2.5 py-1.5">
-              <Search className="w-3.5 h-3.5 text-white shrink-0" />
+            <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-2 shadow-sm">
+              <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar time..."
-                className="flex-1 bg-transparent text-white text-xs font-medium placeholder-white/70 outline-none min-w-0"
+                placeholder="Buscar time ou seleção..."
+                className="flex-1 bg-transparent text-gray-800 text-xs font-medium placeholder-gray-400 outline-none min-w-0"
                 data-testid="input-search-teams"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="text-white/80 hover:text-white">
+                <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -389,7 +389,7 @@ export default function Home() {
         </div>
         {!isSearching && !isTyping && liveStatus?.fixtureId && (
           <div className="px-3 pt-2">
-            <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={true} />
+            <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
           </div>
         )}
         {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
@@ -400,10 +400,10 @@ export default function Home() {
           </div>
         )}
         <div className="flex-1">
-          <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} onToggleSelection={handleToggleSelection} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
+          <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} onToggleSelection={handleToggleSelection} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={false} />
         </div>
         {/* Mobile footer — Regras */}
-        <div className="flex-shrink-0 py-4 px-4 text-center border-t border-white/10">
+        <div className="flex-shrink-0 py-4 px-4 text-center border-t border-gray-100">
           <button
             onClick={() => setShowRules(true)}
             className="inline-flex items-center gap-2 text-yellow-400 hover:text-yellow-300 text-sm font-semibold transition-colors"
