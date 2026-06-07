@@ -262,7 +262,7 @@ export default function Copa() {
         <div className="flex items-center justify-between gap-2" style={{ position: "relative", zIndex: 1 }}>
           <div className="flex items-center gap-2">
             <img src={fwSportsLogo} alt="Verano Sports" className="h-12 w-auto object-contain" />
-            <img src={copaLogo} alt="Copa do Mundo 2026" className="h-12 w-auto object-contain" />
+            <img src={copaLogo} alt="Copa do Mundo 2026" className="h-8 w-auto object-contain" />
           </div>
 
           <div className="flex items-center gap-1.5">
