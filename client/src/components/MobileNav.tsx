@@ -28,10 +28,10 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
           <span className="text-white font-bold text-[10px] whitespace-nowrap">Todas as Ligas</span>
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0 border-0" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 50%, #d4960a 100%)" }}>
+      <SheetContent side="left" className="w-72 p-0 border-0" style={{ background: "linear-gradient(160deg, #7c4a00 0%, #b8750a 30%, #d4960f 55%, #c47c05 75%, #8a5200 100%)", borderRight: "1px solid rgba(201,162,39,0.4)" }}>
         <div className="flex flex-col h-full">
-          <SheetHeader className="p-4 border-b border-yellow-400/50">
-            <SheetTitle className="flex items-center gap-2 text-white text-sm font-bold drop-shadow">
+          <SheetHeader className="p-4 border-b border-yellow-600/40">
+            <SheetTitle className="flex items-center gap-2 text-[#fff8dc] text-sm font-bold" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>
               <span className="text-base">&#9917;</span>
               Ligas de Futebol
             </SheetTitle>
@@ -41,7 +41,7 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
             {isLoading ? (
               <div className="p-4 space-y-2">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <Skeleton key={i} className="h-7 w-full bg-white/30" />
+                  <Skeleton key={i} className="h-7 w-full bg-white/20" />
                 ))}
               </div>
             ) : (
@@ -52,9 +52,12 @@ export function MobileNav({ sports, selectedSport, onSelectSport, isLoading }: M
                     onClick={() => handleSelectSport(sport.key)}
                     className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors ${
                       selectedSport === sport.key
-                        ? "bg-white/30 text-white font-bold border-l-[3px] border-l-white"
-                        : "text-white/90 hover:bg-white/20 border-l-[3px] border-l-transparent"
+                        ? "font-bold border-l-[3px] border-l-yellow-300"
+                        : "border-l-[3px] border-l-transparent hover:bg-white/10"
                     }`}
+                    style={selectedSport === sport.key
+                      ? { background: "rgba(255,220,80,0.25)", color: "#fff8dc" }
+                      : { color: "#ffe9a0" }}
                     data-testid={`button-mobile-sport-${sport.key}`}
                   >
                     {translateLeagueName(sport.key, sport.title)}
