@@ -715,7 +715,7 @@ export function ProfileModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) { setView("menu"); onClose(); } }}>
-      <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
+      <DialogContent className="w-[calc(100vw-16px)] max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {view === "menu" && "Perfil"}
@@ -860,7 +860,7 @@ export function ProfileModal({ open, onClose }: Props) {
                                 key={level}
                                 className={`rounded-lg p-1.5 text-center border transition-colors relative
                                   ${isCurrent ? `${t.cardReached} ring-1 ring-offset-0` : ""}
-                                  ${isPast    ? "bg-zinc-800/60 border-zinc-700/40 opacity-50" : ""}
+                                  ${isPast    ? "bg-gray-100 border-gray-200 opacity-80" : ""}
                                   ${isLocked  ? t.card : ""}
                                 `}
                                 style={isCurrent ? { boxShadow: `0 0 8px 0 ${t.glow}` } : undefined}
@@ -878,12 +878,12 @@ export function ProfileModal({ open, onClose }: Props) {
                                 `}>
                                   {t.label}
                                 </p>
-                                <p className={`text-[9px] ${isCurrent ? "text-gray-700" : "text-zinc-600"}`}>
+                                <p className={`text-[9px] ${isCurrent ? "text-gray-700" : "text-gray-500"}`}>
                                   R${threshold >= 1000 ? "1k" : threshold}
                                 </p>
                                 <p className={`text-[10px] font-bold mt-0.5
                                   ${isCurrent ? t.bonusReached : ""}
-                                  ${isPast    ? "text-zinc-600 line-through" : ""}
+                                  ${isPast    ? "text-gray-500 line-through" : ""}
                                   ${isLocked  ? t.bonus : ""}
                                 `}>
                                   +R${bonus}
@@ -900,7 +900,7 @@ export function ProfileModal({ open, onClose }: Props) {
                         {allDone
                           ? <>💎 Meta atingida! Bônus creditado na segunda às 08h</>
                           : nextLevel
-                          ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ {TIERS[CLUB_FW_LEVELS.findIndex(l => l.level === nextLevel.level)].label}</>
+                          ? <>Apostado: <span className="text-gray-900 font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-600 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ {TIERS[CLUB_FW_LEVELS.findIndex(l => l.level === nextLevel.level)].label}</>
                           : "Acompanhe seu progresso aqui"}
                       </p>
                       <p className="text-[10px] text-gray-400">
