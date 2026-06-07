@@ -73,7 +73,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
   return (
     <div 
       className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-gradient-to-b from-white to-blue-300 hover:shadow-md"} ${hasSelections ? "border-transparent" : isDark ? "border-[#5a5a5a]" : "border-blue-200"}`}
-      style={hasSelections ? { boxShadow: "0 0 0 1px #8a5200, 0 0 0 2.5px #d4960f, 0 0 0 4px #7c4a00" } : undefined}
+      style={hasSelections ? { boxShadow: "0 0 0 2px #c9a227" } : undefined}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
