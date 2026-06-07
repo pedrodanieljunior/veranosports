@@ -26,33 +26,64 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-50 overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)" }}>
-      {/* Neon streaks overlay */}
+      {/* Neon fan streaks overlay */}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 92% 20%, rgba(0,160,255,0.55) 0%, rgba(0,100,220,0.25) 30%, transparent 65%)" }} />
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 80% 80%, rgba(0,80,200,0.3) 0%, transparent 50%)" }} />
-        {/* Neon lines */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <filter id="neon-h">
-              <feGaussianBlur stdDeviation="1.8" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            {/* Focal point glow */}
+            <radialGradient id="focal-h" cx="82%" cy="38%" r="25%">
+              <stop offset="0%" stopColor="rgba(120,200,255,0.7)" />
+              <stop offset="100%" stopColor="rgba(0,100,255,0)" />
+            </radialGradient>
+            {/* Streak gradients — all from focal (328,38) to endpoint */}
+            <linearGradient id="sh1" x1="328" y1="38" x2="-20" y2="-20" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(160,220,255,0.95)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh2" x1="328" y1="38" x2="60" y2="-15" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(140,210,255,0.85)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh3" x1="328" y1="38" x2="170" y2="-18" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(180,230,255,0.9)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh4" x1="328" y1="38" x2="-30" y2="55" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(100,190,255,0.8)" /><stop offset="100%" stopColor="rgba(40,120,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh5" x1="328" y1="38" x2="-30" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(80,170,255,0.7)" /><stop offset="100%" stopColor="rgba(30,100,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh6" x1="328" y1="38" x2="60" y2="118" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(120,200,255,0.75)" /><stop offset="100%" stopColor="rgba(50,130,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh7" x1="328" y1="38" x2="200" y2="118" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(100,185,255,0.6)" /><stop offset="100%" stopColor="rgba(40,110,255,0)" />
+            </linearGradient>
+            <linearGradient id="sh8" x1="328" y1="38" x2="310" y2="118" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="rgba(140,210,255,0.5)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
+            </linearGradient>
+            <filter id="fglow-h" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="b" />
+              <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
-            <filter id="neon-h2">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            <filter id="fglow-h2" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.2" result="b" />
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
           </defs>
-          {/* Main bright streaks */}
-          <line x1="210" y1="140" x2="420" y2="-10" stroke="rgba(80,180,255,0.9)" strokeWidth="1.5" filter="url(#neon-h)" />
-          <line x1="230" y1="140" x2="440" y2="-10" stroke="rgba(100,200,255,0.7)" strokeWidth="1" filter="url(#neon-h)" />
-          <line x1="250" y1="140" x2="460" y2="-10" stroke="rgba(60,160,255,0.8)" strokeWidth="2" filter="url(#neon-h2)" />
-          <line x1="270" y1="140" x2="480" y2="-10" stroke="rgba(120,210,255,0.6)" strokeWidth="1" filter="url(#neon-h)" />
-          <line x1="295" y1="140" x2="505" y2="-10" stroke="rgba(80,180,255,0.85)" strokeWidth="1.5" filter="url(#neon-h)" />
-          <line x1="320" y1="140" x2="530" y2="-10" stroke="rgba(40,140,255,0.5)" strokeWidth="1" filter="url(#neon-h)" />
-          <line x1="180" y1="140" x2="390" y2="-10" stroke="rgba(60,160,255,0.4)" strokeWidth="1" filter="url(#neon-h)" />
-          {/* Accent bright line */}
-          <line x1="258" y1="140" x2="468" y2="-10" stroke="rgba(180,230,255,1)" strokeWidth="0.8" />
-          <line x1="283" y1="140" x2="493" y2="-10" stroke="rgba(180,230,255,0.9)" strokeWidth="0.6" />
+          {/* Background glow at focal point */}
+          <ellipse cx="328" cy="38" rx="60" ry="40" fill="url(#focal-h)" />
+          {/* Fan streaks */}
+          <line x1="328" y1="38" x2="-20" y2="-20" stroke="url(#sh1)" strokeWidth="2.5" filter="url(#fglow-h)" />
+          <line x1="328" y1="38" x2="60" y2="-15" stroke="url(#sh2)" strokeWidth="2" filter="url(#fglow-h)" />
+          <line x1="328" y1="38" x2="170" y2="-18" stroke="url(#sh3)" strokeWidth="1.5" filter="url(#fglow-h2)" />
+          <line x1="328" y1="38" x2="-30" y2="55" stroke="url(#sh4)" strokeWidth="2" filter="url(#fglow-h)" />
+          <line x1="328" y1="38" x2="-30" y2="100" stroke="url(#sh5)" strokeWidth="2.5" filter="url(#fglow-h)" />
+          <line x1="328" y1="38" x2="60" y2="118" stroke="url(#sh6)" strokeWidth="1.8" filter="url(#fglow-h2)" />
+          <line x1="328" y1="38" x2="200" y2="118" stroke="url(#sh7)" strokeWidth="1.5" filter="url(#fglow-h2)" />
+          <line x1="328" y1="38" x2="310" y2="118" stroke="url(#sh8)" strokeWidth="1" filter="url(#fglow-h2)" />
+          {/* Bright core accent lines (no blur, sharp) */}
+          <line x1="328" y1="38" x2="-20" y2="-20" stroke="rgba(220,240,255,0.6)" strokeWidth="0.7" />
+          <line x1="328" y1="38" x2="-30" y2="100" stroke="rgba(200,230,255,0.5)" strokeWidth="0.6" />
+          <line x1="328" y1="38" x2="60" y2="-15" stroke="rgba(210,235,255,0.55)" strokeWidth="0.5" />
         </svg>
       </div>
       <div className="flex items-center justify-between px-4 py-3" style={{ position: "relative", zIndex: 1 }}>

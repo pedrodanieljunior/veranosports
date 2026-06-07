@@ -261,30 +261,59 @@ export default function Copa() {
     <div className="min-h-screen bg-white">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2 overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)", borderBottom: "2px solid #e87c1e" }}>
-        {/* Neon streaks overlay */}
+        {/* Neon fan streaks overlay */}
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 92% 20%, rgba(0,160,255,0.55) 0%, rgba(0,100,220,0.25) 30%, transparent 65%)" }} />
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 80% 90%, rgba(0,80,200,0.3) 0%, transparent 45%)" }} />
           <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <filter id="neon-m">
-                <feGaussianBlur stdDeviation="1.8" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              <radialGradient id="focal-m" cx="82%" cy="30%" r="22%">
+                <stop offset="0%" stopColor="rgba(120,200,255,0.7)" />
+                <stop offset="100%" stopColor="rgba(0,100,255,0)" />
+              </radialGradient>
+              <linearGradient id="sm1" x1="328" y1="42" x2="-20" y2="-20" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(160,220,255,0.95)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm2" x1="328" y1="42" x2="60" y2="-15" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(140,210,255,0.85)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm3" x1="328" y1="42" x2="170" y2="-18" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(180,230,255,0.9)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm4" x1="328" y1="42" x2="-30" y2="70" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(100,190,255,0.8)" /><stop offset="100%" stopColor="rgba(40,120,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm5" x1="328" y1="42" x2="-30" y2="140" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(80,170,255,0.7)" /><stop offset="100%" stopColor="rgba(30,100,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm6" x1="328" y1="42" x2="60" y2="155" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(120,200,255,0.75)" /><stop offset="100%" stopColor="rgba(50,130,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm7" x1="328" y1="42" x2="200" y2="155" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(100,185,255,0.6)" /><stop offset="100%" stopColor="rgba(40,110,255,0)" />
+              </linearGradient>
+              <linearGradient id="sm8" x1="328" y1="42" x2="310" y2="155" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="rgba(140,210,255,0.5)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
+              </linearGradient>
+              <filter id="fglow-m" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2.5" result="b" />
+                <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
-              <filter id="neon-m2">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              <filter id="fglow-m2" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1.2" result="b" />
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
-            <line x1="200" y1="160" x2="420" y2="-15" stroke="rgba(80,180,255,0.9)" strokeWidth="1.5" filter="url(#neon-m)" />
-            <line x1="220" y1="160" x2="440" y2="-15" stroke="rgba(100,200,255,0.7)" strokeWidth="1" filter="url(#neon-m)" />
-            <line x1="240" y1="160" x2="460" y2="-15" stroke="rgba(60,160,255,0.8)" strokeWidth="2" filter="url(#neon-m2)" />
-            <line x1="262" y1="160" x2="482" y2="-15" stroke="rgba(120,210,255,0.65)" strokeWidth="1" filter="url(#neon-m)" />
-            <line x1="285" y1="160" x2="505" y2="-15" stroke="rgba(80,180,255,0.85)" strokeWidth="1.5" filter="url(#neon-m)" />
-            <line x1="308" y1="160" x2="528" y2="-15" stroke="rgba(40,140,255,0.5)" strokeWidth="1" filter="url(#neon-m)" />
-            <line x1="175" y1="160" x2="395" y2="-15" stroke="rgba(60,160,255,0.4)" strokeWidth="1" filter="url(#neon-m)" />
-            <line x1="250" y1="160" x2="470" y2="-15" stroke="rgba(180,230,255,1)" strokeWidth="0.8" />
-            <line x1="275" y1="160" x2="495" y2="-15" stroke="rgba(180,230,255,0.9)" strokeWidth="0.6" />
+            <ellipse cx="328" cy="42" rx="60" ry="45" fill="url(#focal-m)" />
+            <line x1="328" y1="42" x2="-20" y2="-20" stroke="url(#sm1)" strokeWidth="2.5" filter="url(#fglow-m)" />
+            <line x1="328" y1="42" x2="60" y2="-15" stroke="url(#sm2)" strokeWidth="2" filter="url(#fglow-m)" />
+            <line x1="328" y1="42" x2="170" y2="-18" stroke="url(#sm3)" strokeWidth="1.5" filter="url(#fglow-m2)" />
+            <line x1="328" y1="42" x2="-30" y2="70" stroke="url(#sm4)" strokeWidth="2" filter="url(#fglow-m)" />
+            <line x1="328" y1="42" x2="-30" y2="140" stroke="url(#sm5)" strokeWidth="2.5" filter="url(#fglow-m)" />
+            <line x1="328" y1="42" x2="60" y2="155" stroke="url(#sm6)" strokeWidth="1.8" filter="url(#fglow-m2)" />
+            <line x1="328" y1="42" x2="200" y2="155" stroke="url(#sm7)" strokeWidth="1.5" filter="url(#fglow-m2)" />
+            <line x1="328" y1="42" x2="310" y2="155" stroke="url(#sm8)" strokeWidth="1" filter="url(#fglow-m2)" />
+            <line x1="328" y1="42" x2="-20" y2="-20" stroke="rgba(220,240,255,0.6)" strokeWidth="0.7" />
+            <line x1="328" y1="42" x2="-30" y2="140" stroke="rgba(200,230,255,0.5)" strokeWidth="0.6" />
+            <line x1="328" y1="42" x2="60" y2="-15" stroke="rgba(210,235,255,0.55)" strokeWidth="0.5" />
           </svg>
         </div>
         {/* Row 1: Logo + Copa badge + Auth */}
