@@ -695,7 +695,7 @@ export function ProfileModal({ open, onClose }: Props) {
   useEffect(() => {
     if (clubFwProgress && clubFwProgress.newBonus > 0) {
       toast({
-        title: "🏆 Clube FW — Bônus creditado!",
+        title: "🏆 Clube Verano — Bônus creditado!",
         description: `+R$ ${clubFwProgress.newBonus.toFixed(2).replace(".", ",")} adicionados ao seu saldo bônus.`,
       });
       refreshUser();
@@ -811,10 +811,10 @@ export function ProfileModal({ open, onClose }: Props) {
                 ];
 
                 return (
-                  <div className="rounded-xl p-4 border border-blue-100/60 bg-white/80" data-testid="card-clube-fw">
+                  <div className="rounded-xl p-4 border border-blue-200/70" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)" }} data-testid="card-clube-fw">
                     <div className="flex items-center gap-2 mb-3">
                       <Trophy className="w-4 h-4 text-yellow-400" />
-                      <span className="font-bold text-sm text-yellow-400">Clube FW</span>
+                      <span className="font-bold text-sm text-yellow-400">Clube Verano</span>
                       <span className="ml-auto text-xs text-gray-500">semana atual</span>
                     </div>
 

@@ -5349,7 +5349,7 @@ function RecompensasTab() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Gift className="w-4 h-4 text-yellow-400" />
-            Processar Pagamento Clube FW
+            Processar Pagamento Clube Verano
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -5490,7 +5490,7 @@ function RecompensasTab() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Filter className="w-4 h-4" />
-            Histórico de Recompensas – Clube FW
+            Histórico de Recompensas – Clube Verano
           </CardTitle>
         </CardHeader>
         <CardContent>
