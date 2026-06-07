@@ -260,7 +260,7 @@ export default function Copa() {
   return (
     <div className="min-h-screen bg-white">
       {/* ===== HEADER ===== */}
-      <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)", borderBottom: "2px solid #e87c1e" }}>
+      <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "radial-gradient(ellipse at 90% 0%, rgba(0,140,255,0.45) 0%, transparent 55%), radial-gradient(ellipse at 75% 100%, rgba(0,80,200,0.3) 0%, transparent 50%), repeating-linear-gradient(38deg, transparent, transparent 38px, rgba(0,160,255,0.07) 38px, rgba(0,160,255,0.07) 39px), repeating-linear-gradient(38deg, transparent, transparent 70px, rgba(0,200,255,0.04) 70px, rgba(0,200,255,0.04) 71px), linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)", borderBottom: "2px solid #e87c1e" }}>
         {/* Row 1: Logo + Copa badge + Auth */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
