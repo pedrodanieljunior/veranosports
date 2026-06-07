@@ -420,23 +420,23 @@ export function BetSlip({
         onClick={() => onToggleMinimize(false)}
         data-testid="betslip-minimized-bar"
       >
-        <div className="mx-3 mb-3 rounded-2xl border border-blue-200 shadow-xl px-4 py-3 flex items-center justify-between cursor-pointer" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)" }}>
+        <div className="mx-3 mb-3 rounded-2xl border border-blue-700 shadow-xl px-4 py-3 flex items-center justify-between cursor-pointer" style={{ background: "linear-gradient(to bottom, #1565C0, #0d47a1)" }}>
           <div className="flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-primary" />
-            <span className="font-bold text-sm">Bilhete de Apostas</span>
+            <Receipt className="w-5 h-5 text-white" />
+            <span className="font-bold text-sm text-white">Bilhete de Apostas</span>
             {selections.length > 0 && (
-              <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-white text-blue-900 text-xs font-bold px-2 py-0.5 rounded-full">
                 {selections.length}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
             {selections.length > 0 && (
-              <span className="text-sm font-mono font-bold text-primary">
+              <span className="text-sm font-mono font-bold text-white">
                 {fmtOdds(totalOdds)}x
               </span>
             )}
-            <ChevronUp className="w-5 h-5 text-gray-500" />
+            <ChevronUp className="w-5 h-5 text-white/70" />
           </div>
         </div>
       </div>
