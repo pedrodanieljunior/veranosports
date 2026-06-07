@@ -122,16 +122,16 @@ function DepositView({ onBack }: { onBack: () => void }) {
   if (step === "pix" && pendingDeposit) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setStep("form")} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+        <button onClick={() => setStep("form")} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
           <ChevronLeft className="w-4 h-4" /> Voltar
         </button>
-        <div className="bg-zinc-800 rounded-xl p-4 space-y-3 border border-zinc-700">
-          <h3 className="font-bold text-center text-white flex items-center justify-center gap-2">
+        <div className="rounded-xl p-4 space-y-3 border border-blue-100 bg-white/80">
+          <h3 className="font-bold text-center text-gray-900 flex items-center justify-center gap-2">
             <SiPix className="w-4 h-4 text-[#32BCAD]" /> Faça o PIX
           </h3>
           <div className="space-y-1">
-            <p className="text-xs text-zinc-400">Valor a pagar</p>
-            <p className="text-2xl font-bold text-yellow-400">R$ {pendingDeposit.amount.toFixed(2).replace(".", ",")}</p>
+            <p className="text-xs text-gray-500">Valor a pagar</p>
+            <p className="text-2xl font-bold text-yellow-600">R$ {pendingDeposit.amount.toFixed(2).replace(".", ",")}</p>
             {pendingDeposit.bonusAmount > 0 && (
               <p className="text-sm text-green-400 font-semibold">+ R$ {pendingDeposit.bonusAmount.toFixed(2).replace(".", ",")} de bônus (1º depósito)</p>
             )}
@@ -145,13 +145,13 @@ function DepositView({ onBack }: { onBack: () => void }) {
                 alt="QR Code PIX"
                 className="w-48 h-48 rounded-lg border border-zinc-600 bg-white p-1"
               />
-              <p className="text-xs text-zinc-500">Aponte a câmera do seu banco para o QR Code</p>
+              <p className="text-xs text-gray-400">Aponte a câmera do seu banco para o QR Code</p>
             </div>
           )}
 
           <div className="space-y-2">
-            <p className="text-xs text-zinc-400 font-medium">ou use o PIX Copia e Cola</p>
-            <div className="bg-zinc-900 border border-zinc-600 rounded-lg p-3 font-mono text-[10px] text-zinc-300 break-all leading-relaxed select-all max-h-20 overflow-y-auto">
+            <p className="text-xs text-gray-500 font-medium">ou use o PIX Copia e Cola</p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 font-mono text-[10px] text-gray-700 break-all leading-relaxed select-all max-h-20 overflow-y-auto">
               {pixCode}
             </div>
             <Button
@@ -184,7 +184,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
               <SiWhatsapp className="w-5 h-5 mr-2" />
               Enviar comprovante via WhatsApp
             </Button>
-            <p className="text-xs text-zinc-400 text-center">Após enviar o comprovante, seu saldo será atualizado em até 10 minutos.</p>
+            <p className="text-xs text-gray-500 text-center">Após enviar o comprovante, seu saldo será atualizado em até 10 minutos.</p>
           </>
         )}
       </div>
@@ -193,12 +193,12 @@ function DepositView({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
       <div className="space-y-3">
-        <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-          <p className="text-sm text-zinc-400 mb-1">Saldo real</p>
+        <div className="rounded-xl p-4 border border-blue-100 bg-white/80">
+          <p className="text-sm text-gray-500 mb-1">Saldo real</p>
           <p className="text-2xl font-bold text-yellow-400">R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</p>
           {(user?.bonusBalance ?? 0) > 0 && (
             <p className="text-sm text-green-400 mt-1 font-semibold">🎁 Bônus: R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
@@ -210,12 +210,12 @@ function DepositView({ onBack }: { onBack: () => void }) {
           </div>
         )}
         <div className="space-y-2">
-          <Label className="text-zinc-300">Valor do depósito (R$) — mín. R$10 / máx. R$1.000</Label>
+          <Label className="text-gray-700">Valor do depósito (R$) — mín. R$10 / máx. R$1.000</Label>
           <Input
             placeholder="Ex: 100,00"
             value={amount}
             onChange={e => setAmount(e.target.value.replace(/[^0-9,]/g, ""))}
-            className="bg-zinc-800 border-zinc-600 text-white"
+            className="bg-white border-blue-200 text-gray-900"
             data-testid="input-deposit-amount"
           />
           {parsedAmount > 1000 && (
@@ -233,19 +233,19 @@ function DepositView({ onBack }: { onBack: () => void }) {
         >
           {createMutation.isPending ? "Aguarde..." : "Continuar"}
         </Button>
-        <p className="text-xs text-zinc-500 text-center">Valor mínimo: R$ 10,00</p>
+        <p className="text-xs text-gray-400 text-center">Valor mínimo: R$ 10,00</p>
       </div>
 
       {deposits && deposits.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-zinc-400">Histórico de depósitos</p>
+          <p className="text-sm font-semibold text-gray-500">Histórico de depósitos</p>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {deposits.map(d => (
-              <div key={d.id} className="bg-zinc-800 rounded-lg px-3 py-2 flex items-center justify-between">
+              <div key={d.id} className="rounded-lg px-3 py-2 flex items-center justify-between bg-white border border-blue-50">
                 <div>
                   <p className="font-semibold text-sm">R$ {d.amount.toFixed(2).replace(".", ",")}</p>
                   {d.bonusAmount > 0 && <p className="text-xs text-green-400">+R$ {d.bonusAmount.toFixed(2).replace(".", ",")} bônus</p>}
-                  <p className="text-xs text-zinc-500">{format(new Date(d.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                  <p className="text-xs text-gray-400">{format(new Date(d.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                 </div>
                 <div className={`flex items-center gap-1 text-xs font-semibold ${statusColor(d.status)}`}>
                   {statusIcon(d.status)}
@@ -309,34 +309,34 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
 
-      <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-        <p className="text-sm text-zinc-400 mb-1">Saldo disponível para saque</p>
+      <div className="rounded-xl p-4 border border-blue-100 bg-white/80">
+        <p className="text-sm text-gray-500 mb-1">Saldo disponível para saque</p>
         <p className="text-2xl font-bold text-yellow-400">R$ {(user?.balance ?? 0).toFixed(2).replace(".", ",")}</p>
         {(user?.bonusBalance ?? 0) > 0 && (
-          <p className="text-xs text-zinc-500 mt-1">🎁 Bônus R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")} — não disponível para saque</p>
+          <p className="text-xs text-gray-400 mt-1">🎁 Bônus R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")} — não disponível para saque</p>
         )}
       </div>
 
-      <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-3">
+      <div className="rounded-xl p-4 border border-blue-100 bg-white/80 space-y-3">
         <p className="text-sm font-semibold text-white">Solicitar Saque</p>
         <div className="space-y-2">
-          <Label className="text-xs text-zinc-400">Valor (mín. R$ 20,00)</Label>
+          <Label className="text-xs text-gray-500">Valor (mín. R$ 20,00)</Label>
           <Input
             type="number"
             inputMode="decimal"
             placeholder="0,00"
             value={amount}
             onChange={e => setAmount(e.target.value)}
-            className="bg-zinc-900 border-zinc-600 text-white"
+            className="bg-white border-blue-200 text-gray-900"
             data-testid="input-withdraw-amount"
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs text-zinc-400">Chave PIX (CPF, e-mail, telefone ou chave aleatória)</Label>
+          <Label className="text-xs text-gray-500">Chave PIX (CPF, e-mail, telefone ou chave aleatória)</Label>
           <label className="flex items-center gap-2 cursor-pointer w-fit">
             <input
               type="checkbox"
@@ -349,7 +349,7 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
               className="w-4 h-4 accent-yellow-400"
               data-testid="checkbox-pix-same-cpf"
             />
-            <span className="text-xs text-zinc-400">O mesmo do CPF de cadastro</span>
+            <span className="text-xs text-gray-500">O mesmo do CPF de cadastro</span>
           </label>
           <Input
             type="text"
@@ -357,7 +357,7 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
             value={pixKey}
             onChange={e => { if (!useCpfAsKey) setPixKey(e.target.value); }}
             readOnly={useCpfAsKey}
-            className={`bg-zinc-900 border-zinc-600 text-white ${useCpfAsKey ? "opacity-60 cursor-not-allowed" : ""}`}
+            className={`bg-white border-blue-200 text-gray-900 ${useCpfAsKey ? "opacity-60 cursor-not-allowed" : ""}`}
             data-testid="input-withdraw-pix-key"
           />
         </div>
@@ -369,19 +369,19 @@ function WithdrawView({ onBack }: { onBack: () => void }) {
         >
           {requestMutation.isPending ? "Enviando..." : "Solicitar Saque"}
         </Button>
-        <p className="text-xs text-zinc-500 text-center">O saque será processado em até 24 horas úteis</p>
+        <p className="text-xs text-gray-400 text-center">O saque será processado em até 24 horas úteis</p>
       </div>
 
       {withdrawals.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-zinc-400">Histórico de saques</p>
+          <p className="text-sm font-semibold text-gray-500">Histórico de saques</p>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {withdrawals.map(w => (
-              <div key={w.id} className="bg-zinc-800 rounded-lg px-3 py-2 flex items-center justify-between">
+              <div key={w.id} className="rounded-lg px-3 py-2 flex items-center justify-between bg-white border border-blue-50">
                 <div>
                   <p className="font-semibold text-sm">R$ {w.amount.toFixed(2).replace(".", ",")}</p>
-                  <p className="text-xs text-zinc-500">{w.pixKey}</p>
-                  <p className="text-xs text-zinc-500">{format(new Date(w.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                  <p className="text-xs text-gray-400">{w.pixKey}</p>
+                  <p className="text-xs text-gray-400">{format(new Date(w.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                 </div>
                 <div className={`flex items-center gap-1 text-xs font-semibold ${wdStatusColor(w.status)}`}>
                   {wdStatusIcon(w.status)}
@@ -431,22 +431,22 @@ function AccountView({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
-      <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-2">
-        <p className="text-xs text-zinc-400">Nome</p>
+      <div className="rounded-xl p-4 border border-blue-100 bg-white/80 space-y-2">
+        <p className="text-xs text-gray-500">Nome</p>
         <p className="font-semibold">{user?.name}</p>
-        <p className="text-xs text-zinc-400 mt-2">CPF</p>
+        <p className="text-xs text-gray-500 mt-2">CPF</p>
         <p className="font-semibold font-mono">{user?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
-        <p className="text-xs text-zinc-400 mt-2">Telefone</p>
+        <p className="text-xs text-gray-500 mt-2">Telefone</p>
         <p className="font-semibold">{user?.phone}</p>
       </div>
-      <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-3">
+      <div className="rounded-xl p-4 border border-blue-100 bg-white/80 space-y-3">
         <p className="text-sm font-semibold">Alterar senha</p>
-        <Input type="password" placeholder="Senha atual" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="bg-zinc-900 border-zinc-600 text-white" />
-        <Input type="password" placeholder="Nova senha" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="bg-zinc-900 border-zinc-600 text-white" />
-        <Input type="password" placeholder="Confirmar nova senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-zinc-900 border-zinc-600 text-white" />
+        <Input type="password" placeholder="Senha atual" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="bg-white border-blue-200 text-gray-900" />
+        <Input type="password" placeholder="Nova senha" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="bg-white border-blue-200 text-gray-900" />
+        <Input type="password" placeholder="Confirmar nova senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-white border-blue-200 text-gray-900" />
         <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold" onClick={handleChangePassword} disabled={loading}>
           {loading ? "Salvando..." : "Alterar senha"}
         </Button>
@@ -489,39 +489,39 @@ function HistoryView({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white" data-testid="button-history-back">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800" data-testid="button-history-back">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
 
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-zinc-800 rounded-lg px-3 py-3 h-16 animate-pulse" />
+            <div key={i} className="rounded-lg px-3 py-3 h-16 animate-pulse bg-blue-50" />
           ))}
         </div>
       ) : transactions.length === 0 ? (
-        <div className="bg-zinc-800 rounded-xl p-6 border border-zinc-700 text-center">
-          <History className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
-          <p className="text-zinc-400 text-sm">Nenhuma transação encontrada</p>
-          <p className="text-zinc-500 text-xs mt-1">Suas movimentações de saldo aparecerão aqui</p>
+        <div className="rounded-xl p-6 border border-blue-100 bg-white/80 text-center">
+          <History className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-500 text-sm">Nenhuma transação encontrada</p>
+          <p className="text-gray-400 text-xs mt-1">Suas movimentações de saldo aparecerão aqui</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
           {transactions.map(t => (
-            <div key={t.id} className="bg-zinc-800 rounded-lg px-3 py-2.5 flex items-center justify-between" data-testid={`row-transaction-${t.id}`}>
+            <div key={t.id} className="rounded-lg px-3 py-2.5 flex items-center justify-between bg-white border border-blue-50" data-testid={`row-transaction-${t.id}`}>
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="shrink-0">{typeIcon(t.type)}</span>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-white">{typeLabel(t.type)}</p>
-                  <p className="text-xs text-zinc-400 truncate max-w-[160px]">{t.description}</p>
-                  <p className="text-xs text-zinc-500">{format(new Date(t.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                  <p className="text-xs font-semibold text-gray-900">{typeLabel(t.type)}</p>
+                  <p className="text-xs text-gray-500 truncate max-w-[160px]">{t.description}</p>
+                  <p className="text-xs text-gray-400">{format(new Date(t.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                 </div>
               </div>
               <div className="text-right shrink-0 ml-2">
                 <p className={`text-sm font-bold ${amountColor(t.amount)}`}>
                   {t.amount >= 0 ? "+" : ""}R$ {Math.abs(t.amount).toFixed(2).replace(".", ",")}
                 </p>
-                <p className="text-xs text-zinc-500">Saldo: R$ {t.balanceAfter.toFixed(2).replace(".", ",")}</p>
+                <p className="text-xs text-gray-400">Saldo: R$ {t.balanceAfter.toFixed(2).replace(".", ",")}</p>
               </div>
             </div>
           ))}
@@ -579,23 +579,23 @@ function InviteView({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
 
-      <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 space-y-1">
+      <div className="rounded-xl p-4 border border-blue-100 bg-white/80 space-y-1">
         <p className="text-sm font-semibold text-white flex items-center gap-2"><Gift className="w-4 h-4 text-yellow-400" /> Como funciona</p>
-        <p className="text-xs text-zinc-400">Cadastre um código único, compartilhe com amigos e eles usam ao se registrar. Futuros benefícios serão vinculados ao seu código.</p>
+        <p className="text-xs text-gray-500">Cadastre um código único, compartilhe com amigos e eles usam ao se registrar. Futuros benefícios serão vinculados ao seu código.</p>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs text-zinc-400">Seu código de convite (3–12 letras/números)</Label>
+        <Label className="text-xs text-gray-500">Seu código de convite (3–12 letras/números)</Label>
         <div className="flex gap-2">
           <Input
             placeholder="EX: PEDRO10"
             value={code}
             onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))}
-            className="bg-zinc-900 border-zinc-600 text-white font-mono tracking-widest uppercase"
+            className="bg-white border-blue-200 text-gray-900 font-mono tracking-widest uppercase"
             data-testid="input-referral-code"
           />
           <Button
@@ -611,14 +611,14 @@ function InviteView({ onBack }: { onBack: () => void }) {
 
       {hasCode && (
         <div className="space-y-3">
-          <div className="bg-zinc-800 rounded-xl p-3 border border-zinc-700">
-            <p className="text-xs text-zinc-400 mb-1">Link de convite</p>
-            <p className="text-xs font-mono text-yellow-300 break-all">{inviteLink}</p>
+          <div className="rounded-xl p-3 border border-blue-100 bg-white/80">
+            <p className="text-xs text-gray-500 mb-1">Link de convite</p>
+            <p className="text-xs font-mono text-yellow-700 break-all">{inviteLink}</p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="flex-1 border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+              className="flex-1 border-blue-200 text-gray-700 hover:bg-blue-50"
               onClick={copyLink}
               data-testid="button-copy-invite-link"
             >
@@ -646,18 +646,18 @@ function RulesView({ onBack }: { onBack: () => void }) {
   });
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
       <ScrollArea className="h-[60vh] pr-2">
         {isLoading ? (
           <div className="space-y-3 py-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-3 bg-zinc-700 rounded animate-pulse" style={{ width: `${65 + (i % 3) * 12}%` }} />
+              <div key={i} className="h-3 bg-blue-100 rounded animate-pulse" style={{ width: `${65 + (i % 3) * 12}%` }} />
             ))}
           </div>
         ) : !data?.content ? (
-          <p className="text-zinc-400 text-sm text-center py-8">Nenhuma regra cadastrada ainda.</p>
+          <p className="text-gray-500 text-sm text-center py-8">Nenhuma regra cadastrada ainda.</p>
         ) : (
           <div
             className="prose prose-sm dark:prose-invert max-w-none py-1 rules-content"
@@ -715,7 +715,7 @@ export function ProfileModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) { setView("menu"); onClose(); } }}>
-      <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-sm">
+      <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {view === "menu" && "Perfil"}
@@ -731,17 +731,17 @@ export function ProfileModal({ open, onClose }: Props) {
         {view === "menu" && (
           <ScrollArea className="max-h-[70vh]">
             <div className="space-y-4 pr-1">
-              <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-                <p className="text-sm text-zinc-400">Olá, <span className="text-white font-semibold">{user.name.split(" ")[0]}</span></p>
-                <p className="text-xs text-zinc-500 mt-0.5">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
-                <div className="mt-3 pt-3 border-t border-zinc-700">
-                  <p className="text-xs text-zinc-400">Saldo total</p>
+              <div className="rounded-xl p-4 border border-blue-100 bg-white/80">
+                <p className="text-sm text-gray-600">Olá, <span className="text-gray-900 font-semibold">{user.name.split(" ")[0]}</span></p>
+                <p className="text-xs text-gray-400 mt-0.5">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</p>
+                <div className="mt-3 pt-3 border-t border-blue-100">
+                  <p className="text-xs text-gray-500">Saldo total</p>
                   <p className="text-2xl font-bold text-yellow-400">
                     R$ {(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}
                   </p>
                   {(user.bonusBalance ?? 0) > 0 && (
-                    <div className="mt-1.5 flex gap-3 text-xs text-zinc-400">
-                      <span>💰 Principal: <span className="text-white font-semibold">R$ {user.balance.toFixed(2).replace(".", ",")}</span></span>
+                    <div className="mt-1.5 flex gap-3 text-xs text-gray-500">
+                      <span>💰 Principal: <span className="text-gray-900 font-semibold">R$ {user.balance.toFixed(2).replace(".", ",")}</span></span>
                       <span>🎁 Bônus: <span className="text-green-400 font-semibold">R$ {(user.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></span>
                     </div>
                   )}
@@ -811,15 +811,15 @@ export function ProfileModal({ open, onClose }: Props) {
                 ];
 
                 return (
-                  <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-600/40" data-testid="card-clube-fw">
+                  <div className="rounded-xl p-4 border border-blue-100/60 bg-white/80" data-testid="card-clube-fw">
                     <div className="flex items-center gap-2 mb-3">
                       <Trophy className="w-4 h-4 text-yellow-400" />
                       <span className="font-bold text-sm text-yellow-400">Clube FW</span>
-                      <span className="ml-auto text-xs text-zinc-400">semana atual</span>
+                      <span className="ml-auto text-xs text-gray-500">semana atual</span>
                     </div>
 
                     {/* barra de progresso */}
-                    <div className="relative h-2.5 bg-zinc-700 rounded-full mb-4 overflow-visible">
+                    <div className="relative h-2.5 bg-blue-100 rounded-full mb-4 overflow-visible">
                       <div
                         className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                         style={{
@@ -866,19 +866,19 @@ export function ProfileModal({ open, onClose }: Props) {
                                 style={isCurrent ? { boxShadow: `0 0 8px 0 ${t.glow}` } : undefined}
                               >
                                 {isPast && (
-                                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-zinc-900/60">
+                                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/70">
                                     <span className="text-green-400 font-bold text-xs">✓</span>
                                   </div>
                                 )}
                                 <p className={`text-sm leading-none mb-0.5 ${isPast ? "grayscale opacity-40" : ""}`}>{t.icon}</p>
                                 <p className={`text-[9px] font-bold
                                   ${isCurrent ? t.nameReached : ""}
-                                  ${isPast    ? "text-zinc-500" : ""}
+                                  ${isPast    ? "text-gray-400" : ""}
                                   ${isLocked  ? t.name : ""}
                                 `}>
                                   {t.label}
                                 </p>
-                                <p className={`text-[9px] ${isCurrent ? "text-zinc-300" : "text-zinc-600"}`}>
+                                <p className={`text-[9px] ${isCurrent ? "text-gray-700" : "text-zinc-600"}`}>
                                   R${threshold >= 1000 ? "1k" : threshold}
                                 </p>
                                 <p className={`text-[10px] font-bold mt-0.5
@@ -896,17 +896,17 @@ export function ProfileModal({ open, onClose }: Props) {
                     })()}
 
                     <div className="space-y-1 text-center">
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-gray-500">
                         {allDone
                           ? <>💎 Meta atingida! Bônus creditado na segunda às 08h</>
                           : nextLevel
                           ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-400 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ {TIERS[CLUB_FW_LEVELS.findIndex(l => l.level === nextLevel.level)].label}</>
                           : "Acompanhe seu progresso aqui"}
                       </p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-[10px] text-gray-400">
                         🕗 Premiação toda segunda às 08h (horário de Manaus)
                       </p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-[10px] text-gray-400">
                         Bônus não acumulativo
                       </p>
                     </div>
@@ -918,26 +918,26 @@ export function ProfileModal({ open, onClose }: Props) {
                 {menuItems.map(item => (
                   <button
                     key={item.id}
-                    className="w-full flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition-colors"
+                    className="w-full flex items-center gap-3 bg-white hover:bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-left transition-colors"
                     onClick={() => setView(item.id)}
                     data-testid={`button-profile-${item.id}`}
                   >
                     <span className="text-yellow-400">{item.icon}</span>
                     <div>
                       <p className="font-semibold text-sm">{item.label}</p>
-                      <p className="text-xs text-zinc-400">{item.desc}</p>
+                      <p className="text-xs text-gray-500">{item.desc}</p>
                     </div>
                   </button>
                 ))}
                 <button
-                  className="w-full flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition-colors"
+                  className="w-full flex items-center gap-3 bg-white hover:bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-left transition-colors"
                   onClick={() => window.open(`https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent("Olá, preciso de ajuda.")}`, "_blank")}
                   data-testid="button-profile-fale-conosco"
                 >
                   <span className="text-yellow-400"><MessageCircle className="w-5 h-5" /></span>
                   <div>
                     <p className="font-semibold text-sm">Fale conosco</p>
-                    <p className="text-xs text-zinc-400">Suporte via WhatsApp</p>
+                    <p className="text-xs text-gray-500">Suporte via WhatsApp</p>
                   </div>
                 </button>
               </div>

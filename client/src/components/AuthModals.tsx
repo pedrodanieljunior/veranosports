@@ -101,30 +101,30 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
   return (
     <>
       <Dialog open={mode === "login"} onOpenChange={open => !open && onClose()}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-sm">
+        <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-center">Entrar</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-center text-gray-900">Entrar</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
-              <Label className="text-zinc-300">CPF</Label>
+              <Label className="text-gray-700">CPF</Label>
               <Input
                 placeholder="000.000.000-00"
                 value={formatCPF(cpf)}
                 onChange={e => setCpf(e.target.value)}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-login-cpf"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Senha</Label>
+              <Label className="text-gray-700">Senha</Label>
               <Input
                 type="password"
                 placeholder="Sua senha"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleLogin()}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-login-password"
               />
             </div>
@@ -147,9 +147,9 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
                 <SiWhatsapp className="w-4 h-4" />
                 Esqueci minha senha
               </a>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-gray-500">
                 Não tem conta?{" "}
-                <button className="text-yellow-400 hover:underline font-semibold" onClick={() => onSwitch("register")}>
+                <button className="text-yellow-600 hover:underline font-semibold" onClick={() => onSwitch("register")}>
                   Cadastre-se
                 </button>
               </p>
@@ -159,71 +159,71 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       </Dialog>
 
       <Dialog open={mode === "register"} onOpenChange={open => !open && onClose()}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-sm">
+        <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-center">Criar Conta</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-center text-gray-900">Criar Conta</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="space-y-1">
-              <Label className="text-zinc-300">CPF <span className="text-red-400">*</span></Label>
+              <Label className="text-gray-700">CPF <span className="text-red-500">*</span></Label>
               <Input
                 placeholder="000.000.000-00"
                 value={formatCPF(regCpf)}
                 onChange={e => setRegCpf(e.target.value)}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-register-cpf"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Nome <span className="text-red-400">*</span></Label>
+              <Label className="text-gray-700">Nome <span className="text-red-500">*</span></Label>
               <Input
                 placeholder="Seu nome"
                 value={regName}
                 onChange={e => setRegName(e.target.value)}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-register-name"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Telefone (com DDD) <span className="text-red-400">*</span></Label>
+              <Label className="text-gray-700">Telefone (com DDD) <span className="text-red-500">*</span></Label>
               <Input
                 placeholder="(92) 99999-9999"
                 value={formatPhone(regPhone)}
                 onChange={e => setRegPhone(e.target.value)}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-register-phone"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Código de indicação <span className="text-zinc-500">(opcional)</span></Label>
+              <Label className="text-gray-700">Código de indicação <span className="text-gray-400">(opcional)</span></Label>
               <Input
                 placeholder="Código de quem te indicou"
                 value={regReferral}
                 onChange={e => setRegReferral(e.target.value)}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-register-referral"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Senha <span className="text-red-400">*</span></Label>
+              <Label className="text-gray-700">Senha <span className="text-red-500">*</span></Label>
               <Input
                 type="password"
                 placeholder="Mínimo 6 caracteres"
                 value={regPassword}
                 onChange={e => setRegPassword(e.target.value)}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-register-password"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-zinc-300">Confirmar senha <span className="text-red-400">*</span></Label>
+              <Label className="text-gray-700">Confirmar senha <span className="text-red-500">*</span></Label>
               <Input
                 type="password"
                 placeholder="Repita a senha"
                 value={regPassword2}
                 onChange={e => setRegPassword2(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleRegister()}
-                className="bg-zinc-800 border-zinc-600 text-white"
+                className="bg-white border-blue-200 text-gray-900"
                 data-testid="input-register-password2"
               />
             </div>
@@ -235,9 +235,9 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
             >
               {loading ? "Cadastrando..." : "Criar conta"}
             </Button>
-            <p className="text-sm text-zinc-400 text-center">
+            <p className="text-sm text-gray-500 text-center">
               Já tem conta?{" "}
-              <button className="text-yellow-400 hover:underline font-semibold" onClick={() => onSwitch("login")}>
+              <button className="text-yellow-600 hover:underline font-semibold" onClick={() => onSwitch("login")}>
                 Entrar
               </button>
             </p>
