@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import { getSessionId } from "@/lib/session";
-import fwSportsLogo from "@assets/c2528abb-6947-4d73-adef-9352aea4a59c_1780795079409.jpeg";
+import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
@@ -302,7 +302,7 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
-      <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#0d1629" }}>
+      <div className="md:hidden flex flex-col min-h-screen" style={{ background: "linear-gradient(to bottom, #0d1629 0%, #12204a 25%, #1a3a7a 50%, #e8f0ff 80%, #ffffff 100%)" }}>
         <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)" }}>
           {/* Row 1: Logo + Auth buttons */}
           <div className="flex items-center justify-between">

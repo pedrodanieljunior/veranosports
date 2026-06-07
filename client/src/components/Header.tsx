@@ -1,7 +1,7 @@
 import { History, Receipt, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
-import veranoLogo from "@assets/c2528abb-6947-4d73-adef-9352aea4a59c_1780795079409.jpeg";
+import veranoLogo from "@assets/verano-logo-transparent.png";
 
 interface HeaderProps {
   selectionsCount: number;

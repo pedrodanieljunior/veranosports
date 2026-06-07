@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
-import fwSportsLogo from "@assets/c2528abb-6947-4d73-adef-9352aea4a59c_1780795079409.jpeg";
+import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
 import tacaCopa from "@assets/taca_copa_transparent.png";
 
@@ -258,7 +258,7 @@ export default function Copa() {
   const pendingBets = betHistory.filter(b => b.status === "pending").length;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#0d1629" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(to bottom, #0d1629 0%, #12204a 25%, #1a3a7a 50%, #e8f0ff 80%, #ffffff 100%)" }}>
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)", borderBottom: "2px solid #e87c1e" }}>
         {/* Row 1: Logo + Copa badge + Auth */}
