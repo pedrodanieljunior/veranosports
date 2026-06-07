@@ -743,23 +743,23 @@ export function BetSlip({
                   value={stake}
                   onChange={(e) => setStake(e.target.value)}
                   placeholder="0.00"
-                  className="text-lg font-mono"
+                  className="text-lg font-mono border-blue-300 focus-visible:ring-blue-400"
+                  style={{ background: "#ffffff", color: "#111827" }}
                   data-testid="input-stake"
                 />
               </div>
               
               <div className="flex gap-2">
                 {[10, 25, 50, 100].map((value) => (
-                  <Button
+                  <button
                     key={value}
-                    variant="outline"
-                    size="sm"
                     onClick={() => setStake(value.toString())}
-                    className="flex-1"
+                    className="flex-1 py-1.5 rounded-md text-sm font-medium border border-blue-300 transition-colors hover:bg-blue-50"
+                    style={{ background: "#ffffff", color: "#111827" }}
                     data-testid={`button-stake-${value}`}
                   >
                     R${value}
-                  </Button>
+                  </button>
                 ))}
               </div>
 
