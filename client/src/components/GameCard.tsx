@@ -72,7 +72,8 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
 
   return (
     <div 
-      className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-gradient-to-b from-white to-blue-300 hover:shadow-md"} ${hasSelections ? "border-yellow-400 ring-1 ring-yellow-400" : isDark ? "border-[#5a5a5a]" : "border-blue-200"}`}
+      className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-gradient-to-b from-white to-blue-300 hover:shadow-md"} ${hasSelections ? "border-transparent" : isDark ? "border-[#5a5a5a]" : "border-blue-200"}`}
+      style={hasSelections ? { boxShadow: "0 0 0 1px #8a5200, 0 0 0 2.5px #d4960f, 0 0 0 4px #7c4a00" } : undefined}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
@@ -83,7 +84,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
         </div>
         <div className="ml-auto flex items-center gap-1">
           {hasSelections && (
-            <Badge className="bg-yellow-500 text-white text-[10px] px-1.5 py-0 border-0">
+            <Badge className="text-white text-[10px] px-1.5 py-0 border-0" style={{ background: "linear-gradient(135deg, #d4960f, #8a5200)" }}>
               {selectionsForGame.length}
             </Badge>
           )}
