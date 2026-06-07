@@ -261,59 +261,59 @@ export default function Copa() {
     <div className="min-h-screen bg-white">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2 overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)", borderBottom: "2px solid #e87c1e" }}>
-        {/* Neon fan streaks overlay */}
+        {/* Neon curved streaks overlay */}
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
-          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 140" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <radialGradient id="focal-m" cx="82%" cy="30%" r="22%">
-                <stop offset="0%" stopColor="rgba(120,200,255,0.7)" />
-                <stop offset="100%" stopColor="rgba(0,100,255,0)" />
-              </radialGradient>
-              <linearGradient id="sm1" x1="328" y1="42" x2="-20" y2="-20" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(160,220,255,0.95)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+              <linearGradient id="mg1" x1="100%" y1="0%" x2="30%" y2="0%">
+                <stop offset="0%" stopColor="rgba(160,220,255,0.95)" />
+                <stop offset="50%" stopColor="rgba(100,185,255,0.55)" />
+                <stop offset="100%" stopColor="rgba(60,150,255,0)" />
               </linearGradient>
-              <linearGradient id="sm2" x1="328" y1="42" x2="60" y2="-15" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(140,210,255,0.85)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
+              <linearGradient id="mg2" x1="100%" y1="0%" x2="40%" y2="0%">
+                <stop offset="0%" stopColor="rgba(180,235,255,0.85)" />
+                <stop offset="55%" stopColor="rgba(120,195,255,0.4)" />
+                <stop offset="100%" stopColor="rgba(70,155,255,0)" />
               </linearGradient>
-              <linearGradient id="sm3" x1="328" y1="42" x2="170" y2="-18" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(180,230,255,0.9)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+              <linearGradient id="mg3" x1="100%" y1="0%" x2="50%" y2="0%">
+                <stop offset="0%" stopColor="rgba(140,210,255,0.7)" />
+                <stop offset="100%" stopColor="rgba(50,140,255,0)" />
               </linearGradient>
-              <linearGradient id="sm4" x1="328" y1="42" x2="-30" y2="70" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(100,190,255,0.8)" /><stop offset="100%" stopColor="rgba(40,120,255,0)" />
-              </linearGradient>
-              <linearGradient id="sm5" x1="328" y1="42" x2="-30" y2="140" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(80,170,255,0.7)" /><stop offset="100%" stopColor="rgba(30,100,255,0)" />
-              </linearGradient>
-              <linearGradient id="sm6" x1="328" y1="42" x2="60" y2="155" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(120,200,255,0.75)" /><stop offset="100%" stopColor="rgba(50,130,255,0)" />
-              </linearGradient>
-              <linearGradient id="sm7" x1="328" y1="42" x2="200" y2="155" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(100,185,255,0.6)" /><stop offset="100%" stopColor="rgba(40,110,255,0)" />
-              </linearGradient>
-              <linearGradient id="sm8" x1="328" y1="42" x2="310" y2="155" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="rgba(140,210,255,0.5)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
-              </linearGradient>
-              <filter id="fglow-m" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="2.5" result="b" />
+              <filter id="mglow-a" x="-30%" y="-80%" width="160%" height="260%">
+                <feGaussianBlur stdDeviation="3" result="b" />
                 <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
-              <filter id="fglow-m2" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="1.2" result="b" />
+              <filter id="mglow-b" x="-30%" y="-60%" width="160%" height="220%">
+                <feGaussianBlur stdDeviation="1.8" result="b" />
                 <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
+              <linearGradient id="mmask-g" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="black" />
+                <stop offset="25%" stopColor="black" />
+                <stop offset="50%" stopColor="white" />
+                <stop offset="100%" stopColor="white" />
+              </linearGradient>
+              <mask id="mstreak-mask">
+                <rect width="400" height="140" fill="url(#mmask-g)" />
+              </mask>
             </defs>
-            <ellipse cx="328" cy="42" rx="60" ry="45" fill="url(#focal-m)" />
-            <line x1="328" y1="42" x2="-20" y2="-20" stroke="url(#sm1)" strokeWidth="2.5" filter="url(#fglow-m)" />
-            <line x1="328" y1="42" x2="60" y2="-15" stroke="url(#sm2)" strokeWidth="2" filter="url(#fglow-m)" />
-            <line x1="328" y1="42" x2="170" y2="-18" stroke="url(#sm3)" strokeWidth="1.5" filter="url(#fglow-m2)" />
-            <line x1="328" y1="42" x2="-30" y2="70" stroke="url(#sm4)" strokeWidth="2" filter="url(#fglow-m)" />
-            <line x1="328" y1="42" x2="-30" y2="140" stroke="url(#sm5)" strokeWidth="2.5" filter="url(#fglow-m)" />
-            <line x1="328" y1="42" x2="60" y2="155" stroke="url(#sm6)" strokeWidth="1.8" filter="url(#fglow-m2)" />
-            <line x1="328" y1="42" x2="200" y2="155" stroke="url(#sm7)" strokeWidth="1.5" filter="url(#fglow-m2)" />
-            <line x1="328" y1="42" x2="310" y2="155" stroke="url(#sm8)" strokeWidth="1" filter="url(#fglow-m2)" />
-            <line x1="328" y1="42" x2="-20" y2="-20" stroke="rgba(220,240,255,0.6)" strokeWidth="0.7" />
-            <line x1="328" y1="42" x2="-30" y2="140" stroke="rgba(200,230,255,0.5)" strokeWidth="0.6" />
-            <line x1="328" y1="42" x2="60" y2="-15" stroke="rgba(210,235,255,0.55)" strokeWidth="0.5" />
+            <ellipse cx="390" cy="70" rx="80" ry="70" fill="rgba(60,140,255,0.18)" />
+            <ellipse cx="380" cy="70" rx="40" ry="35" fill="rgba(100,190,255,0.22)" />
+            <g mask="url(#mstreak-mask)">
+              <path d="M 410 70 Q 300 -20 -20 5"   stroke="url(#mg1)" strokeWidth="5"   fill="none" filter="url(#mglow-a)" />
+              <path d="M 410 70 Q 310 10  -20 30"  stroke="url(#mg2)" strokeWidth="4"   fill="none" filter="url(#mglow-a)" />
+              <path d="M 410 70 Q 320 30  -20 55"  stroke="url(#mg1)" strokeWidth="3.5" fill="none" filter="url(#mglow-a)" />
+              <path d="M 410 70 Q 320 75  -20 80"  stroke="url(#mg2)" strokeWidth="3"   fill="none" filter="url(#mglow-b)" />
+              <path d="M 410 70 Q 310 100 -20 110" stroke="url(#mg1)" strokeWidth="4"   fill="none" filter="url(#mglow-a)" />
+              <path d="M 410 70 Q 300 120 -20 140" stroke="url(#mg3)" strokeWidth="3"   fill="none" filter="url(#mglow-b)" />
+              <path d="M 410 70 Q 290 140 100 160" stroke="url(#mg3)" strokeWidth="2.5" fill="none" filter="url(#mglow-b)" />
+              <path d="M 410 70 Q 300 -20 -20 5"  stroke="rgba(220,242,255,0.8)"  strokeWidth="0.8" fill="none" />
+              <path d="M 410 70 Q 310 10  -20 30"  stroke="rgba(210,238,255,0.7)"  strokeWidth="0.6" fill="none" />
+              <path d="M 410 70 Q 320 30  -20 55"  stroke="rgba(200,235,255,0.65)" strokeWidth="0.7" fill="none" />
+              <path d="M 410 70 Q 320 75  -20 80"  stroke="rgba(200,235,255,0.6)"  strokeWidth="0.5" fill="none" />
+              <path d="M 410 70 Q 310 100 -20 110" stroke="rgba(215,238,255,0.7)"  strokeWidth="0.8" fill="none" />
+              <path d="M 410 70 Q 300 120 -20 140" stroke="rgba(200,232,255,0.6)"  strokeWidth="0.6" fill="none" />
+            </g>
           </svg>
         </div>
         {/* Row 1: Logo + Copa badge + Auth */}

@@ -26,64 +26,66 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-50 overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1629 0%, #0e1f4a 60%, #0d2a6e 100%)" }}>
-      {/* Neon fan streaks overlay */}
+      {/* Neon curved streaks overlay */}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 400 100" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            {/* Focal point glow */}
-            <radialGradient id="focal-h" cx="82%" cy="38%" r="25%">
-              <stop offset="0%" stopColor="rgba(120,200,255,0.7)" />
-              <stop offset="100%" stopColor="rgba(0,100,255,0)" />
-            </radialGradient>
-            {/* Streak gradients — all from focal (328,38) to endpoint */}
-            <linearGradient id="sh1" x1="328" y1="38" x2="-20" y2="-20" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(160,220,255,0.95)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+            {/* Horizontal fade: bright right → transparent left */}
+            <linearGradient id="hg1" x1="100%" y1="0%" x2="30%" y2="0%">
+              <stop offset="0%" stopColor="rgba(160,220,255,0.95)" />
+              <stop offset="50%" stopColor="rgba(100,185,255,0.55)" />
+              <stop offset="100%" stopColor="rgba(60,150,255,0)" />
             </linearGradient>
-            <linearGradient id="sh2" x1="328" y1="38" x2="60" y2="-15" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(140,210,255,0.85)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
+            <linearGradient id="hg2" x1="100%" y1="0%" x2="40%" y2="0%">
+              <stop offset="0%" stopColor="rgba(180,235,255,0.85)" />
+              <stop offset="55%" stopColor="rgba(120,195,255,0.4)" />
+              <stop offset="100%" stopColor="rgba(70,155,255,0)" />
             </linearGradient>
-            <linearGradient id="sh3" x1="328" y1="38" x2="170" y2="-18" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(180,230,255,0.9)" /><stop offset="100%" stopColor="rgba(80,160,255,0)" />
+            <linearGradient id="hg3" x1="100%" y1="0%" x2="50%" y2="0%">
+              <stop offset="0%" stopColor="rgba(140,210,255,0.7)" />
+              <stop offset="100%" stopColor="rgba(50,140,255,0)" />
             </linearGradient>
-            <linearGradient id="sh4" x1="328" y1="38" x2="-30" y2="55" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(100,190,255,0.8)" /><stop offset="100%" stopColor="rgba(40,120,255,0)" />
-            </linearGradient>
-            <linearGradient id="sh5" x1="328" y1="38" x2="-30" y2="100" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(80,170,255,0.7)" /><stop offset="100%" stopColor="rgba(30,100,255,0)" />
-            </linearGradient>
-            <linearGradient id="sh6" x1="328" y1="38" x2="60" y2="118" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(120,200,255,0.75)" /><stop offset="100%" stopColor="rgba(50,130,255,0)" />
-            </linearGradient>
-            <linearGradient id="sh7" x1="328" y1="38" x2="200" y2="118" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(100,185,255,0.6)" /><stop offset="100%" stopColor="rgba(40,110,255,0)" />
-            </linearGradient>
-            <linearGradient id="sh8" x1="328" y1="38" x2="310" y2="118" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="rgba(140,210,255,0.5)" /><stop offset="100%" stopColor="rgba(60,140,255,0)" />
-            </linearGradient>
-            <filter id="fglow-h" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="b" />
+            {/* Glow blur filters */}
+            <filter id="glow-a" x="-30%" y="-80%" width="160%" height="260%">
+              <feGaussianBlur stdDeviation="3" result="b" />
               <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
-            <filter id="fglow-h2" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="1.2" result="b" />
+            <filter id="glow-b" x="-30%" y="-60%" width="160%" height="220%">
+              <feGaussianBlur stdDeviation="1.8" result="b" />
               <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
+            {/* Mask: fade left edge so streaks don't reach logo area */}
+            <linearGradient id="mask-g" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="black" />
+              <stop offset="30%" stopColor="black" />
+              <stop offset="55%" stopColor="white" />
+              <stop offset="100%" stopColor="white" />
+            </linearGradient>
+            <mask id="streak-mask">
+              <rect width="400" height="100" fill="url(#mask-g)" />
+            </mask>
           </defs>
-          {/* Background glow at focal point */}
-          <ellipse cx="328" cy="38" rx="60" ry="40" fill="url(#focal-h)" />
-          {/* Fan streaks */}
-          <line x1="328" y1="38" x2="-20" y2="-20" stroke="url(#sh1)" strokeWidth="2.5" filter="url(#fglow-h)" />
-          <line x1="328" y1="38" x2="60" y2="-15" stroke="url(#sh2)" strokeWidth="2" filter="url(#fglow-h)" />
-          <line x1="328" y1="38" x2="170" y2="-18" stroke="url(#sh3)" strokeWidth="1.5" filter="url(#fglow-h2)" />
-          <line x1="328" y1="38" x2="-30" y2="55" stroke="url(#sh4)" strokeWidth="2" filter="url(#fglow-h)" />
-          <line x1="328" y1="38" x2="-30" y2="100" stroke="url(#sh5)" strokeWidth="2.5" filter="url(#fglow-h)" />
-          <line x1="328" y1="38" x2="60" y2="118" stroke="url(#sh6)" strokeWidth="1.8" filter="url(#fglow-h2)" />
-          <line x1="328" y1="38" x2="200" y2="118" stroke="url(#sh7)" strokeWidth="1.5" filter="url(#fglow-h2)" />
-          <line x1="328" y1="38" x2="310" y2="118" stroke="url(#sh8)" strokeWidth="1" filter="url(#fglow-h2)" />
-          {/* Bright core accent lines (no blur, sharp) */}
-          <line x1="328" y1="38" x2="-20" y2="-20" stroke="rgba(220,240,255,0.6)" strokeWidth="0.7" />
-          <line x1="328" y1="38" x2="-30" y2="100" stroke="rgba(200,230,255,0.5)" strokeWidth="0.6" />
-          <line x1="328" y1="38" x2="60" y2="-15" stroke="rgba(210,235,255,0.55)" strokeWidth="0.5" />
+          {/* Radial glow bloom at focal area (right side) */}
+          <ellipse cx="390" cy="50" rx="80" ry="60" fill="rgba(60,140,255,0.18)" />
+          <ellipse cx="380" cy="50" rx="40" ry="30" fill="rgba(100,190,255,0.22)" />
+          {/* Curved streaks — using cubic bezier Q control points for elegant arcs */}
+          <g mask="url(#streak-mask)">
+            {/* Glow layer (blurred, thick) */}
+            <path d="M 410 50 Q 300 -30 -20 -5"   stroke="url(#hg1)" strokeWidth="5"   fill="none" filter="url(#glow-a)" />
+            <path d="M 410 50 Q 310 -10 -20 15"   stroke="url(#hg2)" strokeWidth="4"   fill="none" filter="url(#glow-a)" />
+            <path d="M 410 50 Q 320 10  -20 35"   stroke="url(#hg1)" strokeWidth="3.5" fill="none" filter="url(#glow-a)" />
+            <path d="M 410 50 Q 320 55  -20 60"   stroke="url(#hg2)" strokeWidth="3"   fill="none" filter="url(#glow-b)" />
+            <path d="M 410 50 Q 310 75  -20 80"   stroke="url(#hg1)" strokeWidth="4"   fill="none" filter="url(#glow-a)" />
+            <path d="M 410 50 Q 300 90  -20 105"  stroke="url(#hg3)" strokeWidth="3"   fill="none" filter="url(#glow-b)" />
+            <path d="M 410 50 Q 290 110 100 120"  stroke="url(#hg3)" strokeWidth="2.5" fill="none" filter="url(#glow-b)" />
+            {/* Sharp bright core lines */}
+            <path d="M 410 50 Q 300 -30 -20 -5"  stroke="rgba(220,242,255,0.8)" strokeWidth="0.8" fill="none" />
+            <path d="M 410 50 Q 310 -10 -20 15"  stroke="rgba(210,238,255,0.7)" strokeWidth="0.6" fill="none" />
+            <path d="M 410 50 Q 320 10  -20 35"  stroke="rgba(200,235,255,0.65)" strokeWidth="0.7" fill="none" />
+            <path d="M 410 50 Q 320 55  -20 60"  stroke="rgba(200,235,255,0.6)" strokeWidth="0.5" fill="none" />
+            <path d="M 410 50 Q 310 75  -20 80"  stroke="rgba(215,238,255,0.7)" strokeWidth="0.8" fill="none" />
+            <path d="M 410 50 Q 300 90  -20 105" stroke="rgba(200,232,255,0.6)" strokeWidth="0.6" fill="none" />
+          </g>
         </svg>
       </div>
       <div className="flex items-center justify-between px-4 py-3" style={{ position: "relative", zIndex: 1 }}>
