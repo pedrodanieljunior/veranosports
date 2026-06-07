@@ -346,11 +346,11 @@ export function BetSlip({
     return (
       <>
         <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-        <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl">
+        <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)" }}>
           <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
-            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            <div className="w-10 h-1 rounded-full bg-blue-300/60" />
           </div>
-        <CardHeader className="border-b border-card-border flex-shrink-0">
+        <CardHeader className="border-b border-blue-200 flex-shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -420,7 +420,7 @@ export function BetSlip({
         onClick={() => onToggleMinimize(false)}
         data-testid="betslip-minimized-bar"
       >
-        <div className="mx-3 mb-3 rounded-2xl bg-card border border-card-border shadow-xl px-4 py-3 flex items-center justify-between cursor-pointer">
+        <div className="mx-3 mb-3 rounded-2xl border border-blue-200 shadow-xl px-4 py-3 flex items-center justify-between cursor-pointer" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)" }}>
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-primary" />
             <span className="font-bold text-sm">Bilhete de Apostas</span>
@@ -446,16 +446,16 @@ export function BetSlip({
   return (
     <>
     <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)" }} onClick={(e) => e.stopPropagation()}>
       <div
         className="flex flex-col items-center pt-2 pb-1 md:hidden flex-shrink-0 cursor-pointer active:opacity-70"
         onClick={() => onToggleMinimize(true)}
         data-testid="button-minimize-betslip"
       >
-        <div className="w-10 h-1 rounded-full bg-muted-foreground/40" />
-        <span className="text-[10px] text-muted-foreground/60 mt-0.5">minimizar</span>
+        <div className="w-10 h-1 rounded-full bg-blue-300/60" />
+        <span className="text-[10px] text-gray-500 mt-0.5">minimizar</span>
       </div>
-      <CardHeader className="border-b border-card-border flex-shrink-0">
+      <CardHeader className="border-b border-blue-200 flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-primary" />
@@ -521,9 +521,9 @@ export function BetSlip({
                         ? `${copaGroupBadge} — ${first.homeTeam}`
                         : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
                       return (
-                        <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
+                        <div key={gameId} className="rounded-xl bg-white/70 border border-blue-200 overflow-hidden" data-testid={`card-pre-game-${gameId}`}>
                           <div
-                            className={`flex items-center justify-between px-3 py-2.5 bg-muted/60 border-b border-border ${isMulti ? "cursor-pointer select-none active:opacity-70" : ""}`}
+                            className={`flex items-center justify-between px-3 py-2.5 bg-white/60 border-b border-blue-200 ${isMulti ? "cursor-pointer select-none active:opacity-70" : ""}`}
                             onClick={() => isMulti && toggleGameExpand(gameId)}
                           >
                             <div className="flex items-center gap-2 min-w-0">
@@ -541,7 +541,7 @@ export function BetSlip({
                               )}
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                              <span className={`font-bold text-sm ${isSGPGame ? "text-purple-400" : "text-yellow-400"}`}>
+                              <span className={`font-bold text-sm ${isSGPGame ? "text-purple-700" : "text-amber-600"}`}>
                                 {fmtOdds(gameOdds)}
                               </span>
                               {isMulti && (
@@ -555,7 +555,7 @@ export function BetSlip({
                           {/* Collapsed preview */}
                           {isMulti && !isExpanded && (
                             <button
-                              className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/80 transition-colors"
+                              className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-white/80 transition-colors"
                               onClick={() => toggleGameExpand(gameId)}
                             >
                               <div className="flex items-center gap-2 min-w-0">
@@ -617,7 +617,7 @@ export function BetSlip({
             </ScrollArea>
 
             {/* Fixed bottom: stats + banners + stake input + alerts + submit */}
-            <div className="pt-3 border-t border-card-border space-y-3 flex-shrink-0">
+            <div className="pt-3 border-t border-blue-200 space-y-3 flex-shrink-0">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Seleções</span>
                 <span className="font-medium">{selections.length}</span>
@@ -721,10 +721,10 @@ export function BetSlip({
                 </div>
               )}
 
-              <div className="pt-1 border-t border-card-border">
+              <div className="pt-1 border-t border-blue-200">
                 <div className="flex justify-between text-lg">
                   <span className="font-medium">Retorno Potencial</span>
-                  <span className={`font-bold ${hasSGPCombination ? "text-purple-400" : comboApplies || isSingleH2H ? "text-yellow-400" : "text-primary"}`}>
+                  <span className={`font-bold ${hasSGPCombination ? "text-purple-700" : comboApplies || isSingleH2H ? "text-amber-600" : "text-primary"}`}>
                     R$ {bonusUsedInBet > 0 ? netPotentialWin.toFixed(2) : displayPotentialWin.toFixed(2)}
                   </span>
                 </div>
