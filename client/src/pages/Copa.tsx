@@ -300,8 +300,8 @@ export default function Copa() {
                 <span className="font-bold text-[10px] whitespace-nowrap" style={{ color: "rgba(255,255,255,0.8)" }}>Principais Ligas</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#1a3520] border-[#c9a227]/30 z-[9999]">
-              <p className="font-bold text-xs mb-2 px-1" style={{ color: "#f5c518" }}>🏆 Principais Ligas</p>
+            <PopoverContent side="bottom" align="start" className="w-52 p-2 border-[#c9a227]/50 z-[9999]" style={{ background: "linear-gradient(160deg, #7c4a00 0%, #b8750a 30%, #d4960f 55%, #c47c05 75%, #8a5200 100%)", borderColor: "rgba(201,162,39,0.5)" }}>
+              <p className="font-bold text-xs mb-2 px-1" style={{ color: "#fff8dc", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>🏆 Principais Ligas</p>
               {[
                 { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
                 { key: "soccer_epl", label: "Premier League" },
@@ -315,7 +315,9 @@ export default function Copa() {
                 return (
                   <button key={key} onClick={() => { setSelectedSport(key); setActiveTab("todos"); }}
                     className="w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                    style={selectedSport === key ? { background: "#c9a227", color: "#0b1f10" } : { color: "#374151" }}
+                    style={selectedSport === key
+                      ? { background: "rgba(255,220,80,0.35)", color: "#fff8dc", border: "1px solid rgba(255,220,80,0.5)" }
+                      : { color: "#ffe9a0" }}
                   >
                     {label}
                   </button>
