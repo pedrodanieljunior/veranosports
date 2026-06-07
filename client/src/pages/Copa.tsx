@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
-import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
+import fwSportsLogo from "@assets/c2528abb-6947-4d73-adef-9352aea4a59c_1780795079409.jpeg";
 import copaLogo from "@assets/copa_logo_transparent.png";
 import tacaCopa from "@assets/taca_copa_transparent.png";
 
@@ -258,13 +258,13 @@ export default function Copa() {
   const pendingBets = betHistory.filter(b => b.status === "pending").length;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#0b1f10" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#0d1629" }}>
       {/* ===== HEADER ===== */}
-      <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "linear-gradient(135deg, #0d2a14 0%, #143d1e 60%, #0f2f18 100%)", borderBottom: "2px solid #c9a227" }}>
+      <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)", borderBottom: "2px solid #e87c1e" }}>
         {/* Row 1: Logo + Copa badge + Auth */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <img src={fwSportsLogo} alt="FW Sports" className="h-12 w-auto" />
+            <img src={fwSportsLogo} alt="Verano Sports" className="h-12 w-auto object-contain" />
             <img src={copaLogo} alt="Copa do Mundo 2026" className="h-12 w-auto object-contain" />
           </div>
 
@@ -345,7 +345,7 @@ export default function Copa() {
               <div className="flex items-start gap-2">
                 <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-14 w-auto object-contain shrink-0 mt-0.5" style={{ filter: "drop-shadow(0 0 6px rgba(201,162,39,0.5))" }} />
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(11px, 3.2vw, 15px)" }}>FW RUMO À COPA DO MUNDO 2026</h2>
+                  <h2 className="font-black leading-tight whitespace-nowrap" style={{ color: "#f5c518", fontSize: "clamp(11px, 3.2vw, 15px)" }}>VERANO SPORTS RUMO À COPA DO MUNDO 2026</h2>
                   <p className="text-white/45 text-[9px] font-bold tracking-widest">EUA · CANADÁ · MÉXICO</p>
                   <div className="flex items-center gap-3 mt-1 overflow-hidden">
                     <span className="flex items-center gap-1 text-white/60 text-[9px] whitespace-nowrap shrink-0"><span className="text-green-400 text-[10px]">✓</span>Cobertura completa</span>

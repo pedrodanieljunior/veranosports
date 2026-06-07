@@ -1,7 +1,7 @@
 import { History, Receipt, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
-import logoFwSports from "@assets/logo_fw_sports_1771768422008.png";
+import veranoLogo from "@assets/c2528abb-6947-4d73-adef-9352aea4a59c_1780795079409.jpeg";
 
 interface HeaderProps {
   selectionsCount: number;
@@ -25,13 +25,13 @@ export function Header({
   const { user, loading } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50" style={{ background: "linear-gradient(180deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+    <header className="sticky top-0 z-50" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)" }}>
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center">
           <img
-            src={logoFwSports}
-            alt="FW Sports"
-            className="h-20 w-auto object-contain drop-shadow-lg"
+            src={veranoLogo}
+            alt="Verano Sports"
+            className="h-14 w-auto object-contain drop-shadow-lg"
             data-testid="img-logo"
           />
         </div>
@@ -41,14 +41,16 @@ export function Header({
             <>
               <button
                 onClick={onOpenRegister}
-                className="px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors"
+                className="px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                style={{ background: "rgba(232,124,30,0.15)", color: "#e87c1e", border: "1px solid rgba(232,124,30,0.4)" }}
                 data-testid="button-register"
               >
                 Registre-se
               </button>
               <button
                 onClick={onOpenLogin}
-                className="px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors"
+                className="px-4 py-2 rounded-lg font-bold text-sm transition-colors text-white"
+                style={{ background: "#1565C0" }}
                 data-testid="button-login"
               >
                 Login
@@ -58,7 +60,8 @@ export function Header({
             <>
               <button
                 onClick={onOpenHistory}
-                className="relative flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/95 text-gray-800 font-bold text-sm shadow-md hover:bg-white transition-colors"
+                className="relative flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm shadow-md text-white transition-colors"
+                style={{ background: "#1565C0" }}
                 data-testid="button-open-history"
               >
                 <History className="w-4 h-4" />
@@ -76,13 +79,14 @@ export function Header({
 
               <button
                 onClick={onOpenProfile}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-900 text-white font-bold text-sm shadow-md hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm shadow-md transition-colors"
+                style={{ background: "rgba(232,124,30,0.15)", border: "1px solid rgba(232,124,30,0.4)" }}
                 data-testid="button-open-profile"
               >
-                <span className="text-yellow-400 text-xs font-mono">
+                <span className="text-xs font-mono" style={{ color: "#e87c1e" }}>
                   R${user.balance.toFixed(2).replace(".", ",")}
                 </span>
-                <UserCircle className="w-5 h-5" />
+                <UserCircle className="w-5 h-5 text-white" />
               </button>
             </>
           ) : null}
@@ -90,7 +94,8 @@ export function Header({
           {user && (
             <button
               onClick={onOpenBetSlip}
-              className="relative flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-md hover:bg-green-700 transition-colors"
+              className="relative flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm shadow-md text-white transition-colors"
+              style={{ background: "#e87c1e" }}
               data-testid="button-open-betslip"
             >
               <Receipt className="w-4 h-4" />

@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import { getSessionId } from "@/lib/session";
-import fwSportsLogo from "@assets/WhatsApp_Image_2026-02-27_at_14.24.46-removebg-preview_1772216817565.png";
+import fwSportsLogo from "@assets/c2528abb-6947-4d73-adef-9352aea4a59c_1780795079409.jpeg";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
@@ -302,28 +302,28 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
       {/* ===== MOBILE LAYOUT ===== */}
-      <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#333333" }}>
-        <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
+      <div className="md:hidden flex flex-col min-h-screen" style={{ backgroundColor: "#0d1629" }}>
+        <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)" }}>
           {/* Row 1: Logo + Auth buttons */}
           <div className="flex items-center justify-between">
-            <img src={fwSportsLogo} alt="FW Sports" className="h-16 w-auto cursor-pointer" onClick={() => setSelectedSport(null)} />
+            <img src={fwSportsLogo} alt="Verano Sports" className="h-14 w-auto cursor-pointer object-contain" onClick={() => setSelectedSport(null)} />
             <div className="flex flex-row flex-nowrap items-center gap-2">
               {!user ? (
                 <>
-                  <button onClick={() => setAuthMode("register")} className="px-3 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs whitespace-nowrap transition-colors" data-testid="button-register-mobile">
+                  <button onClick={() => setAuthMode("register")} className="px-3 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-colors" style={{ background: "rgba(232,124,30,0.15)", color: "#e87c1e", border: "1px solid rgba(232,124,30,0.4)" }} data-testid="button-register-mobile">
                     Registre-se
                   </button>
-                  <button onClick={() => setAuthMode("login")} className="px-3 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs whitespace-nowrap transition-colors" data-testid="button-login-mobile">
+                  <button onClick={() => setAuthMode("login")} className="px-3 py-1.5 rounded-lg text-white font-bold text-xs whitespace-nowrap transition-colors" style={{ background: "#1565C0" }} data-testid="button-login-mobile">
                     Login
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white font-bold text-xs shadow-md whitespace-nowrap" data-testid="button-open-history-mobile">
+                  <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#1565C0" }} data-testid="button-open-history-mobile">
                     <History className="w-3.5 h-3.5" /><span>Apostas</span>
                     {betHistory.filter(b => b.status === "pending").length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.filter(b => b.status === "pending").length}</Badge>}
                   </button>
-                  <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs whitespace-nowrap transition-colors" data-testid="button-open-profile-mobile">
+                  <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-colors" style={{ background: "rgba(232,124,30,0.15)", border: "1px solid rgba(232,124,30,0.4)" }} data-testid="button-open-profile-mobile">
                     <span className="text-white text-[10px]">
                       R${(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}
                     </span>
@@ -468,28 +468,28 @@ export default function Home() {
             {/* Buttons area - positioned at top right of the white area */}
             <div className="flex items-center justify-end pb-0 flex-shrink-0" style={{ paddingRight: "8vw", paddingTop: "12vh" }}>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-56 border border-black/10 shadow-sm" style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8b206 40%, #d4960a 100%)" }}>
-                  <Search className="w-4 h-4 text-gray-900/70 shrink-0" />
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-56 border border-white/20 shadow-sm bg-white/10">
+                  <Search className="w-4 h-4 text-white/70 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Buscar time..."
-                    className="flex-1 bg-transparent text-gray-900 text-sm font-medium placeholder-gray-900/50 outline-none min-w-0"
+                    className="flex-1 bg-transparent text-white text-sm font-medium placeholder-white/50 outline-none min-w-0"
                     data-testid="input-search-teams-desktop"
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery("")} className="text-gray-900/60 hover:text-gray-900">
+                    <button onClick={() => setSearchQuery("")} className="text-white/60 hover:text-white">
                       <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
                 {!user ? (
                   <>
-                    <button onClick={() => setAuthMode("register")} className="px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors" data-testid="button-register-desktop">
+                    <button onClick={() => setAuthMode("register")} className="px-4 py-2 rounded-lg font-bold text-sm transition-colors" style={{ background: "rgba(232,124,30,0.15)", color: "#e87c1e", border: "1px solid rgba(232,124,30,0.4)" }} data-testid="button-register-desktop">
                       Registre-se
                     </button>
-                    <button onClick={() => setAuthMode("login")} className="px-5 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors" data-testid="button-login-desktop">
+                    <button onClick={() => setAuthMode("login")} className="px-5 py-2 rounded-lg text-white font-bold text-sm transition-colors" style={{ background: "#1565C0" }} data-testid="button-login-desktop">
                       Login
                     </button>
                   </>
@@ -497,17 +497,18 @@ export default function Home() {
                   <>
                     <button
                       onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-                      className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-bold text-sm shadow-sm hover:bg-green-700 transition-colors"
+                      className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-white font-bold text-sm shadow-sm transition-colors"
+                      style={{ background: "#1565C0" }}
                       data-testid="button-open-history"
                     >
                       <History className="w-4 h-4" /><span>Apostas</span>
                       {betHistory.filter(b => b.status === "pending").length > 0 && <Badge className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs bg-red-500 text-white border-0">{betHistory.filter(b => b.status === "pending").length}</Badge>}
                     </button>
-                    <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-sm transition-colors" data-testid="button-open-profile-desktop">
-                      <span className="text-white text-xs">
+                    <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-colors" style={{ background: "rgba(232,124,30,0.15)", border: "1px solid rgba(232,124,30,0.4)" }} data-testid="button-open-profile-desktop">
+                      <span className="text-xs" style={{ color: "#e87c1e" }}>
                         R${(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}
                       </span>
-                      <UserCircle className="w-5 h-5" />
+                      <UserCircle className="w-5 h-5 text-white" />
                     </button>
                   </>
                 )}
