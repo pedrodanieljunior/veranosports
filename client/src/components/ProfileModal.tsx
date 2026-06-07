@@ -811,15 +811,15 @@ export function ProfileModal({ open, onClose }: Props) {
                 ];
 
                 return (
-                  <div className="rounded-xl p-4 border border-blue-200/70" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)" }} data-testid="card-clube-fw">
+                  <div className="rounded-xl p-4 border border-yellow-600/40" style={{ background: "linear-gradient(160deg, #7c4a00 0%, #b8750a 30%, #d4960f 55%, #c47c05 75%, #8a5200 100%)" }} data-testid="card-clube-fw">
                     <div className="flex items-center gap-2 mb-3">
                       <Trophy className="w-4 h-4 text-yellow-400" />
                       <span className="font-bold text-sm text-yellow-400">Clube Verano</span>
-                      <span className="ml-auto text-xs text-gray-500">semana atual</span>
+                      <span className="ml-auto text-xs text-yellow-200/70">semana atual</span>
                     </div>
 
                     {/* barra de progresso */}
-                    <div className="relative h-2.5 bg-blue-100 rounded-full mb-4 overflow-visible">
+                    <div className="relative h-2.5 bg-black/20 rounded-full mb-4 overflow-visible">
                       <div
                         className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                         style={{
@@ -878,7 +878,7 @@ export function ProfileModal({ open, onClose }: Props) {
                                 `}>
                                   {t.label}
                                 </p>
-                                <p className={`text-[9px] ${isCurrent ? "text-gray-700" : "text-gray-500"}`}>
+                                <p className={`text-[9px] ${isCurrent ? "text-white/80" : "text-yellow-100/70"}`}>
                                   R${threshold >= 1000 ? "1k" : threshold}
                                 </p>
                                 <p className={`text-[10px] font-bold mt-0.5
@@ -896,17 +896,17 @@ export function ProfileModal({ open, onClose }: Props) {
                     })()}
 
                     <div className="space-y-1 text-center">
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-yellow-100/90">
                         {allDone
                           ? <>💎 Meta atingida! Bônus creditado na segunda às 08h</>
                           : nextLevel
-                          ? <>Apostado: <span className="text-gray-900 font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-600 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ {TIERS[CLUB_FW_LEVELS.findIndex(l => l.level === nextLevel.level)].label}</>
+                          ? <>Apostado: <span className="text-white font-semibold">R$ {weeklyStake.toFixed(2).replace(".", ",")}</span> · Faltam <span className="text-yellow-300 font-semibold">R$ {(nextLevel.threshold - weeklyStake).toFixed(2).replace(".", ",")}</span> p/ {TIERS[CLUB_FW_LEVELS.findIndex(l => l.level === nextLevel.level)].label}</>
                           : "Acompanhe seu progresso aqui"}
                       </p>
-                      <p className="text-[10px] text-gray-400">
+                      <p className="text-[10px] text-yellow-200/60">
                         🕗 Premiação toda segunda às 08h (horário de Manaus)
                       </p>
-                      <p className="text-[10px] text-gray-400">
+                      <p className="text-[10px] text-yellow-200/60">
                         Bônus não acumulativo
                       </p>
                     </div>
