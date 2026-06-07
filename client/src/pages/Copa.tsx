@@ -318,7 +318,7 @@ export default function Copa() {
                 return (
                   <button key={key} onClick={() => { setSelectedSport(key); setActiveTab("todos"); }}
                     className="w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                    style={selectedSport === key ? { background: "#c9a227", color: "#0b1f10" } : { color: "white" }}
+                    style={selectedSport === key ? { background: "#c9a227", color: "#0b1f10" } : { color: "#374151" }}
                   >
                     {label}
                   </button>
@@ -451,11 +451,11 @@ export default function Copa() {
                 <span className="text-xl">
                   {activeTab === "copa" ? "🏆" : activeTab === "champions" ? "⭐" : "⚽"}
                 </span>
-                <p className="text-white font-bold text-sm">
+                <p className="text-gray-800 font-bold text-sm">
                   {activeTab === "todos" ? "Jogos do Dia" : activeTab === "copa" ? "Copa do Mundo 2026" : "Champions League"}
                 </p>
               </div>
-              <p className="text-white/40 text-xs ml-7">
+              <p className="text-gray-400 text-xs ml-7">
                 {activeTab === "champions" && uclFinalGame
                   ? `${new Date(uclFinalGame.commenceTime).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — 1 jogo`
                   : `${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — ${filteredGames.length} ${filteredGames.length === 1 ? "jogo" : "jogos"}`
@@ -483,23 +483,23 @@ export default function Copa() {
                     <div className="flex gap-1.5 pb-1" style={{ minWidth: "max-content" }}>
                       <button onClick={() => setCopaGrupoKey("todos")} data-testid="grupo-todos"
                         className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
-                        style={{ background: copaGrupoKey === "todos" ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === "todos" ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                        style={{ background: copaGrupoKey === "todos" ? "#c9a227" : "#f3f4f6", color: copaGrupoKey === "todos" ? "#0b1f10" : "#374151", border: copaGrupoKey === "todos" ? "none" : "1px solid #e5e7eb" }}>
                         TODOS
                       </button>
                       {COPA_GRUPOS.map(g => (
                         <button key={g} onClick={() => setCopaGrupoKey(g)} data-testid={`grupo-${g}`}
                           className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
-                          style={{ background: copaGrupoKey === g ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === g ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                          style={{ background: copaGrupoKey === g ? "#c9a227" : "#f3f4f6", color: copaGrupoKey === g ? "#0b1f10" : "#374151", border: copaGrupoKey === g ? "none" : "1px solid #e5e7eb" }}>
                           GRUPO {g}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
-                <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
+                <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "#f3f4f6", border: "1px solid #e5e7eb" }}>
                   <div className="text-4xl mb-3">🏆</div>
-                  <p className="text-white font-bold text-sm mb-1">Em breve!</p>
-                  <p className="text-white/50 text-xs">Os cards desta seção serão adicionados em breve.</p>
+                  <p className="text-gray-800 font-bold text-sm mb-1">Em breve!</p>
+                  <p className="text-gray-500 text-xs">Os cards desta seção serão adicionados em breve.</p>
                 </div>
               </>
             );
@@ -510,13 +510,13 @@ export default function Copa() {
                     <div className="flex gap-1.5 pb-1" style={{ minWidth: "max-content" }}>
                       <button onClick={() => setCopaGrupoKey("todos")} data-testid="grupo-todos"
                         className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
-                        style={{ background: copaGrupoKey === "todos" ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === "todos" ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                        style={{ background: copaGrupoKey === "todos" ? "#c9a227" : "#f3f4f6", color: copaGrupoKey === "todos" ? "#0b1f10" : "#374151", border: copaGrupoKey === "todos" ? "none" : "1px solid #e5e7eb" }}>
                         TODOS
                       </button>
                       {COPA_GRUPOS.map(g => (
                         <button key={g} onClick={() => setCopaGrupoKey(g)} data-testid={`grupo-${g}`}
                           className="px-3 py-1.5 rounded-full text-[11px] font-black transition-all whitespace-nowrap"
-                          style={{ background: copaGrupoKey === g ? "#c9a227" : "rgba(255,255,255,0.07)", color: copaGrupoKey === g ? "#0b1f10" : "rgba(255,255,255,0.65)" }}>
+                          style={{ background: copaGrupoKey === g ? "#c9a227" : "#f3f4f6", color: copaGrupoKey === g ? "#0b1f10" : "#374151", border: copaGrupoKey === g ? "none" : "1px solid #e5e7eb" }}>
                           GRUPO {g}
                         </button>
                       ))}
@@ -722,10 +722,10 @@ export default function Copa() {
               ))}
             </div>
           ) : copaMundoGames.length === 0 ? (
-            <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(201,162,39,0.2)" }}>
+            <div className="mx-3 rounded-xl p-6 text-center" style={{ background: "#f3f4f6", border: "1px solid #e5e7eb" }}>
               <div className="text-4xl mb-3">🏆</div>
-              <p className="text-white font-bold text-sm mb-1">Jogos da Copa em breve!</p>
-              <p className="text-white/50 text-xs">Os jogos da Copa do Mundo 2026 estarão disponíveis a partir de 11 de junho.</p>
+              <p className="text-gray-800 font-bold text-sm mb-1">Jogos da Copa em breve!</p>
+              <p className="text-gray-500 text-xs">Os jogos da Copa do Mundo 2026 estarão disponíveis a partir de 11 de junho.</p>
             </div>
           ) : (
             <GamesList
