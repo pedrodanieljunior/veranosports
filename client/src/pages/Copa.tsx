@@ -37,7 +37,7 @@ const WC_QUALIFIER_KEYS = [
   "soccer_wc_intercontinental",
 ];
 
-type CopaTab = "todos" | "copa" | "champions";
+type CopaTab = "aovivo" | "todos" | "copa";
 type CopaSubTab = "todos" | "grupos" | "longo" | "especiais";
 
 function useCountdown(target: Date) {
@@ -155,13 +155,6 @@ export default function Copa() {
     enabled: activeTab === "copa",
   });
 
-  const { data: uclFinalGame } = useQuery<Game | null>({
-    queryKey: ["/api/ucl-final"],
-    queryFn: () => fetch("/api/ucl-final").then(r => r.json()),
-    staleTime: 10 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
-    enabled: activeTab === "champions",
-  });
 
   const sessionId = getSessionId();
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
@@ -189,11 +182,8 @@ export default function Copa() {
     const future = base.filter(g => new Date(g.commenceTime).getTime() > now);
     if (isSearching || isTyping || selectedSport) return future;
     if (activeTab === "copa") return future.filter(g => g.sportKey === "soccer_fifa_world_cup");
-    if (activeTab === "champions") {
-      return uclFinalGame ? [uclFinalGame] : [];
-    }
     return future;
-  }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now, uclFinalGame]);
+  }, [baseGames, searchResults, isSearching, isTyping, activeTab, selectedSport, now]);
 
   const placeBetMutation = useMutation({
     mutationFn: async (data: { selections: Selection[]; stake: number; useBonus: boolean }) => {
@@ -246,14 +236,20 @@ export default function Copa() {
     setSelections(prev => prev.map(s => s.gameId === oldId ? { ...s, gameId: newId, id: s.id.replace(oldId, newId) } : s));
   };
 
+  const hasLiveGame = !!liveStatus?.fixtureId;
+
   const tabs: { key: CopaTab; label: string; icon: React.ReactNode }[] = [
+    {
+      key: "aovivo",
+      label: "AO VIVO",
+      icon: (
+        <span className="relative flex items-center">
+          <span className={`w-2 h-2 rounded-full ${hasLiveGame ? "bg-red-500 animate-pulse" : "bg-gray-400"}`} />
+        </span>
+      ),
+    },
     { key: "todos", label: "TODOS", icon: "📅" },
     { key: "copa", label: "COPA DO MUNDO", icon: <img src={copaTrofeuTab} alt="Copa" className="w-5 h-5 object-contain" /> },
-    {
-      key: "champions",
-      label: "CHAMPIONS LEAGUE",
-      icon: <img src={proxyLogoUrl("https://media.api-sports.io/football/leagues/2.png")} alt="UCL" className="w-5 h-5 object-contain" />,
-    },
   ];
 
   const pendingBets = betHistory.filter(b => b.status === "pending").length;
@@ -375,13 +371,6 @@ export default function Copa() {
         </div>
       )}
 
-      {/* ===== LIVE TEST CARD ===== */}
-      {!isSearching && !isTyping && liveStatus?.fixtureId && (
-        <div className="px-3 pt-3">
-          <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
-        </div>
-      )}
-
       {/* ===== BOOST CARDS ===== */}
       {boostCards.length > 0 && !isSearching && !isTyping && (
         <div className="pt-3">
@@ -446,30 +435,39 @@ export default function Copa() {
           )}
 
           {/* Info do tab ativo */}
-          <div className="mt-2 px-3 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">
-                  {activeTab === "copa" ? "🏆" : activeTab === "champions" ? "⭐" : "⚽"}
-                </span>
-                <p className="text-gray-800 font-bold text-sm">
-                  {activeTab === "todos" ? "Jogos do Dia" : activeTab === "copa" ? "Copa do Mundo 2026" : "Champions League"}
+          {activeTab !== "aovivo" && (
+            <div className="mt-2 px-3 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{activeTab === "copa" ? "🏆" : "⚽"}</span>
+                  <p className="text-gray-800 font-bold text-sm">
+                    {activeTab === "todos" ? "Jogos do Dia" : "Copa do Mundo 2026"}
+                  </p>
+                </div>
+                <p className="text-gray-400 text-xs ml-7">
+                  {`${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — ${filteredGames.length} ${filteredGames.length === 1 ? "jogo" : "jogos"}`}
                 </p>
               </div>
-              <p className="text-gray-400 text-xs ml-7">
-                {activeTab === "champions" && uclFinalGame
-                  ? `${new Date(uclFinalGame.commenceTime).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — 1 jogo`
-                  : `${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — ${filteredGames.length} ${filteredGames.length === 1 ? "jogo" : "jogos"}`
-                }
-              </p>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* ===== GAMES LIST ===== */}
       <div className="px-0 pt-2 pb-4">
-        {activeTab === "copa" && copaSubTab !== "todos" ? (
+        {activeTab === "aovivo" ? (
+          <div className="px-3">
+            {hasLiveGame ? (
+              <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="w-3 h-3 rounded-full bg-gray-300 mb-4" />
+                <p className="text-gray-600 font-semibold text-sm">Nenhum jogo ao vivo no momento</p>
+                <p className="text-gray-400 text-xs mt-1">Os jogos ao vivo aparecerão aqui automaticamente</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === "copa" && copaSubTab !== "todos" ? (
           (() => {
             const COPA_GRUPOS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
             const subCards = copaCards.filter((c: any) => c.subTab === copaSubTab);
@@ -750,8 +748,8 @@ export default function Copa() {
             isLoading={isTyping || (isSearching ? searchLoading : todayLoading)}
             error={null}
             selectedSport={null}
-            isTodayGames={!isSearching && !isTyping && activeTab !== "champions"}
-            hideHeader={activeTab === "champions"}
+            isTodayGames={!isSearching && !isTyping}
+            hideHeader={false}
             isDark={false}
           />
         )}
