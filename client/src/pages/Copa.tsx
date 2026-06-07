@@ -255,7 +255,10 @@ export default function Copa() {
   const pendingBets = betHistory.filter(b => b.status === "pending").length;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{
+      background: "radial-gradient(ellipse at 20% 30%, rgba(147,197,253,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(186,230,253,0.3) 0%, transparent 50%), radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.8) 0%, transparent 40%), linear-gradient(135deg, #f8fbff 0%, #e8f4ff 30%, #f0f8ff 60%, #dbeafe 100%)",
+      position: "relative"
+    }}>
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-2" style={{ backgroundImage: `url(${headerBg})`, backgroundSize: "cover", backgroundPosition: "center", borderBottom: "2px solid #e87c1e" }}>
         {/* Row 1: Logo + Copa badge + Auth */}
