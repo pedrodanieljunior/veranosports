@@ -23,7 +23,7 @@ function OddWithLock({ value, originalValue, isDark, locked }: { value: string; 
           {originalValue}
         </span>
       )}
-      <span className={`text-sm font-bold tabular-nums ${locked ? (isDark ? "text-[#f5c518]/70" : "text-green-600/70") : (isDark ? "text-[#f5c518]" : "text-green-600")} inline-flex items-center gap-0.5`}>
+      <span className={`text-sm font-bold tabular-nums ${locked ? (isDark ? "text-[#f5c518]/70" : "text-[#0076a8]/70") : (isDark ? "text-[#f5c518]" : "text-[#0076a8]")} inline-flex items-center gap-0.5`}>
         {value}
         {locked && <Lock className={`w-2.5 h-2.5 ${isDark ? "text-white/40" : "text-gray-400"}`} />}
       </span>
