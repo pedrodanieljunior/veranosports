@@ -346,7 +346,7 @@ export function BetSlip({
     return (
       <>
         <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-        <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)" }}>
+        <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", color: "#111827" }}>
           <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
             <div className="w-10 h-1 rounded-full bg-blue-300/60" />
           </div>
@@ -369,11 +369,11 @@ export function BetSlip({
                 <CheckCircle2 className="w-9 h-9 text-green-500" />
               </div>
               <div>
-                <p className="text-lg font-bold text-foreground">Bilhete registrado!</p>
-                <p className="text-sm text-muted-foreground mt-1">Sua aposta foi confirmada com sucesso.</p>
+                <p className="text-lg font-bold text-gray-900">Bilhete registrado!</p>
+                <p className="text-sm text-gray-500 mt-1">Sua aposta foi confirmada com sucesso.</p>
               </div>
               <div className="bg-primary/10 border border-primary rounded-lg px-6 py-3">
-                <p className="text-xs text-muted-foreground mb-1">Código do Bilhete</p>
+                <p className="text-xs text-gray-500 mb-1">Código do Bilhete</p>
                 <p className="font-mono text-xl font-bold text-primary" data-testid="text-bet-id">
                   #{placedBet.id.slice(0, 8).toUpperCase()}
                 </p>
@@ -436,7 +436,7 @@ export function BetSlip({
                 {fmtOdds(totalOdds)}x
               </span>
             )}
-            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            <ChevronUp className="w-5 h-5 text-gray-500" />
           </div>
         </div>
       </div>
@@ -446,7 +446,7 @@ export function BetSlip({
   return (
     <>
     <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)" }} onClick={(e) => e.stopPropagation()}>
+    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", color: "#111827" }} onClick={(e) => e.stopPropagation()}>
       <div
         className="flex flex-col items-center pt-2 pb-1 md:hidden flex-shrink-0 cursor-pointer active:opacity-70"
         onClick={() => onToggleMinimize(true)}
@@ -490,11 +490,11 @@ export function BetSlip({
           </div>
         ) : selections.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-            <Receipt className="w-16 h-16 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">
+            <Receipt className="w-16 h-16 text-gray-400 mb-4" />
+            <p className="text-gray-500">
               Seu bilhete está vazio
             </p>
-            <p className="text-sm text-muted-foreground/70 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               Clique nas odds para adicionar seleções
             </p>
           </div>
@@ -528,7 +528,7 @@ export function BetSlip({
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-sm">⚽</span>
-                              <span className="font-semibold text-foreground text-sm truncate">
+                              <span className="font-semibold text-gray-900 text-sm truncate">
                                 {betSlipGameLabel}
                               </span>
                               {isSGPGame && (
@@ -546,8 +546,8 @@ export function BetSlip({
                               </span>
                               {isMulti && (
                                 isExpanded
-                                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                  ? <ChevronUp className="w-4 h-4 text-gray-500" />
+                                  : <ChevronDown className="w-4 h-4 text-gray-500" />
                               )}
                             </div>
                           </div>
@@ -560,7 +560,7 @@ export function BetSlip({
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <div className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
-                                <span className="text-muted-foreground text-xs truncate">
+                                <span className="text-gray-500 text-xs truncate">
                                   {sels[0].marketKey.startsWith("copa_grupo")
                                     ? formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)
                                     : `${translateMarket(sels[0].marketKey)} · ${formatOutcome(sels[0].outcome, sels[0].marketKey, sels[0].homeTeam, sels[0].awayTeam)}`}
@@ -570,7 +570,7 @@ export function BetSlip({
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-600/30 border border-purple-500/50 text-purple-300 leading-none tracking-wide">
                                   CA
                                 </span>
-                                <span className="text-xs text-muted-foreground">+{sels.length - 1} mais</span>
+                                <span className="text-xs text-gray-500">+{sels.length - 1} mais</span>
                               </div>
                             </button>
                           )}
@@ -589,10 +589,10 @@ export function BetSlip({
                                       <div className="flex items-center gap-0 relative">
                                         <div className="absolute -left-5 w-3 h-3 rounded-full bg-yellow-400 border-2 border-muted z-10" />
                                         {!sel.marketKey.startsWith("copa_grupo") && (
-                                          <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
+                                          <span className="text-gray-500 text-xs">{translateMarket(sel.marketKey)}</span>
                                         )}
                                       </div>
-                                      <p className="text-foreground font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
+                                      <p className="text-gray-900 font-semibold text-sm mt-0.5">{formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}</p>
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0 ml-2 mt-1">
                                       <button
@@ -619,11 +619,11 @@ export function BetSlip({
             {/* Fixed bottom: stats + banners + stake input + alerts + submit */}
             <div className="pt-3 border-t border-blue-200 space-y-3 flex-shrink-0">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Seleções</span>
+                <span className="text-gray-600">Seleções</span>
                 <span className="font-medium">{selections.length}</span>
               </div>
               <div className="flex justify-between text-sm -mt-2">
-                <span className="text-muted-foreground">Odds Total</span>
+                <span className="text-gray-600">Odds Total</span>
                 <span className="font-medium">{fmtOdds(totalOdds)}</span>
               </div>
 
@@ -640,14 +640,14 @@ export function BetSlip({
                   </div>
                   <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Odd normal</span>
-                      <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {superAumentoBaseReturn.toFixed(2)}</span>
+                      <span className="text-gray-600">Odd normal</span>
+                      <span className="text-gray-800 font-medium line-through decoration-red-400/70">R$ {superAumentoBaseReturn.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
-                      <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
-                        <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Super Aumentada
+                      <span className="text-amber-700 font-bold text-sm flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 fill-amber-700" /> Super Aumentada
                       </span>
-                      <span className="text-yellow-400 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
+                      <span className="text-amber-700 font-extrabold text-base">R$ {displayPotentialWin.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -666,11 +666,11 @@ export function BetSlip({
                   </div>
                   <div className="bg-purple-500/10 px-3 py-2 space-y-1">
                     {sgpLoading ? (
-                      <p className="text-xs text-purple-300">Calculando odds correlacionadas...</p>
+                      <p className="text-xs text-purple-700">Calculando odds correlacionadas...</p>
                     ) : hasSGPActive ? (
-                      <p className="text-xs text-purple-300">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
+                      <p className="text-xs text-purple-700">Odds correlacionadas via Placar Exato — mais precisas que multiplicação simples.</p>
                     ) : (
-                      <p className="text-xs text-purple-300">Mercados do mesmo jogo combinados com odds especiais.</p>
+                      <p className="text-xs text-purple-700">Mercados do mesmo jogo combinados com odds especiais.</p>
                     )}
                   </div>
                 </div>
@@ -685,7 +685,7 @@ export function BetSlip({
                     </div>
                   </div>
                   <div className="bg-purple-500/10 px-3 py-2">
-                    <p className="text-xs text-purple-300">A FW Sports oferece as maiores odds combinadas do mercado.</p>
+                    <p className="text-xs text-purple-700">A FW Sports oferece as maiores odds combinadas do mercado.</p>
                   </div>
                 </div>
               )}
@@ -708,14 +708,14 @@ export function BetSlip({
                   </div>
                   <div className="bg-yellow-500/10 px-3 py-2.5 space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Sem bônus</span>
-                      <span className="text-foreground font-medium line-through decoration-red-400/70">R$ {returnWithoutBonus.toFixed(2)}</span>
+                      <span className="text-gray-600">Sem bônus</span>
+                      <span className="text-gray-800 font-medium line-through decoration-red-400/70">R$ {returnWithoutBonus.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center border-t border-yellow-500/40 pt-2">
-                      <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
-                        <Zap className="w-3.5 h-3.5 fill-yellow-400" /> Com bônus
+                      <span className="text-amber-700 font-bold text-sm flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 fill-amber-700" /> Com bônus
                       </span>
-                      <span className="text-yellow-300 font-extrabold text-base">R$ {returnWithBonus.toFixed(2)}</span>
+                      <span className="text-amber-700 font-extrabold text-base">R$ {returnWithBonus.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
