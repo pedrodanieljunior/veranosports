@@ -288,7 +288,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
     return (
       <div key={market.id} className="space-y-3">
-        <span className="text-sm font-semibold text-gray-200">{market.label}</span>
+        <span className="text-sm font-semibold text-gray-800">{market.label}</span>
         <div className={`grid gap-2 ${colClass}`}>
           {filteredValues.map((value) => {
             const outcomeKey = `${market.name}-${value.value}`;
@@ -323,11 +323,11 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
                   disabled
                     ? (groupLocked || correlatedLocked)
-                      ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
-                      : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                      ? "bg-blue-50 border-blue-100 opacity-60 cursor-not-allowed"
+                      : "bg-blue-50 border-blue-100 opacity-40 cursor-not-allowed"
                     : selected
-                      ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
-                      : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                      ? "bg-green-100 border-green-500 hover-elevate active-elevate-2"
+                      : "bg-white/70 border-blue-200 hover:border-blue-400 hover-elevate active-elevate-2"
                 }`}
                 data-testid={`button-modal-extra-${market.id}-${value.value}`}
               >
@@ -336,9 +336,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                     <Lock className="w-3 h-3 text-gray-400" />
                   </span>
                 )}
-                <span className="text-xs text-gray-400 mb-1 text-center line-clamp-1">{displayLabel}</span>
+                <span className="text-xs text-gray-600 mb-1 text-center line-clamp-1">{displayLabel}</span>
                 <div className="flex flex-col items-center">
-                  <span className="font-bold text-base text-[#f5c518]">{displayOdd.toFixed(2)}</span>
+                  <span className="font-bold text-base text-[#0076a8]">{displayOdd.toFixed(2)}</span>
                   {isBoosted && (
                     <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
                       {value.odd.toFixed(2)}
@@ -371,31 +371,31 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-[#333333] to-[#282828] text-gray-100 border-[#444]">
-        <DialogHeader className="p-4 pb-0 border-b border-[#444] bg-[#333333]">
+      <DialogContent className="max-w-md max-h-[90vh] p-0 gap-0 bg-gradient-to-b from-white to-blue-400 text-gray-900 border-blue-300">
+        <DialogHeader className="p-4 pb-0 border-b border-blue-200 bg-white/80">
           <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-1 text-xs text-gray-400">
+            <div className="flex items-center gap-1 text-xs text-gray-600">
               <Clock className="w-3.5 h-3.5" />
               <span>{format(gameDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
             </div>
-            <Badge variant="secondary" className="text-xs bg-[#444] text-gray-300">
+            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-0">
               {game.sportTitle}
             </Badge>
           </div>
-          <DialogTitle className="text-base text-gray-100">
+          <DialogTitle className="text-base text-gray-900">
             <div className="flex items-center justify-center gap-3">
               <div className="flex items-center gap-1.5 min-w-0">
                 <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
                 <span className="truncate">{game.homeTeam}</span>
               </div>
-              <span className="text-gray-400 font-normal text-sm shrink-0">vs</span>
+              <span className="text-gray-500 font-normal text-sm shrink-0">vs</span>
               <div className="flex items-center gap-1.5 min-w-0">
                 <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
                 <span className="truncate">{game.awayTeam}</span>
               </div>
             </div>
           </DialogTitle>
-          <DialogDescription className="text-xs text-gray-400 !mt-5 mb-3">
+          <DialogDescription className="text-xs text-gray-600 !mt-5 mb-3">
             Selecione uma odd para adicionar ao bilhete
           </DialogDescription>
 
@@ -407,8 +407,8 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.id
-                    ? "border-yellow-400 text-yellow-400 bg-[#282828]"
-                    : "border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#2a2a2a]"
+                    ? "border-blue-600 text-blue-700 bg-blue-100/50"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-blue-50"
                 }`}
                 data-testid={`tab-market-${tab.id}`}
               >
@@ -425,7 +425,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {showH2h && h2hMarket && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-200">Resultado Final (1X2)</span>
+                  <span className="text-sm font-semibold text-gray-800">Resultado Final (1X2)</span>
                   <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-amber-500/40">
                     <Zap className="w-2.5 h-2.5 fill-black" />
                     Super Aumento Apostas simples
@@ -450,11 +450,11 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                         className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
                           disabled
                             ? correlatedLocked
-                              ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed"
-                              : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
+                              ? "bg-blue-50 border-blue-100 opacity-60 cursor-not-allowed"
+                              : "bg-blue-50 border-blue-100 opacity-40 cursor-not-allowed"
                             : selected
-                              ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
-                              : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                              ? "bg-green-100 border-green-500 hover-elevate active-elevate-2"
+                              : "bg-white/70 border-blue-200 hover:border-blue-400 hover-elevate active-elevate-2"
                         }`}
                         data-testid={`button-modal-h2h-${outcome.name}`}
                       >
@@ -463,9 +463,9 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                             <Lock className="w-3 h-3 text-gray-400" />
                           </span>
                         )}
-                        <span className="text-xs text-gray-400 mb-1">{displayName}</span>
+                        <span className="text-xs text-gray-600 mb-1">{displayName}</span>
                         <div className="flex items-center gap-1">
-                          <span className="font-bold text-lg text-[#f5c518]">{displayOdd.toFixed(2)}</span>
+                          <span className="font-bold text-lg text-[#0076a8]">{displayOdd.toFixed(2)}</span>
                           {h2hBoosted && (h2hBoostPct > 0 ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />)}
                         </div>
                         {h2hBoosted && (
@@ -483,7 +483,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
               const DC_LABELS: Record<string, string> = { "1X": "Casa ou Empate", "X2": "Empate ou Fora", "12": "Casa ou Fora" };
               return (
                 <div className="space-y-3">
-                  <span className="text-sm font-semibold text-gray-200">Dupla Chance</span>
+                  <span className="text-sm font-semibold text-gray-800">Dupla Chance</span>
                   <div className="grid grid-cols-3 gap-2">
                     {dcMarket.outcomes.map((outcome: any) => {
                       const selected = isSelected(outcome.name, "double_chance");
@@ -496,15 +496,15 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                           disabled={disabled}
                           className={`relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all ${
                             disabled
-                              ? groupLocked ? "bg-[#2a2a2a] border-[#444] opacity-60 cursor-not-allowed" : "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
-                              : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2" : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                              ? groupLocked ? "bg-blue-50 border-blue-100 opacity-60 cursor-not-allowed" : "bg-blue-50 border-blue-100 opacity-40 cursor-not-allowed"
+                              : selected ? "bg-green-100 border-green-500 hover-elevate active-elevate-2" : "bg-white/70 border-blue-200 hover:border-blue-400 hover-elevate active-elevate-2"
                           }`}
                           data-testid={`button-modal-dc-${outcome.name}`}
                         >
                           {groupLocked && !selected && <span className="absolute top-1 right-1"><Lock className="w-3 h-3 text-gray-400" /></span>}
-                          <span className="text-[10px] text-gray-400 mb-1 text-center font-bold">{outcome.name}</span>
+                          <span className="text-[10px] text-gray-600 mb-1 text-center font-bold">{outcome.name}</span>
                           <span className="text-[9px] text-gray-500 mb-1 text-center leading-tight">{DC_LABELS[outcome.name] || outcome.name}</span>
-                          <span className="font-bold text-base text-[#f5c518]">{outcome.price.toFixed(2)}</span>
+                          <span className="font-bold text-base text-[#0076a8]">{outcome.price.toFixed(2)}</span>
                         </button>
                       );
                     })}
@@ -533,7 +533,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
               return (
                 <div className="space-y-3">
-                  <span className="text-sm font-semibold text-gray-200">Mais ou Menos Gols</span>
+                  <span className="text-sm font-semibold text-gray-800">Mais ou Menos Gols</span>
                   <div className="space-y-1.5">
                     {/* Header row */}
                     <div className="grid grid-cols-3 gap-2 mb-1">
@@ -543,7 +543,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                     </div>
                     {lines.map(([line, { mais, menos }]) => (
                       <div key={line} className="grid grid-cols-3 gap-2 items-center">
-                        <div className="text-xs text-gray-300 font-medium text-center">{line}</div>
+                        <div className="text-xs text-gray-700 font-medium text-center">{line}</div>
                         {[mais, menos].map((outcome, idx) => {
                           if (!outcome) return <div key={idx} />;
                           const selected = isSelected(outcome.name, "totals");
@@ -555,13 +555,13 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                               onClick={() => !disabled && handleOddClick(outcome.name, outcome.price, "totals", totalsMarket.bookmaker)}
                               disabled={disabled}
                               className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition-all ${
-                                disabled ? "bg-[#2a2a2a] border-[#333] opacity-40 cursor-not-allowed"
-                                  : selected ? "bg-green-900/30 border-green-500 hover-elevate active-elevate-2"
-                                  : "bg-[#3a3a3a] border-[#4a4a4a] hover:border-[#666] hover-elevate active-elevate-2"
+                                disabled ? "bg-blue-50 border-blue-100 opacity-40 cursor-not-allowed"
+                                  : selected ? "bg-green-100 border-green-500 hover-elevate active-elevate-2"
+                                  : "bg-white/70 border-blue-200 hover:border-blue-400 hover-elevate active-elevate-2"
                               }`}
                               data-testid={`button-modal-totals-${outcome.name}`}
                             >
-                              <span className="font-bold text-sm text-[#f5c518]">{displayOdd.toFixed(2)}</span>
+                              <span className="font-bold text-sm text-[#0076a8]">{displayOdd.toFixed(2)}</span>
                               {totBoosted && (
                                 <span className="text-[9px] text-gray-500 line-through flex items-center gap-0.5">
                                   {outcome.price.toFixed(2)}
@@ -581,23 +581,23 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
             {/* Divider between main and extra markets */}
             {showH2h && h2hMarket && filteredExtraMarkets.length > 0 && (
               <div className="flex items-center gap-3 py-1">
-                <div className="flex-1 h-px bg-[#4a4a4a]" />
-                <span className="text-xs text-gray-400 font-medium">Mercados Extras</span>
-                <div className="flex-1 h-px bg-[#4a4a4a]" />
+                <div className="flex-1 h-px bg-blue-200" />
+                <span className="text-xs text-gray-500 font-medium">Mercados Extras</span>
+                <div className="flex-1 h-px bg-blue-200" />
               </div>
             )}
 
             {/* Loading state */}
             {loadingExtra && (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                <span className="ml-2 text-sm text-gray-400">Carregando mercados...</span>
+                <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                <span className="ml-2 text-sm text-gray-500">Carregando mercados...</span>
               </div>
             )}
 
             {/* Error state */}
             {errorExtra && !loadingExtra && (
-              <div className="text-center py-4 text-gray-400">
+              <div className="text-center py-4 text-gray-500">
                 <p className="text-sm">Alguns mercados não puderam ser carregados</p>
               </div>
             )}
@@ -607,16 +607,16 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
 
             {/* Empty state */}
             {!loadingExtra && !hasContent && (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-gray-600">
                 <p className="text-sm">Nenhum mercado disponível nesta categoria</p>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        <div className="p-3 border-t border-[#444] bg-[#282828]">
+        <div className="p-3 border-t border-blue-200 bg-blue-50/50">
           {gameSelectionLimitReached && (
-            <p className="text-xs text-yellow-400 text-center font-semibold">
+            <p className="text-xs text-blue-700 text-center font-semibold">
               Limite de 3 mercados por jogo atingido
             </p>
           )}
