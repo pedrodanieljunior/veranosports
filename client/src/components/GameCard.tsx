@@ -6,6 +6,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { useMarketSettings } from "@/hooks/use-market-settings";
 import { roundOdds } from "@/lib/formatOdds";
 import { useAuth } from "@/lib/auth";
+import { translateTeam } from "@/lib/teamTranslations";
 
 interface GameCardProps {
   game: Game;
@@ -98,7 +99,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
             <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-home-team-${game.id}`}>
-            {game.homeTeam}
+            {translateTeam(game.homeTeam)}
           </span>
           {homeOdd ? (
             <OddWithLock value={displayOdd(homeOdd.price)} isDark={isDark} locked={isLoggedOut} />
@@ -121,7 +122,7 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
             <TeamBadge teamName={game.awayTeam} logoUrl={game.awayLogo} size={22} />
           </div>
           <span className={`text-xs font-medium truncate flex-1 ${isDark ? "text-white" : "text-gray-800"}`} data-testid={`text-away-team-${game.id}`}>
-            {game.awayTeam}
+            {translateTeam(game.awayTeam)}
           </span>
           {awayOdd ? (
             <OddWithLock value={displayOdd(awayOdd.price)} isDark={isDark} locked={isLoggedOut} />

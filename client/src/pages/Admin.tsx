@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { translateLeagueDisplay } from "@/lib/leagueTranslations";
+import { translateTeam } from "@/lib/teamTranslations";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
@@ -1076,7 +1077,7 @@ export default function Admin() {
                           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                             <div>
                               <p className="font-semibold text-sm">
-                                {entry.homeTeam}{entry.awayTeam ? <> <span className="text-muted-foreground">vs</span> {entry.awayTeam}</> : ""}
+                                {translateTeam(entry.homeTeam)}{entry.awayTeam ? <> <span className="text-muted-foreground">vs</span> {translateTeam(entry.awayTeam)}</> : ""}
                               </p>
                               <p className="text-xs text-muted-foreground">{translateLeagueDisplay(entry.sportTitle)} · {entry.count} aposta{entry.count !== 1 ? "s" : ""} simples</p>
                             </div>
@@ -5945,10 +5946,10 @@ function AdminLiveGameTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 text-sm font-medium">
                         <img src={proxyLogoUrl(g.homeLogo)} className="w-4 h-4 object-contain" alt="" />
-                        <span className="truncate">{g.home}</span>
+                        <span className="truncate">{translateTeam(g.home)}</span>
                         {g.isLive && <span className="font-bold mx-1">{fmt(g.goalsHome)}–{fmt(g.goalsAway)}</span>}
                         <span className="text-muted-foreground">×</span>
-                        <span className="truncate">{g.away}</span>
+                        <span className="truncate">{translateTeam(g.away)}</span>
                         <img src={proxyLogoUrl(g.awayLogo)} className="w-4 h-4 object-contain" alt="" />
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
