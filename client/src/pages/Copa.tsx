@@ -416,7 +416,7 @@ export default function Copa() {
 
           {/* Linha 2: Sub-abas da Copa (só aparece quando COPA está ativo) */}
           {activeTab === "copa" && (
-            <div className="mt-2" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", borderTop: "1px solid #bfdbfe", borderBottom: "1px solid #bfdbfe" }}>
+            <div className="mt-2" style={{ background: "linear-gradient(to bottom, #1e40af, #1e3a8a)", borderTop: "1px solid #1d4ed8", borderBottom: "1px solid #1d4ed8" }}>
               <div className="flex">
                 {([
                   { key: "todos", label: "TODOS", Icon: Calendar },
@@ -433,8 +433,8 @@ export default function Copa() {
                       className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 transition-all relative"
                       style={isActive ? { background: "#c9a227" } : {}}
                     >
-                      <Icon className="w-5 h-5" style={{ color: isActive ? "#fff" : "#1d4ed8" }} />
-                      <span className="font-black text-[9px] leading-none text-center whitespace-nowrap" style={{ color: isActive ? "#fff" : "#1d4ed8", letterSpacing: "0.03em" }}>
+                      <Icon className="w-5 h-5" style={{ color: isActive ? "#0b1f10" : "rgba(255,255,255,0.85)" }} />
+                      <span className="font-black text-[9px] leading-none text-center whitespace-nowrap" style={{ color: isActive ? "#0b1f10" : "rgba(255,255,255,0.85)", letterSpacing: "0.03em" }}>
                         {label}
                       </span>
                     </button>
