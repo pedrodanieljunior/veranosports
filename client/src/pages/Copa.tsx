@@ -419,7 +419,7 @@ export default function Copa() {
             <div className="mt-2" style={{ background: "linear-gradient(to bottom, #1e40af, #1e3a8a)", borderTop: "1px solid #1d4ed8", borderBottom: "1px solid #1d4ed8" }}>
               <div className="flex">
                 {([
-                  { key: "todos", label: "TODOS", Icon: Calendar },
+                  { key: "todos", label: "JOGOS", Icon: Calendar },
                   { key: "grupos", label: "GRUPOS", Icon: Users },
                   { key: "longo", label: "LONGO PRAZO", Icon: CalendarDays },
                   { key: "especiais", label: "ESPECIAIS", Icon: BarChart2 },
