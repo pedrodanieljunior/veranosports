@@ -811,7 +811,7 @@ export function ProfileModal({ open, onClose }: Props) {
                 ];
 
                 return (
-                  <div className="rounded-xl p-4 border border-blue-400/40" style={{ background: "linear-gradient(160deg, #3b82f6 0%, #60a5fa 30%, #93c5fd 55%, #60a5fa 75%, #3b82f6 100%)" }} data-testid="card-clube-fw">
+                  <div className="rounded-xl p-4 border border-blue-400/40" style={{ background: "linear-gradient(160deg, #bfdbfe 0%, #dbeafe 30%, #eff6ff 55%, #dbeafe 75%, #bfdbfe 100%)" }} data-testid="card-clube-fw">
                     <div className="flex items-center gap-2 mb-3">
                       <Trophy className="w-4 h-4 text-yellow-400" />
                       <span className="font-bold text-sm text-yellow-400">Clube Verano</span>
