@@ -146,7 +146,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
         {!hasOutcomes && (
           <div
             className="flex items-center justify-center gap-2.5 rounded-lg px-3 py-2 mt-0.5"
-            style={{ background: "#111", border: "1px solid #2a2a2a" }}
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(245,197,24,0.25)" }}
           >
             <span className="text-sm font-semibold line-through" style={{ color: "#777", textDecorationColor: "#555" }}>
               {fmtOdds(card.originalOdds)}
