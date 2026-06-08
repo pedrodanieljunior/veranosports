@@ -266,7 +266,7 @@ export default function Copa() {
         {/* Row 1: Logo + Copa badge + Auth */}
         <div className="flex items-center justify-between gap-2" style={{ position: "relative", zIndex: 1 }}>
           <div className="flex items-center gap-2">
-            <img src={fwSportsLogo} alt="Verano Sports" className="h-12 w-auto object-contain" />
+            <img src={fwSportsLogo} alt="Verano Sports" className="h-16 w-auto object-contain" />
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -397,10 +397,14 @@ export default function Copa() {
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); if (tab.key === "copa") setCopaSubTab("todos"); }}
                   data-testid={`tab-copa-${tab.key}`}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[10px] whitespace-nowrap transition-all shrink-0"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[10px] whitespace-nowrap transition-all shrink-0 ${tab.key === "aovivo" && hasLiveGame && activeTab !== "aovivo" ? "animate-pulse" : ""}`}
                   style={activeTab === tab.key
-                    ? { background: "#1565C0", color: "#ffffff" }
-                    : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }
+                    ? tab.key === "aovivo" && hasLiveGame
+                      ? { background: "#ea580c", color: "#ffffff" }
+                      : { background: "#1565C0", color: "#ffffff" }
+                    : tab.key === "aovivo" && hasLiveGame
+                      ? { background: "#fff7ed", color: "#ea580c", border: "1px solid #fb923c" }
+                      : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }
                   }
                 >
                   <span>{tab.icon}</span>
@@ -440,22 +444,6 @@ export default function Copa() {
             </div>
           )}
 
-          {/* Info do tab ativo */}
-          {activeTab !== "aovivo" && (
-            <div className="mt-2 px-3 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{activeTab === "copa" ? "🏆" : "⚽"}</span>
-                  <p className="text-gray-800 font-bold text-sm">
-                    {activeTab === "todos" ? "Jogos do Dia" : "Copa do Mundo 2026"}
-                  </p>
-                </div>
-                <p className="text-gray-400 text-xs ml-7">
-                  {`${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())} — ${filteredGames.length} ${filteredGames.length === 1 ? "jogo" : "jogos"}`}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
