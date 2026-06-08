@@ -256,7 +256,7 @@ export default function Copa() {
 
   return (
     <div className="min-h-screen" style={{
-      background: "radial-gradient(ellipse at 20% 30%, rgba(147,197,253,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(186,230,253,0.3) 0%, transparent 50%), radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.8) 0%, transparent 40%), linear-gradient(135deg, #f8fbff 0%, #e8f4ff 30%, #f0f8ff 60%, #dbeafe 100%)",
+      background: "#ffffff",
       position: "relative"
     }}>
       {/* ===== HEADER ===== */}
