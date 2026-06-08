@@ -182,7 +182,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                     <span className="text-xs line-through" style={{ color: "#666", textDecorationColor: "#555" }}>
                       {fmtOdds(o.originalOdds)}
                     </span>
-                    <Zap className="w-3 h-3 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
+                    <Zap className="w-3 h-3 flex-shrink-0" style={{ color: "#ea580c", fill: "#ea580c" }} />
                     <span className="text-sm font-extrabold" style={{ color: "#ea580c" }}>
                       {fmtOdds(o.boostedOdds)}
                     </span>
