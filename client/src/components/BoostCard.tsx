@@ -175,7 +175,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                     cursor: "pointer",
                   }}
                 >
-                  <span className="text-xs font-semibold" style={{ color: isChosen ? "#f5c518" : "#ccc" }}>
+                  <span className="text-xs font-semibold" style={{ color: isChosen ? "#1d4ed8" : "#111" }}>
                     {o.label}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -183,7 +183,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                       {fmtOdds(o.originalOdds)}
                     </span>
                     <Zap className="w-3 h-3 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
-                    <span className="text-sm font-extrabold" style={{ color: "#f5c518" }}>
+                    <span className="text-sm font-extrabold" style={{ color: "#ea580c" }}>
                       {fmtOdds(o.boostedOdds)}
                     </span>
                   </div>
