@@ -631,7 +631,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
                 {isGoalsMarket ? (
                   // Paired rows: Over X.5 | Under X.5 per line
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1.5 items-center">
                     {(() => {
                       const lines = Array.from(new Set(
                         filteredValues.map(v => { const m = v.value.match(/[\d.]+/); return m ? m[0] : ""; })
