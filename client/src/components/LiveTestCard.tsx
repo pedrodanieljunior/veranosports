@@ -601,12 +601,12 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                     isSuspended
                       ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
                       : movement === "up"
-                      ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-green-50 text-gray-800"
+                      ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-transparent text-gray-800"
                       : movement === "down"
-                      ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 bg-red-50 text-gray-800"
+                      ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 bg-transparent text-gray-800"
                       : active
                       ? "bg-yellow-400 border-yellow-400 text-black"
-                      : "bg-white/60 border-black/15 text-gray-900 hover:bg-white/80"
+                      : "bg-transparent border-black/15 text-gray-900 hover:bg-white/20"
                   }`}
                 >
                   <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
