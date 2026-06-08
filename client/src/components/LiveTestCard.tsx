@@ -575,65 +575,84 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 })
               : market.values;
             if (filteredValues.length === 0) return null;
+
+            const renderBtn = (v: typeof filteredValues[0]) => {
+              const rawOdd = v.odd;
+              const isSuspended = !!v.suspended;
+              const id = selId(GAME_ID, market.id, v.value);
+              const moveKey = `m${market.id}-${v.value}`;
+              const movement = isSuspended ? undefined : oddMovements[moveKey];
+              const sel: Selection = {
+                id, gameId: GAME_ID,
+                homeTeam: data.teams.home.name, awayTeam: data.teams.away.name,
+                commenceTime, sportTitle: "Futebol Ao Vivo",
+                marketKey: `live_m${market.id}`, bookmaker: "API-Football",
+                outcome: v.value, odds: rawOdd, result: "pending",
+              };
+              const active = !isSuspended && isSelected(selections, id);
+              const outcomeLabel = translateOutcome(v.value);
+              return (
+                <button
+                  key={v.value}
+                  data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
+                  onClick={() => !isSuspended && onToggleSelection(sel)}
+                  disabled={isSuspended}
+                  className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors flex-1 ${
+                    isSuspended
+                      ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
+                      : movement === "up"
+                      ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-green-50 text-gray-800"
+                      : movement === "down"
+                      ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 bg-red-50 text-gray-800"
+                      : active
+                      ? "bg-yellow-400 border-yellow-400 text-black"
+                      : "bg-white/60 border-black/15 text-gray-900 hover:bg-white/80"
+                  }`}
+                >
+                  <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
+                  <div className="flex items-center gap-0.5">
+                    {isSuspended ? (
+                      <Lock className="w-3.5 h-3.5 text-gray-500" />
+                    ) : (
+                      <>
+                        <span className="text-sm font-black bg-gradient-to-b from-blue-500 to-blue-800 bg-clip-text text-transparent">{rawOdd.toFixed(2)}</span>
+                        {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
+                        {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            };
+
+            const isGoalsMarket = GOALS_MARKET_IDS.includes(market.id);
             return (
               <div key={market.id} className={`text-center ${idx > 0 ? "border-t pt-3 border-black/15" : ""}`}>
                 <p className={`mb-1.5 ${marketTitleCls}`}>{label}</p>
-                <div className="flex flex-wrap gap-1.5 justify-center">
-                  {filteredValues.map(v => {
-                    const rawOdd = v.odd;
-                    const isSuspended = !!v.suspended;
-                    const id = selId(GAME_ID, market.id, v.value);
-                    const moveKey = `m${market.id}-${v.value}`;
-                    const movement = isSuspended ? undefined : oddMovements[moveKey];
-                    const sel: Selection = {
-                      id,
-                      gameId: GAME_ID,
-                      homeTeam: data.teams.home.name,
-                      awayTeam: data.teams.away.name,
-                      commenceTime,
-                      sportTitle: "Futebol Ao Vivo",
-                      marketKey: `live_m${market.id}`,
-                      bookmaker: "API-Football",
-                      outcome: v.value,
-                      odds: rawOdd,
-                      result: "pending",
-                    };
-                    const active = !isSuspended && isSelected(selections, id);
-                    const outcomeLabel = translateOutcome(v.value);
-                    return (
-                      <button
-                        key={v.value}
-                        data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
-                        onClick={() => !isSuspended && onToggleSelection(sel)}
-                        disabled={isSuspended}
-                        className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
-                          isSuspended
-                            ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
-                            : movement === "up"
-                            ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-green-50 text-gray-800"
-                            : movement === "down"
-                            ? active ? "bg-yellow-400 border-red-400 text-black" : "border-red-500/60 bg-red-50 text-gray-800"
-                            : active
-                            ? "bg-yellow-400 border-yellow-400 text-black"
-                            : "bg-white/60 border-black/15 text-gray-900 hover:bg-white/80"
-                        }`}
-                      >
-                        <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
-                        <div className="flex items-center gap-0.5">
-                          {isSuspended ? (
-                            <Lock className="w-3.5 h-3.5 text-gray-500" />
-                          ) : (
-                            <>
-                              <span className="text-sm font-black bg-gradient-to-b from-blue-500 to-blue-800 bg-clip-text text-transparent">{rawOdd.toFixed(2)}</span>
-                              {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
-                              {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
-                            </>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                {isGoalsMarket ? (
+                  // Paired rows: Over X.5 | Under X.5 per line
+                  <div className="flex flex-col gap-1.5">
+                    {(() => {
+                      const lines = Array.from(new Set(
+                        filteredValues.map(v => { const m = v.value.match(/[\d.]+/); return m ? m[0] : ""; })
+                      )).filter(Boolean);
+                      return lines.map(line => {
+                        const over = filteredValues.find(v => v.value.toLowerCase().includes("over") && v.value.includes(line));
+                        const under = filteredValues.find(v => v.value.toLowerCase().includes("under") && v.value.includes(line));
+                        return (
+                          <div key={line} className="flex gap-1.5">
+                            {over && renderBtn(over)}
+                            {under && renderBtn(under)}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 justify-center">
+                    {filteredValues.map(v => renderBtn(v))}
+                  </div>
+                )}
               </div>
             );
           })}
