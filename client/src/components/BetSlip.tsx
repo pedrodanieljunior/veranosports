@@ -205,7 +205,7 @@ export function BetSlip({
       ? `${(comboPct * 100).toFixed(0)}%`
       : `${(comboPct * 100).toFixed(1)}%`;
 
-    let lines = [`🎯 Bilhete FW Sports\n`];
+    let lines = [`🎯 Bilhete Verano Sports\n`];
     for (const [game, sels] of Object.entries(grouped)) {
       lines.push(`⚽ ${game}`);
       for (const s of sels) {
@@ -246,7 +246,7 @@ export function BetSlip({
     const shareText = buildShareLines(placedBet, true, false).join("\n");
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Bilhete FW Sports", text: shareText });
+        await navigator.share({ title: "Bilhete Verano Sports", text: shareText });
       } catch (err) {}
     } else {
       navigator.clipboard.writeText(shareText);
@@ -259,7 +259,7 @@ export function BetSlip({
     const shareText = buildShareLines(placedBet, false, true).join("\n");
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Bilhete FW Sports", text: shareText });
+        await navigator.share({ title: "Bilhete Verano Sports", text: shareText });
       } catch (err) {}
     } else {
       navigator.clipboard.writeText(shareText);
@@ -685,7 +685,7 @@ export function BetSlip({
                     </div>
                   </div>
                   <div className="bg-purple-500/10 px-3 py-2">
-                    <p className="text-xs text-purple-700">A FW Sports oferece as maiores odds combinadas do mercado.</p>
+                    <p className="text-xs text-purple-700">A Verano Sports oferece as maiores odds combinadas do mercado.</p>
                   </div>
                 </div>
               )}

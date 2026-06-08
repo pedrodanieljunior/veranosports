@@ -16,7 +16,7 @@ import { ptBR } from "date-fns/locale";
 
 const WHATSAPP_SUPPORT = "5592981128080";
 const PIX_KEY = "22580407000178";
-const PIX_NAME = "FW Sports";
+const PIX_NAME = "Verano Sports";
 const PIX_CITY = "Manaus";
 
 function emv(id: string, value: string): string {
@@ -111,7 +111,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
   };
 
   const sendWhatsApp = () => {
-    const msg = `Olá! Realizei um depósito PIX de R$${parsedAmount.toFixed(2)} na FW Sports. Código do depósito: #${pendingDeposit?.id}. Segue o comprovante em anexo.`;
+    const msg = `Olá! Realizei um depósito PIX de R$${parsedAmount.toFixed(2)} na Verano Sports. Código do depósito: #${pendingDeposit?.id}. Segue o comprovante em anexo.`;
     window.open(`https://wa.me/${WHATSAPP_SUPPORT}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
@@ -571,7 +571,7 @@ function InviteView({ onBack }: { onBack: () => void }) {
   };
 
   const shareWhatsApp = () => {
-    const msg = encodeURIComponent(`🏆 Aposte comigo na FW Sports! Use meu código *${code}* e comece a ganhar: ${inviteLink}`);
+    const msg = encodeURIComponent(`🏆 Aposte comigo na Verano Sports! Use meu código *${code}* e comece a ganhar: ${inviteLink}`);
     window.open(`https://wa.me/?text=${msg}`, "_blank");
   };
 

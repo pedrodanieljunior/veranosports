@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
+import { translateLeagueDisplay } from "@/lib/leagueTranslations";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
@@ -1603,7 +1604,7 @@ export default function Admin() {
                         size="sm"
                         onClick={() => {
                           const totalSacado = withdrawals.reduce((s, w) => s + w.amount, 0);
-                          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Saques - FW Sports</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#111}h1{color:#c53030;border-bottom:2px solid #c53030;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#c53030;color:white;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}.total{font-size:1.2em;font-weight:bold;margin-top:20px;text-align:right;color:#c53030}.footer{margin-top:40px;font-size:0.8em;color:#888;text-align:center}</style></head><body><h1>Relatório de Saques — FW Sports</h1><p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p><table><thead><tr><th>#</th><th>Data/Hora</th><th>Valor</th><th>Descrição</th></tr></thead><tbody>${withdrawals.map((w, i) => `<tr><td>${i + 1}</td><td>${new Date(w.createdAt).toLocaleString('pt-BR')}</td><td>R$${w.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${w.description || '—'}</td></tr>`).join('')}</tbody></table><p class="total">Total: R$${totalSacado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p><p class="footer">FW Sports — Documento gerado automaticamente</p></body></html>`;
+                          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Saques - Verano Sports</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#111}h1{color:#c53030;border-bottom:2px solid #c53030;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#c53030;color:white;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}.total{font-size:1.2em;font-weight:bold;margin-top:20px;text-align:right;color:#c53030}.footer{margin-top:40px;font-size:0.8em;color:#888;text-align:center}</style></head><body><h1>Relatório de Saques — Verano Sports</h1><p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p><table><thead><tr><th>#</th><th>Data/Hora</th><th>Valor</th><th>Descrição</th></tr></thead><tbody>${withdrawals.map((w, i) => `<tr><td>${i + 1}</td><td>${new Date(w.createdAt).toLocaleString('pt-BR')}</td><td>R$${w.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${w.description || '—'}</td></tr>`).join('')}</tbody></table><p class="total">Total: R$${totalSacado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p><p class="footer">Verano Sports — Documento gerado automaticamente</p></body></html>`;
                           const w = window.open('', '_blank');
                           if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
                         }}
@@ -5775,7 +5776,7 @@ function AdminLiveGameTab() {
                 {/* League */}
                 <div className="flex items-center gap-1.5 mb-3">
                   <img src={proxyLogoUrl(activeGame.leagueLogo)} className="w-4 h-4 object-contain" alt="" />
-                  <span className="text-xs text-muted-foreground">{activeGame.league}</span>
+                  <span className="text-xs text-muted-foreground">{translateLeagueDisplay(activeGame.league)}</span>
                   {activeGame.isLive && (
                     <span className="ml-auto text-sm font-bold tabular-nums text-white">
                       {activeGame.elapsed}′ &nbsp;
@@ -5952,7 +5953,7 @@ function AdminLiveGameTab() {
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
                         <img src={proxyLogoUrl(g.leagueLogo)} className="w-3 h-3 object-contain" alt="" />
-                        <span className="text-[10px] text-muted-foreground truncate">{g.league}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{translateLeagueDisplay(g.league)}</span>
                       </div>
                     </div>
 

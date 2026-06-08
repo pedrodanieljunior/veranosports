@@ -567,7 +567,7 @@ export default function Copa() {
                     commenceTime: WC_DATE,
                     sportTitle: "Copa do Mundo 2026",
                     marketKey,
-                    bookmaker: "FW Sports",
+                    bookmaker: "Verano Sports",
                     outcome,
                     odds,
                   });

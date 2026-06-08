@@ -37,6 +37,48 @@ export const leagueTranslations: Record<string, string> = {
   "soccer_england_league1": "League One – Inglaterra",
 };
 
+export const leagueDisplayTranslations: Record<string, string> = {
+  "Friendlies": "Amistosos Internacionais",
+  "International Friendlies": "Amistosos Internacionais",
+  "World Cup - Qualification South America": "Eliminatórias Copa – Sul-Americana",
+  "World Cup - Qualification Europe": "Eliminatórias Copa – UEFA",
+  "World Cup - Qualification CONCACAF": "Eliminatórias Copa – CONCACAF",
+  "World Cup - Qualification Africa": "Eliminatórias Copa – África",
+  "World Cup - Qualification Asia": "Eliminatórias Copa – Ásia",
+  "Serie B": "Série B – Brasil",
+  "Serie A": "Série A – Itália",
+  "Premier League": "Premier League",
+  "Ligue 1": "Ligue 1 – França",
+  "Ligue 2": "Ligue 2 – França",
+  "Bundesliga": "Bundesliga – Alemanha",
+  "2. Bundesliga": "2. Bundesliga – Alemanha",
+  "La Liga": "La Liga – Espanha",
+  "Segunda Division": "Segunda Divisão – Espanha",
+  "Champions League": "UEFA Champions League",
+  "Europa League": "UEFA Europa League",
+  "Conference League": "UEFA Conference League",
+  "Copa do Brasil": "Copa do Brasil",
+  "Copa Libertadores": "Copa Libertadores",
+  "Copa Sudamericana": "Copa Sul-Americana",
+  "MLS": "MLS – Estados Unidos",
+  "Liga MX": "Liga MX – México",
+  "Eredivisie": "Eredivisie – Holanda",
+  "Primeira Liga": "Primeira Liga – Portugal",
+  "Süper Lig": "Superliga – Turquia",
+  "J1 League": "J-League – Japão",
+  "EFL Cup": "Copa da Liga Inglesa",
+  "FA Cup": "Copa da Inglaterra",
+  "Championship": "Championship – Inglaterra",
+  "League One": "League One – Inglaterra",
+  "Brasileiro Série A": "Campeonato Brasileiro Série A",
+  "Brasileiro Série B": "Campeonato Brasileiro Série B",
+  "Primera División": "Primeira Divisão Argentina",
+};
+
 export function translateLeagueName(key: string, fallbackTitle: string): string {
-  return leagueTranslations[key] || fallbackTitle;
+  return leagueTranslations[key] || leagueDisplayTranslations[fallbackTitle] || fallbackTitle;
+}
+
+export function translateLeagueDisplay(name: string): string {
+  return leagueDisplayTranslations[name] || name;
 }
