@@ -53,11 +53,11 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
 
   const cardStyle = {
-    background: "linear-gradient(135deg, #1a1a1a 0%, #222 60%, #1c1a10 100%)",
-    border: isAnySelected ? "2px solid #f5c518" : "2px solid #c8991a",
+    background: "linear-gradient(135deg, #7c2d00 0%, #c2440a 40%, #ea580c 70%, #c2440a 100%)",
+    border: isAnySelected ? "2px solid #fed7aa" : "2px solid #fb923c",
     boxShadow: isAnySelected
-      ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
-      : "0 3px 16px rgba(0,0,0,0.5), 0 0 0 1px #f5c51820",
+      ? "0 0 0 1px #fed7aa40, 0 6px 24px #ea580c50"
+      : "0 3px 16px rgba(0,0,0,0.4), 0 0 0 1px #fb923c30",
   };
 
   return (
@@ -109,7 +109,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
               background: "#f5c51812",
             }}
           >
-            ⚡ SUPER BOOST FW
+            ⚡ SUPER BOOST VERANO
           </span>
         </div>
 
