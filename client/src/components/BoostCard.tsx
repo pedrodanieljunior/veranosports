@@ -170,8 +170,8 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                   onClick={() => onToggleSelection(makeSelection(idx))}
                   className="w-full flex items-center justify-between rounded-lg px-3 py-2 transition-all"
                   style={{
-                    background: isChosen ? "#1d4ed820" : "#4b5563",
-                    border: isChosen ? "1.5px solid #93c5fd" : "1px solid #6b7280",
+                    background: isChosen ? "#1d4ed820" : "#9ca3af",
+                    border: isChosen ? "1.5px solid #93c5fd" : "1px solid #d1d5db",
                     cursor: "pointer",
                   }}
                 >
