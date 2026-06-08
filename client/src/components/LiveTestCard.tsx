@@ -597,7 +597,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                   data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
                   onClick={() => !isSuspended && onToggleSelection(sel)}
                   disabled={isSuspended}
-                  className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors flex-1 ${
+                  className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
                     isSuspended
                       ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
                       : movement === "up"
@@ -640,7 +640,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                         const over = filteredValues.find(v => v.value.toLowerCase().includes("over") && v.value.includes(line));
                         const under = filteredValues.find(v => v.value.toLowerCase().includes("under") && v.value.includes(line));
                         return (
-                          <div key={line} className="flex gap-1.5">
+                          <div key={line} className="flex gap-1.5 justify-center">
                             {over && renderBtn(over)}
                             {under && renderBtn(under)}
                           </div>
