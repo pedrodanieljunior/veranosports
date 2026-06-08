@@ -762,8 +762,8 @@ export function ProfileModal({ open, onClose }: Props) {
                     glow: "rgba(249,115,22,0.45)",
                     dot: "bg-orange-800 border-orange-700",
                     dotReached: "bg-orange-400 border-orange-300",
-                    card: "bg-orange-950/40 border-orange-800/50",
-                    cardReached: "bg-orange-900/40 border-orange-500/70",
+                    card: "bg-transparent border-orange-800/50",
+                    cardReached: "bg-transparent border-orange-500/70",
                     name: "text-orange-600",
                     nameReached: "text-orange-300",
                     bonus: "text-orange-700",
@@ -775,8 +775,8 @@ export function ProfileModal({ open, onClose }: Props) {
                     glow: "rgba(132,204,22,0.45)",
                     dot: "bg-lime-800 border-lime-700",
                     dotReached: "bg-lime-400 border-lime-300",
-                    card: "bg-lime-950/40 border-lime-800/50",
-                    cardReached: "bg-lime-900/40 border-lime-500/70",
+                    card: "bg-transparent border-lime-800/50",
+                    cardReached: "bg-transparent border-lime-500/70",
                     name: "text-lime-600",
                     nameReached: "text-lime-300",
                     bonus: "text-lime-700",
@@ -788,8 +788,8 @@ export function ProfileModal({ open, onClose }: Props) {
                     glow: "rgba(168,85,247,0.45)",
                     dot: "bg-purple-800 border-purple-700",
                     dotReached: "bg-purple-400 border-purple-300",
-                    card: "bg-purple-950/40 border-purple-800/50",
-                    cardReached: "bg-purple-900/40 border-purple-500/70",
+                    card: "bg-transparent border-purple-800/50",
+                    cardReached: "bg-transparent border-purple-500/70",
                     name: "text-purple-600",
                     nameReached: "text-purple-300",
                     bonus: "text-purple-700",
@@ -801,8 +801,8 @@ export function ProfileModal({ open, onClose }: Props) {
                     glow: "rgba(34,211,238,0.45)",
                     dot: "bg-cyan-800 border-cyan-700",
                     dotReached: "bg-cyan-400 border-cyan-300",
-                    card: "bg-cyan-950/40 border-cyan-800/50",
-                    cardReached: "bg-cyan-900/40 border-cyan-500/70",
+                    card: "bg-transparent border-cyan-800/50",
+                    cardReached: "bg-transparent border-cyan-500/70",
                     name: "text-cyan-600",
                     nameReached: "text-cyan-300",
                     bonus: "text-cyan-700",
@@ -860,7 +860,7 @@ export function ProfileModal({ open, onClose }: Props) {
                                 key={level}
                                 className={`rounded-lg p-1.5 text-center border transition-colors relative
                                   ${isCurrent ? `${t.cardReached} ring-1 ring-offset-0` : ""}
-                                  ${isPast    ? "bg-gray-100 border-gray-200 opacity-80" : ""}
+                                  ${isPast    ? "bg-transparent border-gray-200 opacity-80" : ""}
                                   ${isLocked  ? t.card : ""}
                                 `}
                                 style={isCurrent ? { boxShadow: `0 0 8px 0 ${t.glow}` } : undefined}
