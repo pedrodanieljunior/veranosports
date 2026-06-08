@@ -246,7 +246,7 @@ export default function Copa() {
       label: "AO VIVO",
       icon: (
         <span className="relative flex items-center">
-          <span className={`w-2 h-2 rounded-full ${hasLiveGame ? "bg-red-500 animate-pulse" : "bg-gray-400"}`} />
+          <span className={`w-2 h-2 rounded-full ${hasLiveGame ? (activeTab === "aovivo" ? "bg-white animate-ping" : "bg-orange-400 animate-pulse") : "bg-gray-400"}`} />
         </span>
       ),
     },
@@ -397,7 +397,7 @@ export default function Copa() {
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); if (tab.key === "copa") setCopaSubTab("todos"); }}
                   data-testid={`tab-copa-${tab.key}`}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[10px] whitespace-nowrap transition-all shrink-0 ${tab.key === "aovivo" && hasLiveGame && activeTab !== "aovivo" ? "animate-pulse" : ""}`}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[10px] whitespace-nowrap transition-all shrink-0 ${tab.key === "aovivo" && hasLiveGame ? "animate-pulse" : ""}`}
                   style={activeTab === tab.key
                     ? tab.key === "aovivo" && hasLiveGame
                       ? { background: "#ea580c", color: "#ffffff" }
