@@ -96,7 +96,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
         )}
 
         {/* Divider */}
-        <div className="border-t mb-2" style={{ borderColor: "#333" }} />
+        <div className="border-t mb-2" style={{ borderColor: "#f5c518" }} />
 
         {/* SUPER BOOST badge */}
         <div className="mb-2">
