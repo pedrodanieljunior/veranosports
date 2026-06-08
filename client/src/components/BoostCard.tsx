@@ -146,9 +146,9 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
         {!hasOutcomes && (
           <div
             className="flex items-center justify-center gap-2.5 rounded-lg px-3 py-2 mt-0.5"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(245,197,24,0.25)" }}
+            style={{ background: "rgba(255,255,255,0.08)", border: isAnySelected ? "1.5px solid #f5c518" : "1px solid rgba(245,197,24,0.25)" }}
           >
-            <span className="text-sm font-semibold line-through" style={{ color: "#777", textDecorationColor: "#555" }}>
+            <span className="text-sm font-semibold line-through" style={{ color: "#bbb", textDecorationColor: "#999" }}>
               {fmtOdds(card.originalOdds)}
             </span>
             <Zap className="w-4 h-4 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
