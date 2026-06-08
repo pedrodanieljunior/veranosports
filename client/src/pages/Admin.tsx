@@ -1078,7 +1078,7 @@ export default function Admin() {
                               <p className="font-semibold text-sm">
                                 {entry.homeTeam}{entry.awayTeam ? <> <span className="text-muted-foreground">vs</span> {entry.awayTeam}</> : ""}
                               </p>
-                              <p className="text-xs text-muted-foreground">{entry.sportTitle} · {entry.count} aposta{entry.count !== 1 ? "s" : ""} simples</p>
+                              <p className="text-xs text-muted-foreground">{translateLeagueDisplay(entry.sportTitle)} · {entry.count} aposta{entry.count !== 1 ? "s" : ""} simples</p>
                             </div>
                             <div className="flex flex-wrap gap-1 justify-end">
                               {entry.isBlocked && (
