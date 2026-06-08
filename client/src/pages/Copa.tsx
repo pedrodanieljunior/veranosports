@@ -342,8 +342,8 @@ export default function Copa() {
       {/* ===== COUNTDOWN BANNER ===== */}
       {!countdown.started && (
         <div className="px-3 pt-3">
-          <div className="rounded-xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0d3a1a 0%, #1a5e2a 40%, #0f4a1f 100%)", border: "1px solid rgba(201,162,39,0.4)" }}>
-            <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 80% 50%, #ffd700 0%, transparent 60%)" }} />
+          <div className="rounded-xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #001a5e 0%, #002776 40%, #003399 100%)", border: "1px solid rgba(255,223,0,0.4)" }}>
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 80% 50%, #ffd700 0%, transparent 60%)" }} />
             <div className="relative px-3 pt-2 pb-2 flex flex-col gap-2">
               <div className="flex items-start gap-2">
                 <img src={tacaCopa} alt="Taça Copa do Mundo" className="h-14 w-auto object-contain shrink-0 mt-0.5" style={{ filter: "drop-shadow(0 0 6px rgba(201,162,39,0.5))" }} />
