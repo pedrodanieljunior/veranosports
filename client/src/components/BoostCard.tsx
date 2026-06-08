@@ -72,7 +72,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
       <div className="pl-4 pr-3 pt-3 pb-2.5">
         {/* Event name */}
-        <p className="text-center text-[11px] font-medium mb-0.5" style={{ color: "#aaa" }}>
+        <p className="text-center text-[11px] font-medium mb-0.5" style={{ color: "#f5c518" }}>
           {card.eventName}
         </p>
 
