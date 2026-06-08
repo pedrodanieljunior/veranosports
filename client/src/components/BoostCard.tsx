@@ -54,10 +54,10 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
   const cardStyle = {
     background: "linear-gradient(135deg, #0f2d6b 0%, #1a4fad 30%, #2563eb 55%, #1a4fad 75%, #0f2d6b 100%)",
-    border: isAnySelected ? "2px solid #f5c518" : "2px solid #c8991a",
+    border: isAnySelected ? "2px solid #b8860b" : "2px solid #8a6300",
     boxShadow: isAnySelected
-      ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
-      : "0 3px 16px rgba(0,0,0,0.4), 0 0 0 1px #c8991a30",
+      ? "0 0 0 1px #b8860b40, 0 6px 24px #b8860b30"
+      : "0 3px 16px rgba(0,0,0,0.4), 0 0 0 1px #8a630030",
   };
 
   return (
@@ -182,8 +182,8 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                     <span className="text-xs line-through" style={{ color: "#666", textDecorationColor: "#555" }}>
                       {fmtOdds(o.originalOdds)}
                     </span>
-                    <Zap className="w-3 h-3 flex-shrink-0" style={{ color: "#f5c518", fill: "#f5c518" }} />
-                    <span className="text-sm font-extrabold" style={{ color: "#f5c518" }}>
+                    <Zap className="w-3 h-3 flex-shrink-0" style={{ color: "#b8860b", fill: "#b8860b" }} />
+                    <span className="text-sm font-extrabold" style={{ color: "#b8860b" }}>
                       {fmtOdds(o.boostedOdds)}
                     </span>
                   </div>
