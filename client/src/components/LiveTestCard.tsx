@@ -550,7 +550,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       {/* Markets */}
       {data.markets.length > 0 && !isFinished && (
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
-          {data.markets.map((market, idx) => {
+          {data.markets.filter(m => m.id !== 65).map((market, idx) => {
             const label = MARKET_LABELS[market.id] ?? market.name;
             // Goals markets: only show .5 lines (remove 0.75, 1.25, 1.75, etc.)
             const GOALS_MARKET_IDS = [5, 25, 6];
