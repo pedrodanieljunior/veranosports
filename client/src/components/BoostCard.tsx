@@ -171,7 +171,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                   className="w-full flex items-center justify-between rounded-lg px-3 py-2 transition-all"
                   style={{
                     background: isChosen ? "linear-gradient(135deg, #bfdbfe 0%, #dbeafe 100%)" : "linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)",
-                    border: isChosen ? "1.5px solid #3b82f6" : "1px solid #bfdbfe",
+                    border: isChosen ? "1.5px solid #ea580c" : "1px solid #bfdbfe",
                     cursor: "pointer",
                   }}
                 >
