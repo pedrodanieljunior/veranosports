@@ -53,7 +53,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
 
   const cardStyle = {
-    background: "linear-gradient(135deg, #0f2d6b 0%, #1a4fad 30%, #2563eb 55%, #1a4fad 75%, #0f2d6b 100%)",
+    background: "linear-gradient(135deg, #060f2e 0%, #0c2461 30%, #1239a0 55%, #0c2461 75%, #060f2e 100%)",
     border: isAnySelected ? "2px solid #f5c518" : "2px solid #c8991a",
     boxShadow: isAnySelected
       ? "0 0 0 1px #f5c51840, 0 6px 24px #f5c51830"
