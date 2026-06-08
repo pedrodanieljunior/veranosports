@@ -3857,6 +3857,10 @@ function UsersTab() {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [bulkBonusAmount, setBulkBonusAmount] = useState("");
+  const [bulkBonusMode, setBulkBonusMode] = useState<"all" | "selected">("all");
+  const [bulkBonusSelected, setBulkBonusSelected] = useState<Set<string>>(new Set());
+  const [bulkBonusOpen, setBulkBonusOpen] = useState(false);
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -3939,6 +3943,22 @@ function UsersTab() {
     onError: () => toast({ title: "Erro ao deletar usuário", variant: "destructive" }),
   });
 
+  const bulkBonusMutation = useMutation({
+    mutationFn: async ({ cpfs, amount }: { cpfs: string[] | "all"; amount: number }) => {
+      const res = await apiRequest("POST", "/api/admin/users/bulk-bonus", { cpfs, amount });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: `Bônus distribuído para ${data.count} usuário(s)!` });
+      setBulkBonusAmount("");
+      setBulkBonusSelected(new Set());
+      setBulkBonusOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      refetchUsers();
+    },
+    onError: () => toast({ title: "Erro ao distribuir bônus", variant: "destructive" }),
+  });
+
   const totalUsersBalance = users.reduce((s, u) => s + u.balance, 0);
 
   return (
@@ -3967,6 +3987,127 @@ function UsersTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Distribuir Bônus em Massa */}
+      <Card className="border-yellow-500/30">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Gift className="w-4 h-4 text-yellow-400" />
+              Distribuir Bônus
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setBulkBonusOpen(v => !v)} data-testid="button-toggle-bulk-bonus">
+              {bulkBonusOpen ? "Fechar" : "Abrir"}
+            </Button>
+          </div>
+        </CardHeader>
+        {bulkBonusOpen && (
+          <CardContent className="space-y-4">
+            {/* Modo */}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={bulkBonusMode === "all" ? "default" : "outline"}
+                onClick={() => { setBulkBonusMode("all"); setBulkBonusSelected(new Set()); }}
+                data-testid="button-bulk-mode-all"
+              >
+                Todos os usuários
+              </Button>
+              <Button
+                size="sm"
+                variant={bulkBonusMode === "selected" ? "default" : "outline"}
+                onClick={() => setBulkBonusMode("selected")}
+                data-testid="button-bulk-mode-selected"
+              >
+                Selecionar usuários
+              </Button>
+            </div>
+
+            {/* Lista de seleção */}
+            {bulkBonusMode === "selected" && (
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {users.length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-3">Nenhum usuário cadastrado.</p>
+                ) : (
+                  <div>
+                    <label className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={bulkBonusSelected.size === users.length && users.length > 0}
+                        onChange={e => setBulkBonusSelected(e.target.checked ? new Set(users.map(u => u.cpf)) : new Set())}
+                        className="w-4 h-4"
+                        data-testid="checkbox-select-all-users"
+                      />
+                      <span className="text-sm font-semibold">Selecionar todos ({users.length})</span>
+                    </label>
+                    {users.map(u => (
+                      <label key={u.cpf} className="flex items-center gap-2 px-3 py-2 border-b last:border-0 hover:bg-muted/30 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={bulkBonusSelected.has(u.cpf)}
+                          onChange={e => {
+                            const next = new Set(bulkBonusSelected);
+                            e.target.checked ? next.add(u.cpf) : next.delete(u.cpf);
+                            setBulkBonusSelected(next);
+                          }}
+                          className="w-4 h-4"
+                          data-testid={`checkbox-user-${u.cpf}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{u.name}</p>
+                          <p className="text-xs text-muted-foreground">{u.cpf}</p>
+                        </div>
+                        {u.bonusBalance > 0 && (
+                          <span className="text-xs text-yellow-400">🎁 R$ {u.bonusBalance.toFixed(2).replace(".", ",")}</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Valor e confirmação */}
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Valor do bônus (R$)
+                  {bulkBonusMode === "all"
+                    ? ` — será adicionado a todos os ${users.length} usuários`
+                    : bulkBonusSelected.size > 0
+                      ? ` — ${bulkBonusSelected.size} usuário(s) selecionado(s)`
+                      : " — selecione os usuários"}
+                </label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Ex: 10,00"
+                  value={bulkBonusAmount}
+                  onChange={e => setBulkBonusAmount(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+                  data-testid="input-bulk-bonus-amount"
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  const amount = parseFloat(bulkBonusAmount);
+                  if (!amount || amount <= 0) return;
+                  const cpfs = bulkBonusMode === "all" ? "all" : Array.from(bulkBonusSelected);
+                  if (cpfs !== "all" && (cpfs as string[]).length === 0) return;
+                  bulkBonusMutation.mutate({ cpfs, amount });
+                }}
+                disabled={bulkBonusMutation.isPending || !bulkBonusAmount || parseFloat(bulkBonusAmount) <= 0 || (bulkBonusMode === "selected" && bulkBonusSelected.size === 0)}
+                className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold shrink-0"
+                data-testid="button-distribute-bonus"
+              >
+                {bulkBonusMutation.isPending ? "Enviando..." : "Distribuir"}
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* User list */}
           <Card className="md:col-span-1">

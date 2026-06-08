@@ -2256,6 +2256,23 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/users/bulk-bonus", requireAdmin, async (req, res) => {
+    try {
+      const { cpfs, amount } = req.body as { cpfs: string[] | "all"; amount: number };
+      if (!amount || amount <= 0) return res.status(400).json({ message: "Valor inválido" });
+      const allUsers = await storage.getAllUsers();
+      const targets = cpfs === "all" ? allUsers : allUsers.filter(u => (cpfs as string[]).includes(u.cpf));
+      if (targets.length === 0) return res.status(400).json({ message: "Nenhum usuário selecionado" });
+      for (const user of targets) {
+        const newBonus = Math.round((user.bonusBalance + amount) * 100) / 100;
+        await storage.updateUserBonusBalance(user.cpf, newBonus);
+      }
+      res.json({ ok: true, count: targets.length });
+    } catch {
+      res.status(500).json({ message: "Erro ao distribuir bônus" });
+    }
+  });
+
   app.post("/api/admin/users/:cpf/reset-password", async (req, res) => {
     try {
       const { newPassword } = req.body as { newPassword: string };
