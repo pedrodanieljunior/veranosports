@@ -823,7 +823,7 @@ export function BetSlip({
               )}
 
               {hasBonusBalance && (
-                <label className="flex items-center gap-2 cursor-pointer bg-green-950/40 border border-green-700/40 rounded-lg px-3 py-2">
+                <label className="flex items-center gap-2 cursor-pointer bg-green-900/70 border border-green-500/60 rounded-lg px-3 py-2 shadow-sm">
                   <input
                     type="checkbox"
                     checked={useBonus}
@@ -831,10 +831,10 @@ export function BetSlip({
                     className="w-4 h-4 accent-yellow-400"
                     data-testid="checkbox-use-bonus"
                   />
-                  <span className="text-sm text-green-300 font-semibold">
+                  <span className="text-sm text-green-200 font-semibold">
                     🎁 Usar bônus (R$ {(user?.bonusBalance ?? 0).toFixed(2).replace(".", ",")}
                     {stakeNum > (user?.bonusBalance ?? 0) && stakeNum > 0
-                      ? <span className="text-zinc-400 font-normal"> + R$ {Math.max(0, stakeNum - (user?.bonusBalance ?? 0)).toFixed(2).replace(".", ",")} do saldo</span>
+                      ? <span className="text-zinc-300 font-normal"> + R$ {Math.max(0, stakeNum - (user?.bonusBalance ?? 0)).toFixed(2).replace(".", ",")} do saldo</span>
                       : null})
                   </span>
                 </label>
