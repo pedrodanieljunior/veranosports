@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { fmtOdds } from "@/lib/formatOdds";
 import { translateLeagueDisplay } from "@/lib/leagueTranslations";
 import { translateTeam } from "@/lib/teamTranslations";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +82,9 @@ import {
   StopCircle,
   Smartphone,
   ExternalLink,
+  Minus,
+  Loader2,
+  X,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -1035,6 +1038,10 @@ export default function Admin() {
             <TabsTrigger value="ao-vivo" data-testid="tab-ao-vivo">
               <Signal className="w-4 h-4 mr-2 text-red-500" />
               Ao Vivo
+            </TabsTrigger>
+            <TabsTrigger value="bolao" data-testid="tab-bolao">
+              <Trophy className="w-4 h-4 mr-2 text-yellow-400" />
+              Bolão
             </TabsTrigger>
           </TabsList>
 
@@ -2605,6 +2612,10 @@ export default function Admin() {
 
           <TabsContent value="ao-vivo">
             <AdminLiveGameTab />
+          </TabsContent>
+
+          <TabsContent value="bolao">
+            <BolaoTab />
           </TabsContent>
 
         </Tabs>
@@ -6124,6 +6135,241 @@ function AdminLiveGameTab() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ─── Bolão Tab ────────────────────────────────────────────────────────────────
+function BolaoTab() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  interface BolaoAdmin {
+    id: number;
+    homeTeam: string;
+    awayTeam: string;
+    matchDate: string;
+    entryFee: number;
+    status: string;
+    active: boolean;
+    actualHomeScore: number | null;
+    actualAwayScore: number | null;
+    totalEntries: number;
+    prizePool: number;
+    entries: { id: number; userId: string; homeScore: number; awayScore: number; prizeAwarded: boolean; createdAt: string }[];
+  }
+
+  const { data: boloes = [], isLoading } = useQuery<BolaoAdmin[]>({ queryKey: ["/api/admin/bolao"], staleTime: 10_000 });
+
+  // Form state
+  const [form, setForm] = useState({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10" });
+  const [creating, setCreating] = useState(false);
+
+  // Finish modal
+  const [finishModal, setFinishModal] = useState<{ id: number; homeTeam: string; awayTeam: string } | null>(null);
+  const [finishScores, setFinishScores] = useState({ homeScore: 0, awayScore: 0 });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/bolao", {
+        homeTeam: form.homeTeam.trim(),
+        awayTeam: form.awayTeam.trim(),
+        matchDate: form.matchDate,
+        entryFee: parseFloat(form.entryFee) || 10,
+        active: true,
+        status: "open",
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] });
+      setForm({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10" });
+      setCreating(false);
+      toast({ title: "Bolão criado!" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/bolao/${id}`, { active });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] }); queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] }); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/bolao/${id}`, undefined);
+      if (!res.ok) throw new Error("Erro");
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] }); queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] }); toast({ title: "Bolão excluído" }); },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const finishMutation = useMutation({
+    mutationFn: async ({ id, homeScore, awayScore }: { id: number; homeScore: number; awayScore: number }) => {
+      const res = await apiRequest("POST", `/api/admin/bolao/${id}/finish`, { homeScore, awayScore });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] });
+      setFinishModal(null);
+      toast({ title: `Bolão finalizado! ${data.winnerCount} ganhador(es), R$${data.prizePerWinner?.toFixed(2) ?? "0"} cada.` });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const statusLabel = (s: string) => s === "open" ? "Aberto" : s === "closed" ? "Fechado" : "Finalizado";
+  const statusColor = (s: string) => s === "open" ? "bg-green-500/20 text-green-400 border-green-500/30" : s === "closed" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30";
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-400" />
+              Bolão da Copa
+            </CardTitle>
+            <Button size="sm" onClick={() => setCreating(v => !v)} data-testid="button-novo-bolao">
+              {creating ? <><X className="w-4 h-4 mr-1" />Cancelar</> : <><Plus className="w-4 h-4 mr-1" />Novo Bolão</>}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {creating && (
+            <div className="border rounded-lg p-4 mb-4 space-y-3 bg-muted/30">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Time da Casa</label>
+                  <input className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.homeTeam} onChange={e => setForm(f => ({ ...f, homeTeam: e.target.value }))} placeholder="Ex: Brasil" data-testid="input-bolao-home" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Time Visitante</label>
+                  <input className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.awayTeam} onChange={e => setForm(f => ({ ...f, awayTeam: e.target.value }))} placeholder="Ex: Argentina" data-testid="input-bolao-away" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Data do Jogo</label>
+                  <input type="datetime-local" className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.matchDate} onChange={e => setForm(f => ({ ...f, matchDate: e.target.value }))} data-testid="input-bolao-date" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Taxa de entrada (R$)</label>
+                  <input type="number" className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.entryFee} onChange={e => setForm(f => ({ ...f, entryFee: e.target.value }))} min="1" step="0.01" data-testid="input-bolao-fee" />
+                </div>
+              </div>
+              <Button className="w-full" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.homeTeam || !form.awayTeam} data-testid="button-criar-bolao">
+                {createMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</> : "Criar Bolão"}
+              </Button>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : boloes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">Nenhum bolão criado ainda.</div>
+          ) : (
+            <div className="space-y-3">
+              {boloes.map(b => (
+                <div key={b.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{b.homeTeam} vs {b.awayTeam}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {b.matchDate ? new Date(b.matchDate).toLocaleString("pt-BR") : "—"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={statusColor(b.status)}>{statusLabel(b.status)}</Badge>
+                      {b.status === "finished" && b.actualHomeScore !== null && (
+                        <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                          Placar: {b.actualHomeScore}×{b.actualAwayScore}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    <span className="flex items-center gap-1 text-muted-foreground"><Users className="w-3.5 h-3.5" />{b.totalEntries} participante{b.totalEntries !== 1 ? "s" : ""}</span>
+                    <span className="flex items-center gap-1 text-muted-foreground"><DollarSign className="w-3.5 h-3.5" />Prêmio: R${fmt(b.prizePool)}</span>
+                    <span className="flex items-center gap-1 text-muted-foreground">Taxa: R${fmt(b.entryFee)}</span>
+                  </div>
+
+                  {b.status !== "finished" && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => toggleActiveMutation.mutate({ id: b.id, active: !b.active })} data-testid={`button-bolao-toggle-${b.id}`}>
+                        {b.active ? <><EyeOff className="w-3.5 h-3.5 mr-1" />Ocultar</> : <><Eye className="w-3.5 h-3.5 mr-1" />Exibir</>}
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-yellow-400 border-yellow-500/30" onClick={() => { setFinishModal({ id: b.id, homeTeam: b.homeTeam, awayTeam: b.awayTeam }); setFinishScores({ homeScore: 0, awayScore: 0 }); }} data-testid={`button-bolao-finish-${b.id}`}>
+                        <CheckCircle className="w-3.5 h-3.5 mr-1" />Finalizar
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-red-400 border-red-500/30" onClick={() => deleteMutation.mutate(b.id)} data-testid={`button-bolao-delete-${b.id}`}>
+                        <Trash2 className="w-3.5 h-3.5 mr-1" />Excluir
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Finish modal */}
+      <Dialog open={!!finishModal} onOpenChange={open => !open && setFinishModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-400" />
+              Finalizar Bolão
+            </DialogTitle>
+          </DialogHeader>
+          {finishModal && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">{finishModal.homeTeam} vs {finishModal.awayTeam}</p>
+              <p className="text-sm font-medium">Informe o placar real:</p>
+              <div className="flex items-center justify-center gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{finishModal.homeTeam}</span>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="w-8 h-8" onClick={() => setFinishScores(s => ({ ...s, homeScore: Math.max(0, s.homeScore - 1) }))}>
+                      <Minus className="w-3.5 h-3.5" />
+                    </Button>
+                    <span className="text-2xl font-bold w-8 text-center">{finishScores.homeScore}</span>
+                    <Button variant="outline" size="icon" className="w-8 h-8" onClick={() => setFinishScores(s => ({ ...s, homeScore: s.homeScore + 1 }))}>
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <span className="text-xl font-bold text-muted-foreground">×</span>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{finishModal.awayTeam}</span>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="w-8 h-8" onClick={() => setFinishScores(s => ({ ...s, awayScore: Math.max(0, s.awayScore - 1) }))}>
+                      <Minus className="w-3.5 h-3.5" />
+                    </Button>
+                    <span className="text-2xl font-bold w-8 text-center">{finishScores.awayScore}</span>
+                    <Button variant="outline" size="icon" className="w-8 h-8" onClick={() => setFinishScores(s => ({ ...s, awayScore: s.awayScore + 1 }))}>
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <Button className="w-full" onClick={() => finishMutation.mutate({ id: finishModal.id, homeScore: finishScores.homeScore, awayScore: finishScores.awayScore })} disabled={finishMutation.isPending} data-testid="button-confirm-finish-bolao">
+                {finishMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Finalizando...</> : "Confirmar e Distribuir Prêmios"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

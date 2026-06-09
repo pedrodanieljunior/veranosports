@@ -469,6 +469,39 @@ export const insertCopaWorldCupCardSchema = z.object({
 
 export type InsertCopaWorldCupCard = z.infer<typeof insertCopaWorldCupCardSchema>;
 
+// ─── Bolão da Copa ───────────────────────────────────────────────────────────
+export const baloesTable = pgTable("boloes", {
+  id: serial("id").primaryKey(),
+  homeTeam: text("home_team").notNull(),
+  awayTeam: text("away_team").notNull(),
+  matchDate: text("match_date").notNull(),
+  entryFee: real("entry_fee").notNull().default(10),
+  status: text("status").notNull().default("open"), // open | closed | finished
+  actualHomeScore: integer("actual_home_score"),
+  actualAwayScore: integer("actual_away_score"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const bolaoEntriesTable = pgTable("bolao_entries", {
+  id: serial("id").primaryKey(),
+  bolaoId: integer("bolao_id").notNull(),
+  userId: text("user_id").notNull(),
+  homeScore: integer("home_score").notNull(),
+  awayScore: integer("away_score").notNull(),
+  prizeAwarded: boolean("prize_awarded").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type Bolao = typeof baloesTable.$inferSelect;
+export type BolaoEntry = typeof bolaoEntriesTable.$inferSelect;
+
+export const insertBolaoSchema = createInsertSchema(baloesTable).omit({ id: true, createdAt: true });
+export const insertBolaoEntrySchema = createInsertSchema(bolaoEntriesTable).omit({ id: true, createdAt: true, prizeAwarded: true });
+
+export type InsertBolao = z.infer<typeof insertBolaoSchema>;
+export type InsertBolaoEntry = z.infer<typeof insertBolaoEntrySchema>;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),

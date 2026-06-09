@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -121,6 +121,16 @@ export interface IStorage {
   processAllUsersClubFwPayout(weekStart: string): Promise<{ processed: number; totalBonus: number }>;
   fixOvercreditedClubFw(): Promise<{ fixed: number; totalDeducted: number; details: string[] }>;
   getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]>;
+  // Bolão
+  getBoloes(): Promise<Bolao[]>;
+  getActiveBolao(): Promise<Bolao | null>;
+  createBolao(data: InsertBolao): Promise<Bolao>;
+  updateBolao(id: number, data: Partial<InsertBolao>): Promise<Bolao | undefined>;
+  deleteBolao(id: number): Promise<boolean>;
+  createBolaoEntry(data: { bolaoId: number; userId: string; homeScore: number; awayScore: number }): Promise<BolaoEntry>;
+  getBolaoEntries(bolaoId: number): Promise<BolaoEntry[]>;
+  getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]>;
+  finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1203,6 +1213,64 @@ export class DatabaseStorage implements IStorage {
   async deleteCopaCard(id: number): Promise<boolean> {
     const result = await db.delete(copaWorldCupCardsTable).where(eq(copaWorldCupCardsTable.id, id)).returning();
     return result.length > 0;
+  }
+
+  // ─── Bolão ────────────────────────────────────────────────────────────────
+  async getBoloes(): Promise<Bolao[]> {
+    return db.select().from(baloesTable).orderBy(desc(baloesTable.createdAt));
+  }
+
+  async getActiveBolao(): Promise<Bolao | null> {
+    const rows = await db.select().from(baloesTable).where(and(eq(baloesTable.active, true), eq(baloesTable.status, "open"))).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async createBolao(data: InsertBolao): Promise<Bolao> {
+    const [row] = await db.insert(baloesTable).values(data).returning();
+    return row;
+  }
+
+  async updateBolao(id: number, data: Partial<InsertBolao>): Promise<Bolao | undefined> {
+    const [row] = await db.update(baloesTable).set(data).where(eq(baloesTable.id, id)).returning();
+    return row ?? undefined;
+  }
+
+  async deleteBolao(id: number): Promise<boolean> {
+    const result = await db.delete(baloesTable).where(eq(baloesTable.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async createBolaoEntry(data: { bolaoId: number; userId: string; homeScore: number; awayScore: number }): Promise<BolaoEntry> {
+    const [row] = await db.insert(bolaoEntriesTable).values({ ...data, prizeAwarded: false }).returning();
+    return row;
+  }
+
+  async getBolaoEntries(bolaoId: number): Promise<BolaoEntry[]> {
+    return db.select().from(bolaoEntriesTable).where(eq(bolaoEntriesTable.bolaoId, bolaoId)).orderBy(desc(bolaoEntriesTable.createdAt));
+  }
+
+  async getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]> {
+    return db.select().from(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId)).orderBy(desc(bolaoEntriesTable.createdAt));
+  }
+
+  async finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number }> {
+    const bolao = await db.select().from(baloesTable).where(eq(baloesTable.id, bolaoId)).limit(1);
+    if (!bolao[0]) throw new Error("Bolão não encontrado");
+    const entries = await db.select().from(bolaoEntriesTable).where(eq(bolaoEntriesTable.bolaoId, bolaoId));
+    const totalEntries = entries.length;
+    const total = Math.round(totalEntries * (bolao[0].entryFee ?? 10) * 100) / 100;
+    const winners = entries.filter(e => e.homeScore === homeScore && e.awayScore === awayScore);
+    const prizePerWinner = winners.length > 0 ? Math.round((total / winners.length) * 100) / 100 : 0;
+
+    // Mark winners & award prize via transactions (handled in route)
+    await db.update(baloesTable).set({ status: "finished", actualHomeScore: homeScore, actualAwayScore: awayScore }).where(eq(baloesTable.id, bolaoId));
+
+    // Mark prize awarded for winners
+    for (const w of winners) {
+      await db.update(bolaoEntriesTable).set({ prizeAwarded: true }).where(eq(bolaoEntriesTable.id, w.id));
+    }
+
+    return { winners: winners.length, prizePerWinner, totalEntries, total };
   }
 }
 

@@ -10,6 +10,7 @@ import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
 import { RulesModal } from "@/components/RulesModal";
 import { BoostCard } from "@/components/BoostCard";
 import { BoostCard as BoostCardType } from "@shared/schema";
+import { BolaoCard } from "@/components/BolaoCard";
 import { AuthModals } from "@/components/AuthModals";
 import { ProfileModal } from "@/components/ProfileModal";
 import { useAuth } from "@/lib/auth";
@@ -171,6 +172,16 @@ export default function Home() {
     refetchInterval: 30 * 1000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
+  });
+
+  const { data: bolaoData } = useQuery<{
+    bolao: { id: number; homeTeam: string; awayTeam: string; matchDate: string; entryFee: number; status: string };
+    totalEntries: number; prizePool: number;
+    userEntries: { id: number; homeScore: number; awayScore: number; createdAt: string }[];
+  } | null>({
+    queryKey: ["/api/bolao/active"],
+    staleTime: 15_000,
+    refetchInterval: 30_000,
   });
 
   const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
@@ -392,6 +403,11 @@ export default function Home() {
             <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
           </div>
         )}
+        {bolaoData && !isSearching && !isTyping && !selectedSport && (
+          <div className="pt-2">
+            <BolaoCard data={bolaoData} isLoggedIn={!!user} onLoginRequired={() => setAuthMode("login")} />
+          </div>
+        )}
         {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
           <div className="pt-2">
             {boostCards.map(card => (
@@ -527,6 +543,13 @@ export default function Home() {
             {!isSearching && !isTyping && liveStatus?.fixtureId && (
               <div className="pb-3" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
                 <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+              </div>
+            )}
+
+            {/* Bolão */}
+            {bolaoData && !isSearching && !isTyping && !selectedSport && (
+              <div className="pb-2" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+                <BolaoCard data={bolaoData} isLoggedIn={!!user} onLoginRequired={() => setAuthMode("login")} />
               </div>
             )}
 

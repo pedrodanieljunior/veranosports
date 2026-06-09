@@ -4186,6 +4186,109 @@ export async function registerRoutes(
     }
   });
 
+  // ─── Bolão da Copa ───────────────────────────────────────────────────────
+  app.get("/api/bolao/active", async (req, res) => {
+    try {
+      const bolao = await storage.getActiveBolao();
+      if (!bolao) return res.json(null);
+      const entries = await storage.getBolaoEntries(bolao.id);
+      const totalEntries = entries.length;
+      const prizePool = Math.round(totalEntries * (bolao.entryFee ?? 10) * 100) / 100;
+      const userId = req.session?.userId;
+      const userEntries = userId ? entries.filter(e => e.userId === userId) : [];
+      res.json({ bolao, totalEntries, prizePool, userEntries });
+    } catch (e) {
+      res.status(500).json({ error: "Erro ao buscar bolão" });
+    }
+  });
+
+  app.post("/api/bolao/:id/enter", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });
+      const bolaoId = parseInt(req.params.id);
+      const { homeScore, awayScore } = req.body as { homeScore: number; awayScore: number };
+      if (homeScore < 0 || awayScore < 0 || homeScore > 20 || awayScore > 20) return res.status(400).json({ error: "Placar inválido" });
+
+      const bolao = (await storage.getBoloes()).find(b => b.id === bolaoId);
+      if (!bolao || bolao.status !== "open" || !bolao.active) return res.status(400).json({ error: "Bolão não disponível" });
+
+      const user = await storage.getUserByCpf(req.session.userId);
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+      const fee = bolao.entryFee ?? 10;
+      if (user.balance < fee) return res.status(400).json({ error: "Saldo insuficiente. Você precisa de R$" + fee.toFixed(2) + " para participar." });
+
+      // Deduct entry fee
+      const newBalance = Math.round((user.balance - fee) * 100) / 100;
+      await storage.updateUserBalance(req.session.userId, newBalance);
+      await storage.createTransaction({ userId: req.session.userId, type: "bolao_entry", amount: -fee, balanceAfter: newBalance, description: `Bolão: ${bolao.homeTeam} x ${bolao.awayTeam} — ${homeScore}x${awayScore}` });
+
+      const entry = await storage.createBolaoEntry({ bolaoId, userId: req.session.userId, homeScore, awayScore });
+      res.json({ entry, newBalance });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Erro ao participar do bolão" });
+    }
+  });
+
+  // Admin bolão routes
+  app.get("/api/admin/bolao", requireAdmin, async (_req, res) => {
+    try {
+      const boloes = await storage.getBoloes();
+      const result = await Promise.all(boloes.map(async b => {
+        const entries = await storage.getBolaoEntries(b.id);
+        return { ...b, totalEntries: entries.length, prizePool: Math.round(entries.length * (b.entryFee ?? 10) * 100) / 100, entries };
+      }));
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: "Erro" }); }
+  });
+
+  app.post("/api/admin/bolao", requireAdmin, async (req, res) => {
+    try {
+      const bolao = await storage.createBolao(req.body);
+      res.json(bolao);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/admin/bolao/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const bolao = await storage.updateBolao(id, req.body);
+      if (!bolao) return res.status(404).json({ error: "Não encontrado" });
+      res.json(bolao);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/admin/bolao/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteBolao(id);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/admin/bolao/:id/finish", requireAdmin, async (req, res) => {
+    try {
+      const bolaoId = parseInt(req.params.id);
+      const { homeScore, awayScore } = req.body as { homeScore: number; awayScore: number };
+      const result = await storage.finishBolao(bolaoId, homeScore, awayScore);
+
+      // Credit prize to each winner's balance
+      if (result.prizePerWinner > 0) {
+        const entries = await storage.getBolaoEntries(bolaoId);
+        const winners = entries.filter(e => e.prizeAwarded && e.homeScore === homeScore && e.awayScore === awayScore);
+        for (const w of winners) {
+          const user = await storage.getUserByCpf(w.userId);
+          if (user) {
+            const newBal = Math.round((user.balance + result.prizePerWinner) * 100) / 100;
+            await storage.updateUserBalance(w.userId, newBal);
+            await storage.createTransaction({ userId: w.userId, type: "bolao_win", amount: result.prizePerWinner, balanceAfter: newBal, description: `Prêmio do bolão: ${homeScore}x${awayScore} — R$${result.prizePerWinner.toFixed(2)}` });
+          }
+        }
+      }
+
+      res.json({ ...result, winnerCount: result.winners });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // Boost card routes
   app.get("/api/boost-cards", async (_req, res) => {
     try {
