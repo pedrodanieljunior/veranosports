@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Minus, Users, DollarSign, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getCountryFlag } from "@/lib/countryFlags";
 
 interface BolaoData {
   bolao: {
@@ -105,7 +106,10 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
         <div className="flex items-center justify-center gap-3 mb-3">
           {/* Home score */}
           <div className="flex flex-col items-center gap-1">
-            <span className="text-sm font-black text-white truncate max-w-[90px] text-center">{bolao.homeTeam}</span>
+            {getCountryFlag(bolao.homeTeam)
+              ? <span className="text-4xl leading-none">{getCountryFlag(bolao.homeTeam)}</span>
+              : <span className="text-sm font-black text-white truncate max-w-[90px] text-center">{bolao.homeTeam}</span>
+            }
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
@@ -131,7 +135,10 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
 
           {/* Away score */}
           <div className="flex flex-col items-center gap-1">
-            <span className="text-sm font-black text-white truncate max-w-[90px] text-center">{bolao.awayTeam}</span>
+            {getCountryFlag(bolao.awayTeam)
+              ? <span className="text-4xl leading-none">{getCountryFlag(bolao.awayTeam)}</span>
+              : <span className="text-sm font-black text-white truncate max-w-[90px] text-center">{bolao.awayTeam}</span>
+            }
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
