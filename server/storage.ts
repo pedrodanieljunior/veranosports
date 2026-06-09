@@ -232,8 +232,14 @@ export class DatabaseStorage implements IStorage {
     const currentStatus = bet.status as string;
     let newStatus: string = currentStatus;
     if (currentStatus !== "cashed_out") {
-      const anyLost = updatedSelections.some(sel => sel.result === "lost");
-      const allResolved = updatedSelections.every(sel => sel.result !== "pending");
+      // Seleções boost são sempre resolvidas manualmente pelo admin — excluir da lógica automática
+      const nonBoostSelections = updatedSelections.filter((sel: any) => sel.marketKey !== "boost");
+      const boostSelections = updatedSelections.filter((sel: any) => sel.marketKey === "boost");
+      const boostPending = boostSelections.some((sel: any) => !sel.result || sel.result === "pending");
+      const boostLost = boostSelections.some((sel: any) => sel.result === "lost");
+
+      const anyLost = nonBoostSelections.some((sel: any) => sel.result === "lost") || boostLost;
+      const allResolved = nonBoostSelections.every((sel: any) => sel.result !== "pending") && !boostPending;
       if (anyLost) {
         // Uma seleção perdida = bilhete perdido imediatamente (regra de múltipla)
         newStatus = "lost";

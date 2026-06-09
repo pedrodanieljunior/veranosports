@@ -1605,14 +1605,20 @@ async function runCheckResults() {
     let selectionsUpdated = false;
 
     for (const selection of bet.selections) {
-      if (selection.result && selection.result !== "pending") {
-        if (selection.result === "lost") allSelectionsWon = false;
+      // Super Boost Verano: NUNCA resolvido automaticamente — sempre pelo admin manualmente
+      // Este check vem ANTES do check de result para evitar que boost "lost" incorreto bloqueie o bilhete
+      if (selection.marketKey === "boost") {
+        if (!selection.result || selection.result === "pending") {
+          allSelectionsResolved = false; // ainda aguarda resolução manual
+        } else if (selection.result === "lost") {
+          allSelectionsWon = false; // admin marcou como perdido
+        }
+        // se "won", não afeta allSelectionsWon (correto)
         continue;
       }
 
-      // Super Boost Verano: sempre resolvido manualmente pelo admin — nunca automático
-      if (selection.marketKey === "boost") {
-        allSelectionsResolved = false;
+      if (selection.result && selection.result !== "pending") {
+        if (selection.result === "lost") allSelectionsWon = false;
         continue;
       }
 
@@ -5676,6 +5682,17 @@ export async function registerRoutes(
       }
 
       const existing = await storage.getBetSlip(id);
+
+      // Ao reverter para "pending", resetar seleções boost para "pending" também
+      // (evita que um boost incorretamente marcado como "lost" force o bilhete a perder novamente)
+      if (status === "pending" && existing?.selections) {
+        for (const sel of existing.selections) {
+          if (sel.marketKey === "boost" && sel.result && sel.result !== "pending") {
+            await storage.updateSelectionResult(id, sel.id, "pending");
+          }
+        }
+      }
+
       const updated = await storage.updateBetSlipStatus(id, status);
       if (!updated) {
         return res.status(404).json({ error: "Bilhete não encontrado" });
