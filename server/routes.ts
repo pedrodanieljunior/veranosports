@@ -1610,6 +1610,12 @@ async function runCheckResults() {
         continue;
       }
 
+      // Super Boost Verano: sempre resolvido manualmente pelo admin — nunca automático
+      if (selection.marketKey === "boost") {
+        allSelectionsResolved = false;
+        continue;
+      }
+
       const matchingFixture = allFinishedFixtures.find((fixture: any) =>
         teamsMatch(fixture.teams.home.name, selection.homeTeam) &&
         teamsMatch(fixture.teams.away.name, selection.awayTeam)
@@ -6005,6 +6011,8 @@ export async function registerRoutes(
       const resolvedSelections: any[] = [];
 
       for (const sel of bet.selections) {
+        // Super Boost Verano: sempre resolvido manualmente pelo admin — nunca automático
+        if (sel.marketKey === "boost") { resolvedSelections.push(sel); continue; }
         const fid = sel.gameId.startsWith("api-football-") ? sel.gameId.replace("api-football-", "") : null;
         if (!fid) { resolvedSelections.push(sel); continue; }
         const fix = fixtureResults.get(fid);
@@ -6560,6 +6568,9 @@ function checkSelectionResult(
 ): boolean | null {
   const outcome   = selection.outcome?.toLowerCase() ?? "";
   const marketKey = selection.marketKey?.toLowerCase() ?? "";
+
+  // Super Boost Verano: nunca resolvido automaticamente
+  if (marketKey === "boost") return null;
 
   console.log(`    checkSelectionResult: mk="${marketKey}" outcome="${selection.outcome}"`);
   console.log(`    Placar: ${homeGoals}-${awayGoals}, HT: ${htHomeGoals}-${htAwayGoals}`);
