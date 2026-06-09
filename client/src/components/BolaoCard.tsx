@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trophy, Plus, Minus, Users, DollarSign, Loader2 } from "lucide-react";
+import { ListChecks, Plus, Minus, Users, DollarSign, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -73,11 +73,10 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
       <div className="px-4 pt-3 pb-3">
         {/* Header */}
         <div className="flex items-center justify-center gap-2 mb-1">
-          <Trophy className="w-4 h-4" style={{ color: "#f5c518" }} />
+          <ListChecks className="w-4 h-4" style={{ color: "#f5c518" }} />
           <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#f5c518" }}>
             Bolão da Copa
           </span>
-          <Trophy className="w-4 h-4" style={{ color: "#f5c518" }} />
         </div>
 
         {/* Teams */}
