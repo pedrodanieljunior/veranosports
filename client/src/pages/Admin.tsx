@@ -6225,9 +6225,23 @@ function BolaoTab() {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const [expandedPalpites, setExpandedPalpites] = useState<Record<number, boolean>>({});
+
   const fmt = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const statusLabel = (s: string) => s === "open" ? "Aberto" : s === "closed" ? "Fechado" : "Finalizado";
   const statusColor = (s: string) => s === "open" ? "bg-green-500/20 text-green-400 border-green-500/30" : s === "closed" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30";
+
+  function groupPalpites(entries: BolaoAdmin["entries"], prizePool: number) {
+    const map = new Map<string, { homeScore: number; awayScore: number; count: number }>();
+    for (const e of entries) {
+      const key = `${e.homeScore}-${e.awayScore}`;
+      if (!map.has(key)) map.set(key, { homeScore: e.homeScore, awayScore: e.awayScore, count: 0 });
+      map.get(key)!.count++;
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.count - a.count)
+      .map(g => ({ ...g, prizeIfWin: g.count > 0 ? Math.round((prizePool / g.count) * 100) / 100 : 0 }));
+  }
 
   return (
     <div className="space-y-4">
@@ -6299,9 +6313,48 @@ function BolaoTab() {
 
                   <div className="flex flex-wrap gap-3 text-sm">
                     <span className="flex items-center gap-1 text-muted-foreground"><Users className="w-3.5 h-3.5" />{b.totalEntries} participante{b.totalEntries !== 1 ? "s" : ""}</span>
-                    <span className="flex items-center gap-1 text-muted-foreground"><DollarSign className="w-3.5 h-3.5" />Prêmio: R${fmt(b.prizePool)}</span>
+                    <span className="flex items-center gap-1 text-muted-foreground"><DollarSign className="w-3.5 h-3.5" />Prêmio total: R${fmt(b.prizePool)}</span>
                     <span className="flex items-center gap-1 text-muted-foreground">Taxa: R${fmt(b.entryFee)}</span>
                   </div>
+
+                  {/* Palpites por placar */}
+                  {b.entries.length > 0 && (
+                    <div>
+                      <button
+                        className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 mb-2"
+                        onClick={() => setExpandedPalpites(p => ({ ...p, [b.id]: !p[b.id] }))}
+                        data-testid={`button-palpites-${b.id}`}
+                      >
+                        {expandedPalpites[b.id] ? "▾" : "▸"} Palpites por placar ({b.totalEntries})
+                      </button>
+                      {expandedPalpites[b.id] && (() => {
+                        const grupos = groupPalpites(b.entries, b.prizePool);
+                        return (
+                          <div className="rounded-lg overflow-hidden border border-border text-xs">
+                            <div className="grid grid-cols-3 bg-muted/60 px-3 py-2 font-semibold text-muted-foreground">
+                              <span>Placar</span>
+                              <span className="text-center">Qtd. usuários</span>
+                              <span className="text-right">Prêmio por ganhador</span>
+                            </div>
+                            {grupos.map((g, i) => {
+                              const isWinner = b.status === "finished" && b.actualHomeScore === g.homeScore && b.actualAwayScore === g.awayScore;
+                              return (
+                                <div key={i} className={`grid grid-cols-3 px-3 py-2 border-t border-border ${isWinner ? "bg-yellow-500/10" : i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                                  <span className={`font-bold ${isWinner ? "text-yellow-400" : ""}`}>
+                                    {isWinner && "🏆 "}{g.homeScore} × {g.awayScore}
+                                  </span>
+                                  <span className="text-center text-muted-foreground">{g.count} {g.count === 1 ? "usuário" : "usuários"}</span>
+                                  <span className={`text-right font-semibold ${isWinner ? "text-yellow-400" : "text-green-400"}`}>
+                                    R$ {fmt(g.prizeIfWin)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
 
                   {b.status !== "finished" && (
                     <div className="flex flex-wrap gap-2">
