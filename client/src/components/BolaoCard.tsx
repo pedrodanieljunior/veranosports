@@ -80,9 +80,9 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
 
         {/* Teams */}
         <div className="flex items-center justify-center gap-3 mb-3">
-          <span className="text-white font-bold text-sm text-right flex-1 truncate text-right">{bolao.homeTeam}</span>
+          <span className="font-black text-xl text-right flex-1 truncate" style={{ color: "#fff", textShadow: "0 1px 8px rgba(245,197,24,0.25)" }}>{bolao.homeTeam}</span>
           <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>VS</span>
-          <span className="text-white font-bold text-sm flex-1 truncate">{bolao.awayTeam}</span>
+          <span className="font-black text-xl flex-1 truncate" style={{ color: "#fff", textShadow: "0 1px 8px rgba(245,197,24,0.25)" }}>{bolao.awayTeam}</span>
         </div>
 
         {/* Stats row */}
