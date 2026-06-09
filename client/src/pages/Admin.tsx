@@ -6156,7 +6156,7 @@ function BolaoTab() {
     actualAwayScore: number | null;
     totalEntries: number;
     prizePool: number;
-    entries: { id: number; userId: string; homeScore: number; awayScore: number; prizeAwarded: boolean; createdAt: string }[];
+    entries: { id: number; userId: string; userName: string; homeScore: number; awayScore: number; prizeAwarded: boolean; createdAt: string }[];
   }
 
   const { data: boloes = [], isLoading } = useQuery<BolaoAdmin[]>({ queryKey: ["/api/admin/bolao"], staleTime: 10_000 });
@@ -6232,11 +6232,13 @@ function BolaoTab() {
   const statusColor = (s: string) => s === "open" ? "bg-green-500/20 text-green-400 border-green-500/30" : s === "closed" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30";
 
   function groupPalpites(entries: BolaoAdmin["entries"], prizePool: number) {
-    const map = new Map<string, { homeScore: number; awayScore: number; count: number }>();
+    const map = new Map<string, { homeScore: number; awayScore: number; count: number; users: string[] }>();
     for (const e of entries) {
       const key = `${e.homeScore}-${e.awayScore}`;
-      if (!map.has(key)) map.set(key, { homeScore: e.homeScore, awayScore: e.awayScore, count: 0 });
-      map.get(key)!.count++;
+      if (!map.has(key)) map.set(key, { homeScore: e.homeScore, awayScore: e.awayScore, count: 0, users: [] });
+      const g = map.get(key)!;
+      g.count++;
+      g.users.push(e.userName || e.userId);
     }
     return Array.from(map.values())
       .sort((a, b) => b.count - a.count)
@@ -6331,22 +6333,40 @@ function BolaoTab() {
                         const grupos = groupPalpites(b.entries, b.prizePool);
                         return (
                           <div className="rounded-lg overflow-hidden border border-border text-xs">
-                            <div className="grid grid-cols-3 bg-muted/60 px-3 py-2 font-semibold text-muted-foreground">
+                            <div className="grid grid-cols-[1fr_1fr_1fr_auto] bg-muted/60 px-3 py-2 font-semibold text-muted-foreground gap-2">
                               <span>Placar</span>
-                              <span className="text-center">Qtd. usuários</span>
-                              <span className="text-right">Prêmio por ganhador</span>
+                              <span>Usuários</span>
+                              <span>Prêmio por ganhador</span>
+                              <span />
                             </div>
                             {grupos.map((g, i) => {
                               const isWinner = b.status === "finished" && b.actualHomeScore === g.homeScore && b.actualAwayScore === g.awayScore;
+                              const canFinish = b.status !== "finished";
                               return (
-                                <div key={i} className={`grid grid-cols-3 px-3 py-2 border-t border-border ${isWinner ? "bg-yellow-500/10" : i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
-                                  <span className={`font-bold ${isWinner ? "text-yellow-400" : ""}`}>
-                                    {isWinner && "🏆 "}{g.homeScore} × {g.awayScore}
-                                  </span>
-                                  <span className="text-center text-muted-foreground">{g.count} {g.count === 1 ? "usuário" : "usuários"}</span>
-                                  <span className={`text-right font-semibold ${isWinner ? "text-yellow-400" : "text-green-400"}`}>
-                                    R$ {fmt(g.prizeIfWin)}
-                                  </span>
+                                <div key={i} className={`px-3 py-2.5 border-t border-border ${isWinner ? "bg-yellow-500/10" : i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                                  <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
+                                    <span className={`font-bold text-sm ${isWinner ? "text-yellow-400" : ""}`}>
+                                      {isWinner && "🏆 "}{g.homeScore} × {g.awayScore}
+                                    </span>
+                                    <div className="flex flex-col gap-0.5">
+                                      {g.users.map((u, j) => (
+                                        <span key={j} className="text-muted-foreground truncate max-w-[140px]" title={u}>{u}</span>
+                                      ))}
+                                    </div>
+                                    <span className={`font-semibold ${isWinner ? "text-yellow-400" : "text-green-400"}`}>
+                                      R$ {fmt(g.prizeIfWin)}
+                                    </span>
+                                    {canFinish && (
+                                      <button
+                                        className="text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap"
+                                        style={{ background: "rgba(201,162,39,0.15)", color: "#f5c518", border: "1px solid rgba(201,162,39,0.3)" }}
+                                        onClick={() => { setFinishModal({ id: b.id, homeTeam: b.homeTeam, awayTeam: b.awayTeam }); setFinishScores({ homeScore: g.homeScore, awayScore: g.awayScore }); }}
+                                        data-testid={`button-usar-placar-${b.id}-${g.homeScore}-${g.awayScore}`}
+                                      >
+                                        Usar este placar
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}

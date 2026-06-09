@@ -4235,7 +4235,11 @@ export async function registerRoutes(
       const boloes = await storage.getBoloes();
       const result = await Promise.all(boloes.map(async b => {
         const entries = await storage.getBolaoEntries(b.id);
-        return { ...b, totalEntries: entries.length, prizePool: Math.round(entries.length * (b.entryFee ?? 10) * 100) / 100, entries };
+        const entriesWithNames = await Promise.all(entries.map(async e => {
+          const user = await storage.getUserByCpf(e.userId);
+          return { ...e, userName: user?.name ?? e.userId };
+        }));
+        return { ...b, totalEntries: entries.length, prizePool: Math.round(entries.length * (b.entryFee ?? 10) * 100) / 100, entries: entriesWithNames };
       }));
       res.json(result);
     } catch (e) { res.status(500).json({ error: "Erro" }); }
