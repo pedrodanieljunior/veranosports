@@ -105,7 +105,7 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
         <div className="flex items-center justify-center gap-3 mb-3">
           {/* Home score */}
           <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] text-white/60 font-medium truncate max-w-[70px] text-center">{bolao.homeTeam}</span>
+            <span className="text-sm font-black text-white truncate max-w-[90px] text-center">{bolao.homeTeam}</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
@@ -131,7 +131,7 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
 
           {/* Away score */}
           <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] text-white/60 font-medium truncate max-w-[70px] text-center">{bolao.awayTeam}</span>
+            <span className="text-sm font-black text-white truncate max-w-[90px] text-center">{bolao.awayTeam}</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
