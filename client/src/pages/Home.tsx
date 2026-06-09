@@ -180,8 +180,17 @@ export default function Home() {
     userEntries: { id: number; homeScore: number; awayScore: number; createdAt: string }[];
   } | null>({
     queryKey: ["/api/bolao/active"],
-    staleTime: 15_000,
+    queryFn: async () => {
+      const res = await fetch("/api/bolao/active", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    retry: 1,
   });
 
   const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({

@@ -12,6 +12,7 @@ import { AuthModals } from "@/components/AuthModals";
 import { ProfileModal } from "@/components/ProfileModal";
 import { BoostCard } from "@/components/BoostCard";
 import { BoostCard as BoostCardType } from "@shared/schema";
+import { BolaoCard } from "@/components/BolaoCard";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -148,6 +149,18 @@ export default function Copa() {
 
   const { data: copaCards = [] } = useQuery<any[]>({
     queryKey: ["/api/copa-world-cup-cards"], staleTime: 60_000, refetchInterval: 60_000,
+  });
+
+  const { data: bolaoData } = useQuery<any>({
+    queryKey: ["/api/bolao/active"],
+    queryFn: async () => {
+      const res = await fetch("/api/bolao/active");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: 1,
   });
 
   const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
@@ -374,6 +387,17 @@ export default function Copa() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===== BOLÃO DA COPA ===== */}
+      {bolaoData && !isSearching && !isTyping && (
+        <div className="px-3 pt-3">
+          <BolaoCard
+            data={bolaoData}
+            isLoggedIn={!!user}
+            onLoginRequired={() => setAuthMode("login")}
+          />
         </div>
       )}
 
