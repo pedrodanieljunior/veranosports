@@ -73,7 +73,7 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
       <div className="px-4 pt-3 pb-3">
         {/* Header */}
         <div className="flex items-center justify-center mb-1">
-          <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#f5c518" }}>
+          <span className="text-xs font-black tracking-widest uppercase underline" style={{ color: "#f5c518" }}>
             Bolão da Copa
           </span>
         </div>
