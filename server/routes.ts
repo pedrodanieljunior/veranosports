@@ -4280,10 +4280,13 @@ export async function registerRoutes(
     try {
       const bolao = await storage.getActiveBolao();
       if (!bolao) return res.json(null);
+      const now = Date.now();
+      // Time-window visibility: hide before startsAt or after endsAt
+      if ((bolao as any).startsAt && now < new Date((bolao as any).startsAt).getTime()) return res.json(null);
+      if ((bolao as any).endsAt && now >= new Date((bolao as any).endsAt).getTime()) return res.json(null);
       // Hide 10 minutes before match start
       if (bolao.matchDate) {
         const matchTime = new Date(bolao.matchDate).getTime();
-        const now = Date.now();
         if (now >= matchTime - 10 * 60 * 1000) return res.json(null);
       }
       const entries = await storage.getBolaoEntries(bolao.id);

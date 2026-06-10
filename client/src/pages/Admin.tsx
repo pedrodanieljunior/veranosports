@@ -6247,6 +6247,8 @@ function BolaoTab() {
     houseCut: number;
     status: string;
     active: boolean;
+    startsAt: string | null;
+    endsAt: string | null;
     actualHomeScore: number | null;
     actualAwayScore: number | null;
     totalEntries: number;
@@ -6258,7 +6260,7 @@ function BolaoTab() {
   const { data: boloes = [], isLoading } = useQuery<BolaoAdmin[]>({ queryKey: ["/api/admin/bolao"], staleTime: 10_000 });
 
   // Form state
-  const [form, setForm] = useState({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10", houseCut: "10" });
+  const [form, setForm] = useState({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10", houseCut: "10", startsAt: "", endsAt: "" });
   const [creating, setCreating] = useState(false);
 
   // Finish modal
@@ -6275,6 +6277,8 @@ function BolaoTab() {
         houseCut: parseFloat(form.houseCut) || 0,
         active: true,
         status: "open",
+        startsAt: form.startsAt || null,
+        endsAt: form.endsAt || null,
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
       return res.json();
@@ -6282,7 +6286,7 @@ function BolaoTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] });
-      setForm({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10", houseCut: "10" });
+      setForm({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10", houseCut: "10", startsAt: "", endsAt: "" });
       setCreating(false);
       toast({ title: "Bolão criado!" });
     },
@@ -6389,6 +6393,18 @@ function BolaoTab() {
                   </div>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3 border-t pt-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />Exibir a partir de</label>
+                  <input type="datetime-local" className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.startsAt} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} data-testid="input-bolao-starts" />
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Vazio = aparece imediatamente</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />Ocultar em</label>
+                  <input type="datetime-local" className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.endsAt} onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))} data-testid="input-bolao-ends" />
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Vazio = não some automaticamente</p>
+                </div>
+              </div>
               <Button className="w-full" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.homeTeam || !form.awayTeam} data-testid="button-criar-bolao">
                 {createMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</> : "Criar Bolão"}
               </Button>
@@ -6407,8 +6423,16 @@ function BolaoTab() {
                     <div>
                       <p className="font-semibold">{b.homeTeam} vs {b.awayTeam}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {b.matchDate ? new Date(b.matchDate).toLocaleString("pt-BR") : "—"}
+                        Jogo: {b.matchDate ? new Date(b.matchDate).toLocaleString("pt-BR") : "—"}
                       </p>
+                      {(b.startsAt || b.endsAt) && (
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          {b.startsAt ? `Exibe: ${new Date(b.startsAt).toLocaleString("pt-BR")}` : "Exibe: já"}
+                          {" → "}
+                          {b.endsAt ? `Oculta: ${new Date(b.endsAt).toLocaleString("pt-BR")}` : "sem fim"}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={statusColor(b.status)}>{statusLabel(b.status)}</Badge>
