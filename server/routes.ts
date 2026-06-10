@@ -4392,6 +4392,7 @@ export async function registerRoutes(
   app.get("/api/admin/bolao", requireAdmin, async (_req, res) => {
     try {
       const boloes = await storage.getBoloes();
+      console.log("[admin/bolao] first bolao startsAt:", boloes[0]?.startsAt, "endsAt:", boloes[0]?.endsAt);
       const result = await Promise.all(boloes.map(async b => {
         const entries = await storage.getBolaoEntries(b.id);
         const entriesWithNames = await Promise.all(entries.map(async e => {
@@ -4401,7 +4402,7 @@ export async function registerRoutes(
         const grossPool = Math.round(entries.length * (b.entryFee ?? 10) * 100) / 100;
         const houseCutPct = (b as any).houseCut ?? 0;
         const prizePool = Math.round(grossPool * (1 - houseCutPct / 100) * 100) / 100;
-        return { ...b, totalEntries: entries.length, grossPool, prizePool, entries: entriesWithNames };
+        return { ...b, startsAt: (b as any).startsAt ?? null, endsAt: (b as any).endsAt ?? null, totalEntries: entries.length, grossPool, prizePool, entries: entriesWithNames };
       }));
       res.json(result);
     } catch (e) { res.status(500).json({ error: "Erro" }); }
