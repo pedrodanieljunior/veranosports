@@ -3880,6 +3880,17 @@ function UsersTab() {
   const [bulkBonusMode, setBulkBonusMode] = useState<"all" | "selected">("all");
   const [bulkBonusSelected, setBulkBonusSelected] = useState<Set<string>>(new Set());
   const [bulkBonusOpen, setBulkBonusOpen] = useState(false);
+  const [historyUser, setHistoryUser] = useState<string | null>(null);
+
+  const { data: historyEvents = [], isLoading: historyLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/users", historyUser, "history"],
+    queryFn: async () => {
+      if (!historyUser) return [];
+      const res = await apiRequest("GET", `/api/admin/users/${encodeURIComponent(historyUser)}/history`);
+      return res.json();
+    },
+    enabled: !!historyUser,
+  });
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -3981,6 +3992,7 @@ function UsersTab() {
   const totalUsersBalance = users.reduce((s, u) => s + u.balance, 0);
 
   return (
+    <>
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Card>
@@ -4328,6 +4340,18 @@ function UsersTab() {
                     )}
                   </div>
 
+                  {/* Histórico completo */}
+                  <div className="border-t pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryUser(selectedUser.cpf)}
+                      data-testid="button-user-history"
+                    >
+                      <FileText className="w-4 h-4 mr-1" /> Histórico Completo
+                    </Button>
+                  </div>
+
                   {/* Delete user */}
                   <div className="border-t pt-4">
                     <AlertDialog>
@@ -4356,6 +4380,68 @@ function UsersTab() {
           </Card>
         </div>
     </div>
+
+    {/* ── Modal Histórico do Usuário ── */}
+    <Dialog open={!!historyUser} onOpenChange={open => { if (!open) setHistoryUser(null); }}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Histórico — {users.find(u => u.cpf === historyUser)?.name ?? historyUser}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Todas as atividades: transações, apostas, saques e palpites.
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="flex-1 min-h-0 -mx-1 px-1">
+          {historyLoading ? (
+            <div className="space-y-2 py-4">
+              {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+            </div>
+          ) : historyEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade registrada.</p>
+          ) : (
+            <div className="space-y-1.5 py-2">
+              {historyEvents.map((ev: any) => {
+                const isIncome = ev.amount != null && ev.amount > 0;
+                const isOutcome = ev.amount != null && ev.amount < 0;
+                const kindIcon: Record<string, string> = {
+                  transaction: "💳", bet: "🎯", saque: "💸", bolao: "🏆",
+                };
+                const statusColor = (ev.status === "won" || ev.status === "paid") ? "text-green-400"
+                  : (ev.status === "lost" || ev.status === "rejected") ? "text-red-400"
+                  : "text-yellow-400";
+                return (
+                  <div key={ev.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <span className="text-base mt-0.5 flex-shrink-0">{kindIcon[ev.kind] ?? "📋"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-tight">{ev.title}</p>
+                      {ev.subtitle && <p className="text-xs text-muted-foreground mt-0.5 truncate">{ev.subtitle}</p>}
+                      <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                        {new Date(ev.date).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      {ev.amount != null && (
+                        <p className={`text-sm font-bold tabular-nums ${isIncome ? "text-green-400" : isOutcome ? "text-red-400" : "text-muted-foreground"}`}>
+                          {isIncome ? "+" : ""}R${Math.abs(ev.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      )}
+                      {ev.status && (
+                        <p className={`text-[10px] font-medium mt-0.5 ${statusColor}`}>
+                          {ev.status === "won" ? "Ganhou" : ev.status === "lost" ? "Perdeu" : ev.status === "paid" ? "Pago" : ev.status === "rejected" ? "Rejeitado" : ev.status === "pending" ? "Pendente" : ev.status}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

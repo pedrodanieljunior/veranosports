@@ -2320,6 +2320,79 @@ export async function registerRoutes(
     res.json(bets);
   });
 
+  app.get("/api/admin/users/:cpf/history", requireAdmin, async (req, res) => {
+    try {
+      const { cpf } = req.params;
+      const [transactions, bets, withdrawals, bolaoEntries, allBoloes] = await Promise.all([
+        storage.getTransactionsByUser(cpf),
+        storage.getBetSlipsByUser(cpf),
+        storage.getUserWithdrawalsByUser(cpf),
+        storage.getBolaoEntriesByUser(cpf),
+        storage.getBoloes(),
+      ]);
+
+      const txTypeLabel: Record<string, string> = {
+        deposit: "Depósito", withdrawal: "Saque", win: "Prêmio de aposta",
+        bet_placed: "Aposta colocada", adjustment: "Ajuste manual",
+        bolao_win: "Prêmio do bolão", bolao_entry: "Palpite do bolão",
+        bonus: "Bônus", cashout: "Cash Out", early_exit: "Saída antecipada",
+        referral_bonus: "Bônus indicação",
+      };
+
+      type Event = { id: string; kind: string; date: string; title: string; subtitle: string; amount: number | null; status: string | null };
+      const events: Event[] = [];
+
+      for (const tx of transactions) {
+        events.push({
+          id: `tx-${tx.id}`, kind: "transaction",
+          date: tx.createdAt as string,
+          title: txTypeLabel[tx.type] ?? tx.type,
+          subtitle: tx.description ?? "",
+          amount: tx.amount,
+          status: null,
+        });
+      }
+
+      for (const bet of bets) {
+        const label = bet.status === "won" ? "Apostou e ganhou" : bet.status === "lost" ? "Apostou e perdeu" : bet.status === "cashed_out" ? "Cash Out" : bet.status === "anulado" ? "Aposta anulada" : "Aposta pendente";
+        events.push({
+          id: `bet-${bet.id}`, kind: "bet",
+          date: bet.createdAt as string,
+          title: label,
+          subtitle: `${bet.selections.length} seleção(ões) · odds ${bet.totalOdds.toFixed(2)} · R$ ${bet.stake.toFixed(2)}`,
+          amount: -bet.stake,
+          status: bet.status,
+        });
+      }
+
+      for (const w of withdrawals) {
+        events.push({
+          id: `wd-${w.id}`, kind: "saque",
+          date: w.createdAt as string,
+          title: `Saque solicitado${w.status === "paid" ? " (pago)" : w.status === "rejected" ? " (rejeitado)" : " (pendente)"}`,
+          subtitle: w.pixKey ? `Chave: ${w.pixKey}` : "",
+          amount: -w.amount,
+          status: w.status,
+        });
+      }
+
+      for (const e of bolaoEntries) {
+        const bolao = allBoloes.find(b => b.id === e.bolaoId);
+        events.push({
+          id: `blp-${e.id}`, kind: "bolao",
+          date: e.createdAt as string,
+          title: `Palpite: ${e.homeScore}×${e.awayScore}`,
+          subtitle: bolao ? `${bolao.homeTeam} × ${bolao.awayTeam}` : `Bolão #${e.bolaoId}`,
+          amount: null,
+          status: e.prizeAwarded ? "won" : bolao?.status === "finished" ? "lost" : "pending",
+        });
+      }
+
+      events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      res.json(events);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   app.get("/api/admin/referrals", requireAdmin, async (_req, res) => {
     const allUsers = await storage.getAllUsers();
     // Use firstDepositDone flag as source of truth (balance may be set manually or via confirmed deposit)
