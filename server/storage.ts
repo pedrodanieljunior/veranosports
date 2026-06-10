@@ -1251,22 +1251,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]> {
-    return db.select().from(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId)).orderBy(desc(bolaoEntriesTable.createdAt));
+    return db.select().from(bolaoEntriesTable)
+      .where(and(eq(bolaoEntriesTable.userId, userId), eq(bolaoEntriesTable.hidden, false)))
+      .orderBy(desc(bolaoEntriesTable.createdAt));
   }
 
   async deleteAllBolaoEntriesByUser(userId: string): Promise<void> {
-    // Only delete entries from bolões that are NOT finished (protect awarded prizes)
-    const userEntries = await db.select({ id: bolaoEntriesTable.id, bolaoId: bolaoEntriesTable.bolaoId })
-      .from(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId));
-    const bolaoIds = [...new Set(userEntries.map(e => e.bolaoId))];
-    if (bolaoIds.length === 0) return;
-    const boloes = await db.select({ id: baloesTable.id, status: baloesTable.status })
-      .from(baloesTable).where(inArray(baloesTable.id, bolaoIds));
-    const finishedIds = new Set(boloes.filter(b => b.status === "finished").map(b => b.id));
-    const entriesToDelete = userEntries.filter(e => !finishedIds.has(e.bolaoId)).map(e => e.id);
-    if (entriesToDelete.length > 0) {
-      await db.delete(bolaoEntriesTable).where(inArray(bolaoEntriesTable.id, entriesToDelete));
-    }
+    // Never physically delete bolão entries — they are paid tickets and must remain visible to admins.
+    // Instead, mark them as hidden so the user's "Meus Palpites" view is cleared.
+    await db.update(bolaoEntriesTable).set({ hidden: true }).where(eq(bolaoEntriesTable.userId, userId));
   }
 
   async finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number }> {

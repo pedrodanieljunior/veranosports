@@ -492,6 +492,7 @@ export const bolaoEntriesTable = pgTable("bolao_entries", {
   awayScore: integer("away_score").notNull(),
   prizeAwarded: boolean("prize_awarded").notNull().default(false),
   prizeAmount: real("prize_amount"),
+  hidden: boolean("hidden").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
