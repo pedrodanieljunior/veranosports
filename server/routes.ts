@@ -4392,7 +4392,6 @@ export async function registerRoutes(
   app.get("/api/admin/bolao", requireAdmin, async (_req, res) => {
     try {
       const boloes = await storage.getBoloes();
-      console.log("[admin/bolao] first bolao startsAt:", boloes[0]?.startsAt, "endsAt:", boloes[0]?.endsAt);
       const result = await Promise.all(boloes.map(async b => {
         const entries = await storage.getBolaoEntries(b.id);
         const entriesWithNames = await Promise.all(entries.map(async e => {

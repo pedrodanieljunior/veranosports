@@ -6234,6 +6234,22 @@ function AdminLiveGameTab() {
 }
 
 // ─── Bolão Tab ────────────────────────────────────────────────────────────────
+function fmtBolaoTime(s: string): string {
+  if (!s) return s;
+  // UTC ISO string (ends with Z or has offset) → convert to Manaus display
+  if (s.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(s)) {
+    return new Date(s).toLocaleString("pt-BR", { timeZone: "America/Manaus", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  // datetime-local string (e.g. "2026-06-10T10:05") — treat as Manaus time, just format nicely
+  const parts = s.replace("T", " ").split(" ");
+  if (parts.length === 2) {
+    const [date, time] = parts;
+    const [y, m, d] = date.split("-");
+    return `${d}/${m}/${y}, ${time.slice(0, 5)}`;
+  }
+  return s;
+}
+
 function BolaoTab() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -6427,9 +6443,9 @@ function BolaoTab() {
                       </p>
                       <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
                         <Clock className="w-2.5 h-2.5" />
-                        {b.startsAt ? `Exibe: ${b.startsAt.replace("T", " ")}` : "Exibe: imediatamente"}
+                        {b.startsAt ? `Exibe: ${fmtBolaoTime(b.startsAt)}` : "Exibe: imediatamente"}
                         {" → "}
-                        {b.endsAt ? `Oculta: ${b.endsAt.replace("T", " ")}` : "sem fim automático"}
+                        {b.endsAt ? `Oculta: ${fmtBolaoTime(b.endsAt)}` : "sem fim automático"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
