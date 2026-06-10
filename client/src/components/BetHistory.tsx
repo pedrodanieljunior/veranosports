@@ -478,9 +478,14 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                         <button
                           onClick={async () => {
                             setDeleting(true);
-                            await fetch("/api/bolao/my-entries", { method: "DELETE", credentials: "include" });
-                            setPalpites([]);
-                            setActiveTab("apostas");
+                            const res = await fetch("/api/bolao/my-entries", { method: "DELETE", credentials: "include" });
+                            if (res.ok) {
+                              // Re-fetch from server to confirm real state (avoids stale local data coming back)
+                              const updated = await fetch("/api/bolao/my-entries", { credentials: "include" });
+                              const data = updated.ok ? await updated.json() : [];
+                              setPalpites(data);
+                              if (data.length === 0) setActiveTab("apostas");
+                            }
                             setConfirmDelete(false);
                             setDeleting(false);
                           }}
