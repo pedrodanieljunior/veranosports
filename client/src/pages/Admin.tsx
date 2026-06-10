@@ -6425,14 +6425,12 @@ function BolaoTab() {
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Jogo: {b.matchDate ? new Date(b.matchDate).toLocaleString("pt-BR") : "—"}
                       </p>
-                      {(b.startsAt || b.endsAt) && (
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5" />
-                          {b.startsAt ? `Exibe: ${b.startsAt.replace("T", " ")}` : "Exibe: já"}
-                          {" → "}
-                          {b.endsAt ? `Oculta: ${b.endsAt.replace("T", " ")}` : "sem fim"}
-                        </p>
-                      )}
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {b.startsAt ? `Exibe: ${b.startsAt.replace("T", " ")}` : "Exibe: imediatamente"}
+                        {" → "}
+                        {b.endsAt ? `Oculta: ${b.endsAt.replace("T", " ")}` : "sem fim automático"}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={statusColor(b.status)}>{statusLabel(b.status)}</Badge>
