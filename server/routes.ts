@@ -4399,9 +4399,14 @@ export async function registerRoutes(
   app.post("/api/admin/bolao", requireAdmin, async (req, res) => {
     try {
       const body = { ...req.body };
-      body.startsAt = body.startsAt ? new Date(body.startsAt) : null;
-      body.endsAt = body.endsAt ? new Date(body.endsAt) : null;
-      console.log("[bolao create] body:", JSON.stringify(body));
+      if (body.startsAt) {
+        const d = new Date(body.startsAt);
+        body.startsAt = isNaN(d.getTime()) ? null : d;
+      } else { body.startsAt = null; }
+      if (body.endsAt) {
+        const d = new Date(body.endsAt);
+        body.endsAt = isNaN(d.getTime()) ? null : d;
+      } else { body.endsAt = null; }
       const bolao = await storage.createBolao(body);
       res.json(bolao);
     } catch (e: any) {
