@@ -496,6 +496,11 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                             <div className={`text-[11px] mt-0.5 font-medium ${isWon ? "text-green-400" : isLost ? "text-red-400" : entry.bolaoStatus === "closed" ? "text-orange-400" : "text-yellow-400/70"}`}>
                               {isWon ? "✓ Acertou!" : isLost ? "✗ Errou" : entry.bolaoStatus === "closed" ? "Jogo em breve" : "Aguardando"}
                             </div>
+                            {isWon && entry.prizeAmount != null && (
+                              <div className="text-[11px] mt-0.5 font-bold text-green-300">
+                                +R${entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
