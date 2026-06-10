@@ -22,15 +22,18 @@ interface BolaoData {
 interface BolaoCardProps {
   data: BolaoData;
   isLoggedIn: boolean;
+  userBalance: number;
   onLoginRequired: () => void;
 }
 
-export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps) {
+export function BolaoCard({ data, isLoggedIn, userBalance, onLoginRequired }: BolaoCardProps) {
   const { bolao, totalEntries, prizePool, userEntries } = data;
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fee = bolao.entryFee ?? 10;
+  const hasEnoughBalance = userBalance >= fee;
 
   const enterMutation = useMutation({
     mutationFn: async () => {
@@ -53,6 +56,10 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
 
   const handleEnter = () => {
     if (!isLoggedIn) { onLoginRequired(); return; }
+    if (!hasEnoughBalance) {
+      toast({ title: "Saldo insuficiente", description: `Você precisa de R$ ${fee.toFixed(2)} em saldo real para participar. Bônus não é aceito no Bolão.`, variant: "destructive" });
+      return;
+    }
     enterMutation.mutate();
   };
 
@@ -166,13 +173,15 @@ export function BolaoCard({ data, isLoggedIn, onLoginRequired }: BolaoCardProps)
           onClick={handleEnter}
           disabled={enterMutation.isPending}
           className="w-full py-2.5 rounded-lg font-black text-sm tracking-wide transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
-          style={{ background: "linear-gradient(135deg, #f5c518 0%, #e8a800 100%)", color: "#0f2d6b" }}
+          style={{ background: isLoggedIn && !hasEnoughBalance ? "rgba(255,255,255,0.15)" : "linear-gradient(135deg, #f5c518 0%, #e8a800 100%)", color: isLoggedIn && !hasEnoughBalance ? "rgba(255,255,255,0.5)" : "#0f2d6b" }}
           data-testid="bolao-enter-button"
         >
           {enterMutation.isPending ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Participando...</>
+          ) : isLoggedIn && !hasEnoughBalance ? (
+            <>🔒 Saldo insuficiente (apenas saldo real)</>
           ) : (
-            <>⚽ Participar por R$ {(bolao.entryFee ?? 10).toFixed(2)}</>
+            <>⚽ Participar por R$ {fee.toFixed(2)}</>
           )}
         </button>
 

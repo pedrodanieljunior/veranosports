@@ -396,6 +396,7 @@ export default function Copa() {
           <BolaoCard
             data={bolaoData}
             isLoggedIn={!!user}
+            userBalance={user?.balance ?? 0}
             onLoginRequired={() => setAuthMode("login")}
           />
         </div>
