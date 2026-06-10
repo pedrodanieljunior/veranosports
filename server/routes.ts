@@ -4226,6 +4226,45 @@ export async function registerRoutes(
     }
   });
 
+  // User's own bolão entries (all bolões, even hidden ones)
+  app.get("/api/bolao/my-entries", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.json([]);
+      const allBoloes = await storage.getBoloes();
+      const userEntries = await storage.getBolaoEntriesByUser(req.session.userId);
+      const result = userEntries.map(e => {
+        const bolao = allBoloes.find(b => b.id === e.bolaoId);
+        if (!bolao) return null;
+        const grossPool = Math.round(0 * 100) / 100; // not needed here
+        const houseCutPct = (bolao as any).houseCut ?? 0;
+        // Determine entry status
+        let status: "pending" | "won" | "lost" = "pending";
+        if (bolao.status === "finished" && bolao.actualHomeScore !== null && bolao.actualAwayScore !== null) {
+          status = (e.homeScore === bolao.actualHomeScore && e.awayScore === bolao.actualAwayScore) ? "won" : "lost";
+        }
+        return {
+          id: e.id,
+          bolaoId: bolao.id,
+          homeTeam: bolao.homeTeam,
+          awayTeam: bolao.awayTeam,
+          matchDate: bolao.matchDate,
+          bolaoStatus: bolao.status,
+          actualHomeScore: bolao.actualHomeScore,
+          actualAwayScore: bolao.actualAwayScore,
+          myHomeScore: e.homeScore,
+          myAwayScore: e.awayScore,
+          prizeAwarded: e.prizeAwarded,
+          status,
+          entryFee: bolao.entryFee,
+          createdAt: e.createdAt,
+        };
+      }).filter(Boolean);
+      res.json(result);
+    } catch (e) {
+      res.status(500).json({ error: "Erro ao buscar palpites" });
+    }
+  });
+
   app.post("/api/bolao/:id/enter", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });

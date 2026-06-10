@@ -22,7 +22,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock, Trophy, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
@@ -161,6 +161,18 @@ export default function Copa() {
     staleTime: 0,
     refetchOnMount: "always",
     retry: 1,
+  });
+
+  const { data: myBolaoEntries = [] } = useQuery<any[]>({
+    queryKey: ["/api/bolao/my-entries"],
+    queryFn: async () => {
+      const res = await fetch("/api/bolao/my-entries");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+    refetchOnMount: "always",
   });
 
   const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
@@ -399,6 +411,67 @@ export default function Copa() {
             userBalance={user?.balance ?? 0}
             onLoginRequired={() => setAuthMode("login")}
           />
+        </div>
+      )}
+
+      {/* ===== MEUS PALPITES (visível mesmo após bolão sumir) ===== */}
+      {user && myBolaoEntries.length > 0 && !isSearching && !isTyping && (
+        <div className="px-3 pt-3">
+          <div className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1b3e 0%, #0a1628 100%)", border: "1px solid rgba(245,197,24,0.2)" }}>
+            {/* Header */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm font-bold text-white">Meus Palpites</span>
+              <span className="ml-auto text-xs text-white/40">{myBolaoEntries.length} palpite{myBolaoEntries.length !== 1 ? "s" : ""}</span>
+            </div>
+            {/* Entries */}
+            <div className="divide-y divide-white/5">
+              {myBolaoEntries.map((entry: any) => {
+                const isPending = entry.status === "pending";
+                const isWon = entry.status === "won";
+                const isClosed = entry.bolaoStatus === "closed";
+                const fmt = (d: string) => {
+                  try { return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+                  catch { return d; }
+                };
+                return (
+                  <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
+                    {/* Status icon */}
+                    <div className="shrink-0">
+                      {isPending && !isClosed && <Clock className="w-4 h-4 text-yellow-400" />}
+                      {isPending && isClosed && <Clock className="w-4 h-4 text-orange-400" />}
+                      {isWon && <CheckCircle2 className="w-4 h-4 text-green-400" />}
+                      {entry.status === "lost" && <XCircle className="w-4 h-4 text-red-400" />}
+                    </div>
+                    {/* Match + prediction */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white truncate">{entry.homeTeam} × {entry.awayTeam}</p>
+                      <p className="text-[11px] text-white/40 mt-0.5">{fmt(entry.matchDate)}</p>
+                    </div>
+                    {/* My prediction */}
+                    <div className="text-right shrink-0">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="text-xs text-white/50">Palpite:</span>
+                        <span className="text-sm font-black text-yellow-300 tabular-nums">{entry.myHomeScore}–{entry.myAwayScore}</span>
+                      </div>
+                      {/* Result or status */}
+                      {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
+                        <p className="text-[11px] mt-0.5" style={{ color: isWon ? "#4ade80" : "#f87171" }}>
+                          {isWon ? "✓ Acertou!" : `Placar: ${entry.actualHomeScore}–${entry.actualAwayScore}`}
+                        </p>
+                      )}
+                      {entry.bolaoStatus === "open" && (
+                        <p className="text-[11px] text-yellow-400/70 mt-0.5">Aguardando jogo</p>
+                      )}
+                      {entry.bolaoStatus === "closed" && (
+                        <p className="text-[11px] text-orange-400/70 mt-0.5">Jogo em breve</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
