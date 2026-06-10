@@ -72,6 +72,9 @@ export default function Copa() {
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CopaTab>("todos");
   const [copaSubTab, setCopaSubTab] = useState<CopaSubTab>("todos");
+  const [showPalpites, setShowPalpites] = useState(false);
+  const [palpitesData, setPalpitesData] = useState<any[]>([]);
+  const [palpitesLoading, setPalpitesLoading] = useState(false);
   const [copaGrupoKey, setCopaGrupoKey] = useState<string>("todos");
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -163,13 +166,15 @@ export default function Copa() {
     retry: 1,
   });
 
-  const { data: myBolaoEntries = [] } = useQuery<any[]>({
-    queryKey: ["/api/bolao/my-entries"],
-    enabled: !!user,
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-  });
+  const fetchPalpites = async () => {
+    setPalpitesLoading(true);
+    try {
+      const res = await fetch("/api/bolao/my-entries", { credentials: "include" });
+      if (res.ok) setPalpitesData(await res.json());
+    } catch { /* ignore */ } finally {
+      setPalpitesLoading(false);
+    }
+  };
 
   const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
     queryKey: ["/api/copa-mundo-games"],
@@ -306,6 +311,16 @@ export default function Copa() {
                   <History className="w-3.5 h-3.5" /><span>Apostas</span>
                   {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
                 </button>
+                <button
+                  onClick={() => { setShowPalpites(true); fetchPalpites(); }}
+                  className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap"
+                  style={{ background: "rgba(245,197,24,0.15)", color: "#f5c518", border: "1px solid rgba(245,197,24,0.3)" }}
+                  data-testid="button-palpites-copa"
+                  title="Meus palpites do bolão"
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>Bolão</span>
+                </button>
                 <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap" style={{ background: "rgba(201,162,39,0.15)", color: "#f5c518", border: "1px solid rgba(201,162,39,0.3)" }} data-testid="button-profile-copa">
                   <span className="text-[10px]">R${(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}</span>
                   <UserCircle className="w-4 h-4" />
@@ -407,67 +422,6 @@ export default function Copa() {
             userBalance={user?.balance ?? 0}
             onLoginRequired={() => setAuthMode("login")}
           />
-        </div>
-      )}
-
-      {/* ===== MEUS PALPITES (visível mesmo após bolão sumir) ===== */}
-      {user && myBolaoEntries.length > 0 && !isSearching && !isTyping && (
-        <div className="px-3 pt-3">
-          <div className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0d1b3e 0%, #0a1628 100%)", border: "1px solid rgba(245,197,24,0.2)" }}>
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-              <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-white">Meus Palpites</span>
-              <span className="ml-auto text-xs text-white/40">{myBolaoEntries.length} palpite{myBolaoEntries.length !== 1 ? "s" : ""}</span>
-            </div>
-            {/* Entries */}
-            <div className="divide-y divide-white/5">
-              {myBolaoEntries.map((entry: any) => {
-                const isPending = entry.status === "pending";
-                const isWon = entry.status === "won";
-                const isClosed = entry.bolaoStatus === "closed";
-                const fmt = (d: string) => {
-                  try { return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
-                  catch { return d; }
-                };
-                return (
-                  <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
-                    {/* Status icon */}
-                    <div className="shrink-0">
-                      {isPending && !isClosed && <Clock className="w-4 h-4 text-yellow-400" />}
-                      {isPending && isClosed && <Clock className="w-4 h-4 text-orange-400" />}
-                      {isWon && <CheckCircle2 className="w-4 h-4 text-green-400" />}
-                      {entry.status === "lost" && <XCircle className="w-4 h-4 text-red-400" />}
-                    </div>
-                    {/* Match + prediction */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">{entry.homeTeam} × {entry.awayTeam}</p>
-                      <p className="text-[11px] text-white/40 mt-0.5">{fmt(entry.matchDate)}</p>
-                    </div>
-                    {/* My prediction */}
-                    <div className="text-right shrink-0">
-                      <div className="inline-flex items-center gap-1.5">
-                        <span className="text-xs text-white/50">Palpite:</span>
-                        <span className="text-sm font-black text-yellow-300 tabular-nums">{entry.myHomeScore}–{entry.myAwayScore}</span>
-                      </div>
-                      {/* Result or status */}
-                      {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
-                        <p className="text-[11px] mt-0.5" style={{ color: isWon ? "#4ade80" : "#f87171" }}>
-                          {isWon ? "✓ Acertou!" : `Placar: ${entry.actualHomeScore}–${entry.actualAwayScore}`}
-                        </p>
-                      )}
-                      {entry.bolaoStatus === "open" && (
-                        <p className="text-[11px] text-yellow-400/70 mt-0.5">Aguardando jogo</p>
-                      )}
-                      {entry.bolaoStatus === "closed" && (
-                        <p className="text-[11px] text-orange-400/70 mt-0.5">Jogo em breve</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
       )}
 
@@ -854,6 +808,76 @@ export default function Copa() {
       <GameDetailModal game={selectedGame} open={!!selectedGame} onClose={() => setSelectedGame(null)} selections={selections} onToggleSelection={handleToggleSelection} onMigrateGameId={handleMigrateGameId} />
       {showBetSlip && user && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => { if (selections.length > 0) { setIsBetSlipMinimized(true); } else { setShowBetSlip(false); } }} onPlaceBet={(stake, useBonus) => placeBetMutation.mutate({ selections, stake, useBonus })} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
       {showHistory && user && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
+
+      {/* ===== MODAL MEUS PALPITES ===== */}
+      {showPalpites && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowPalpites(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md rounded-t-2xl overflow-hidden"
+            style={{ background: "linear-gradient(180deg, #0d1b3e 0%, #080f22 100%)", border: "1px solid rgba(245,197,24,0.2)", maxHeight: "80vh" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-white/20" /></div>
+            {/* Header */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm font-bold text-white">Meus Palpites</span>
+              {palpitesData.length > 0 && <span className="text-xs text-white/40 ml-1">{palpitesData.length} palpite{palpitesData.length !== 1 ? "s" : ""}</span>}
+              <button onClick={() => setShowPalpites(false)} className="ml-auto text-white/40 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+            {/* Content */}
+            <div className="overflow-y-auto" style={{ maxHeight: "calc(80vh - 90px)" }}>
+              {palpitesLoading ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-white/40 text-sm">
+                  <div className="w-4 h-4 border-2 border-yellow-400/40 border-t-yellow-400 rounded-full animate-spin" />
+                  Carregando...
+                </div>
+              ) : palpitesData.length === 0 ? (
+                <div className="text-center py-10 text-white/40 text-sm">Nenhum palpite registrado ainda.</div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {palpitesData.map((entry: any) => {
+                    const isWon = entry.status === "won";
+                    const isLost = entry.status === "lost";
+                    const isPending = entry.status === "pending";
+                    const fmtDate = (d: string) => {
+                      try { return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+                      catch { return d; }
+                    };
+                    return (
+                      <div key={entry.id} className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="shrink-0">
+                          {isWon && <CheckCircle2 className="w-5 h-5 text-green-400" />}
+                          {isLost && <XCircle className="w-5 h-5 text-red-400" />}
+                          {isPending && entry.bolaoStatus === "closed" && <Clock className="w-5 h-5 text-orange-400" />}
+                          {isPending && entry.bolaoStatus === "open" && <Clock className="w-5 h-5 text-yellow-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white">{entry.homeTeam} × {entry.awayTeam}</p>
+                          <p className="text-[11px] text-white/40 mt-0.5">{fmtDate(entry.matchDate)}</p>
+                          {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
+                            <p className="text-[11px] mt-0.5 text-white/50">Placar final: {entry.actualHomeScore}–{entry.actualAwayScore}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-sm font-black tabular-nums" style={{ color: isWon ? "#4ade80" : isLost ? "#f87171" : "#fde047" }}>
+                            {entry.myHomeScore}–{entry.myAwayScore}
+                          </div>
+                          <div className="text-[11px] mt-0.5" style={{ color: isWon ? "#4ade80" : isLost ? "#f87171" : entry.bolaoStatus === "closed" ? "#fb923c" : "#fbbf24" }}>
+                            {isWon ? "✓ Acertou!" : isLost ? "✗ Errou" : entry.bolaoStatus === "closed" ? "Jogo em breve" : "Aguardando"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <RulesModal open={showRules} onClose={() => setShowRules(false)} />
       <AuthModals mode={authMode} onClose={() => setAuthMode(null)} onSwitch={m => setAuthMode(m)} />
       <ProfileModal open={showProfile} onClose={() => { setShowProfile(false); refreshUser(); }} />
