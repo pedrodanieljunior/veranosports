@@ -2064,7 +2064,7 @@ export async function registerRoutes(
   async function sendEmailNotification(subject: string, html: string) {
     try {
       const user = "verosports365@gmail.com";
-      const pass = process.env.SENDER_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD;
+      const pass = process.env.SENDER_APP_PASSWORD;
       const to = process.env.NOTIFY_EMAIL || process.env.GMAIL_NOTIFY;
       if (!user || !pass || !to) return;
       const transporter = nodemailer.createTransport({
