@@ -165,14 +165,10 @@ export default function Copa() {
 
   const { data: myBolaoEntries = [] } = useQuery<any[]>({
     queryKey: ["/api/bolao/my-entries"],
-    queryFn: async () => {
-      const res = await fetch("/api/bolao/my-entries");
-      if (!res.ok) return [];
-      return res.json();
-    },
     enabled: !!user,
-    staleTime: 30_000,
+    staleTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
