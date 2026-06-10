@@ -6150,11 +6150,13 @@ function BolaoTab() {
     awayTeam: string;
     matchDate: string;
     entryFee: number;
+    houseCut: number;
     status: string;
     active: boolean;
     actualHomeScore: number | null;
     actualAwayScore: number | null;
     totalEntries: number;
+    grossPool: number;
     prizePool: number;
     entries: { id: number; userId: string; userName: string; homeScore: number; awayScore: number; prizeAwarded: boolean; createdAt: string }[];
   }
@@ -6162,7 +6164,7 @@ function BolaoTab() {
   const { data: boloes = [], isLoading } = useQuery<BolaoAdmin[]>({ queryKey: ["/api/admin/bolao"], staleTime: 10_000 });
 
   // Form state
-  const [form, setForm] = useState({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10" });
+  const [form, setForm] = useState({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10", houseCut: "10" });
   const [creating, setCreating] = useState(false);
 
   // Finish modal
@@ -6176,6 +6178,7 @@ function BolaoTab() {
         awayTeam: form.awayTeam.trim(),
         matchDate: form.matchDate,
         entryFee: parseFloat(form.entryFee) || 10,
+        houseCut: parseFloat(form.houseCut) || 0,
         active: true,
         status: "open",
       });
@@ -6185,7 +6188,7 @@ function BolaoTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] });
-      setForm({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10" });
+      setForm({ homeTeam: "", awayTeam: "", matchDate: "", entryFee: "10", houseCut: "10" });
       setCreating(false);
       toast({ title: "Bolão criado!" });
     },
@@ -6272,7 +6275,7 @@ function BolaoTab() {
                   <input className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.awayTeam} onChange={e => setForm(f => ({ ...f, awayTeam: e.target.value }))} placeholder="Ex: Argentina" data-testid="input-bolao-away" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Data do Jogo</label>
                   <input type="datetime-local" className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.matchDate} onChange={e => setForm(f => ({ ...f, matchDate: e.target.value }))} data-testid="input-bolao-date" />
@@ -6280,6 +6283,13 @@ function BolaoTab() {
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Taxa de entrada (R$)</label>
                   <input type="number" className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={form.entryFee} onChange={e => setForm(f => ({ ...f, entryFee: e.target.value }))} min="1" step="0.01" data-testid="input-bolao-fee" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">% da casa</label>
+                  <div className="relative mt-1">
+                    <input type="number" className="w-full rounded-md border bg-background px-3 py-2 text-sm pr-7" value={form.houseCut} onChange={e => setForm(f => ({ ...f, houseCut: e.target.value }))} min="0" max="100" step="0.5" data-testid="input-bolao-housecut" />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                  </div>
                 </div>
               </div>
               <Button className="w-full" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.homeTeam || !form.awayTeam} data-testid="button-criar-bolao">
@@ -6315,7 +6325,10 @@ function BolaoTab() {
 
                   <div className="flex flex-wrap gap-3 text-sm">
                     <span className="flex items-center gap-1 text-muted-foreground"><Users className="w-3.5 h-3.5" />{b.totalEntries} participante{b.totalEntries !== 1 ? "s" : ""}</span>
-                    <span className="flex items-center gap-1 text-muted-foreground"><DollarSign className="w-3.5 h-3.5" />Prêmio total: R${fmt(b.prizePool)}</span>
+                    <span className="flex items-center gap-1 text-muted-foreground"><DollarSign className="w-3.5 h-3.5" />Prêmio líquido: R${fmt(b.prizePool)}</span>
+                    {b.houseCut > 0 && (
+                      <span className="flex items-center gap-1 text-orange-400 text-xs">(bruto R${fmt(b.grossPool)} − {b.houseCut}% casa = R${fmt(b.grossPool - b.prizePool)})</span>
+                    )}
                     <span className="flex items-center gap-1 text-muted-foreground">Taxa: R${fmt(b.entryFee)}</span>
                   </div>
 

@@ -476,6 +476,7 @@ export const baloesTable = pgTable("boloes", {
   awayTeam: text("away_team").notNull(),
   matchDate: text("match_date").notNull(),
   entryFee: real("entry_fee").notNull().default(10),
+  houseCut: real("house_cut").notNull().default(0), // % da casa (0-100)
   status: text("status").notNull().default("open"), // open | closed | finished
   actualHomeScore: integer("actual_home_score"),
   actualAwayScore: integer("actual_away_score"),

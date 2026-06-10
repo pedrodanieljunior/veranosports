@@ -4204,7 +4204,9 @@ export async function registerRoutes(
       if (!bolao) return res.json(null);
       const entries = await storage.getBolaoEntries(bolao.id);
       const totalEntries = entries.length;
-      const prizePool = Math.round(totalEntries * (bolao.entryFee ?? 10) * 100) / 100;
+      const grossPool = Math.round(totalEntries * (bolao.entryFee ?? 10) * 100) / 100;
+      const houseCutPct = (bolao as any).houseCut ?? 0;
+      const prizePool = Math.round(grossPool * (1 - houseCutPct / 100) * 100) / 100;
       const userId = req.session?.userId;
       const userEntries = userId ? entries.filter(e => e.userId === userId) : [];
       res.json({ bolao, totalEntries, prizePool, userEntries });
@@ -4250,7 +4252,10 @@ export async function registerRoutes(
           const user = await storage.getUserByCpf(e.userId);
           return { ...e, userName: user?.name ?? e.userId };
         }));
-        return { ...b, totalEntries: entries.length, prizePool: Math.round(entries.length * (b.entryFee ?? 10) * 100) / 100, entries: entriesWithNames };
+        const grossPool = Math.round(entries.length * (b.entryFee ?? 10) * 100) / 100;
+        const houseCutPct = (b as any).houseCut ?? 0;
+        const prizePool = Math.round(grossPool * (1 - houseCutPct / 100) * 100) / 100;
+        return { ...b, totalEntries: entries.length, grossPool, prizePool, entries: entriesWithNames };
       }));
       res.json(result);
     } catch (e) { res.status(500).json({ error: "Erro" }); }

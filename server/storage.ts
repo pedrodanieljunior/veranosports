@@ -1258,7 +1258,9 @@ export class DatabaseStorage implements IStorage {
     if (!bolao[0]) throw new Error("Bolão não encontrado");
     const entries = await db.select().from(bolaoEntriesTable).where(eq(bolaoEntriesTable.bolaoId, bolaoId));
     const totalEntries = entries.length;
-    const total = Math.round(totalEntries * (bolao[0].entryFee ?? 10) * 100) / 100;
+    const grossTotal = Math.round(totalEntries * (bolao[0].entryFee ?? 10) * 100) / 100;
+    const houseCutPct = bolao[0].houseCut ?? 0;
+    const total = Math.round(grossTotal * (1 - houseCutPct / 100) * 100) / 100;
     const winners = entries.filter(e => e.homeScore === homeScore && e.awayScore === awayScore);
     const prizePerWinner = winners.length > 0 ? Math.round((total / winners.length) * 100) / 100 : 0;
 
