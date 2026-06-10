@@ -51,7 +51,5 @@ timeoutMs = 20000
 [userenv.shared]
 CALLMEBOT_PHONE = "559281372318"
 CALLMEBOT_APIKEY = "1099152"
-GMAIL_USER = "fwconstrucoesepinturas@gmail.com"
-GMAIL_APP_PASSWORD = "eafhedlisvhkjfye"
 NOTIFY_EMAIL = "verosports365@gmail.com"
 SENDER_EMAIL = "verosports365@gmail.com"
