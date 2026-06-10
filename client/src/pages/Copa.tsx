@@ -22,7 +22,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock, Trophy, CheckCircle2, XCircle, Clock, ChevronDown } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
@@ -72,16 +72,11 @@ export default function Copa() {
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CopaTab>("todos");
   const [copaSubTab, setCopaSubTab] = useState<CopaSubTab>("todos");
-  const [showPalpites, setShowPalpites] = useState(false);
-  const [palpitesData, setPalpitesData] = useState<any[]>([]);
-  const [palpitesLoading, setPalpitesLoading] = useState(false);
   const [copaGrupoKey, setCopaGrupoKey] = useState<string>("todos");
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
-  const [showApostasMenu, setShowApostasMenu] = useState(false);
-  const apostasMenuRef = useRef<HTMLDivElement>(null);
   const pendingGameRef = useRef<Game | null>(null);
   const pendingSelectionRef = useRef<Selection | null>(null);
   const countdown = useCountdown(COPA_START);
@@ -116,16 +111,6 @@ export default function Copa() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!showApostasMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (apostasMenuRef.current && !apostasMenuRef.current.contains(e.target as Node)) {
-        setShowApostasMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showApostasMenu]);
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
 
@@ -179,15 +164,6 @@ export default function Copa() {
     retry: 1,
   });
 
-  const fetchPalpites = async () => {
-    setPalpitesLoading(true);
-    try {
-      const res = await fetch("/api/bolao/my-entries", { credentials: "include" });
-      if (res.ok) setPalpitesData(await res.json());
-    } catch { /* ignore */ } finally {
-      setPalpitesLoading(false);
-    }
-  };
 
   const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
     queryKey: ["/api/copa-mundo-games"],
@@ -320,45 +296,10 @@ export default function Copa() {
               </>
             ) : (
               <>
-                {/* Botão Apostas com dropdown */}
-                <div className="relative" ref={apostasMenuRef}>
-                  <button
-                    onClick={() => setShowApostasMenu(v => !v)}
-                    className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap"
-                    style={{ background: "#1565C0", color: "white" }}
-                    data-testid="button-apostas-copa"
-                  >
-                    <History className="w-3.5 h-3.5" />
-                    <span>Apostas</span>
-                    <ChevronDown className="w-3 h-3 opacity-70" />
-                    {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
-                  </button>
-                  {showApostasMenu && (
-                    <div
-                      className="absolute right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50"
-                      style={{ minWidth: "160px", background: "#0d1b3e", border: "1px solid rgba(255,255,255,0.12)" }}
-                    >
-                      <button
-                        onClick={() => { setShowHistory(true); setShowBetSlip(false); setShowApostasMenu(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 text-xs font-semibold text-white hover:bg-white/5 transition-colors"
-                        data-testid="button-history-copa"
-                      >
-                        <History className="w-3.5 h-3.5 text-blue-400" />
-                        Histórico
-                      </button>
-                      <div style={{ height: "1px", background: "rgba(255,255,255,0.07)" }} />
-                      <button
-                        onClick={() => { setShowPalpites(true); fetchPalpites(); setShowApostasMenu(false); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 text-xs font-semibold hover:bg-white/5 transition-colors"
-                        style={{ color: "#fbbf24" }}
-                        data-testid="button-palpites-copa"
-                      >
-                        <Trophy className="w-3.5 h-3.5" />
-                        Meus Palpites
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#1565C0", color: "white" }} data-testid="button-history-copa">
+                  <History className="w-3.5 h-3.5" /><span>Apostas</span>
+                  {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
+                </button>
                 <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap" style={{ background: "rgba(201,162,39,0.15)", color: "#f5c518", border: "1px solid rgba(201,162,39,0.3)" }} data-testid="button-profile-copa">
                   <span className="text-[10px]">R${(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}</span>
                   <UserCircle className="w-4 h-4" />
@@ -847,75 +788,6 @@ export default function Copa() {
       {showBetSlip && user && <BetSlip selections={selections} onRemoveSelection={handleRemoveSelection} onClearAll={handleClearAll} onClose={() => { if (selections.length > 0) { setIsBetSlipMinimized(true); } else { setShowBetSlip(false); } }} onPlaceBet={(stake, useBonus) => placeBetMutation.mutate({ selections, stake, useBonus })} placedBet={placedBet} isPlacing={placeBetMutation.isPending} isMinimized={isBetSlipMinimized} onToggleMinimize={setIsBetSlipMinimized} gameLimitRemaining={gameLimitRemaining} />}
       {showHistory && user && <BetHistory bets={betHistory} isLoading={historyLoading} onClose={() => setShowHistory(false)} />}
 
-      {/* ===== MODAL MEUS PALPITES ===== */}
-      {showPalpites && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowPalpites(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div
-            className="relative w-full max-w-md rounded-t-2xl overflow-hidden"
-            style={{ background: "linear-gradient(180deg, #0d1b3e 0%, #080f22 100%)", border: "1px solid rgba(245,197,24,0.2)", maxHeight: "80vh" }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-white/20" /></div>
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-              <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-white">Meus Palpites</span>
-              {palpitesData.length > 0 && <span className="text-xs text-white/40 ml-1">{palpitesData.length} palpite{palpitesData.length !== 1 ? "s" : ""}</span>}
-              <button onClick={() => setShowPalpites(false)} className="ml-auto text-white/40 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
-            </div>
-            {/* Content */}
-            <div className="overflow-y-auto" style={{ maxHeight: "calc(80vh - 90px)" }}>
-              {palpitesLoading ? (
-                <div className="flex items-center justify-center py-10 gap-2 text-white/40 text-sm">
-                  <div className="w-4 h-4 border-2 border-yellow-400/40 border-t-yellow-400 rounded-full animate-spin" />
-                  Carregando...
-                </div>
-              ) : palpitesData.length === 0 ? (
-                <div className="text-center py-10 text-white/40 text-sm">Nenhum palpite registrado ainda.</div>
-              ) : (
-                <div className="divide-y divide-white/5">
-                  {palpitesData.map((entry: any) => {
-                    const isWon = entry.status === "won";
-                    const isLost = entry.status === "lost";
-                    const isPending = entry.status === "pending";
-                    const fmtDate = (d: string) => {
-                      try { return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
-                      catch { return d; }
-                    };
-                    return (
-                      <div key={entry.id} className="flex items-center gap-3 px-4 py-3.5">
-                        <div className="shrink-0">
-                          {isWon && <CheckCircle2 className="w-5 h-5 text-green-400" />}
-                          {isLost && <XCircle className="w-5 h-5 text-red-400" />}
-                          {isPending && entry.bolaoStatus === "closed" && <Clock className="w-5 h-5 text-orange-400" />}
-                          {isPending && entry.bolaoStatus === "open" && <Clock className="w-5 h-5 text-yellow-400" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white">{entry.homeTeam} × {entry.awayTeam}</p>
-                          <p className="text-[11px] text-white/40 mt-0.5">{fmtDate(entry.matchDate)}</p>
-                          {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
-                            <p className="text-[11px] mt-0.5 text-white/50">Placar final: {entry.actualHomeScore}–{entry.actualAwayScore}</p>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-sm font-black tabular-nums" style={{ color: isWon ? "#4ade80" : isLost ? "#f87171" : "#fde047" }}>
-                            {entry.myHomeScore}–{entry.myAwayScore}
-                          </div>
-                          <div className="text-[11px] mt-0.5" style={{ color: isWon ? "#4ade80" : isLost ? "#f87171" : entry.bolaoStatus === "closed" ? "#fb923c" : "#fbbf24" }}>
-                            {isWon ? "✓ Acertou!" : isLost ? "✗ Errou" : entry.bolaoStatus === "closed" ? "Jogo em breve" : "Aguardando"}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       <RulesModal open={showRules} onClose={() => setShowRules(false)} />
       <AuthModals mode={authMode} onClose={() => setAuthMode(null)} onSwitch={m => setAuthMode(m)} />
       <ProfileModal open={showProfile} onClose={() => { setShowProfile(false); refreshUser(); }} />

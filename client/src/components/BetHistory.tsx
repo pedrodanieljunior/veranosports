@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight, Info } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight, Info, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -352,12 +352,31 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
 }
 
 export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
+  const [activeTab, setActiveTab] = useState<"apostas" | "bolao">("apostas");
+  const [palpites, setPalpites] = useState<any[]>([]);
+  const [palpitesLoading, setPalpitesLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "bolao") return;
+    setPalpitesLoading(true);
+    fetch("/api/bolao/my-entries", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setPalpites(data))
+      .catch(() => setPalpites([]))
+      .finally(() => setPalpitesLoading(false));
+  }, [activeTab]);
+
   const { data: cashoutSettings } = useQuery<{ earlyExitPct: number; cashOutPct: number }>({
     queryKey: ["/api/cashout-settings"],
     staleTime: 5 * 60 * 1000,
   });
   const earlyExitPct = cashoutSettings?.earlyExitPct ?? 20;
   const cashOutPct = cashoutSettings?.cashOutPct ?? 20;
+
+  const fmtDate = (d: string) => {
+    try { return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+    catch { return d; }
+  };
 
   return (
     <>
@@ -366,8 +385,8 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
         <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
-        <CardHeader className="border-b border-card-border flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
+        <CardHeader className="border-b border-card-border flex-shrink-0 pb-0">
+          <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
               <History className="w-5 h-5 text-primary" />
               <CardTitle className="text-lg">Apostas</CardTitle>
@@ -376,32 +395,110 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
               <X className="w-4 h-4" />
             </Button>
           </div>
+          {/* Abas */}
+          <div className="flex gap-0 -mx-6 border-t border-border">
+            <button
+              onClick={() => setActiveTab("apostas")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
+              style={{
+                borderColor: activeTab === "apostas" ? "hsl(var(--primary))" : "transparent",
+                color: activeTab === "apostas" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+              }}
+              data-testid="tab-apostas-history"
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              Histórico
+            </button>
+            <button
+              onClick={() => setActiveTab("bolao")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
+              style={{
+                borderColor: activeTab === "bolao" ? "#f59e0b" : "transparent",
+                color: activeTab === "bolao" ? "#f59e0b" : "hsl(var(--muted-foreground))",
+              }}
+              data-testid="tab-bolao-history"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              Meus Palpites
+            </button>
+          </div>
         </CardHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <CardContent className="p-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-24 w-full rounded-xl" />
-                ))}
-              </div>
-            ) : bets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-center py-8">
-                <Receipt className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground">
-                  Nenhum bilhete gerado ainda
-                </p>
-                <p className="text-sm text-muted-foreground/70 mt-1">
-                  Selecione odds e gere seu primeiro bilhete
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {bets.map((bet) => (
-                  <BetCard key={bet.id} bet={bet} earlyExitPct={earlyExitPct} cashOutPct={cashOutPct} />
-                ))}
-              </div>
+            {/* ── Aba Histórico ── */}
+            {activeTab === "apostas" && (
+              isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : bets.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <Receipt className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                  <p className="text-muted-foreground">Nenhum bilhete gerado ainda</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">Selecione odds e gere seu primeiro bilhete</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {bets.map((bet) => (
+                    <BetCard key={bet.id} bet={bet} earlyExitPct={earlyExitPct} cashOutPct={cashOutPct} />
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* ── Aba Meus Palpites ── */}
+            {activeTab === "bolao" && (
+              palpitesLoading ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
+                  <div className="w-4 h-4 border-2 border-yellow-400/40 border-t-yellow-400 rounded-full animate-spin" />
+                  Carregando...
+                </div>
+              ) : palpites.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <Trophy className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                  <p className="text-muted-foreground">Nenhum palpite registrado ainda</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">Participe de um bolão para ver seus palpites aqui</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {palpites.map((entry: any) => {
+                    const isWon = entry.status === "won";
+                    const isLost = entry.status === "lost";
+                    return (
+                      <div
+                        key={entry.id}
+                        className="rounded-xl border overflow-hidden"
+                        style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : entry.bolaoStatus === "closed" ? "bg-orange-400" : "bg-yellow-400"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{entry.homeTeam} × {entry.awayTeam}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(entry.matchDate)}</p>
+                            {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Placar final: {entry.actualHomeScore}–{entry.actualAwayScore}</p>
+                            )}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <span className="text-xs text-muted-foreground">Palpite:</span>
+                              <span className={`font-black text-sm tabular-nums ${isWon ? "text-green-400" : isLost ? "text-red-400" : "text-yellow-400"}`}>
+                                {entry.myHomeScore}–{entry.myAwayScore}
+                              </span>
+                            </div>
+                            <div className={`text-[11px] mt-0.5 font-medium ${isWon ? "text-green-400" : isLost ? "text-red-400" : entry.bolaoStatus === "closed" ? "text-orange-400" : "text-yellow-400/70"}`}>
+                              {isWon ? "✓ Acertou!" : isLost ? "✗ Errou" : entry.bolaoStatus === "closed" ? "Jogo em breve" : "Aguardando"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </CardContent>
         </div>
