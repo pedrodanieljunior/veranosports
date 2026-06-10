@@ -4398,7 +4398,10 @@ export async function registerRoutes(
 
   app.post("/api/admin/bolao", requireAdmin, async (req, res) => {
     try {
-      const bolao = await storage.createBolao(req.body);
+      const body = { ...req.body };
+      body.startsAt = body.startsAt ? new Date(body.startsAt) : null;
+      body.endsAt = body.endsAt ? new Date(body.endsAt) : null;
+      const bolao = await storage.createBolao(body);
       res.json(bolao);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
