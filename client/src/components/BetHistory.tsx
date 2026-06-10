@@ -354,17 +354,19 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
 export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
   const [activeTab, setActiveTab] = useState<"apostas" | "bolao">("apostas");
   const [palpites, setPalpites] = useState<any[]>([]);
-  const [palpitesLoading, setPalpitesLoading] = useState(false);
+  const [palpitesLoading, setPalpitesLoading] = useState(true);
 
   useEffect(() => {
-    if (activeTab !== "bolao") return;
     setPalpitesLoading(true);
     fetch("/api/bolao/my-entries", { credentials: "include" })
       .then(r => r.ok ? r.json() : [])
-      .then(data => setPalpites(data))
+      .then(data => {
+        setPalpites(data);
+        if (data.length === 0) setActiveTab("apostas");
+      })
       .catch(() => setPalpites([]))
       .finally(() => setPalpitesLoading(false));
-  }, [activeTab]);
+  }, []);
 
   const { data: cashoutSettings } = useQuery<{ earlyExitPct: number; cashOutPct: number }>({
     queryKey: ["/api/cashout-settings"],
@@ -409,18 +411,20 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
               <Receipt className="w-3.5 h-3.5" />
               Histórico
             </button>
-            <button
-              onClick={() => setActiveTab("bolao")}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
-              style={{
-                borderColor: activeTab === "bolao" ? "#f59e0b" : "transparent",
-                color: activeTab === "bolao" ? "#f59e0b" : "hsl(var(--muted-foreground))",
-              }}
-              data-testid="tab-bolao-history"
-            >
-              <Trophy className="w-3.5 h-3.5" />
-              Meus Palpites
-            </button>
+            {palpites.length > 0 && (
+              <button
+                onClick={() => setActiveTab("bolao")}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
+                style={{
+                  borderColor: activeTab === "bolao" ? "#f59e0b" : "transparent",
+                  color: activeTab === "bolao" ? "#f59e0b" : "hsl(var(--muted-foreground))",
+                }}
+                data-testid="tab-bolao-history"
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                Meus Palpites
+              </button>
+            )}
           </div>
         </CardHeader>
 
