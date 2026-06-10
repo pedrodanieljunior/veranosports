@@ -2065,7 +2065,7 @@ export async function registerRoutes(
     try {
       const user = process.env.GMAIL_USER;
       const pass = process.env.GMAIL_APP_PASSWORD;
-      const to = process.env.GMAIL_NOTIFY;
+      const to = process.env.NOTIFY_EMAIL || process.env.GMAIL_NOTIFY;
       if (!user || !pass || !to) return;
       const transporter = nodemailer.createTransport({
         service: "gmail",
