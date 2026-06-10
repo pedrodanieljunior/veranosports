@@ -22,7 +22,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock, Trophy, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock, Trophy, CheckCircle2, XCircle, Clock, ChevronDown } from "lucide-react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
@@ -80,6 +80,8 @@ export default function Copa() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  const [showApostasMenu, setShowApostasMenu] = useState(false);
+  const apostasMenuRef = useRef<HTMLDivElement>(null);
   const pendingGameRef = useRef<Game | null>(null);
   const pendingSelectionRef = useRef<Selection | null>(null);
   const countdown = useCountdown(COPA_START);
@@ -113,6 +115,17 @@ export default function Copa() {
       setShowBetSlip(true); setIsBetSlipMinimized(true);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!showApostasMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (apostasMenuRef.current && !apostasMenuRef.current.contains(e.target as Node)) {
+        setShowApostasMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showApostasMenu]);
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
 
@@ -307,29 +320,44 @@ export default function Copa() {
               </>
             ) : (
               <>
-                {/* Botão combinado Apostas + Bolão */}
-                <div className="relative inline-flex rounded-lg overflow-hidden shadow-md" style={{ border: "1px solid rgba(255,255,255,0.12)" }}>
+                {/* Botão Apostas com dropdown */}
+                <div className="relative" ref={apostasMenuRef}>
                   <button
-                    onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
-                    className="relative inline-flex items-center gap-1 px-2.5 py-1.5 font-bold text-xs whitespace-nowrap"
+                    onClick={() => setShowApostasMenu(v => !v)}
+                    className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap"
                     style={{ background: "#1565C0", color: "white" }}
-                    data-testid="button-history-copa"
+                    data-testid="button-apostas-copa"
                   >
                     <History className="w-3.5 h-3.5" />
                     <span>Apostas</span>
+                    <ChevronDown className="w-3 h-3 opacity-70" />
                     {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
                   </button>
-                  <div style={{ width: "1px", background: "rgba(255,255,255,0.15)" }} />
-                  <button
-                    onClick={() => { setShowPalpites(true); fetchPalpites(); }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-bold text-xs whitespace-nowrap"
-                    style={{ background: "#0d47a1", color: "#fbbf24" }}
-                    data-testid="button-palpites-copa"
-                    title="Meus palpites do bolão"
-                  >
-                    <Trophy className="w-3 h-3" />
-                    <span>Bolão</span>
-                  </button>
+                  {showApostasMenu && (
+                    <div
+                      className="absolute right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50"
+                      style={{ minWidth: "160px", background: "#0d1b3e", border: "1px solid rgba(255,255,255,0.12)" }}
+                    >
+                      <button
+                        onClick={() => { setShowHistory(true); setShowBetSlip(false); setShowApostasMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-xs font-semibold text-white hover:bg-white/5 transition-colors"
+                        data-testid="button-history-copa"
+                      >
+                        <History className="w-3.5 h-3.5 text-blue-400" />
+                        Histórico
+                      </button>
+                      <div style={{ height: "1px", background: "rgba(255,255,255,0.07)" }} />
+                      <button
+                        onClick={() => { setShowPalpites(true); fetchPalpites(); setShowApostasMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-xs font-semibold hover:bg-white/5 transition-colors"
+                        style={{ color: "#fbbf24" }}
+                        data-testid="button-palpites-copa"
+                      >
+                        <Trophy className="w-3.5 h-3.5" />
+                        Meus Palpites
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap" style={{ background: "rgba(201,162,39,0.15)", color: "#f5c518", border: "1px solid rgba(201,162,39,0.3)" }} data-testid="button-profile-copa">
                   <span className="text-[10px]">R${(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}</span>
