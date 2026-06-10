@@ -498,7 +498,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                             </div>
                             {isWon && entry.prizeAmount != null && (
                               <div className="text-[11px] mt-0.5 font-bold text-green-300">
-                                +R${entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                + R${entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </div>
                             )}
                           </div>
