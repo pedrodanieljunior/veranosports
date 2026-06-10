@@ -4399,14 +4399,15 @@ export async function registerRoutes(
   app.post("/api/admin/bolao", requireAdmin, async (req, res) => {
     try {
       const body = { ...req.body };
-      if (body.startsAt) {
-        const d = new Date(body.startsAt);
-        body.startsAt = isNaN(d.getTime()) ? null : d;
-      } else { body.startsAt = null; }
-      if (body.endsAt) {
-        const d = new Date(body.endsAt);
-        body.endsAt = isNaN(d.getTime()) ? null : d;
-      } else { body.endsAt = null; }
+      // Interpret datetime-local strings as Manaus time (UTC-4)
+      const parseManaus = (s: string) => {
+        if (!s) return null;
+        const str = s.length === 16 ? s + ":00-04:00" : s.length === 19 ? s + "-04:00" : s;
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+      };
+      body.startsAt = body.startsAt ? parseManaus(body.startsAt) : null;
+      body.endsAt = body.endsAt ? parseManaus(body.endsAt) : null;
       const bolao = await storage.createBolao(body);
       res.json(bolao);
     } catch (e: any) {
