@@ -2063,8 +2063,8 @@ export async function registerRoutes(
   // ─── Gmail Email Notification ─────────────────────────────────────────────────
   async function sendEmailNotification(subject: string, html: string) {
     try {
-      const user = process.env.GMAIL_USER;
-      const pass = process.env.GMAIL_APP_PASSWORD;
+      const user = process.env.SENDER_EMAIL || process.env.GMAIL_USER;
+      const pass = process.env.SENDER_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD;
       const to = process.env.NOTIFY_EMAIL || process.env.GMAIL_NOTIFY;
       if (!user || !pass || !to) return;
       const transporter = nodemailer.createTransport({
