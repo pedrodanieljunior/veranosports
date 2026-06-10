@@ -1617,6 +1617,17 @@ async function runCheckResults() {
         continue;
       }
 
+      // Copa cards (Grupos, Longo Prazo, Especiais): NUNCA resolvidos automaticamente
+      // Sempre pelo admin manualmente — resultado não depende de placar de partida simples
+      if (selection.gameId?.startsWith("copa-card-")) {
+        if (!selection.result || selection.result === "pending") {
+          allSelectionsResolved = false;
+        } else if (selection.result === "lost") {
+          allSelectionsWon = false;
+        }
+        continue;
+      }
+
       if (selection.result && selection.result !== "pending") {
         if (selection.result === "lost") allSelectionsWon = false;
         continue;
@@ -6137,6 +6148,8 @@ export async function registerRoutes(
       for (const sel of bet.selections) {
         // Super Boost Verano: sempre resolvido manualmente pelo admin — nunca automático
         if (sel.marketKey === "boost") { resolvedSelections.push(sel); continue; }
+        // Copa cards (Grupos, Longo Prazo, Especiais): sempre resolvido manualmente pelo admin
+        if (sel.gameId?.startsWith("copa-card-")) { resolvedSelections.push(sel); continue; }
         const fid = sel.gameId.startsWith("api-football-") ? sel.gameId.replace("api-football-", "") : null;
         if (!fid) { resolvedSelections.push(sel); continue; }
         const fix = fixtureResults.get(fid);
