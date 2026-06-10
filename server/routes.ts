@@ -3572,6 +3572,11 @@ export async function registerRoutes(
   const savedCashOutPct = await storage.getSetting("cashOutPct");
   if (savedCashOutPct) cashOutPct = parseFloat(savedCashOutPct) || 20;
 
+  // Extras do caixa (lucro da casa no bolão, etc.)
+  let caixaExtras = 0;
+  const savedCaixaExtras = await storage.getSetting("caixaExtras");
+  if (savedCaixaExtras) caixaExtras = parseFloat(savedCaixaExtras) || 0;
+
   function startAutoCheckTimer() {
     if (autoCheckTimer) clearInterval(autoCheckTimer);
     autoCheckTimer = setInterval(async () => {
@@ -3604,7 +3609,7 @@ export async function registerRoutes(
       .filter((w: any) => w.status === "paid" || w.status === "approved")
       .reduce((s: number, w: any) => s + w.amount, 0);
     return Math.max(0,
-      DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios + defensasProfits
+      DAILY_LIMIT + entradasPix - saldosClientes - exposicao - totalSaquesAdmin - pagamentosUsuarios + defensasProfits + caixaExtras
     );
   }
 
@@ -4309,6 +4314,12 @@ export async function registerRoutes(
             await storage.createTransaction({ userId: w.userId, type: "bolao_win", amount: result.prizePerWinner, balanceAfter: newBal, description: `Prêmio do bolão: ${homeScore}x${awayScore} — R$${result.prizePerWinner.toFixed(2)}` });
           }
         }
+      }
+
+      // Credit house profit to caixaExtras
+      if (result.houseProfit > 0) {
+        caixaExtras = Math.round((caixaExtras + result.houseProfit) * 100) / 100;
+        await storage.setSetting("caixaExtras", String(caixaExtras));
       }
 
       res.json({ ...result, winnerCount: result.winners });
@@ -5720,7 +5731,7 @@ export async function registerRoutes(
   app.get("/api/admin/defensas", requireAdmin, async (req, res) => {
     try {
       const defesas = await storage.getDefesas();
-      res.json({ defesas, defensasBalance, defensasInitialBalance, defensasProfits });
+      res.json({ defesas, defensasBalance, defensasInitialBalance, defensasProfits, caixaExtras });
     } catch (err) {
       res.status(500).json({ error: "Erro ao buscar defesas" });
     }

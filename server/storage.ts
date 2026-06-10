@@ -130,7 +130,7 @@ export interface IStorage {
   createBolaoEntry(data: { bolaoId: number; userId: string; homeScore: number; awayScore: number }): Promise<BolaoEntry>;
   getBolaoEntries(bolaoId: number): Promise<BolaoEntry[]>;
   getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]>;
-  finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number }>;
+  finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1272,7 +1272,8 @@ export class DatabaseStorage implements IStorage {
       await db.update(bolaoEntriesTable).set({ prizeAwarded: true }).where(eq(bolaoEntriesTable.id, w.id));
     }
 
-    return { winners: winners.length, prizePerWinner, totalEntries, total };
+    const houseProfit = Math.round((grossTotal - total) * 100) / 100;
+    return { winners: winners.length, prizePerWinner, totalEntries, total, houseProfit };
   }
 }
 

@@ -309,7 +309,7 @@ export default function Admin() {
     refetchInterval: adminMe?.isAdmin ? 10 * 1000 : false,
   });
 
-  const { data: defensasData, refetch: refetchDefesas } = useQuery<{ defesas: Defesa[]; defensasBalance: number; defensasInitialBalance: number; defensasProfits: number }>({
+  const { data: defensasData, refetch: refetchDefesas } = useQuery<{ defesas: Defesa[]; defensasBalance: number; defensasInitialBalance: number; defensasProfits: number; caixaExtras: number }>({
     queryKey: ["/api/admin/defensas"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/defensas");
@@ -1267,6 +1267,7 @@ export default function Admin() {
 
                 // Fórmula principal
                 const defensasProfits = defensasData?.defensasProfits ?? 0;
+                const caixaExtras = defensasData?.caixaExtras ?? 0;
                 const cashPlus = bets
                   .filter(b => (b as any).cashOutValue != null)
                   .reduce((s, b) => s + Math.max(0, b.stake - ((b as any).cashOutValue ?? b.stake)), 0);
@@ -1277,7 +1278,8 @@ export default function Admin() {
                   - totalSaquesAdmin
                   - pagamentosUsuarios
                   + defensasProfits
-                  + cashPlus;
+                  + cashPlus
+                  + caixaExtras;
 
                 const isPositive = caixa >= 0;
 
@@ -1484,7 +1486,7 @@ export default function Admin() {
                           <p className="text-xs text-muted-foreground">Pagamentos usuários</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div className="grid grid-cols-3 gap-3 mt-3">
                         {/* Lucro Defesas */}
                         <div className="bg-cyan-500/10 rounded-lg p-3 text-center">
                           <Shield className="w-4 h-4 mx-auto mb-1 text-cyan-400" />
@@ -1496,6 +1498,12 @@ export default function Admin() {
                           <TrendingUp className="w-4 h-4 mx-auto mb-1 text-emerald-400" />
                           <p className="text-sm font-bold text-emerald-400">+R${fmt(cashPlus)}</p>
                           <p className="text-xs text-muted-foreground">Cash +</p>
+                        </div>
+                        {/* Extras (% da casa bolão, etc.) */}
+                        <div className="bg-yellow-500/10 rounded-lg p-3 text-center">
+                          <Trophy className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
+                          <p className="text-sm font-bold text-yellow-400">+R${fmt(caixaExtras)}</p>
+                          <p className="text-xs text-muted-foreground">Extras</p>
                         </div>
                       </div>
                     </CardContent>
