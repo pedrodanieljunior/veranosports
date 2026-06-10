@@ -542,7 +542,7 @@ function InviteView({ onBack }: { onBack: () => void }) {
     setCode(user?.referralCode ?? "");
   }, [user?.cpf, user?.referralCode]);
 
-  const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://fwsports.com";
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://veranosports.com";
   const inviteLink = `${siteUrl}?ref=${code}`;
 
   const saveMutation = useMutation({

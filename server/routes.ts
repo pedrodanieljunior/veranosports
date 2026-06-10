@@ -309,7 +309,7 @@ function formatTeamName(name: string): string {
 
 // Configuração PIX - CNPJ
 const PIX_KEY = "22580407000178";
-const PIX_NAME = "FW Sports";
+const PIX_NAME = "Verano Sports";
 const PIX_CITY = "SAO PAULO";
 
 // Gerar payload PIX EMV (formato BRCode)
@@ -1926,9 +1926,9 @@ export async function registerRoutes(
             },
             body: JSON.stringify({
               transaction_amount: amount,
-              description: "Depósito FW Sports",
+              description: "Depósito Verano Sports",
               payment_method_id: "pix",
-              payer: { email: `${userId.replace(/\D/g, "")}@deposito.fwsports.com` },
+              payer: { email: `${userId.replace(/\D/g, "")}@deposito.veranosports.com` },
             }),
           });
           if (mpRes.ok) {
@@ -2060,7 +2060,7 @@ export async function registerRoutes(
         service: "gmail",
         auth: { user, pass },
       });
-      await transporter.sendMail({ from: `"FW Sports" <${user}>`, to, subject, html });
+      await transporter.sendMail({ from: `"Verano Sports" <${user}>`, to, subject, html });
     } catch (err) {
       console.error("[email] Erro ao enviar notificação:", err);
     }
@@ -2089,7 +2089,7 @@ export async function registerRoutes(
       });
       console.log(`[saque] Notificando: nome=${user.name} cpf=${userId} valor=${amount} pix=${pixKey}`);
       sendEmailNotification(
-        `💸 Novo saque solicitado - FW Sports`,
+        `💸 Novo saque solicitado - Verano Sports`,
         `<h2 style="color:#e11d48">💸 Novo saque solicitado</h2>
          <table style="font-size:15px;border-collapse:collapse">
            <tr><td style="padding:6px 12px;font-weight:bold">Nome</td><td style="padding:6px 12px">${user.name}</td></tr>
