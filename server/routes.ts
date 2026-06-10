@@ -4367,8 +4367,12 @@ export async function registerRoutes(
       if (result.houseProfit > 0) {
         const prevExtras = caixaExtras;
         caixaExtras = Math.round((caixaExtras + result.houseProfit) * 100) / 100;
-        await storage.setSetting("caixaExtras", String(caixaExtras));
-        console.log(`[Bolão #${bolaoId}] caixaExtras: R$${prevExtras.toFixed(2)} + R$${result.houseProfit.toFixed(2)} = R$${caixaExtras.toFixed(2)}`);
+        try {
+          await storage.setSetting("caixaExtras", String(caixaExtras));
+          console.log(`[Bolão #${bolaoId}] caixaExtras: R$${prevExtras.toFixed(2)} + R$${result.houseProfit.toFixed(2)} = R$${caixaExtras.toFixed(2)}`);
+        } catch (settingErr: any) {
+          console.error(`[Bolão #${bolaoId}] ERRO ao salvar caixaExtras no banco: ${settingErr.message} — valor em memória: R$${caixaExtras.toFixed(2)}`);
+        }
       }
 
       res.json({ ...result, winnerCount: result.winners });
