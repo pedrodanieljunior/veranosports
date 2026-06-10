@@ -4401,9 +4401,13 @@ export async function registerRoutes(
       const body = { ...req.body };
       body.startsAt = body.startsAt ? new Date(body.startsAt) : null;
       body.endsAt = body.endsAt ? new Date(body.endsAt) : null;
+      console.log("[bolao create] body:", JSON.stringify(body));
       const bolao = await storage.createBolao(body);
       res.json(bolao);
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) {
+      console.error("[bolao create] error:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.patch("/api/admin/bolao/:id", requireAdmin, async (req, res) => {
