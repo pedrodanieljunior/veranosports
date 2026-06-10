@@ -4305,34 +4305,16 @@ export async function registerRoutes(
       if (!req.session?.userId) return res.json([]);
       const allBoloes = await storage.getBoloes();
       const userEntries = await storage.getBolaoEntriesByUser(req.session.userId);
-      // For finished bolões, fetch all entries once to compute winnersCount and prizeAmount
-      const finishedBolaoIds = [...new Set(userEntries.map(e => e.bolaoId).filter(id => {
-        const b = allBoloes.find(b => b.id === id);
-        return b?.status === "finished";
-      }))];
-      const allEntriesMap: Record<number, Awaited<ReturnType<typeof storage.getBolaoEntries>>> = {};
-      await Promise.all(finishedBolaoIds.map(async id => {
-        allEntriesMap[id] = await storage.getBolaoEntries(id);
-      }));
       const result = userEntries.map(e => {
         const bolao = allBoloes.find(b => b.id === e.bolaoId);
         if (!bolao) return null;
-        const houseCutPct = (bolao as any).houseCut ?? 0;
         // Determine entry status
         let status: "pending" | "won" | "lost" = "pending";
         if (bolao.status === "finished" && bolao.actualHomeScore !== null && bolao.actualAwayScore !== null) {
           status = (e.homeScore === bolao.actualHomeScore && e.awayScore === bolao.actualAwayScore) ? "won" : "lost";
         }
-        // Compute prize amount for won entries
-        let prizeAmount: number | null = null;
-        if (status === "won" && allEntriesMap[bolao.id]) {
-          const allEntries = allEntriesMap[bolao.id];
-          const totalEntries = allEntries.length;
-          const winnersCount = allEntries.filter(x => x.prizeAwarded).length || 1;
-          const grossTotal = totalEntries * (bolao.entryFee ?? 10);
-          const pool = Math.round(grossTotal * (1 - houseCutPct / 100) * 100) / 100;
-          prizeAmount = Math.round((pool / winnersCount) * 100) / 100;
-        }
+        // Use stored prize amount (set at finishBolao time — accurate even after entries are deleted)
+        const prizeAmount: number | null = (status === "won" && e.prizeAmount != null) ? e.prizeAmount : null;
         return {
           id: e.id,
           bolaoId: bolao.id,

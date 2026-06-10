@@ -1,6 +1,6 @@
 import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
+import { eq, desc, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
@@ -1255,7 +1255,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAllBolaoEntriesByUser(userId: string): Promise<void> {
-    await db.delete(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId));
+    // Only delete entries from bolões that are NOT finished (protect awarded prizes)
+    const userEntries = await db.select({ id: bolaoEntriesTable.id, bolaoId: bolaoEntriesTable.bolaoId })
+      .from(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId));
+    const bolaoIds = [...new Set(userEntries.map(e => e.bolaoId))];
+    if (bolaoIds.length === 0) return;
+    const boloes = await db.select({ id: baloesTable.id, status: baloesTable.status })
+      .from(baloesTable).where(inArray(baloesTable.id, bolaoIds));
+    const finishedIds = new Set(boloes.filter(b => b.status === "finished").map(b => b.id));
+    const entriesToDelete = userEntries.filter(e => !finishedIds.has(e.bolaoId)).map(e => e.id);
+    if (entriesToDelete.length > 0) {
+      await db.delete(bolaoEntriesTable).where(inArray(bolaoEntriesTable.id, entriesToDelete));
+    }
   }
 
   async finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number }> {
@@ -1272,9 +1283,9 @@ export class DatabaseStorage implements IStorage {
     // Mark winners & award prize via transactions (handled in route)
     await db.update(baloesTable).set({ status: "finished", actualHomeScore: homeScore, actualAwayScore: awayScore }).where(eq(baloesTable.id, bolaoId));
 
-    // Mark prize awarded for winners
+    // Mark prize awarded for winners and store the actual prize amount
     for (const w of winners) {
-      await db.update(bolaoEntriesTable).set({ prizeAwarded: true }).where(eq(bolaoEntriesTable.id, w.id));
+      await db.update(bolaoEntriesTable).set({ prizeAwarded: true, prizeAmount: prizePerWinner }).where(eq(bolaoEntriesTable.id, w.id));
     }
 
     const houseProfit = Math.round((grossTotal - total) * 100) / 100;
