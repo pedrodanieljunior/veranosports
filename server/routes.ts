@@ -4341,24 +4341,34 @@ export async function registerRoutes(
       const { homeScore, awayScore } = req.body as { homeScore: number; awayScore: number };
       const result = await storage.finishBolao(bolaoId, homeScore, awayScore);
 
+      console.log(`[Bolão #${bolaoId}] Finalizado ${homeScore}x${awayScore} | Entradas: ${result.totalEntries} | Prêmio/ganhador: R$${result.prizePerWinner.toFixed(2)} | Lucro casa: R$${result.houseProfit.toFixed(2)}`);
+
       // Credit prize to each winner's balance
       if (result.prizePerWinner > 0) {
         const entries = await storage.getBolaoEntries(bolaoId);
         const winners = entries.filter(e => e.prizeAwarded && e.homeScore === homeScore && e.awayScore === awayScore);
+        console.log(`[Bolão #${bolaoId}] ${winners.length} ganhador(es) encontrado(s)`);
         for (const w of winners) {
           const user = await storage.getUserByCpf(w.userId);
           if (user) {
             const newBal = Math.round((user.balance + result.prizePerWinner) * 100) / 100;
             await storage.updateUserBalance(w.userId, newBal);
             await storage.createTransaction({ userId: w.userId, type: "bolao_win", amount: result.prizePerWinner, balanceAfter: newBal, description: `Prêmio do bolão: ${homeScore}x${awayScore} — R$${result.prizePerWinner.toFixed(2)}` });
+            console.log(`[Bolão #${bolaoId}] Prêmio R$${result.prizePerWinner.toFixed(2)} creditado para ${w.userId} → saldo R$${newBal.toFixed(2)}`);
+          } else {
+            console.warn(`[Bolão #${bolaoId}] Usuário não encontrado: ${w.userId}`);
           }
         }
+      } else {
+        console.log(`[Bolão #${bolaoId}] Nenhum ganhador — prêmio R$0`);
       }
 
       // Credit house profit to caixaExtras
       if (result.houseProfit > 0) {
+        const prevExtras = caixaExtras;
         caixaExtras = Math.round((caixaExtras + result.houseProfit) * 100) / 100;
         await storage.setSetting("caixaExtras", String(caixaExtras));
+        console.log(`[Bolão #${bolaoId}] caixaExtras: R$${prevExtras.toFixed(2)} + R$${result.houseProfit.toFixed(2)} = R$${caixaExtras.toFixed(2)}`);
       }
 
       res.json({ ...result, winnerCount: result.winners });

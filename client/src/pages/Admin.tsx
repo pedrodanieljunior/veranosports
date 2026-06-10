@@ -6230,6 +6230,9 @@ function BolaoTab() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bolao"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bolao/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/defensas"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bets"] });
       setFinishModal(null);
       toast({ title: `Bolão finalizado! ${data.winnerCount} ganhador(es), R$${data.prizePerWinner?.toFixed(2) ?? "0"} cada.` });
     },
