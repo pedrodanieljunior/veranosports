@@ -5801,11 +5801,12 @@ export async function registerRoutes(
 
       const existing = await storage.getBetSlip(id);
 
-      // Ao reverter para "pending", resetar seleções boost para "pending" também
-      // (evita que um boost incorretamente marcado como "lost" force o bilhete a perder novamente)
+      // Ao reverter para "pending", resetar seleções boost e copa-card para "pending" também
+      // (evita que seleções incorretamente marcadas como "lost" forcem o bilhete a perder novamente)
       if (status === "pending" && existing?.selections) {
         for (const sel of existing.selections) {
-          if (sel.marketKey === "boost" && sel.result && sel.result !== "pending") {
+          const isManualOnly = sel.marketKey === "boost" || sel.gameId?.startsWith("copa-card-");
+          if (isManualOnly && sel.result && sel.result !== "pending") {
             await storage.updateSelectionResult(id, sel.id, "pending");
           }
         }
