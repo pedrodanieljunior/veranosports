@@ -307,20 +307,30 @@ export default function Copa() {
               </>
             ) : (
               <>
-                <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#1565C0", color: "white" }} data-testid="button-history-copa">
-                  <History className="w-3.5 h-3.5" /><span>Apostas</span>
-                  {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
-                </button>
-                <button
-                  onClick={() => { setShowPalpites(true); fetchPalpites(); }}
-                  className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap"
-                  style={{ background: "rgba(245,197,24,0.15)", color: "#f5c518", border: "1px solid rgba(245,197,24,0.3)" }}
-                  data-testid="button-palpites-copa"
-                  title="Meus palpites do bolão"
-                >
-                  <Trophy className="w-3.5 h-3.5" />
-                  <span>Bolão</span>
-                </button>
+                {/* Botão combinado Apostas + Bolão */}
+                <div className="relative inline-flex rounded-lg overflow-hidden shadow-md" style={{ border: "1px solid rgba(255,255,255,0.12)" }}>
+                  <button
+                    onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
+                    className="relative inline-flex items-center gap-1 px-2.5 py-1.5 font-bold text-xs whitespace-nowrap"
+                    style={{ background: "#1565C0", color: "white" }}
+                    data-testid="button-history-copa"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span>Apostas</span>
+                    {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
+                  </button>
+                  <div style={{ width: "1px", background: "rgba(255,255,255,0.15)" }} />
+                  <button
+                    onClick={() => { setShowPalpites(true); fetchPalpites(); }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-bold text-xs whitespace-nowrap"
+                    style={{ background: "#0d47a1", color: "#fbbf24" }}
+                    data-testid="button-palpites-copa"
+                    title="Meus palpites do bolão"
+                  >
+                    <Trophy className="w-3 h-3" />
+                    <span>Bolão</span>
+                  </button>
+                </div>
                 <button onClick={() => setShowProfile(true)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap" style={{ background: "rgba(201,162,39,0.15)", color: "#f5c518", border: "1px solid rgba(201,162,39,0.3)" }} data-testid="button-profile-copa">
                   <span className="text-[10px]">R${(user.balance + (user.bonusBalance ?? 0)).toFixed(2).replace(".", ",")}</span>
                   <UserCircle className="w-4 h-4" />
