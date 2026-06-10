@@ -481,8 +481,8 @@ export const baloesTable = pgTable("boloes", {
   actualHomeScore: integer("actual_home_score"),
   actualAwayScore: integer("actual_away_score"),
   active: boolean("active").notNull().default(true),
-  startsAt: timestamp("starts_at"),
-  endsAt: timestamp("ends_at"),
+  startsAt: text("starts_at"),
+  endsAt: text("ends_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

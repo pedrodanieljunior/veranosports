@@ -4281,9 +4281,20 @@ export async function registerRoutes(
       const bolao = await storage.getActiveBolao();
       if (!bolao) return res.json(null);
       const now = Date.now();
-      // Time-window visibility: hide before startsAt or after endsAt
-      if ((bolao as any).startsAt && now < new Date((bolao as any).startsAt).getTime()) return res.json(null);
-      if ((bolao as any).endsAt && now >= new Date((bolao as any).endsAt).getTime()) return res.json(null);
+      // Time-window visibility (values stored as Manaus time = UTC-4)
+      const parseManausText = (s: string) => {
+        const str = s.length === 16 ? s + ":00-04:00" : s.length === 19 ? s + "-04:00" : s;
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+      };
+      if ((bolao as any).startsAt) {
+        const t = parseManausText((bolao as any).startsAt);
+        if (t && now < t.getTime()) return res.json(null);
+      }
+      if ((bolao as any).endsAt) {
+        const t = parseManausText((bolao as any).endsAt);
+        if (t && now >= t.getTime()) return res.json(null);
+      }
       // Hide 10 minutes before match start
       if (bolao.matchDate) {
         const matchTime = new Date(bolao.matchDate).getTime();
@@ -4399,15 +4410,9 @@ export async function registerRoutes(
   app.post("/api/admin/bolao", requireAdmin, async (req, res) => {
     try {
       const body = { ...req.body };
-      // Interpret datetime-local strings as Manaus time (UTC-4)
-      const parseManaus = (s: string) => {
-        if (!s) return null;
-        const str = s.length === 16 ? s + ":00-04:00" : s.length === 19 ? s + "-04:00" : s;
-        const d = new Date(str);
-        return isNaN(d.getTime()) ? null : d;
-      };
-      body.startsAt = body.startsAt ? parseManaus(body.startsAt) : null;
-      body.endsAt = body.endsAt ? parseManaus(body.endsAt) : null;
+      // Store as plain text (datetime-local string, Manaus time)
+      body.startsAt = body.startsAt || null;
+      body.endsAt = body.endsAt || null;
       const bolao = await storage.createBolao(body);
       res.json(bolao);
     } catch (e: any) {

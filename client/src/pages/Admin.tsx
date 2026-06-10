@@ -6428,9 +6428,9 @@ function BolaoTab() {
                       {(b.startsAt || b.endsAt) && (
                         <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
                           <Clock className="w-2.5 h-2.5" />
-                          {b.startsAt ? `Exibe: ${new Date(b.startsAt).toLocaleString("pt-BR", { timeZone: "America/Manaus" })}` : "Exibe: já"}
+                          {b.startsAt ? `Exibe: ${b.startsAt.replace("T", " ")}` : "Exibe: já"}
                           {" → "}
-                          {b.endsAt ? `Oculta: ${new Date(b.endsAt).toLocaleString("pt-BR", { timeZone: "America/Manaus" })}` : "sem fim"}
+                          {b.endsAt ? `Oculta: ${b.endsAt.replace("T", " ")}` : "sem fim"}
                         </p>
                       )}
                     </div>
