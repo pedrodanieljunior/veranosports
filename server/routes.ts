@@ -4202,6 +4202,12 @@ export async function registerRoutes(
     try {
       const bolao = await storage.getActiveBolao();
       if (!bolao) return res.json(null);
+      // Hide 10 minutes before match start
+      if (bolao.matchDate) {
+        const matchTime = new Date(bolao.matchDate).getTime();
+        const now = Date.now();
+        if (now >= matchTime - 10 * 60 * 1000) return res.json(null);
+      }
       const entries = await storage.getBolaoEntries(bolao.id);
       const totalEntries = entries.length;
       const grossPool = Math.round(totalEntries * (bolao.entryFee ?? 10) * 100) / 100;
