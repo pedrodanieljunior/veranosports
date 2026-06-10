@@ -4284,6 +4284,14 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/bolao/my-entries", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });
+      await storage.deleteAllBolaoEntriesByUser(req.session.userId);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   app.post("/api/bolao/:id/enter", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });

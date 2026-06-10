@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight, Info, Trophy } from "lucide-react";
+import { X, History, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Banknote, CircleDollarSign, Check, Timer, ArrowRight, Info, Trophy, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -355,6 +355,8 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
   const [activeTab, setActiveTab] = useState<"apostas" | "bolao">("apostas");
   const [palpites, setPalpites] = useState<any[]>([]);
   const [palpitesLoading, setPalpitesLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setPalpitesLoading(true);
@@ -468,6 +470,43 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                 </div>
               ) : (
                 <div className="space-y-2">
+                  {/* Botão limpar histórico */}
+                  <div className="flex justify-end mb-1">
+                    {confirmDelete ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Tem certeza?</span>
+                        <button
+                          onClick={async () => {
+                            setDeleting(true);
+                            await fetch("/api/bolao/my-entries", { method: "DELETE", credentials: "include" });
+                            setPalpites([]);
+                            setActiveTab("apostas");
+                            setConfirmDelete(false);
+                            setDeleting(false);
+                          }}
+                          disabled={deleting}
+                          className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                        >
+                          {deleting ? "..." : "Sim, limpar"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(false)}
+                          className="text-xs px-2 py-0.5 rounded bg-muted/40 text-muted-foreground hover:bg-muted/60 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(true)}
+                        className="text-xs text-muted-foreground/60 hover:text-red-400 transition-colors flex items-center gap-1"
+                        data-testid="button-clear-palpites"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Limpar histórico
+                      </button>
+                    )}
+                  </div>
                   {palpites.map((entry: any) => {
                     const isWon = entry.status === "won";
                     const isLost = entry.status === "lost";

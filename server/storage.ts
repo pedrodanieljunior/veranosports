@@ -130,6 +130,7 @@ export interface IStorage {
   createBolaoEntry(data: { bolaoId: number; userId: string; homeScore: number; awayScore: number }): Promise<BolaoEntry>;
   getBolaoEntries(bolaoId: number): Promise<BolaoEntry[]>;
   getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]>;
+  deleteAllBolaoEntriesByUser(userId: string): Promise<void>;
   finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }>;
 }
 
@@ -1251,6 +1252,10 @@ export class DatabaseStorage implements IStorage {
 
   async getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]> {
     return db.select().from(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId)).orderBy(desc(bolaoEntriesTable.createdAt));
+  }
+
+  async deleteAllBolaoEntriesByUser(userId: string): Promise<void> {
+    await db.delete(bolaoEntriesTable).where(eq(bolaoEntriesTable.userId, userId));
   }
 
   async finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number }> {
