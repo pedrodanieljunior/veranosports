@@ -75,7 +75,7 @@ export default function Copa() {
       const newNow = Date.now();
       setNow(newNow);
       setSelections(prev => {
-        const filtered = prev.filter(s => new Date(s.commenceTime).getTime() > newNow);
+        const filtered = prev.filter(s => s.gameId.startsWith("copa-card-") || new Date(s.commenceTime).getTime() > newNow);
         if (filtered.length < prev.length) {
           toast({ title: "Jogo iniciado", description: "Seleção removida pois o jogo já começou.", variant: "destructive" });
         }
