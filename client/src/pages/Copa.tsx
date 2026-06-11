@@ -151,8 +151,8 @@ export default function Copa() {
 
   const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({
     queryKey: ["/api/copa-mundo-games"],
-    staleTime: 10 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
     enabled: activeTab === "copa",
   });
 

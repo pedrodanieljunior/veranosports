@@ -2979,9 +2979,15 @@ export async function registerRoutes(
         return res.json([]);
       }
 
-      // Buscar odds para as datas relevantes
+      // Buscar odds para os próximos 3 dias (cobrindo jogos mais próximos)
       const oddsMap = new Map<number, any>();
-      for (const dateStr of fromDate === toDate ? [fromDate] : [fromDate, toDate]) {
+      const startMs = new Date(fromDate + "T00:00:00Z").getTime();
+      const datesToFetch: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(startMs + i * 24 * 60 * 60 * 1000);
+        datesToFetch.push(d.toISOString().split("T")[0]);
+      }
+      for (const dateStr of datesToFetch) {
         try {
           const r = await fetch(
             `${API_FOOTBALL_BASE}/odds?league=${WC_LEAGUE_ID}&season=${WC_SEASON}&date=${dateStr}`,
