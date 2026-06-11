@@ -430,7 +430,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const headerCls = "bg-white/60 border-b border-blue-200";
   const teamCls = "text-gray-900 font-bold";
   const scoreCls = "text-gray-900 font-black text-2xl";
-  const marketTitleCls = "text-white font-semibold text-[11px] uppercase tracking-wide";
+  const marketTitleCls = "text-gray-900 font-semibold text-[11px] uppercase tracking-wide";
   const dividerCls = "border-black/10";
 
   if (isLoading) {
@@ -615,7 +615,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                       <Lock className="w-3.5 h-3.5 text-gray-500" />
                     ) : (
                       <>
-                        <span className="text-sm font-black bg-gradient-to-b from-blue-500 to-blue-800 bg-clip-text text-transparent">{rawOdd.toFixed(2)}</span>
+                        <span className="text-sm font-black text-white">{rawOdd.toFixed(2)}</span>
                         {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
                         {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
                       </>
