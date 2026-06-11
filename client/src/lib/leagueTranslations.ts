@@ -28,6 +28,7 @@ export const leagueTranslations: Record<string, string> = {
   "soccer_wc_qualifiers_caf": "Eliminatórias Copa – África",
   "soccer_wc_qualifiers_afc": "Eliminatórias Copa – Ásia",
   "soccer_wc_intercontinental": "Playoffs Intercontinentais Copa",
+  "soccer_fifa_world_cup": "Copa do Mundo 2026",
   "soccer_england_efl_cup": "Copa da Liga Inglesa",
   "soccer_spain_segunda_division": "Segunda Divisão – Espanha",
   "soccer_germany_bundesliga2": "2. Bundesliga – Alemanha",

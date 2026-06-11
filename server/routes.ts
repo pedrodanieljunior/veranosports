@@ -2613,6 +2613,7 @@ export async function registerRoutes(
 
       // Prioridade de liga (maior = mais importante para exibição)
       const LEAGUE_PRIORITY: Record<string, number> = {
+        "soccer_fifa_world_cup": 11,
         "soccer_brazil_campeonato": 10,
         "soccer_uefa_champs_league": 10,
         "soccer_epl": 9,
@@ -2695,6 +2696,8 @@ export async function registerRoutes(
           { id: 253, key: "soccer_usa_mls", name: "MLS – EUA", season: 2026 },
           { id: 98, key: "soccer_japan_j_league", name: "J1 League – Japão", season: 2026 },
           { id: 10, key: "soccer_international_friendlies", name: "Amistosos Internacionais", season: brazilianSeason },
+          // Copa do Mundo FIFA 2026
+          { id: 1, key: "soccer_fifa_world_cup", name: "Copa do Mundo 2026", season: 2026 },
           // Qualificatórias Copa do Mundo 2026
           { id: 34, key: "soccer_wc_qualifiers_conmebol", name: "Eliminatórias Copa – CONMEBOL", season: brazilianSeason },
           { id: 32, key: "soccer_wc_qualifiers_europe", name: "Eliminatórias Copa – UEFA", season: brazilianSeason },
