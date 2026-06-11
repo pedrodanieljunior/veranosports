@@ -57,14 +57,30 @@ const MARKET_LABELS: Record<string, string> = {
   "extra-47": "Total de Cartões",
 };
 
+const LIVE_MARKET_LABELS: Record<number, string> = {
+  1: "Resultado Final",
+  3: "Vencedor 2º Tempo",
+  5: "Gols Over/Under",
+  6: "Over/Under 1º Tempo",
+  8: "Ambas Marcam",
+  12: "Dupla Chance",
+  13: "Vencedor 1º Tempo",
+  20: "Escanteios Over/Under",
+  25: "Gols Over/Under",
+  65: "Próximos 10 min",
+  119: "Total Cartões",
+};
+
 export function translateMarket(key: string): string {
   if (key === "boost") return "Super Boost";
   if (key === "copa_grupo" || key.startsWith("copa_grupo_")) return "Copa do Mundo 2026";
   if (key === "double_chance") return "Dupla Chance";
   if (key === "totals") return "+/- Gols";
   if (MARKET_LABELS[key]) return MARKET_LABELS[key];
-  if (key.startsWith("extra-")) {
-    return "Mercado Extra";
+  if (key.startsWith("extra-")) return "Mercado Extra";
+  if (key.startsWith("live_m")) {
+    const id = parseInt(key.slice(6), 10);
+    return LIVE_MARKET_LABELS[id] ?? "Ao Vivo";
   }
   return key
     .replace(/_/g, " ")
