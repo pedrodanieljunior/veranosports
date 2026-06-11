@@ -2948,10 +2948,10 @@ export async function registerRoutes(
 
       if (nowMs < TOURNAMENT_START_MS) {
         fromDate = "2026-06-11";
-        toDate = "2026-06-12";
+        toDate = "2026-06-18";
       } else {
         fromDate = new Date(nowMs).toISOString().split("T")[0];
-        toDate = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        toDate = new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
       }
 
       const cacheKey = `copa_mundo_games_${fromDate}_${toDate}`;
