@@ -3742,7 +3742,8 @@ export async function registerRoutes(
       const now = new Date();
       for (const sel of validatedData.selections) {
         const isLiveSel = sel.marketKey?.startsWith("live_");
-        if (!isLiveSel && sel.commenceTime) {
+        const isManualCard = sel.gameId?.startsWith("copa-card-") || sel.marketKey === "boost";
+        if (!isLiveSel && !isManualCard && sel.commenceTime) {
           const gameStart = new Date(sel.commenceTime);
           if (gameStart <= now) {
             return res.status(400).json({
