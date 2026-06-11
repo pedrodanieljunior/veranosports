@@ -7138,6 +7138,106 @@ function checkSelectionResult(
     console.log(`    Cards: outcome não reconhecido "${outcome}"`); return false;
   }
 
+  // ── Mercados Ao Vivo (live_m*) ───────────────────────────────────────────
+  // marketKey salvo como "live_m1", "live_m5" etc. — outcomes são valores brutos
+  // da API-Football: "Home", "Draw", "Away", "Over 1.5", "Under 2.5", "Yes", "No",
+  // "Home/Draw", "Goals/Over 0.5", "Corners 3-Way/Over 9.5", "Cards/Over 4.5" etc.
+  if (marketKey.startsWith("live_m")) {
+    const liveId = parseInt(marketKey.slice(6), 10);
+    const isHomeOc = outcome === "home";
+    const isAwayOc = outcome === "away";
+    const isDrawOc = outcome === "draw" || outcome === "x";
+    const overM  = outcome.match(/over\s*([\d.]+)/i);
+    const underM = outcome.match(/under\s*([\d.]+)/i);
+
+    // live_m1: Resultado Final (1X2)
+    if (liveId === 1) {
+      if (isDrawOc) return homeGoals === awayGoals;
+      if (isHomeOc) return homeGoals > awayGoals;
+      if (isAwayOc) return awayGoals > homeGoals;
+      console.log(`    Live m1: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m5 / live_m25: Gols Over/Under (tempo inteiro)
+    if (liveId === 5 || liveId === 25) {
+      if (overM)  return totalGoals > parseFloat(overM[1]);
+      if (underM) return totalGoals < parseFloat(underM[1]);
+      console.log(`    Live m${liveId}: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m8: Ambas Marcam (Yes/No)
+    if (liveId === 8) {
+      const btts = homeGoals > 0 && awayGoals > 0;
+      if (outcome.includes("yes") || outcome.includes("sim")) return btts;
+      if (outcome.includes("no")  || outcome.includes("não") || outcome.includes("nao")) return !btts;
+      console.log(`    Live m8: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m13: Vencedor 1º Tempo
+    if (liveId === 13) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    Live m13: dados HT indisponíveis`); return null; }
+      if (isDrawOc) return htHomeGoals === htAwayGoals;
+      if (isHomeOc) return htHomeGoals > htAwayGoals;
+      if (isAwayOc) return htAwayGoals > htHomeGoals;
+      console.log(`    Live m13: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m3: Vencedor 2º Tempo
+    if (liveId === 3) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    Live m3: dados HT indisponíveis`); return null; }
+      const h2 = homeGoals - htHomeGoals;
+      const a2 = awayGoals - htAwayGoals;
+      if (isDrawOc) return h2 === a2;
+      if (isHomeOc) return h2 > a2;
+      if (isAwayOc) return a2 > h2;
+      console.log(`    Live m3: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m6: Over/Under 1º Tempo (gols)
+    if (liveId === 6) {
+      if (htHomeGoals === null || htAwayGoals === null) { console.log(`    Live m6: dados HT indisponíveis`); return null; }
+      const htTotal = htHomeGoals + htAwayGoals;
+      if (overM)  return htTotal > parseFloat(overM[1]);
+      if (underM) return htTotal < parseFloat(underM[1]);
+      console.log(`    Live m6: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m12: Dupla Chance (Home/Draw, Home/Away, Draw/Away)
+    if (liveId === 12) {
+      if ((outcome.includes("home") && outcome.includes("draw")) || outcome === "1x") return homeGoals >= awayGoals;
+      if ((outcome.includes("home") && outcome.includes("away")) || outcome === "12") return homeGoals !== awayGoals;
+      if ((outcome.includes("draw") && outcome.includes("away")) || outcome === "x2") return awayGoals >= homeGoals;
+      console.log(`    Live m12: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m20: Escanteios Over/Under
+    if (liveId === 20) {
+      if (totalCorners === null) { console.log(`    Live m20: dados de escanteios indisponíveis`); return null; }
+      if (overM)  return totalCorners > parseFloat(overM[1]);
+      if (underM) return totalCorners < parseFloat(underM[1]);
+      console.log(`    Live m20: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m119: Total Cartões Over/Under
+    if (liveId === 119) {
+      if (homeCards === null || awayCards === null) { console.log(`    Live m119: dados de cartões indisponíveis`); return null; }
+      const totalCards = homeCards + awayCards;
+      if (overM)  return totalCards > parseFloat(overM[1]);
+      if (underM) return totalCards < parseFloat(underM[1]);
+      console.log(`    Live m119: outcome não reconhecido "${selection.outcome}"`); return false;
+    }
+
+    // live_m65: Próximos 10 min — não resolvível automaticamente, admin resolve manualmente
+    if (liveId === 65) {
+      console.log(`    Live m65 (Próximos 10min): aguarda resolução manual`);
+      return null;
+    }
+
+    // outros live markets não mapeados → deixa pendente para resolução manual
+    console.log(`    Live market id=${liveId} não mapeado, aguarda resolução manual`);
+    return null;
+  }
+
   // ── Dupla Chance ─────────────────────────────────────────────────────────
   if (marketKey === "double_chance") {
     const ocTrim = outcome.replace(/^double_chance[-:\s]*/i, "").trim();
