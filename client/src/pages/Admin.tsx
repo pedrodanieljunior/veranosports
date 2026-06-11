@@ -2041,6 +2041,12 @@ export default function Admin() {
                                   <span className="text-xs text-muted-foreground">{bet.userId}</span>
                                 );
                               })()}
+                              {bet.selections.some((s: any) => s.marketKey?.startsWith("live_m")) && (
+                                <span className="text-xs bg-red-600/25 text-red-400 px-2 py-0.5 rounded-full font-semibold border border-red-500/40 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse inline-block" />
+                                  AO VIVO
+                                </span>
+                              )}
                             </div>
                             
                             {/* Bilhete visual — agrupado por jogo */}
