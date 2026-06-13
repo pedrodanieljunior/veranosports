@@ -210,7 +210,7 @@ function DepositView({ onBack }: { onBack: () => void }) {
           </div>
         )}
         <div className="space-y-2">
-          <Label className="text-gray-700">Valor do depósito (R$) — mín. R$10 / máx. R$1.000</Label>
+          <Label className="text-gray-700">Valor do depósito (R$) — mín. R$10 / máx. R$5.000</Label>
           <Input
             placeholder="Ex: 100,00"
             value={amount}
@@ -218,17 +218,17 @@ function DepositView({ onBack }: { onBack: () => void }) {
             className="bg-white border-blue-200 text-gray-900"
             data-testid="input-deposit-amount"
           />
-          {parsedAmount > 1000 && (
-            <p className="text-sm text-red-400">Valor máximo por depósito é R$1.000,00</p>
+          {parsedAmount > 5000 && (
+            <p className="text-sm text-red-400">Valor máximo por depósito é R$5.000,00</p>
           )}
-          {bonus > 0 && parsedAmount <= 1000 && (
+          {bonus > 0 && parsedAmount <= 5000 && (
             <p className="text-sm text-green-400">Você receberá +R$ 10,00 de bônus</p>
           )}
         </div>
         <Button
           className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold"
           onClick={() => createMutation.mutate(parsedAmount)}
-          disabled={!parsedAmount || parsedAmount < 10 || parsedAmount > 1000 || createMutation.isPending}
+          disabled={!parsedAmount || parsedAmount < 10 || parsedAmount > 5000 || createMutation.isPending}
           data-testid="button-deposit-continue"
         >
           {createMutation.isPending ? "Aguarde..." : "Continuar"}
