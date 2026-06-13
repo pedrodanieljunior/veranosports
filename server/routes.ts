@@ -1915,7 +1915,7 @@ export async function registerRoutes(
     try {
       const { amount } = req.body as { amount: number };
       if (!amount || amount < 10) return res.status(400).json({ message: "Valor mínimo de depósito é R$10,00" });
-      if (amount > 1000) return res.status(400).json({ message: "Valor máximo por depósito é R$1.000,00" });
+      if (amount > 5000) return res.status(400).json({ message: "Valor máximo por depósito é R$5.000,00" });
       const userId = req.session.userId!;
       const user = await storage.getUserByCpf(userId);
       if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
