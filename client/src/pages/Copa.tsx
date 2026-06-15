@@ -134,11 +134,6 @@ export default function Copa() {
     staleTime: 8_000,
   });
 
-  const { data: presenceCount } = useQuery<{ total: number }>({
-    queryKey: ["/api/presence/count"],
-    refetchInterval: 30_000,
-    staleTime: 20_000,
-  });
 
   const { data: copaCards = [] } = useQuery<any[]>({
     queryKey: ["/api/copa-world-cup-cards"], staleTime: 60_000, refetchInterval: 60_000,
@@ -373,8 +368,7 @@ export default function Copa() {
         <div className="pt-3">
           {/* Linha 1: TODOS | COPA | QUALIFICATÓRIAS */}
           <div className="px-3">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide flex-1">
+            <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
               {tabs.map(tab => (
                 <button
                   key={tab.key}
@@ -394,13 +388,6 @@ export default function Copa() {
                   <span>{tab.label}</span>
                 </button>
               ))}
-              </div>
-              {(presenceCount?.total ?? 0) > 0 && (
-                <span className="ml-2 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  {presenceCount!.total} online
-                </span>
-              )}
             </div>
           </div>
 
