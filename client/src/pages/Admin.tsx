@@ -539,6 +539,11 @@ export default function Admin() {
     },
   });
 
+  const { data: presenceData } = useQuery<{ total: number; live: number; byPage: Record<string, number> }>({
+    queryKey: ["/api/admin/presence"],
+    refetchInterval: 30_000,
+  });
+
   const checkResultsMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/check-results");
@@ -834,6 +839,20 @@ export default function Admin() {
           <div>
             <h1 className="text-2xl font-bold">Painel de Administração</h1>
             <p className="text-muted-foreground">Gerenciamento de bilhetes</p>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                <span className="font-semibold text-foreground">{presenceData?.total ?? 0}</span>
+                <span>no site agora</span>
+              </span>
+              {(presenceData?.live ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="font-semibold text-red-400">{presenceData.live}</span>
+                  <span className="text-muted-foreground">ao vivo</span>
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button 

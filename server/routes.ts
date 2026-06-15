@@ -1798,6 +1798,31 @@ export async function registerRoutes(
 
   setupImageProxy(app);
 
+  // ─── Presence Tracking ────────────────────────────────────────────────────
+  const presenceMap = new Map<string, { page: string; lastSeen: number }>();
+  setInterval(() => {
+    const cutoff = Date.now() - 60_000;
+    for (const [id, entry] of presenceMap) {
+      if (entry.lastSeen < cutoff) presenceMap.delete(id);
+    }
+  }, 30_000);
+
+  app.post("/api/presence", (req, res) => {
+    const { clientId, page } = req.body as { clientId?: string; page?: string };
+    if (!clientId) return res.json({ ok: false });
+    presenceMap.set(clientId, { page: page || "site", lastSeen: Date.now() });
+    res.json({ ok: true });
+  });
+
+  app.get("/api/presence/count", (_req, res) => {
+    const cutoff = Date.now() - 60_000;
+    let total = 0;
+    for (const entry of presenceMap.values()) {
+      if (entry.lastSeen >= cutoff) total++;
+    }
+    res.json({ total });
+  });
+
   // ─── Auth Routes ──────────────────────────────────────────────────────────
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -2180,6 +2205,19 @@ export async function registerRoutes(
 
   // Apply admin auth guard to all subsequent /api/admin/* routes
   app.use("/api/admin", requireAdmin);
+
+  app.get("/api/admin/presence", (_req, res) => {
+    const cutoff = Date.now() - 60_000;
+    const byPage: Record<string, number> = {};
+    let total = 0;
+    for (const entry of presenceMap.values()) {
+      if (entry.lastSeen >= cutoff) {
+        byPage[entry.page] = (byPage[entry.page] || 0) + 1;
+        total++;
+      }
+    }
+    res.json({ total, live: byPage["aovivo"] || 0, byPage });
+  });
 
   app.get("/api/admin/user-withdrawals", async (_req, res) => {
     const withdrawals = await storage.getAllUserWithdrawals();
