@@ -5621,17 +5621,28 @@ export async function registerRoutes(
               const isHandicap = frontendId === 5 || frontendId === 6;
               let values: any[] = [];
               if (isHandicap) {
-                const target = frontendId === 5 ? "2.5" : "0.5";
                 const byHc: Record<string, any[]> = {};
                 for (const v of (market.values ?? [])) {
                   if (!byHc[v.handicap]) byHc[v.handicap] = [];
                   byHc[v.handicap].push(v);
                 }
-                const hcKey = byHc[target] ? target : Object.keys(byHc)[0];
-                if (hcKey) {
-                  values = (byHc[hcKey] ?? []).map((v: any) => ({
-                    value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd), suspended: !!v.suspended,
-                  }));
+                if (frontendId === 6) {
+                  // 1st half goals — show all available lines sorted ascending
+                  const sortedHcs = Object.keys(byHc).sort((a, b) => parseFloat(a) - parseFloat(b));
+                  for (const hc of sortedHcs) {
+                    for (const v of byHc[hc]) {
+                      values.push({ value: `${v.value} ${hc}`, odd: parseFloat(v.odd), suspended: !!v.suspended });
+                    }
+                  }
+                } else {
+                  // Full-match O/U from LIVE_TO_FRONTEND — keep 2.5 line only (ID 25 already shows all)
+                  const target = "2.5";
+                  const hcKey = byHc[target] ? target : Object.keys(byHc)[0];
+                  if (hcKey) {
+                    values = (byHc[hcKey] ?? []).map((v: any) => ({
+                      value: `${v.value} ${hcKey}`, odd: parseFloat(v.odd), suspended: !!v.suspended,
+                    }));
+                  }
                 }
               } else {
                 values = (market.values ?? []).map((v: any) => ({
