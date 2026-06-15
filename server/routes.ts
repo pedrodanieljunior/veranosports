@@ -1669,18 +1669,28 @@ async function runCheckResults() {
               const statsData = await statsRes.json();
               let homeCorners = 0; let awayCorners = 0;
               let homeYellow = 0; let homeRed = 0; let awayYellow = 0; let awayRed = 0;
+              let foundCornerStat = false;
               for (const teamStat of statsData.response || []) {
                 const isHome = teamsMatch(teamStat.team.name, matchingFixture.teams.home.name);
                 for (const s of teamStat.statistics || []) {
-                  const val = parseInt(s.value) || 0;
-                  if (s.type === "Corner Kicks") { if (isHome) homeCorners = val; else awayCorners = val; }
-                  if (s.type === "Yellow Cards") { if (isHome) homeYellow = val; else awayYellow = val; }
-                  if (s.type === "Red Cards")    { if (isHome) homeRed = val; else awayRed = val; }
+                  const rawVal = s.value;
+                  const val = rawVal !== null && rawVal !== undefined ? parseInt(rawVal) || 0 : null;
+                  if (s.type === "Corner Kicks" && val !== null) {
+                    foundCornerStat = true;
+                    if (isHome) homeCorners = val; else awayCorners = val;
+                  }
+                  if (s.type === "Yellow Cards" && val !== null) { if (isHome) homeYellow = val; else awayYellow = val; }
+                  if (s.type === "Red Cards" && val !== null)    { if (isHome) homeRed = val; else awayRed = val; }
                 }
               }
-              cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
-              cornerHomeCache.set(fixtureId, homeCorners);
-              cornerAwayCache.set(fixtureId, awayCorners);
+              if (foundCornerStat) {
+                cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
+                cornerHomeCache.set(fixtureId, homeCorners);
+                cornerAwayCache.set(fixtureId, awayCorners);
+                console.log(`[CheckResults] Stats fixture ${fixtureId}: corners=${homeCorners + awayCorners} (${homeCorners}/${awayCorners})`);
+              } else {
+                console.log(`[CheckResults] Stats fixture ${fixtureId}: Corner Kicks não encontrado na resposta da API — mantendo pendente`);
+              }
               cardHomeCache.set(fixtureId, homeYellow + homeRed * 2);
               cardAwayCache.set(fixtureId, awayYellow + awayRed * 2);
             }
@@ -6481,21 +6491,30 @@ export async function registerRoutes(
                 const statsData = await statsRes.json();
                 let homeC = 0; let awayC = 0;
                 let homeYellow = 0; let homeRed = 0; let awayYellow = 0; let awayRed = 0;
+                let foundCornerStat = false;
                 for (const teamStat of statsData.response || []) {
                   const isHome = teamsMatch(teamStat.team?.name ?? "", homeTeam);
                   for (const s of teamStat.statistics || []) {
-                    const val = parseInt(s.value) || 0;
-                    if (s.type === "Corner Kicks")  { if (isHome) homeC = val; else awayC = val; }
-                    if (s.type === "Yellow Cards")  { if (isHome) homeYellow = val; else awayYellow = val; }
-                    if (s.type === "Red Cards")     { if (isHome) homeRed = val; else awayRed = val; }
+                    const rawVal = s.value;
+                    const val = rawVal !== null && rawVal !== undefined ? parseInt(rawVal) || 0 : null;
+                    if (s.type === "Corner Kicks" && val !== null) {
+                      foundCornerStat = true;
+                      if (isHome) homeC = val; else awayC = val;
+                    }
+                    if (s.type === "Yellow Cards" && val !== null) { if (isHome) homeYellow = val; else awayYellow = val; }
+                    if (s.type === "Red Cards" && val !== null)    { if (isHome) homeRed = val; else awayRed = val; }
                   }
                 }
-                arCornerCache.set(fid, homeC + awayC);
-                arCornerHomeCache.set(fid, homeC);
-                arCornerAwayCache.set(fid, awayC);
+                if (foundCornerStat) {
+                  arCornerCache.set(fid, homeC + awayC);
+                  arCornerHomeCache.set(fid, homeC);
+                  arCornerAwayCache.set(fid, awayC);
+                  console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed * 2 + awayYellow + awayRed * 2} (${homeYellow + homeRed * 2}/${awayYellow + awayRed * 2})`);
+                } else {
+                  console.log(`    [auto-resolve] Stats fixture ${fid}: Corner Kicks não encontrado na API — mantendo pendente`);
+                }
                 arCardHomeCache.set(fid, homeYellow + homeRed * 2);
                 arCardAwayCache.set(fid, awayYellow + awayRed * 2);
-                console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed * 2 + awayYellow + awayRed * 2} (${homeYellow + homeRed * 2}/${awayYellow + awayRed * 2})`);
               }
             } catch (e) {
               console.log(`    [auto-resolve] Erro ao buscar stats fixture ${fid}:`, e);
