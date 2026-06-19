@@ -29,7 +29,7 @@ function formatPhone(v: string) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
-const WHATSAPP_SUPPORT = "5592981128080";
+const WHATSAPP_SUPPORT = "5592981420808";
 
 export function AuthModals({ mode, onClose, onSwitch }: Props) {
   const { login } = useAuth();

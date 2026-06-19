@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const WHATSAPP_SUPPORT = "5592981128080";
+const WHATSAPP_SUPPORT = "5592981420808";
 const PIX_KEY = "22580407000178";
 const PIX_NAME = "Verano Sports";
 const PIX_CITY = "Manaus";
