@@ -1754,6 +1754,7 @@ async function runCheckResults() {
       const selectionWon = checkSelectionResult(selection, homeGoals, awayGoals, totalGoals, matchingFixture.teams.home.name, matchingFixture.teams.away.name, htHomeGoals, htAwayGoals, totalCorners, firstScorerTeam, hasRedCard, hasRedCard1H, homeCorners2, awayCorners2, homeCorners1H, awayCorners1H, homeCards2, awayCards2);
 
       if (selectionWon === null) {
+        allSelectionsResolved = false;
         allSelectionsWon = false;
       } else {
         await storage.updateSelectionResult(bet.id, selection.id, selectionWon ? "won" : "lost");
