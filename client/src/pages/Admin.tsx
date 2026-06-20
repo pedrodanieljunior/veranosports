@@ -660,11 +660,16 @@ export default function Admin() {
           : `${data.resolvedCount} de ${data.total} seleções resolvidas. Mercados não suportados mantidos como pendentes.`,
       });
     },
-    onError: async (error: any) => {
+    onError: (error: any) => {
       let msg = "Não foi possível resolver automaticamente.";
       try {
-        const body = await error.json?.();
-        if (body?.error) msg = body.error;
+        // apiRequest lança Error com message "STATUS: {json}" — extrair a parte JSON
+        const raw = error?.message ?? "";
+        const jsonStart = raw.indexOf("{");
+        if (jsonStart !== -1) {
+          const body = JSON.parse(raw.slice(jsonStart));
+          if (body?.error) msg = body.error;
+        }
       } catch {}
       toast({ title: "Erro", description: msg, variant: "destructive" });
     },
