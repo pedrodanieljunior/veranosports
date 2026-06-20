@@ -6364,15 +6364,73 @@ export async function registerRoutes(
         homeTeam: string; awayTeam: string;
       }>();
 
+      // Mapa: fixtureId original → fixtureId real (pode diferir se o admin ativou o ID errado)
+      const fidRemap = new Map<string, string>(); // originalFid → resolvedFid
+
       for (const fid of fixtureIds) {
-        const url = `https://v3.football.api-sports.io/fixtures?id=${fid}`;
-        const resp = await fetch(url, {
-          headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
-        });
-        const data: any = await resp.json();
-        const fix = data?.response?.[0];
+        // Encontrar os times esperados para esta fixture a partir das seleções do bilhete
+        const selsForFid = bet.selections.filter((s: any) =>
+          s.gameId === `api-football-${fid}`
+        );
+        const expectedHome = selsForFid[0]?.homeTeam ?? "";
+        const expectedAway = selsForFid[0]?.awayTeam ?? "";
+
+        const fetchFixture = async (id: string) => {
+          const r = await fetch(`https://v3.football.api-sports.io/fixtures?id=${id}`, {
+            headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
+          });
+          const d: any = await r.json();
+          return d?.response?.[0] ?? null;
+        };
+
+        let fix = await fetchFixture(fid);
+        let resolvedFid = fid;
+
+        if (fix && expectedHome) {
+          const apiHome = fix.teams?.home?.name ?? "";
+          const apiAway = fix.teams?.away?.name ?? "";
+          const homeOk = teamsMatch(expectedHome, apiHome) || teamsMatch(apiHome, expectedHome);
+          const awayOk = teamsMatch(expectedAway, apiAway) || teamsMatch(apiAway, expectedAway);
+
+          if (!homeOk || !awayOk) {
+            console.warn(`[auto-resolve] Fixture ${fid} teams MISMATCH: stored="${expectedHome} vs ${expectedAway}" | API="${apiHome} vs ${apiAway}" — buscando fixture correta...`);
+
+            // Buscar fixture pela data do bilhete + nome do time esperado
+            const betDateStr = new Date(bet.createdAt).toISOString().split("T")[0];
+            const searchUrl = `https://v3.football.api-sports.io/fixtures?date=${betDateStr}&search=${encodeURIComponent(expectedHome.split(" ")[0])}`;
+            try {
+              const searchResp = await fetch(searchUrl, {
+                headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
+              });
+              const searchData: any = await searchResp.json();
+              const candidates: any[] = searchData?.response ?? [];
+
+              const match = candidates.find((c: any) => {
+                const cHome = c.teams?.home?.name ?? "";
+                const cAway = c.teams?.away?.name ?? "";
+                return (
+                  (teamsMatch(expectedHome, cHome) || teamsMatch(cHome, expectedHome)) &&
+                  (teamsMatch(expectedAway, cAway) || teamsMatch(cAway, expectedAway))
+                );
+              });
+
+              if (match) {
+                const correctFid = String(match.fixture.id);
+                console.log(`[auto-resolve] Fixture correta encontrada: ${correctFid} (${match.teams.home.name} vs ${match.teams.away.name})`);
+                fix = match;
+                resolvedFid = correctFid;
+              } else {
+                console.warn(`[auto-resolve] Não foi possível encontrar fixture correta para "${expectedHome} vs ${expectedAway}" em ${betDateStr}`);
+              }
+            } catch (searchErr) {
+              console.error("[auto-resolve] Erro ao buscar fixture correta:", searchErr);
+            }
+          }
+        }
+
         if (!fix) continue;
-        fixtureResults.set(fid, {
+        fidRemap.set(fid, resolvedFid);
+        fixtureResults.set(resolvedFid, {
           statusShort: fix.fixture?.status?.short ?? "",
           homeGoals: fix.goals?.home ?? 0,
           awayGoals: fix.goals?.away ?? 0,
@@ -6383,13 +6441,17 @@ export async function registerRoutes(
         });
       }
 
-      // Verificar se todos os jogos terminaram
+      // Verificar se todos os jogos terminaram (usando fixture resolvida)
       const notFinished = fixtureIds.filter(fid => {
-        const r = fixtureResults.get(fid);
+        const resolvedFid = fidRemap.get(fid) ?? fid;
+        const r = fixtureResults.get(resolvedFid);
         return !r || !["FT","AET","PEN","AWD","WO"].includes(r.statusShort);
       });
       if (notFinished.length > 0) {
-        const statuses = notFinished.map(fid => fixtureResults.get(fid)?.statusShort || "não encontrado").join(", ");
+        const statuses = notFinished.map(fid => {
+          const resolvedFid = fidRemap.get(fid) ?? fid;
+          return fixtureResults.get(resolvedFid)?.statusShort || "não encontrado";
+        }).join(", ");
         return res.status(422).json({ error: `Jogo ainda não encerrado (status: ${statuses}). Tente novamente após o fim da partida.` });
       }
 
@@ -6411,7 +6473,9 @@ export async function registerRoutes(
         if (sel.gameId?.startsWith("copa-card-")) { resolvedSelections.push(sel); continue; }
         const fid = sel.gameId.startsWith("api-football-") ? sel.gameId.replace("api-football-", "") : null;
         if (!fid) { resolvedSelections.push(sel); continue; }
-        const fix = fixtureResults.get(fid);
+        // Usar fixture remapeada caso o admin tenha ativado o ID errado
+        const resolvedFid = fidRemap.get(fid) ?? fid;
+        const fix = fixtureResults.get(resolvedFid);
         if (!fix) { resolvedSelections.push(sel); continue; }
 
         const { homeGoals, awayGoals, htHome, htAway, homeTeam, awayTeam } = fix;
@@ -6550,10 +6614,11 @@ export async function registerRoutes(
 
         } else if (mk.includes("corner") || mk === "live_m20") {
           // Escanteios — busca estatísticas da API-Football (também extrai cartões)
-          if (!arCornerCache.has(fid)) {
+          // Usa resolvedFid para garantir que buscamos a fixture correta
+          if (!arCornerCache.has(resolvedFid)) {
             try {
               const statsRes = await fetch(
-                `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fid}`,
+                `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${resolvedFid}`,
                 { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" } }
               );
               if (statsRes.ok) {
@@ -6575,36 +6640,36 @@ export async function registerRoutes(
                   }
                 }
                 if (foundCornerStat && (homeC + awayC) > 0) {
-                  arCornerCache.set(fid, homeC + awayC);
-                  arCornerHomeCache.set(fid, homeC);
-                  arCornerAwayCache.set(fid, awayC);
-                  console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed * 2 + awayYellow + awayRed * 2} (${homeYellow + homeRed * 2}/${awayYellow + awayRed * 2})`);
+                  arCornerCache.set(resolvedFid, homeC + awayC);
+                  arCornerHomeCache.set(resolvedFid, homeC);
+                  arCornerAwayCache.set(resolvedFid, awayC);
+                  console.log(`    [auto-resolve] Stats fixture ${resolvedFid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed * 2 + awayYellow + awayRed * 2} (${homeYellow + homeRed * 2}/${awayYellow + awayRed * 2})`);
                 } else if (foundCornerStat) {
-                  console.log(`    [auto-resolve] Stats fixture ${fid}: Corner Kicks retornou 0+0 — dados ainda não prontos, mantendo pendente`);
+                  console.log(`    [auto-resolve] Stats fixture ${resolvedFid}: Corner Kicks retornou 0+0 — dados ainda não prontos, mantendo pendente`);
                 } else {
-                  console.log(`    [auto-resolve] Stats fixture ${fid}: Corner Kicks não encontrado na API — mantendo pendente`);
+                  console.log(`    [auto-resolve] Stats fixture ${resolvedFid}: Corner Kicks não encontrado na API — mantendo pendente`);
                 }
-                if (!arCardHomeCache.has(fid)) {
-                  arCardHomeCache.set(fid, homeYellow + homeRed * 2);
-                  arCardAwayCache.set(fid, awayYellow + awayRed * 2);
+                if (!arCardHomeCache.has(resolvedFid)) {
+                  arCardHomeCache.set(resolvedFid, homeYellow + homeRed * 2);
+                  arCardAwayCache.set(resolvedFid, awayYellow + awayRed * 2);
                 }
               }
             } catch (e) {
-              console.log(`    [auto-resolve] Erro ao buscar stats fixture ${fid}:`, e);
+              console.log(`    [auto-resolve] Erro ao buscar stats fixture ${resolvedFid}:`, e);
             }
           }
 
           // Escanteios 1º Tempo — sempre manual (admin decide ganhou/perdeu)
           if (mk.includes("first half")) {
             resolved = false;
-            console.log(`    [auto-resolve] Corners 1ºT fixture ${fid}: resolução manual pelo admin`);
+            console.log(`    [auto-resolve] Corners 1ºT fixture ${resolvedFid}: resolução manual pelo admin`);
           // Mercados complexos não resolvíveis automaticamente
           } else if (mk.includes("asian handicap") || mk.includes("last corner")) {
             resolved = false;
           // Corners 1x2 — quem teve mais escanteios
           } else if (mk.includes("1x2")) {
-            const hc = arCornerHomeCache.get(fid);
-            const ac = arCornerAwayCache.get(fid);
+            const hc = arCornerHomeCache.get(resolvedFid);
+            const ac = arCornerAwayCache.get(resolvedFid);
             if (hc !== undefined && ac !== undefined) {
               // Extrai só a escolha (outcome pode ter prefixo "Corners 1x2-Home")
               const ocFull = oc.toLowerCase().trim();
@@ -6618,7 +6683,7 @@ export async function registerRoutes(
             }
           // Corners Over/Under — jogo inteiro
           } else {
-            const totalCorners = arCornerCache.get(fid);
+            const totalCorners = arCornerCache.get(resolvedFid);
             if (totalCorners !== undefined) {
               const overMatch = oc.match(/over\s*(\d+\.?\d*)/i);
               const underMatch = oc.match(/under\s*(\d+\.?\d*)/i);
@@ -6663,10 +6728,10 @@ export async function registerRoutes(
 
         } else if ((mk.includes("cards") && !mk.includes("red card")) || mk === "live_m119") {
           // Mercados de cartões — busca estatísticas da API-Football
-          if (!arCardHomeCache.has(fid)) {
+          if (!arCardHomeCache.has(resolvedFid)) {
             try {
               const statsRes = await fetch(
-                `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fid}`,
+                `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${resolvedFid}`,
                 { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" } }
               );
               if (statsRes.ok) {
@@ -6682,21 +6747,21 @@ export async function registerRoutes(
                     if (s.type === "Red Cards")    { if (isHome) homeRed = val; else awayRed = val; }
                   }
                 }
-                arCardHomeCache.set(fid, homeYellow + homeRed * 2);
-                arCardAwayCache.set(fid, awayYellow + awayRed * 2);
-                if (!arCornerCache.has(fid)) {
-                  arCornerCache.set(fid, homeC + awayC);
-                  arCornerHomeCache.set(fid, homeC);
-                  arCornerAwayCache.set(fid, awayC);
+                arCardHomeCache.set(resolvedFid, homeYellow + homeRed * 2);
+                arCardAwayCache.set(resolvedFid, awayYellow + awayRed * 2);
+                if (!arCornerCache.has(resolvedFid)) {
+                  arCornerCache.set(resolvedFid, homeC + awayC);
+                  arCornerHomeCache.set(resolvedFid, homeC);
+                  arCornerAwayCache.set(resolvedFid, awayC);
                 }
-                console.log(`    [auto-resolve] Cartões fixture ${fid}: casa=${homeYellow + homeRed * 2}, fora=${awayYellow + awayRed * 2}`);
+                console.log(`    [auto-resolve] Cartões fixture ${resolvedFid}: casa=${homeYellow + homeRed * 2}, fora=${awayYellow + awayRed * 2}`);
               }
             } catch (e) {
-              console.log(`    [auto-resolve] Erro ao buscar cartões fixture ${fid}:`, e);
+              console.log(`    [auto-resolve] Erro ao buscar cartões fixture ${resolvedFid}:`, e);
             }
           }
-          const homeCards = arCardHomeCache.get(fid) ?? null;
-          const awayCards = arCardAwayCache.get(fid) ?? null;
+          const homeCards = arCardHomeCache.get(resolvedFid) ?? null;
+          const awayCards = arCardAwayCache.get(resolvedFid) ?? null;
           if (homeCards === null || awayCards === null) {
             resolved = false;
           } else {
@@ -6713,10 +6778,10 @@ export async function registerRoutes(
 
         } else if (mk.includes("team to score first") || mk.includes("score first") || mk.includes("red card")) {
           // Primeiro marcador ou Cartão Vermelho — busca eventos da partida (cache unificado)
-          if (!arFirstGoalCache.has(fid)) {
+          if (!arFirstGoalCache.has(resolvedFid)) {
             try {
               const evRes = await fetch(
-                `${API_FOOTBALL_BASE}/fixtures/events?fixture=${fid}`,
+                `${API_FOOTBALL_BASE}/fixtures/events?fixture=${resolvedFid}`,
                 { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" } }
               );
               if (evRes.ok) {
@@ -6726,26 +6791,26 @@ export async function registerRoutes(
                   .filter((e: any) => e.type === "Goal" && e.detail !== "Missed Penalty")
                   .sort((a: any, b: any) => (a.time?.elapsed ?? 999) - (b.time?.elapsed ?? 999));
                 // "" = buscou mas não houve gol (0x0), null = falha de fetch
-                arFirstGoalCache.set(fid, goalEvents[0]?.team?.name ?? "");
+                arFirstGoalCache.set(resolvedFid, goalEvents[0]?.team?.name ?? "");
                 const redCards = events.filter((e: any) => e.type === "Card" && e.detail === "Red Card");
-                arRedCardCache.set(fid, redCards.length > 0);
+                arRedCardCache.set(resolvedFid, redCards.length > 0);
                 const redCards1H = redCards.filter((e: any) => (e.time?.elapsed ?? 999) <= 45);
-                arRedCard1HCache.set(fid, redCards1H.length > 0);
-                console.log(`    [auto-resolve] eventos fixture ${fid}: 1ºgol=${arFirstGoalCache.get(fid) || "nenhum"}, redCard=${arRedCardCache.get(fid)}, redCard1H=${arRedCard1HCache.get(fid)}`);
+                arRedCard1HCache.set(resolvedFid, redCards1H.length > 0);
+                console.log(`    [auto-resolve] eventos fixture ${resolvedFid}: 1ºgol=${arFirstGoalCache.get(resolvedFid) || "nenhum"}, redCard=${arRedCardCache.get(resolvedFid)}, redCard1H=${arRedCard1HCache.get(resolvedFid)}`);
               } else {
-                arFirstGoalCache.set(fid, null);
-                arRedCardCache.set(fid, false);
-                arRedCard1HCache.set(fid, false);
+                arFirstGoalCache.set(resolvedFid, null);
+                arRedCardCache.set(resolvedFid, false);
+                arRedCard1HCache.set(resolvedFid, false);
               }
             } catch (e) {
-              arFirstGoalCache.set(fid, null);
-              arRedCardCache.set(fid, false);
-              arRedCard1HCache.set(fid, false);
+              arFirstGoalCache.set(resolvedFid, null);
+              arRedCardCache.set(resolvedFid, false);
+              arRedCard1HCache.set(resolvedFid, false);
             }
           }
 
           if (mk.includes("team to score first") || mk.includes("score first")) {
-            const firstScorer = arFirstGoalCache.get(fid) ?? null;
+            const firstScorer = arFirstGoalCache.get(resolvedFid) ?? null;
             if (firstScorer === null) {
               // null = falha ao buscar → mantém pendente
               resolved = false;
@@ -6770,8 +6835,8 @@ export async function registerRoutes(
             // Red Card (jogo inteiro ou 1º tempo)
             const is1H = mk.includes("1st half") || mk.includes("first half");
             const hadRedCard = is1H
-              ? (arRedCard1HCache.get(fid) ?? false)
-              : (arRedCardCache.get(fid) ?? false);
+              ? (arRedCard1HCache.get(resolvedFid) ?? false)
+              : (arRedCardCache.get(resolvedFid) ?? false);
             const outcomeLC = sel.outcome?.toLowerCase() ?? "";
             const pickedSim = outcomeLC.includes("sim") || outcomeLC.includes("yes");
             const pickedNao = outcomeLC.includes("não") || outcomeLC.includes("nao") || outcomeLC.includes("no");
