@@ -6397,7 +6397,12 @@ export async function registerRoutes(
 
             // Buscar fixture pela data do bilhete + nome do time esperado
             const betDateStr = new Date(bet.createdAt).toISOString().split("T")[0];
-            const searchUrl = `https://v3.football.api-sports.io/fixtures?date=${betDateStr}&search=${encodeURIComponent(expectedHome.split(" ")[0])}`;
+            // Converter nome PT→EN para a busca (API-Football usa nomes em inglês)
+            const ptToEn = Object.fromEntries(
+              Object.entries(NATIONAL_TEAM_PT).map(([en, pt]) => [pt.toLowerCase(), en])
+            );
+            const searchName = ptToEn[expectedHome.toLowerCase()] ?? expectedHome;
+            const searchUrl = `https://v3.football.api-sports.io/fixtures?date=${betDateStr}&search=${encodeURIComponent(searchName.split(" ")[0])}`;
             try {
               const searchResp = await fetch(searchUrl, {
                 headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
