@@ -1652,11 +1652,14 @@ async function runCheckResults() {
 
       const isCornerSelection =
         mk.includes("corner") ||
+        mk === "live_m20" ||
         selection.outcome?.toLowerCase().includes("corner") ||
         selection.marketName?.toLowerCase().includes("escanteio") ||
         selection.marketName?.toLowerCase().includes("corner");
 
-      const isCardSelection = mk.includes("cards") && !mk.includes("red card");
+      const isCardSelection =
+        (mk.includes("cards") && !mk.includes("red card")) ||
+        mk === "live_m119";
 
       // Busca estatísticas (escanteios + cartões) quando necessário
       let totalCorners: number | null = null;
@@ -6536,7 +6539,7 @@ export async function registerRoutes(
             }
           }
 
-        } else if (mk.includes("corner")) {
+        } else if (mk.includes("corner") || mk === "live_m20") {
           // Escanteios — busca estatísticas da API-Football (também extrai cartões)
           if (!arCornerCache.has(fid)) {
             try {
@@ -6649,7 +6652,7 @@ export async function registerRoutes(
           else if (underMatch) selResult = teamGoals < parseFloat(underMatch[1]) ? "won" : "lost";
           else resolved = false;
 
-        } else if (mk.includes("cards") && !mk.includes("red card")) {
+        } else if ((mk.includes("cards") && !mk.includes("red card")) || mk === "live_m119") {
           // Mercados de cartões — busca estatísticas da API-Football
           if (!arCardHomeCache.has(fid)) {
             try {
@@ -6766,6 +6769,73 @@ export async function registerRoutes(
             if (pickedSim)      selResult = hadRedCard ? "won" : "lost";
             else if (pickedNao) selResult = hadRedCard ? "lost" : "won";
             else                resolved = false;
+          }
+
+        } else if (mk.startsWith("live_m")) {
+          // Mercados ao vivo — lógica espelha checkSelectionResult
+          const liveId = parseInt(mk.replace("live_m", ""));
+
+          if (liveId === 1) {
+            // 1X2 resultado final
+            if (oc === "home" || oc === "1" || oc === "casa") selResult = homeGoals > awayGoals ? "won" : "lost";
+            else if (oc === "draw" || oc === "x" || oc === "empate") selResult = homeGoals === awayGoals ? "won" : "lost";
+            else if (oc === "away" || oc === "2" || oc === "fora" || oc === "visitante") selResult = awayGoals > homeGoals ? "won" : "lost";
+            else resolved = false;
+
+          } else if (liveId === 5 || liveId === 25) {
+            // Gols Over/Under (tempo inteiro)
+            const total = homeGoals + awayGoals;
+            const overM = oc.match(/over\s*([\d.]+)/i);
+            const underM = oc.match(/under\s*([\d.]+)/i);
+            if (overM)       selResult = total > parseFloat(overM[1]) ? "won" : "lost";
+            else if (underM) selResult = total < parseFloat(underM[1]) ? "won" : "lost";
+            else resolved = false;
+
+          } else if (liveId === 8) {
+            // Ambas Marcam
+            const btts = homeGoals > 0 && awayGoals > 0;
+            if (oc === "yes" || oc === "sim") selResult = btts ? "won" : "lost";
+            else if (oc === "no" || oc === "não" || oc === "nao") selResult = btts ? "lost" : "won";
+            else resolved = false;
+
+          } else if (liveId === 13) {
+            // Vencedor 1º Tempo
+            if (oc === "home" || oc === "1" || oc === "casa") selResult = htHome > htAway ? "won" : "lost";
+            else if (oc === "draw" || oc === "x" || oc === "empate") selResult = htHome === htAway ? "won" : "lost";
+            else if (oc === "away" || oc === "2" || oc === "fora") selResult = htAway > htHome ? "won" : "lost";
+            else resolved = false;
+
+          } else if (liveId === 3) {
+            // Vencedor 2º Tempo
+            const h2Home = homeGoals - htHome;
+            const h2Away = awayGoals - htAway;
+            if (oc === "home" || oc === "1" || oc === "casa") selResult = h2Home > h2Away ? "won" : "lost";
+            else if (oc === "draw" || oc === "x" || oc === "empate") selResult = h2Home === h2Away ? "won" : "lost";
+            else if (oc === "away" || oc === "2" || oc === "fora") selResult = h2Away > h2Home ? "won" : "lost";
+            else resolved = false;
+
+          } else if (liveId === 6) {
+            // Gols Over/Under 1º Tempo
+            const htTotal = htHome + htAway;
+            const overM = oc.match(/over\s*([\d.]+)/i);
+            const underM = oc.match(/under\s*([\d.]+)/i);
+            if (overM)       selResult = htTotal > parseFloat(overM[1]) ? "won" : "lost";
+            else if (underM) selResult = htTotal < parseFloat(underM[1]) ? "won" : "lost";
+            else resolved = false;
+
+          } else if (liveId === 12) {
+            // Dupla Chance
+            if (oc === "home/draw" || oc === "1x") selResult = homeGoals >= awayGoals ? "won" : "lost";
+            else if (oc === "draw/away" || oc === "x2") selResult = awayGoals >= homeGoals ? "won" : "lost";
+            else if (oc === "home/away" || oc === "12") selResult = homeGoals !== awayGoals ? "won" : "lost";
+            else resolved = false;
+
+          } else if (liveId === 65) {
+            // Próximos 10 min — manual
+            resolved = false;
+
+          } else {
+            resolved = false;
           }
 
         } else {

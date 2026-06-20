@@ -4,8 +4,6 @@ import { Selection } from "@shared/schema";
 import { Zap, Clock, TrendingUp, TrendingDown, Lock, ChevronDown, ChevronUp } from "lucide-react";
 import { proxyLogoUrl } from "@/lib/imgProxy";
 
-const FIXTURE_ID = 1520716;
-const GAME_ID = `api-football-${FIXTURE_ID}`;
 
 const MARKET_LABELS: Record<number, string> = {
   1: "Resultado Final",
@@ -463,6 +461,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const homeGoals = data.goals.home ?? 0;
   const awayGoals = data.goals.away ?? 0;
   const commenceTime = data.fixture.date;
+  const gameId = `api-football-${data.fixture.id}`;
 
   return (
     <div className={containerCls} data-testid="card-live-test">
@@ -579,14 +578,15 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
             const renderBtn = (v: typeof filteredValues[0]) => {
               const rawOdd = v.odd;
               const isSuspended = !!v.suspended;
-              const id = selId(GAME_ID, market.id, v.value);
+              const id = selId(gameId, market.id, v.value);
               const moveKey = `m${market.id}-${v.value}`;
               const movement = isSuspended ? undefined : oddMovements[moveKey];
               const sel: Selection = {
-                id, gameId: GAME_ID,
+                id, gameId,
                 homeTeam: data.teams.home.name, awayTeam: data.teams.away.name,
                 commenceTime, sportTitle: "Futebol Ao Vivo",
                 marketKey: `live_m${market.id}`, bookmaker: "API-Football",
+                marketName: MARKET_LABELS[market.id],
                 outcome: v.value, odds: rawOdd, result: "pending",
               };
               const active = !isSuspended && isSelected(selections, id);
