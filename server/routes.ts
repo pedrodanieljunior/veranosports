@@ -6403,29 +6403,61 @@ export async function registerRoutes(
             );
             const searchName = ptToEn[expectedHome.toLowerCase()] ?? expectedHome;
             const searchUrl = `https://v3.football.api-sports.io/fixtures?date=${betDateStr}&search=${encodeURIComponent(searchName.split(" ")[0])}`;
-            try {
-              const searchResp = await fetch(searchUrl, {
-                headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
-              });
-              const searchData: any = await searchResp.json();
-              const candidates: any[] = searchData?.response ?? [];
+            const findCorrectFixture = async (): Promise<any | null> => {
+              // Tentativa 1: busca com filtro de nome (mais rápido)
+              try {
+                const searchResp = await fetch(searchUrl, {
+                  headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" }
+                });
+                const searchData: any = await searchResp.json();
+                const candidates: any[] = searchData?.response ?? [];
+                const found = candidates.find((c: any) => {
+                  const cHome = c.teams?.home?.name ?? "";
+                  const cAway = c.teams?.away?.name ?? "";
+                  return (
+                    (teamsMatch(expectedHome, cHome) || teamsMatch(cHome, expectedHome)) &&
+                    (teamsMatch(expectedAway, cAway) || teamsMatch(cAway, expectedAway))
+                  );
+                });
+                if (found) return found;
+                console.warn(`[auto-resolve] Busca por nome não achou resultado — tentando busca ampla pelo dia ${betDateStr}`);
+              } catch (e) {
+                console.warn("[auto-resolve] Busca por nome falhou:", e);
+              }
 
-              const match = candidates.find((c: any) => {
-                const cHome = c.teams?.home?.name ?? "";
-                const cAway = c.teams?.away?.name ?? "";
-                return (
-                  (teamsMatch(expectedHome, cHome) || teamsMatch(cHome, expectedHome)) &&
-                  (teamsMatch(expectedAway, cAway) || teamsMatch(cAway, expectedAway))
+              // Tentativa 2: pegar TODOS os jogos do dia e filtrar localmente
+              try {
+                const allResp = await fetch(
+                  `https://v3.football.api-sports.io/fixtures?date=${betDateStr}`,
+                  { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" } }
                 );
-              });
+                const allData: any = await allResp.json();
+                const all: any[] = allData?.response ?? [];
+                console.log(`[auto-resolve] Busca ampla: ${all.length} fixtures em ${betDateStr}`);
+                const found = all.find((c: any) => {
+                  const cHome = c.teams?.home?.name ?? "";
+                  const cAway = c.teams?.away?.name ?? "";
+                  return (
+                    (teamsMatch(expectedHome, cHome) || teamsMatch(cHome, expectedHome)) &&
+                    (teamsMatch(expectedAway, cAway) || teamsMatch(cAway, expectedAway))
+                  );
+                });
+                if (found) return found;
+                console.warn(`[auto-resolve] Busca ampla também não encontrou "${expectedHome} vs ${expectedAway}" em ${betDateStr}`);
+              } catch (e) {
+                console.error("[auto-resolve] Busca ampla falhou:", e);
+              }
 
+              return null;
+            };
+
+            try {
+              const match = await findCorrectFixture();
               if (match) {
                 const correctFid = String(match.fixture.id);
                 console.log(`[auto-resolve] Fixture correta encontrada: ${correctFid} (${match.teams.home.name} vs ${match.teams.away.name})`);
                 fix = match;
                 resolvedFid = correctFid;
-              } else {
-                console.warn(`[auto-resolve] Não foi possível encontrar fixture correta para "${expectedHome} vs ${expectedAway}" em ${betDateStr}`);
               }
             } catch (searchErr) {
               console.error("[auto-resolve] Erro ao buscar fixture correta:", searchErr);
