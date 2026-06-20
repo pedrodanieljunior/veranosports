@@ -6422,10 +6422,15 @@ export async function registerRoutes(
         let selResult: "won" | "lost" = "lost";
         let resolved = true;
 
-        if (sel.marketKey === "h2h") {
+        if (sel.marketKey === "h2h" || mk.includes("match_winner")) {
           // Resultado 1X2 — usa fuzzy match para nomes de times
-          if (oc.includes("empate") || oc.includes("draw") || oc === "x") {
+          // Também cobre "Resultado Final: match_winner-Home" do FootballGameCard
+          if (oc.includes("empate") || oc.includes("draw") || oc === "x" || oc.includes("-draw")) {
             selResult = homeGoals === awayGoals ? "won" : "lost";
+          } else if (oc.includes("-home") || oc === "home") {
+            selResult = homeGoals > awayGoals ? "won" : "lost";
+          } else if (oc.includes("-away") || oc === "away") {
+            selResult = awayGoals > homeGoals ? "won" : "lost";
           } else if (teamsMatch(sel.outcome, homeTeam)) {
             selResult = homeGoals > awayGoals ? "won" : "lost";
           } else if (teamsMatch(sel.outcome, awayTeam)) {
@@ -6492,11 +6497,15 @@ export async function registerRoutes(
           const betYes = oc.includes("sim") || oc.includes("yes");
           selResult = (btts === betYes) ? "won" : "lost";
 
-        } else if (mk.includes("ht/ft") || mk.includes("halftime") || sel.marketKey === "HT/FT Double") {
+        } else if (mk.includes("ht/ft") || mk.includes("halftime") || sel.marketKey === "HT/FT Double" || mk === "ht_ft") {
           // HT/FT — API-Football usa "Home/Home", "Away/Draw" etc.
+          // mk pode ser "ht_ft" (FootballGameCard) ou conter "ht/ft"
           const htActual = htHome > htAway ? "home" : htAway > htHome ? "away" : "draw";
           const ftActual = homeGoals > awayGoals ? "home" : awayGoals > homeGoals ? "away" : "draw";
-          const raw = sel.outcome.replace(/^HT\/FT Double[-:\s]*/i, "").trim();
+          const raw = sel.outcome
+            .replace(/^HT\/FT Double[-:\s]*/i, "")
+            .replace(/^[^:]+:\s*ht_ft-/i, "")
+            .trim();
           const slash = raw.lastIndexOf("/");
           if (slash !== -1) {
             const htPick = raw.slice(0, slash).trim().toLowerCase();
@@ -7054,8 +7063,17 @@ function checkSelectionResult(
 
   // ── Resultado 1X2 (h2h) ────────────────────────────────────────────────────
   if (marketKey === "h2h" || marketKey.includes("match_winner")) {
-    if (outcome.includes("draw") || outcome.includes("empate") || outcome === "x") {
+    if (outcome.includes("draw") || outcome.includes("empate") || outcome === "x" || outcome.includes("-draw")) {
       return homeGoals === awayGoals;
+    }
+    // Formato API-Football via FootballGameCard: "Resultado Final: match_winner-Home"
+    if (outcome.includes("-home") || outcome === "home") {
+      console.log(`    h2h/match_winner: home wins (${homeGoals}-${awayGoals})`);
+      return homeGoals > awayGoals;
+    }
+    if (outcome.includes("-away") || outcome === "away") {
+      console.log(`    h2h/match_winner: away wins (${homeGoals}-${awayGoals})`);
+      return awayGoals > homeGoals;
     }
     if (teamsMatch(selection.outcome, homeTeamName) || teamsMatch(selection.outcome, selection.homeTeam)) {
       return homeGoals > awayGoals;
@@ -7069,7 +7087,8 @@ function checkSelectionResult(
 
   // ── HT/FT Double ─────────────────────────────────────────────────────────
   // API-Football retorna valores como "Home/Home", "Away/Draw", "Draw/Away" etc.
-  if (marketKey.includes("ht/ft") || marketKey.includes("halftime") || marketKey === "ht/ft double") {
+  // marketKey pode ser "ht/ft double", "ht_ft" (FootballGameCard) ou conter "halftime"
+  if (marketKey.includes("ht/ft") || marketKey.includes("halftime") || marketKey === "ht/ft double" || marketKey === "ht_ft") {
     if (htHomeGoals === null || htAwayGoals === null) {
       console.log(`    HT/FT: dados de intervalo não disponíveis`);
       return null;
@@ -7077,9 +7096,12 @@ function checkSelectionResult(
     const htActual = htHomeGoals > htAwayGoals ? "home" : htAwayGoals > htHomeGoals ? "away" : "draw";
     const ftActual = homeGoals   > awayGoals   ? "home" : awayGoals   > homeGoals   ? "away" : "draw";
 
-    // O outcome pode estar no formato "Home/Home", "TeamA/TeamB" etc.
-    // Remove prefixo "HT/FT Double-" caso exista, depois divide pela "/"
-    const raw   = selection.outcome.replace(/^HT\/FT Double[-:\s]*/i, "").trim();
+    // Remove prefixos conhecidos antes de extrair os picks:
+    // "HT/FT Double-Home/Home", "Intervalo / Final: ht_ft-Home/Home"
+    const raw   = selection.outcome
+      .replace(/^HT\/FT Double[-:\s]*/i, "")
+      .replace(/^[^:]+:\s*ht_ft-/i, "")
+      .trim();
     const slash = raw.lastIndexOf("/");
     if (slash === -1) { console.log(`    HT/FT: barra não encontrada em "${raw}"`); return false; }
 
