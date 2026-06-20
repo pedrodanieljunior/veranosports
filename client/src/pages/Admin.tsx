@@ -6059,6 +6059,12 @@ function AdminLiveGameTab() {
                     <span className="ml-auto text-xs text-muted-foreground">{statusLabel(activeGame)}</span>
                   )}
                 </div>
+                {/* Fixture ID — visível para verificação */}
+                <div className="mb-3 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Fixture ID:</span>
+                  <span className="text-[11px] font-mono text-amber-400 font-semibold">{data.activeFixtureId}</span>
+                  <span className="text-[10px] text-amber-500/60 ml-auto">Verifique se corresponde ao jogo acima</span>
+                </div>
 
                 {/* Teams */}
                 <div className="flex items-center justify-between gap-2">
