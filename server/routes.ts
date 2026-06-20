@@ -5619,7 +5619,6 @@ export async function registerRoutes(
             // Live odds: response[0].odds is a flat array {id, name, values:[{value,odd,handicap,suspended}]}
             const LIVE_TO_FRONTEND: Record<number, number> = {
               59: 1,  // Fulltime Result
-              35: 3,  // To Win 2nd Half
               36: 5,  // Over/Under Line
               49: 6,  // Over/Under (1st Half)
               69: 8,  // Both Teams to Score

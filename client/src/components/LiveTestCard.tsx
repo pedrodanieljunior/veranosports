@@ -11,7 +11,6 @@ const MARKET_LABELS: Record<number, string> = {
   8: "Ambas Marcam",
   13: "Vencedor 1º Tempo",
   12: "Dupla Chance",
-  3: "Vencedor 2º Tempo",
   6: "Over/Under 1º Tempo",
   20: "Escanteios Over/Under",
   119: "Total Cartões",
