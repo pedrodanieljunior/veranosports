@@ -1662,7 +1662,9 @@ async function runCheckResults() {
       let totalCorners: number | null = null;
       if (isCornerSelection || isCardSelection) {
         const fixtureId = matchingFixture.fixture.id;
-        if (!cornerStatsCache.has(fixtureId) && !cardHomeCache.has(fixtureId)) {
+        const needsCorners = isCornerSelection && !cornerStatsCache.has(fixtureId);
+        const needsCards   = isCardSelection   && !cardHomeCache.has(fixtureId);
+        if (needsCorners || needsCards) {
           try {
             const statsRes = await fetch(`${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fixtureId}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY! } });
             if (statsRes.ok) {
@@ -1674,25 +1676,31 @@ async function runCheckResults() {
                 const isHome = teamsMatch(teamStat.team.name, matchingFixture.teams.home.name);
                 for (const s of teamStat.statistics || []) {
                   const rawVal = s.value;
-                  const val = rawVal !== null && rawVal !== undefined ? parseInt(rawVal) || 0 : null;
-                  if (s.type === "Corner Kicks" && val !== null) {
+                  const val = rawVal !== null && rawVal !== undefined && rawVal !== "" ? parseInt(String(rawVal)) : null;
+                  if (s.type === "Corner Kicks" && val !== null && !isNaN(val)) {
                     foundCornerStat = true;
                     if (isHome) homeCorners = val; else awayCorners = val;
                   }
-                  if (s.type === "Yellow Cards" && val !== null) { if (isHome) homeYellow = val; else awayYellow = val; }
-                  if (s.type === "Red Cards" && val !== null)    { if (isHome) homeRed = val; else awayRed = val; }
+                  if (s.type === "Yellow Cards" && val !== null && !isNaN(val)) { if (isHome) homeYellow = val; else awayYellow = val; }
+                  if (s.type === "Red Cards"    && val !== null && !isNaN(val)) { if (isHome) homeRed = val; else awayRed = val; }
                 }
               }
-              if (foundCornerStat) {
+              // Só aceita como válido se encontrou Corner Kicks e o total é > 0
+              // (API retorna 0 quando os dados ainda não estão prontos — não cachear para retry)
+              if (foundCornerStat && (homeCorners + awayCorners) > 0) {
                 cornerStatsCache.set(fixtureId, homeCorners + awayCorners);
                 cornerHomeCache.set(fixtureId, homeCorners);
                 cornerAwayCache.set(fixtureId, awayCorners);
                 console.log(`[CheckResults] Stats fixture ${fixtureId}: corners=${homeCorners + awayCorners} (${homeCorners}/${awayCorners})`);
+              } else if (foundCornerStat) {
+                console.log(`[CheckResults] Stats fixture ${fixtureId}: Corner Kicks retornou 0+0 — dados ainda não prontos, mantendo pendente`);
               } else {
                 console.log(`[CheckResults] Stats fixture ${fixtureId}: Corner Kicks não encontrado na resposta da API — mantendo pendente`);
               }
-              cardHomeCache.set(fixtureId, homeYellow + homeRed * 2);
-              cardAwayCache.set(fixtureId, awayYellow + awayRed * 2);
+              if (!cardHomeCache.has(fixtureId)) {
+                cardHomeCache.set(fixtureId, homeYellow + homeRed * 2);
+                cardAwayCache.set(fixtureId, awayYellow + awayRed * 2);
+              }
             }
           } catch (err) { console.log(`[CheckResults] Erro stats fixture ${fixtureId}:`, err); }
         }
@@ -6554,16 +6562,20 @@ export async function registerRoutes(
                     if (s.type === "Red Cards" && val !== null)    { if (isHome) homeRed = val; else awayRed = val; }
                   }
                 }
-                if (foundCornerStat) {
+                if (foundCornerStat && (homeC + awayC) > 0) {
                   arCornerCache.set(fid, homeC + awayC);
                   arCornerHomeCache.set(fid, homeC);
                   arCornerAwayCache.set(fid, awayC);
                   console.log(`    [auto-resolve] Stats fixture ${fid}: corners=${homeC + awayC} (${homeC}/${awayC}), cartões=${homeYellow + homeRed * 2 + awayYellow + awayRed * 2} (${homeYellow + homeRed * 2}/${awayYellow + awayRed * 2})`);
+                } else if (foundCornerStat) {
+                  console.log(`    [auto-resolve] Stats fixture ${fid}: Corner Kicks retornou 0+0 — dados ainda não prontos, mantendo pendente`);
                 } else {
                   console.log(`    [auto-resolve] Stats fixture ${fid}: Corner Kicks não encontrado na API — mantendo pendente`);
                 }
-                arCardHomeCache.set(fid, homeYellow + homeRed * 2);
-                arCardAwayCache.set(fid, awayYellow + awayRed * 2);
+                if (!arCardHomeCache.has(fid)) {
+                  arCardHomeCache.set(fid, homeYellow + homeRed * 2);
+                  arCardAwayCache.set(fid, awayYellow + awayRed * 2);
+                }
               }
             } catch (e) {
               console.log(`    [auto-resolve] Erro ao buscar stats fixture ${fid}:`, e);
@@ -7066,8 +7078,8 @@ function checkSelectionResult(
     const underMatch = outcome.match(/under\s*([\d.]+)/i);
     if (overMatch)  { const l = parseFloat(overMatch[1]);  console.log(`    Corners: Over ${l} — ${totalCorners}>${l}=${totalCorners>l}`);  return totalCorners > l; }
     if (underMatch) { const l = parseFloat(underMatch[1]); console.log(`    Corners: Under ${l} — ${totalCorners}<${l}=${totalCorners<l}`); return totalCorners < l; }
-    console.log(`    Corners: padrão Over/Under não identificado`);
-    return false;
+    console.log(`    Corners: padrão Over/Under não identificado — mantendo pendente`);
+    return null;
   }
 
   // ── Total de Gols Over/Under (inteiro, 1º tempo, 2º tempo) ────────────────
