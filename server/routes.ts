@@ -6467,29 +6467,33 @@ export async function registerRoutes(
 
         if (!fix) continue;
         fidRemap.set(fid, resolvedFid);
-        fixtureResults.set(resolvedFid, {
-          statusShort: fix.fixture?.status?.short ?? "",
-          homeGoals: fix.goals?.home ?? 0,
-          awayGoals: fix.goals?.away ?? 0,
-          htHome: fix.score?.halftime?.home ?? 0,
-          htAway: fix.score?.halftime?.away ?? 0,
-          homeTeam: fix.teams?.home?.name ?? "",
-          awayTeam: fix.teams?.away?.name ?? "",
-        });
+        const statusShort = fix.fixture?.status?.short ?? "";
+        const finished = ["FT","AET","PEN","AWD","WO"].includes(statusShort);
+        // Só adiciona ao mapa de resultados se o jogo já terminou
+        // Seleções de jogos não encerrados ficam como pendente automaticamente
+        if (finished) {
+          fixtureResults.set(resolvedFid, {
+            statusShort,
+            homeGoals: fix.goals?.home ?? 0,
+            awayGoals: fix.goals?.away ?? 0,
+            htHome: fix.score?.halftime?.home ?? 0,
+            htAway: fix.score?.halftime?.away ?? 0,
+            homeTeam: fix.teams?.home?.name ?? "",
+            awayTeam: fix.teams?.away?.name ?? "",
+          });
+        } else {
+          console.log(`[auto-resolve] Fixture ${resolvedFid} ainda não encerrada (status: ${statusShort}) — seleções desse jogo ficam pendentes`);
+        }
       }
 
-      // Verificar se todos os jogos terminaram (usando fixture resolvida)
-      const notFinished = fixtureIds.filter(fid => {
-        const resolvedFid = fidRemap.get(fid) ?? fid;
-        const r = fixtureResults.get(resolvedFid);
-        return !r || !["FT","AET","PEN","AWD","WO"].includes(r.statusShort);
-      });
-      if (notFinished.length > 0) {
-        const statuses = notFinished.map(fid => {
+      // Se absolutamente nenhum jogo terminou, bloqueia com 422
+      if (fixtureResults.size === 0) {
+        const statuses = fixtureIds.map(fid => {
           const resolvedFid = fidRemap.get(fid) ?? fid;
-          return fixtureResults.get(resolvedFid)?.statusShort || "não encontrado";
+          // Busca o status da fixture não-terminada (foi salvo no fidRemap mas não em fixtureResults)
+          return resolvedFid;
         }).join(", ");
-        return res.status(422).json({ error: `Jogo ainda não encerrado (status: ${statuses}). Tente novamente após o fim da partida.` });
+        return res.status(422).json({ error: `Nenhum jogo encerrado ainda. Tente novamente após o fim da partida.` });
       }
 
       // Resolver cada seleção (loop async para suportar busca de escanteios e eventos)
