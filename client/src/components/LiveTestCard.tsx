@@ -664,7 +664,22 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
           {(() => {
             const ORDER = [1, 12, 8, 25, 20, 119];
-            return [...data.markets]
+            // Always show Resultado Final and Dupla Chance — inject as suspended if API didn't return them
+            const ALWAYS_SHOW = [
+              { id: 1, name: "Fulltime Result", values: [
+                { value: "Home", odd: 0, suspended: true },
+                { value: "Draw", odd: 0, suspended: true },
+                { value: "Away", odd: 0, suspended: true },
+              ]},
+              { id: 12, name: "Double Chance", values: [
+                { value: "Home/Draw", odd: 0, suspended: true },
+                { value: "Home/Away", odd: 0, suspended: true },
+                { value: "Draw/Away", odd: 0, suspended: true },
+              ]},
+            ];
+            const existingIds = new Set(data.markets.map((m: any) => m.id));
+            const injected = [...data.markets, ...ALWAYS_SHOW.filter(m => !existingIds.has(m.id))];
+            return injected
               .filter(m => ![65, 5, 13, 3].includes(m.id))
               .sort((a, b) => {
                 const ai = ORDER.indexOf(a.id);
