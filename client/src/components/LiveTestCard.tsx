@@ -663,9 +663,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       {data.markets.length > 0 && !isFinished && (
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
           {(() => {
-            const ORDER = [1, 12, 8, 25, 20, 119, 13, 3];
+            const ORDER = [1, 12, 8, 25, 20, 119, 3];
             return [...data.markets]
-              .filter(m => ![65, 5].includes(m.id))
+              .filter(m => ![65, 5, 13].includes(m.id))
               .sort((a, b) => {
                 const ai = ORDER.indexOf(a.id);
                 const bi = ORDER.indexOf(b.id);
