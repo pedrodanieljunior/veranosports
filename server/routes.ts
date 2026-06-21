@@ -5618,7 +5618,8 @@ export async function registerRoutes(
           if (isLiveStatus) {
             // Live odds: response[0].odds is a flat array {id, name, values:[{value,odd,handicap,suspended}]}
             const LIVE_TO_FRONTEND: Record<number, number> = {
-              59: 1,  // Fulltime Result
+              59: 1,  // Fulltime Result (primary live ID)
+              1:  1,  // Fulltime Result (fallback — some fixtures use ID 1 live)
               36: 5,  // Over/Under Line
               49: 6,  // Over/Under (1st Half)
               69: 8,  // Both Teams to Score
@@ -5626,7 +5627,9 @@ export async function registerRoutes(
               19: 13, // 1x2 (1st Half)
             };
             const liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
+            const addedFrontendIds = new Set<number>();
             for (const [liveId, frontendId] of Object.entries(LIVE_TO_FRONTEND)) {
+              if (addedFrontendIds.has(frontendId)) continue; // skip if already added via another live ID
               const market = liveOdds.find((o: any) => o.id === Number(liveId));
               if (!market) continue;
               const isHandicap = frontendId === 5 || frontendId === 6;
@@ -5660,7 +5663,7 @@ export async function registerRoutes(
                   value: DC_LABELS[v.value] ?? v.value, odd: parseFloat(v.odd), suspended: !!v.suspended,
                 }));
               }
-              if (values.length > 0) markets.push({ id: frontendId, name: market.name, values });
+              if (values.length > 0) { markets.push({ id: frontendId, name: market.name, values }); addedFrontendIds.add(frontendId); }
             }
 
             // --- ID 20: Match Corners (Over/Under, prefer .5 lines) ---
