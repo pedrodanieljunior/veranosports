@@ -5666,6 +5666,23 @@ export async function registerRoutes(
               if (values.length > 0) { markets.push({ id: frontendId, name: market.name, values }); addedFrontendIds.add(frontendId); }
             }
 
+            // --- Always show Resultado Final (1) and Dupla Chance (12) as suspended if API didn't return them ---
+            if (!addedFrontendIds.has(1)) {
+              markets.unshift({ id: 1, name: "Fulltime Result", values: [
+                { value: "Home", odd: 0, suspended: true },
+                { value: "Draw", odd: 0, suspended: true },
+                { value: "Away", odd: 0, suspended: true },
+              ]});
+            }
+            if (!addedFrontendIds.has(12)) {
+              const after1 = markets.findIndex(m => m.id === 1);
+              markets.splice(after1 + 1, 0, { id: 12, name: "Double Chance", values: [
+                { value: "Home/Draw", odd: 0, suspended: true },
+                { value: "Home/Away", odd: 0, suspended: true },
+                { value: "Draw/Away", odd: 0, suspended: true },
+              ]});
+            }
+
             // --- ID 20: Match Corners (Over/Under, prefer .5 lines) ---
             const cornersM = liveOdds.find((o: any) => o.id === 20);
             if (cornersM) {
