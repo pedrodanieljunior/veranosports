@@ -269,8 +269,8 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameI
   const anyUnavailable = cornersUnavailable || cardsUnavailable;
 
   const flashScoreUrl = data.homeTeam
-    ? `https://www.flashscore.com/search/?q=${encodeURIComponent(data.homeTeam + " " + data.awayTeam)}`
-    : "https://www.flashscore.com";
+    ? `https://www.google.com/search?q=${encodeURIComponent(data.homeTeam + " " + data.awayTeam + " escanteios")}`
+    : "https://www.google.com/search?q=escanteios+futebol";
 
   return (
     <div className={`px-3 py-1.5 border-b border-border text-xs space-y-1 ${anyUnavailable ? "bg-red-500/10" : "bg-orange-500/10"}`}>
@@ -288,7 +288,7 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameI
             rel="noopener noreferrer"
             className="flex-shrink-0 text-blue-400 hover:text-blue-300 underline font-medium"
           >
-            Ver no FlashScore ↗
+            Buscar no Google ↗
           </a>
         </div>
       )}
