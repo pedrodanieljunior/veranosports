@@ -205,6 +205,37 @@ function gameFinished(commenceTime?: string) {
   return new Date(commenceTime).getTime() + 2.5 * 60 * 60 * 1000 < Date.now();
 }
 
+function gameStatus(commenceTime?: string): "not_started" | "live" | "finished" {
+  if (!commenceTime) return "not_started";
+  const start = new Date(commenceTime).getTime();
+  const now = Date.now();
+  if (now < start) return "not_started";
+  if (now < start + 2.5 * 60 * 60 * 1000) return "live";
+  return "finished";
+}
+
+function GameStatusBadge({ commenceTime }: { commenceTime?: string }) {
+  const status = gameStatus(commenceTime);
+  if (status === "not_started") return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/20 text-slate-400 border border-slate-500/30 flex-shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+      Não iniciado
+    </span>
+  );
+  if (status === "live") return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/15 text-green-400 border border-green-500/30 flex-shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+      Em andamento
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 flex-shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+      Terminado
+    </span>
+  );
+}
+
 function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameId: string; hasCorners: boolean; hasCards: boolean; commenceTime?: string }) {
   const fixtureId = gameId.startsWith("api-football-") ? gameId.replace("api-football-", "") : null;
   const { data, isLoading } = useQuery<any>({
@@ -2168,13 +2199,14 @@ export default function Admin() {
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
-                                        <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
-                                          <div className="flex items-center gap-2 min-w-0">
+                                        <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border gap-2">
+                                          <div className="flex items-center gap-2 min-w-0 flex-1">
                                             <span className="font-semibold text-foreground text-xs truncate">
                                               {gameLabel}
                                             </span>
+                                            <GameStatusBadge commenceTime={first.commenceTime} />
                                           </div>
-                                          <span className="text-yellow-400 font-bold text-xs flex-shrink-0 ml-2">
+                                          <span className="text-yellow-400 font-bold text-xs flex-shrink-0">
                                             {gameOdds}
                                           </span>
                                         </div>
