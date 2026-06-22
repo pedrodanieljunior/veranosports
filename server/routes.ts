@@ -2453,6 +2453,43 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  app.get("/api/admin/fixture-stats", requireAdmin, async (req, res) => {
+    const fixtureId = req.query.fixtureId as string;
+    if (!fixtureId) return res.status(400).json({ error: "fixtureId required" });
+    try {
+      const statsRes = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures/statistics?fixture=${fixtureId}`,
+        { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY || "" } }
+      );
+      if (!statsRes.ok) return res.status(502).json({ error: "API unavailable" });
+      const statsData = await statsRes.json();
+      let homeCorners = 0, awayCorners = 0;
+      let homeYellow = 0, homeRed = 0, awayYellow = 0, awayRed = 0;
+      let homeTeam = "", awayTeam = "";
+      let foundCorners = false;
+      const teams: any[] = statsData.response ?? [];
+      for (let i = 0; i < teams.length; i++) {
+        const teamStat = teams[i];
+        const isHome = i === 0;
+        if (isHome) homeTeam = teamStat.team?.name ?? "Casa";
+        else awayTeam = teamStat.team?.name ?? "Fora";
+        for (const s of teamStat.statistics || []) {
+          const val = s.value !== null && s.value !== undefined ? parseInt(s.value) || 0 : null;
+          if (s.type === "Corner Kicks" && val !== null) { foundCorners = true; if (isHome) homeCorners = val; else awayCorners = val; }
+          if (s.type === "Yellow Cards" && val !== null) { if (isHome) homeYellow = val; else awayYellow = val; }
+          if (s.type === "Red Cards" && val !== null)    { if (isHome) homeRed = val; else awayRed = val; }
+        }
+      }
+      return res.json({
+        fixtureId,
+        homeTeam,
+        awayTeam,
+        corners: { home: homeCorners, away: awayCorners, total: homeCorners + awayCorners, available: foundCorners },
+        cards: { home: homeYellow + homeRed * 2, away: awayYellow + awayRed * 2 },
+      });
+    } catch { return res.status(500).json({ error: "Internal error" }); }
+  });
+
   app.get("/api/admin/referrals", requireAdmin, async (_req, res) => {
     const allUsers = await storage.getAllUsers();
     // Use firstDepositDone flag as source of truth (balance may be set manually or via confirmed deposit)

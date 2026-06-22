@@ -2090,6 +2090,8 @@ export default function Admin() {
                                     const gameLabel = copaBadge
                                       ? `${copaBadge} — ${first.homeTeam}`
                                       : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
+                                    const hasCorners = sels.some((s: any) => s.marketKey?.toLowerCase().includes("corner") || s.marketKey === "live_m20");
+                                    const hasCards = sels.some((s: any) => s.marketKey?.toLowerCase().includes("card") || s.marketKey?.toLowerCase().includes("cartão") || s.marketKey === "live_m119");
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
@@ -2103,6 +2105,9 @@ export default function Admin() {
                                             {gameOdds}
                                           </span>
                                         </div>
+
+                                        {/* Estatísticas da API (escanteios/cartões) */}
+                                        <FixtureStatsRow gameId={gameId} hasCorners={hasCorners} hasCards={hasCards} />
 
                                         {/* Seleções */}
                                         <div className="px-3 py-2.5">
@@ -5857,6 +5862,52 @@ type AdminGame = {
   league: string; leagueLogo: string; goalsHome: number | null; goalsAway: number | null; isLive: boolean;
 };
 type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean };
+
+function FixtureStatsRow({ gameId, hasCorners, hasCards }: { gameId: string; hasCorners: boolean; hasCards: boolean }) {
+  const fixtureId = gameId.startsWith("api-football-") ? gameId.replace("api-football-", "") : null;
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/fixture-stats", fixtureId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/fixture-stats?fixtureId=${fixtureId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("fail");
+      return res.json();
+    },
+    enabled: !!fixtureId && (hasCorners || hasCards),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  if (!fixtureId || (!hasCorners && !hasCards)) return null;
+  if (isLoading) return (
+    <div className="px-3 py-1 bg-orange-500/10 border-b border-border text-xs text-orange-400 animate-pulse">
+      Buscando dados da API...
+    </div>
+  );
+  if (!data) return null;
+  return (
+    <div className="px-3 py-1.5 bg-orange-500/10 border-b border-border text-xs space-y-0.5">
+      {hasCorners && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-orange-400 font-semibold">🟠 Escanteios (API):</span>
+          {data.corners?.available ? (
+            <>
+              <span className="font-bold text-foreground">{data.corners.total} total</span>
+              <span className="text-muted-foreground">({data.homeTeam}: {data.corners.home} | {data.awayTeam}: {data.corners.away})</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">Dados não disponíveis</span>
+          )}
+        </div>
+      )}
+      {hasCards && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-yellow-400 font-semibold">🟡 Cartões (API):</span>
+          <span className="font-bold text-foreground">{(data.cards?.home ?? 0) + (data.cards?.away ?? 0)} total</span>
+          <span className="text-muted-foreground">({data.homeTeam}: {data.cards?.home ?? 0} | {data.awayTeam}: {data.cards?.away ?? 0})</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AdminLiveGameTab() {
   const { data, isLoading, refetch } = useQuery<LiveGamesResp>({
