@@ -214,7 +214,13 @@ function gameStatus(commenceTime?: string): "not_started" | "live" | "finished" 
   return "finished";
 }
 
-function GameStatusBadge({ commenceTime }: { commenceTime?: string }) {
+function GameStatusBadge({ commenceTime, isSpecial }: { commenceTime?: string; isSpecial?: boolean }) {
+  if (isSpecial) return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex-shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+      Especial
+    </span>
+  );
   const status = gameStatus(commenceTime);
   if (status === "not_started") return (
     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/20 text-slate-400 border border-slate-500/30 flex-shrink-0">
@@ -2196,6 +2202,7 @@ export default function Admin() {
                                       : first.homeTeam + (first.awayTeam ? ` vs ${first.awayTeam}` : "");
                                     const hasCorners = sels.some((s: any) => s.marketKey?.toLowerCase().includes("corner") || s.marketKey === "live_m20");
                                     const hasCards = sels.some((s: any) => s.marketKey?.toLowerCase().includes("card") || s.marketKey?.toLowerCase().includes("cartão") || s.marketKey === "live_m119");
+                                    const isSpecialGame = gameId.startsWith("copa-card-") || sels.some((s: any) => s.marketKey === "boost");
                                     return (
                                       <div key={gameId} className="rounded-lg bg-card border border-border overflow-hidden shadow-sm">
                                         {/* Cabeçalho do jogo */}
@@ -2204,7 +2211,7 @@ export default function Admin() {
                                             <span className="font-semibold text-foreground text-xs truncate">
                                               {gameLabel}
                                             </span>
-                                            <GameStatusBadge commenceTime={first.commenceTime} />
+                                            <GameStatusBadge commenceTime={first.commenceTime} isSpecial={isSpecialGame} />
                                           </div>
                                           <span className="text-yellow-400 font-bold text-xs flex-shrink-0">
                                             {gameOdds}
