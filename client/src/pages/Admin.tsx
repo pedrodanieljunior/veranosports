@@ -220,26 +220,47 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards }: { gameId: string; has
     </div>
   );
   if (!data) return null;
+
+  const cornersUnavailable = hasCorners && !data.corners?.available;
+  const cardsUnavailable   = hasCards   && !data.cards?.available;
+  const anyUnavailable = cornersUnavailable || cardsUnavailable;
+
+  const flashScoreUrl = data.homeTeam
+    ? `https://www.flashscore.com/search/?q=${encodeURIComponent(data.homeTeam + " " + data.awayTeam)}`
+    : "https://www.flashscore.com";
+
   return (
-    <div className="px-3 py-1.5 bg-orange-500/10 border-b border-border text-xs space-y-0.5">
-      {hasCorners && (
-        <div className="flex items-center gap-1.5">
-          <span className="text-orange-400 font-semibold">🟠 Escanteios (API):</span>
-          {data.corners?.available ? (
-            <>
-              <span className="font-bold text-foreground">{data.corners.total} total</span>
-              <span className="text-muted-foreground">({data.homeTeam}: {data.corners.home} | {data.awayTeam}: {data.corners.away})</span>
-            </>
-          ) : (
-            <span className="text-muted-foreground">Dados não disponíveis</span>
-          )}
+    <div className={`px-3 py-1.5 border-b border-border text-xs space-y-1 ${anyUnavailable ? "bg-red-500/10" : "bg-orange-500/10"}`}>
+      {anyUnavailable && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-red-400 font-semibold">
+            <span>⚠️</span>
+            <span>
+              API sem dados de {[cornersUnavailable && "escanteios", cardsUnavailable && "cartões"].filter(Boolean).join(" e ")} para esta liga — verificar manualmente
+            </span>
+          </div>
+          <a
+            href={flashScoreUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 text-blue-400 hover:text-blue-300 underline font-medium"
+          >
+            Ver no FlashScore ↗
+          </a>
         </div>
       )}
-      {hasCards && (
+      {hasCorners && data.corners?.available && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-orange-400 font-semibold">🟠 Escanteios (API):</span>
+          <span className="font-bold text-foreground">{data.corners.total} total</span>
+          <span className="text-muted-foreground">({data.homeTeam}: {data.corners.home} | {data.awayTeam}: {data.corners.away})</span>
+        </div>
+      )}
+      {hasCards && data.cards?.available && (
         <div className="flex items-center gap-1.5">
           <span className="text-yellow-400 font-semibold">🟡 Cartões (API):</span>
-          <span className="font-bold text-foreground">{(data.cards?.home ?? 0) + (data.cards?.away ?? 0)} total</span>
-          <span className="text-muted-foreground">({data.homeTeam}: {data.cards?.home ?? 0} | {data.awayTeam}: {data.cards?.away ?? 0})</span>
+          <span className="font-bold text-foreground">{(data.cards.home ?? 0) + (data.cards.away ?? 0)} total</span>
+          <span className="text-muted-foreground">({data.homeTeam}: {data.cards.home ?? 0} | {data.awayTeam}: {data.cards.away ?? 0})</span>
         </div>
       )}
     </div>
@@ -2177,7 +2198,7 @@ export default function Admin() {
                                                     </div>
                                                     <span className="text-muted-foreground text-xs">{translateMarket(sel.marketKey)}</span>
                                                   </div>
-                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                                     <p className={`font-semibold text-xs ${
                                                       sel.result === "won" ? "text-green-400" :
                                                       sel.result === "lost" ? "text-red-400 line-through" :
@@ -2185,6 +2206,18 @@ export default function Admin() {
                                                     }`}>
                                                       {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
                                                     </p>
+                                                    {(!sel.result || sel.result === "pending") && (() => {
+                                                      const mk = sel.marketKey?.toLowerCase() ?? "";
+                                                      const mn = sel.marketName?.toLowerCase() ?? "";
+                                                      const needsStats =
+                                                        mk.includes("corner") || mk === "live_m20" || mn.includes("escanteio") || mn.includes("corner") ||
+                                                        ((mk.includes("card") || mk === "live_m119") && !mk.includes("red card"));
+                                                      return needsStats ? (
+                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 text-[10px] font-medium border border-red-500/30">
+                                                          ⚠️ verificar manualmente
+                                                        </span>
+                                                      ) : null;
+                                                    })()}
                                                   </div>
                                                 </div>
                                                 {/* Botões ganhou/perdeu */}

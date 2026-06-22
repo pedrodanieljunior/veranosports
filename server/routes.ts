@@ -2480,12 +2480,14 @@ export async function registerRoutes(
           if (s.type === "Red Cards" && val !== null)    { if (isHome) homeRed = val; else awayRed = val; }
         }
       }
+      const statsAvailable = teams.length > 0;
       return res.json({
         fixtureId,
         homeTeam,
         awayTeam,
+        statsAvailable,
         corners: { home: homeCorners, away: awayCorners, total: homeCorners + awayCorners, available: foundCorners },
-        cards: { home: homeYellow + homeRed * 2, away: awayYellow + awayRed * 2 },
+        cards: { home: homeYellow + homeRed * 2, away: awayYellow + awayRed * 2, available: statsAvailable },
       });
     } catch { return res.status(500).json({ error: "Internal error" }); }
   });
