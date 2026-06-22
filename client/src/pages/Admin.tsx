@@ -274,7 +274,7 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime, homeTeam:
     ? new Date(commenceTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Manaus" })
     : "";
   const googleQuery = home
-    ? `"${home}" "${away}" escanteios por equipe estatísticas${dateStr ? " " + dateStr : ""}`
+    ? `"${home}" "${away}" escanteios${dateStr ? " " + dateStr : ""}`
     : "escanteios futebol";
   const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
   const sofaUrl = home
