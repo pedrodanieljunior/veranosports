@@ -242,7 +242,7 @@ function GameStatusBadge({ commenceTime, isSpecial }: { commenceTime?: string; i
   );
 }
 
-function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameId: string; hasCorners: boolean; hasCards: boolean; commenceTime?: string }) {
+function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime, homeTeam: homeTeamProp, awayTeam: awayTeamProp }: { gameId: string; hasCorners: boolean; hasCards: boolean; commenceTime?: string; homeTeam?: string; awayTeam?: string }) {
   const fixtureId = gameId.startsWith("api-football-") ? gameId.replace("api-football-", "") : null;
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/fixture-stats", fixtureId],
@@ -268,15 +268,17 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameI
   const cardsUnavailable   = hasCards   && !data.cards?.available   && finished;
   const anyUnavailable = cornersUnavailable || cardsUnavailable;
 
+  const home = data.homeTeam || homeTeamProp || "";
+  const away = data.awayTeam || awayTeamProp || "";
   const dateStr = commenceTime
     ? new Date(commenceTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Manaus" })
     : "";
-  const googleQuery = data.homeTeam
-    ? `"${data.homeTeam}" "${data.awayTeam}" escanteios${dateStr ? " " + dateStr : ""}`
+  const googleQuery = home
+    ? `"${home}" "${away}" escanteios${dateStr ? " " + dateStr : ""}`
     : "escanteios futebol";
   const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
-  const sofaUrl = data.homeTeam
-    ? `https://www.sofascore.com/search?q=${encodeURIComponent(data.homeTeam + " " + data.awayTeam)}`
+  const sofaUrl = home
+    ? `https://www.sofascore.com/search?q=${encodeURIComponent(home + " " + away)}`
     : "https://www.sofascore.com";
 
   return (
@@ -301,10 +303,10 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameI
               className="text-blue-400 hover:text-blue-300 underline font-medium">
               SofaScore ↗
             </a>
-            {data.homeTeam && (
+            {home && (
               <>
                 <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground italic">{data.homeTeam} × {data.awayTeam}{dateStr ? ` (${dateStr})` : ""}</span>
+                <span className="text-muted-foreground italic">{home} × {away}{dateStr ? ` (${dateStr})` : ""}</span>
               </>
             )}
           </div>
@@ -2237,7 +2239,7 @@ export default function Admin() {
                                         </div>
 
                                         {/* Estatísticas da API (escanteios/cartões) */}
-                                        <FixtureStatsRow gameId={gameId} hasCorners={hasCorners} hasCards={hasCards} commenceTime={first.commenceTime} />
+                                        <FixtureStatsRow gameId={gameId} hasCorners={hasCorners} hasCards={hasCards} commenceTime={first.commenceTime} homeTeam={first.homeTeam} awayTeam={first.awayTeam} />
 
                                         {/* Seleções */}
                                         <div className="px-3 py-2.5">
