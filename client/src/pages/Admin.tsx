@@ -268,28 +268,46 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameI
   const cardsUnavailable   = hasCards   && !data.cards?.available   && finished;
   const anyUnavailable = cornersUnavailable || cardsUnavailable;
 
-  const flashScoreUrl = data.homeTeam
-    ? `https://www.google.com/search?q=${encodeURIComponent(data.homeTeam + " " + data.awayTeam + " escanteios")}`
-    : "https://www.google.com/search?q=escanteios+futebol";
+  const dateStr = commenceTime
+    ? new Date(commenceTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Manaus" })
+    : "";
+  const googleQuery = data.homeTeam
+    ? `"${data.homeTeam}" "${data.awayTeam}" escanteios${dateStr ? " " + dateStr : ""}`
+    : "escanteios futebol";
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
+  const sofaUrl = data.homeTeam
+    ? `https://www.sofascore.com/search?q=${encodeURIComponent(data.homeTeam + " " + data.awayTeam)}`
+    : "https://www.sofascore.com";
 
   return (
     <div className={`px-3 py-1.5 border-b border-border text-xs space-y-1 ${anyUnavailable ? "bg-red-500/10" : "bg-orange-500/10"}`}>
       {anyUnavailable && (
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-red-400 font-semibold">
-            <span>⚠️</span>
-            <span>
-              API sem dados de {[cornersUnavailable && "escanteios", cardsUnavailable && "cartões"].filter(Boolean).join(" e ")} para esta liga — verificar manualmente
-            </span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-red-400 font-semibold">
+              <span>⚠️</span>
+              <span>
+                API sem dados de {[cornersUnavailable && "escanteios", cardsUnavailable && "cartões"].filter(Boolean).join(" e ")} para esta liga — verificar manualmente
+              </span>
+            </div>
           </div>
-          <a
-            href={flashScoreUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0 text-blue-400 hover:text-blue-300 underline font-medium"
-          >
-            Buscar no Google ↗
-          </a>
+          <div className="flex items-center gap-2 pl-5">
+            <a href={googleUrl} target="_blank" rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline font-medium">
+              Google ↗
+            </a>
+            <span className="text-muted-foreground">·</span>
+            <a href={sofaUrl} target="_blank" rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline font-medium">
+              SofaScore ↗
+            </a>
+            {data.homeTeam && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-muted-foreground italic">{data.homeTeam} × {data.awayTeam}{dateStr ? ` (${dateStr})` : ""}</span>
+              </>
+            )}
+          </div>
         </div>
       )}
       {hasCorners && data.corners?.available && (
