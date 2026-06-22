@@ -200,7 +200,12 @@ function fmtBRL(n: number) {
   return n.toFixed(2).replace(".", ",");
 }
 
-function FixtureStatsRow({ gameId, hasCorners, hasCards }: { gameId: string; hasCorners: boolean; hasCards: boolean }) {
+function gameFinished(commenceTime?: string) {
+  if (!commenceTime) return false;
+  return new Date(commenceTime).getTime() + 2.5 * 60 * 60 * 1000 < Date.now();
+}
+
+function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime }: { gameId: string; hasCorners: boolean; hasCards: boolean; commenceTime?: string }) {
   const fixtureId = gameId.startsWith("api-football-") ? gameId.replace("api-football-", "") : null;
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/fixture-stats", fixtureId],
@@ -221,8 +226,9 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards }: { gameId: string; has
   );
   if (!data) return null;
 
-  const cornersUnavailable = hasCorners && !data.corners?.available;
-  const cardsUnavailable   = hasCards   && !data.cards?.available;
+  const finished = gameFinished(commenceTime);
+  const cornersUnavailable = hasCorners && !data.corners?.available && finished;
+  const cardsUnavailable   = hasCards   && !data.cards?.available   && finished;
   const anyUnavailable = cornersUnavailable || cardsUnavailable;
 
   const flashScoreUrl = data.homeTeam
@@ -2174,7 +2180,7 @@ export default function Admin() {
                                         </div>
 
                                         {/* Estatísticas da API (escanteios/cartões) */}
-                                        <FixtureStatsRow gameId={gameId} hasCorners={hasCorners} hasCards={hasCards} />
+                                        <FixtureStatsRow gameId={gameId} hasCorners={hasCorners} hasCards={hasCards} commenceTime={first.commenceTime} />
 
                                         {/* Seleções */}
                                         <div className="px-3 py-2.5">
@@ -2206,7 +2212,7 @@ export default function Admin() {
                                                     }`}>
                                                       {formatOutcome(sel.outcome, sel.marketKey, sel.homeTeam, sel.awayTeam)}
                                                     </p>
-                                                    {(!sel.result || sel.result === "pending") && (() => {
+                                                    {(!sel.result || sel.result === "pending") && gameFinished(sel.commenceTime) && (() => {
                                                       const mk = sel.marketKey?.toLowerCase() ?? "";
                                                       const mn = sel.marketName?.toLowerCase() ?? "";
                                                       const needsStats =
