@@ -278,8 +278,8 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime, homeTeam:
     : "escanteios futebol";
   const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
   const sofaUrl = home
-    ? `https://www.sofascore.com/search?q=${encodeURIComponent(home + " " + away)}`
-    : "https://www.sofascore.com";
+    ? `https://www.google.com/search?q=${encodeURIComponent("sofascore " + home + " " + away + (dateStr ? " " + dateStr : ""))}`
+    : null;
 
   return (
     <div className={`px-3 py-1.5 border-b border-border text-xs space-y-1 ${anyUnavailable ? "bg-red-500/10" : "bg-orange-500/10"}`}>
@@ -298,11 +298,15 @@ function FixtureStatsRow({ gameId, hasCorners, hasCards, commenceTime, homeTeam:
               className="text-blue-400 hover:text-blue-300 underline font-medium">
               Google ↗
             </a>
-            <span className="text-muted-foreground">·</span>
-            <a href={sofaUrl} target="_blank" rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline font-medium">
-              SofaScore ↗
-            </a>
+            {sofaUrl && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <a href={sofaUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 underline font-medium">
+                  SofaScore ↗
+                </a>
+              </>
+            )}
             {home && (
               <>
                 <span className="text-muted-foreground">·</span>
