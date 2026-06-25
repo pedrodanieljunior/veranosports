@@ -4355,8 +4355,8 @@ function UsersTab() {
                     return filtered.map(u => {
                       const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
                       const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
-                      const userWithdrawals = allUserWithdrawals.filter(w => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
-                      const totalWithdrawn = userWithdrawals.reduce((s, w) => s + w.amount, 0);
+                      const withdrawalsForUser = userWithdrawals.filter(w => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
+                      const totalWithdrawn = withdrawalsForUser.reduce((s: number, w: any) => s + w.amount, 0);
                       const profit = Math.round((totalDeposited - totalWithdrawn) * 100) / 100;
                       return (
                         <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
@@ -4370,8 +4370,8 @@ function UsersTab() {
                               {userDeposits.length > 0 && (
                                 <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
                               )}
-                              {userWithdrawals.length > 0 && (
-                                <p className="text-xs text-red-400">{userWithdrawals.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
+                              {withdrawalsForUser.length > 0 && (
+                                <p className="text-xs text-red-400">{withdrawalsForUser.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
                               )}
                               {profit !== 0 && (
                                 <p className={`text-xs font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
