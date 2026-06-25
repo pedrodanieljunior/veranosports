@@ -4364,24 +4364,22 @@ function UsersTab() {
                           data-testid={`row-user-${u.cpf}`}>
                           <p className="font-semibold text-sm">{u.name}</p>
                           <p className="text-xs text-muted-foreground">{u.cpf}</p>
-                          <div className="flex items-center justify-between mt-0.5">
+                          <div className="flex items-start justify-between mt-0.5">
                             <p className="text-xs text-green-500 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
-                            {userDeposits.length > 0 && (
-                              <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
-                            )}
-                          </div>
-                          {(userWithdrawals.length > 0 || profit !== 0) && (
-                            <div className="flex items-center justify-between mt-0.5">
-                              {userWithdrawals.length > 0 ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              {userDeposits.length > 0 && (
+                                <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
+                              )}
+                              {userWithdrawals.length > 0 && (
                                 <p className="text-xs text-red-400">{userWithdrawals.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
-                              ) : <span />}
+                              )}
                               {profit !== 0 && (
                                 <p className={`text-xs font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
                                   {profit > 0 ? "+" : ""}R$ {Math.abs(profit).toFixed(2).replace(".", ",")}
                                 </p>
                               )}
                             </div>
-                          )}
+                          </div>
                           {u.bonusBalance > 0 && (
                             <p className="text-xs text-yellow-400 font-medium mt-0.5 flex items-center gap-1">
                               <Gift className="w-3 h-3" /> Bônus: R$ {u.bonusBalance.toFixed(2).replace(".", ",")}
