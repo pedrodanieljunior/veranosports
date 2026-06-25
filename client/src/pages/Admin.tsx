@@ -4064,6 +4064,18 @@ function UsersTab() {
   const [bulkBonusSelected, setBulkBonusSelected] = useState<Set<string>>(new Set());
   const [bulkBonusOpen, setBulkBonusOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<string | null>(null);
+  const [favoritedUsers, setFavoritedUsers] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("admin_fav_users") || "[]")); } catch { return new Set(); }
+  });
+  const toggleFavorite = (cpf: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavoritedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(cpf)) next.delete(cpf); else next.add(cpf);
+      localStorage.setItem("admin_fav_users", JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   const { data: historyEvents = [], isLoading: historyLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/users", historyUser, "history"],
@@ -4354,9 +4366,13 @@ function UsersTab() {
                 <ScrollArea className="h-[500px]">
                   {(() => {
                     const q = userSearch.toLowerCase().trim();
-                    const filtered = users.filter(u =>
-                      !q || u.name.toLowerCase().includes(q) || u.cpf.includes(q)
-                    );
+                    const filtered = users
+                      .filter(u => !q || u.name.toLowerCase().includes(q) || u.cpf.includes(q))
+                      .sort((a, b) => {
+                        const af = favoritedUsers.has(a.cpf) ? 0 : 1;
+                        const bf = favoritedUsers.has(b.cpf) ? 0 : 1;
+                        return af - bf;
+                      });
                     if (filtered.length === 0) return (
                       <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado para "{userSearch}".</p>
                     );
@@ -4370,7 +4386,18 @@ function UsersTab() {
                         <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
                           className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
                           data-testid={`row-user-${u.cpf}`}>
-                          <p className="font-semibold text-sm">{u.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={e => toggleFavorite(u.cpf, e)}
+                              className="shrink-0 text-muted-foreground hover:text-yellow-400 transition-colors"
+                              data-testid={`btn-favorite-${u.cpf}`}
+                            >
+                              {favoritedUsers.has(u.cpf)
+                                ? <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                                : <Star className="w-3.5 h-3.5" />}
+                            </button>
+                            <p className="font-semibold text-sm">{u.name}</p>
+                          </div>
                           <p className="text-xs text-muted-foreground">{u.cpf}</p>
                           <div className="flex items-start justify-between mt-0.5">
                             <p className="text-xs text-green-500 font-medium">saldo: R$ {u.balance.toFixed(2).replace(".", ",")}</p>
