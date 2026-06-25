@@ -4083,6 +4083,14 @@ function UsersTab() {
     },
   });
 
+  const { data: allWithdrawalsForUsers = [] } = useQuery<UserWithdrawal[]>({
+    queryKey: ["/api/admin/user-withdrawals"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/user-withdrawals");
+      return res.json();
+    },
+  });
+
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
@@ -4355,7 +4363,7 @@ function UsersTab() {
                     return filtered.map(u => {
                       const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
                       const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
-                      const withdrawalsForUser = userWithdrawals.filter(w => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
+                      const withdrawalsForUser = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
                       const totalWithdrawn = withdrawalsForUser.reduce((s: number, w: any) => s + w.amount, 0);
                       const profit = Math.round((totalDeposited - totalWithdrawn) * 100) / 100;
                       return (
