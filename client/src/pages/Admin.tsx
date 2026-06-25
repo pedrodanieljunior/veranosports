@@ -4408,7 +4408,7 @@ function UsersTab() {
                               {withdrawalsForUser.length > 0 && (
                                 <p className="text-xs text-red-400">{withdrawalsForUser.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
                               )}
-                              {profit !== 0 && (
+                              {withdrawalsForUser.length > 0 && profit !== 0 && (
                                 <p className={`text-xs font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
                                   lucro: {profit > 0 ? "+" : "-"}R$ {Math.abs(profit).toFixed(2).replace(".", ",")}
                                 </p>
