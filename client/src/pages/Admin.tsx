@@ -4355,6 +4355,9 @@ function UsersTab() {
                     return filtered.map(u => {
                       const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
                       const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
+                      const userWithdrawals = allUserWithdrawals.filter(w => w.userId === u.cpf && w.status === "paid");
+                      const totalWithdrawn = userWithdrawals.reduce((s, w) => s + w.amount, 0);
+                      const profit = Math.round((totalWithdrawn - totalDeposited) * 100) / 100;
                       return (
                         <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
                           className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
@@ -4367,6 +4370,18 @@ function UsersTab() {
                               <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
                             )}
                           </div>
+                          {(userWithdrawals.length > 0 || profit !== 0) && (
+                            <div className="flex items-center justify-between mt-0.5">
+                              {userWithdrawals.length > 0 ? (
+                                <p className="text-xs text-red-400">{userWithdrawals.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
+                              ) : <span />}
+                              {profit !== 0 && (
+                                <p className={`text-xs font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
+                                  {profit > 0 ? "+" : ""}R$ {Math.abs(profit).toFixed(2).replace(".", ",")}
+                                </p>
+                              )}
+                            </div>
+                          )}
                           {u.bonusBalance > 0 && (
                             <p className="text-xs text-yellow-400 font-medium mt-0.5 flex items-center gap-1">
                               <Gift className="w-3 h-3" /> Bônus: R$ {u.bonusBalance.toFixed(2).replace(".", ",")}
