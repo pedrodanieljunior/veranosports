@@ -4381,7 +4381,7 @@ function UsersTab() {
                       const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
                       const withdrawalsForUser = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
                       const totalWithdrawn = withdrawalsForUser.reduce((s: number, w: any) => s + w.amount, 0);
-                      const profit = Math.round((totalDeposited - totalWithdrawn) * 100) / 100;
+                      const profit = Math.round((totalWithdrawn - totalDeposited) * 100) / 100;
                       return (
                         <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
                           className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
