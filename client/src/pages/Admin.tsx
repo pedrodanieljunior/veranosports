@@ -4373,7 +4373,7 @@ function UsersTab() {
                           <p className="font-semibold text-sm">{u.name}</p>
                           <p className="text-xs text-muted-foreground">{u.cpf}</p>
                           <div className="flex items-start justify-between mt-0.5">
-                            <p className="text-xs text-green-500 font-medium">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                            <p className="text-xs text-green-500 font-medium">saldo: R$ {u.balance.toFixed(2).replace(".", ",")}</p>
                             <div className="flex flex-col items-end gap-0.5">
                               {userDeposits.length > 0 && (
                                 <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
