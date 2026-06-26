@@ -6500,8 +6500,9 @@ function DueloAdminSection() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
-  interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; }
+  interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; entries: { id: number; userId: string; userName: string; side: string; prizeAwarded: boolean; createdAt: string }[]; }
   const { data: duelos = [] } = useQuery<DueloAdmin[]>({ queryKey: ["/api/admin/duelo"], staleTime: 10_000 });
+  const [expandedDuelo, setExpandedDuelo] = useState<Record<number, boolean>>({});
 
   const compressImage = (dataUrl: string, onDone: (b64: string, preview: string) => void) => {
     const img = document.createElement("img");
@@ -6690,6 +6691,58 @@ function DueloAdminSection() {
                     <span>Entrada: R$ {d.entryFee.toFixed(2)}</span>
                   </div>
                   {d.winnerSide && <p className="text-xs text-green-500 mt-0.5">Vencedor: Opção {d.winnerSide} ({d.winnerSide === "A" ? d.optionA : d.optionB})</p>}
+
+                  {/* Participantes por opção */}
+                  {(d.entries ?? []).length > 0 && (
+                    <div>
+                      <button
+                        className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-1 mb-2"
+                        onClick={() => setExpandedDuelo(p => ({ ...p, [d.id]: !p[d.id] }))}
+                        data-testid={`button-duelo-entries-${d.id}`}
+                      >
+                        {expandedDuelo[d.id] ? "▾" : "▸"} Participantes por opção ({d.totalEntries})
+                      </button>
+                      {expandedDuelo[d.id] && (() => {
+                        const groupA = (d.entries ?? []).filter(e => e.side === "A");
+                        const groupB = (d.entries ?? []).filter(e => e.side === "B");
+                        const prizeA = groupA.length > 0 ? Math.round((d.prizePool / groupA.length) * 100) / 100 : 0;
+                        const prizeB = groupB.length > 0 ? Math.round((d.prizePool / groupB.length) * 100) / 100 : 0;
+                        const isWinnerA = d.status === "finished" && d.winnerSide === "A";
+                        const isWinnerB = d.status === "finished" && d.winnerSide === "B";
+                        return (
+                          <div className="rounded-lg overflow-hidden border border-border text-xs">
+                            <div className="grid grid-cols-[1fr_1fr_1fr] bg-muted/60 px-3 py-2 font-semibold text-muted-foreground gap-2">
+                              <span>Opção</span>
+                              <span>Usuários</span>
+                              <span>Prêmio por ganhador</span>
+                            </div>
+                            {[{ side: "A", label: d.optionA, group: groupA, prize: prizeA, isWinner: isWinnerA },
+                              { side: "B", label: d.optionB, group: groupB, prize: prizeB, isWinner: isWinnerB }].map((row, i) => (
+                              <div key={row.side} className={`px-3 py-2.5 border-t border-border ${row.isWinner ? "bg-yellow-500/10" : i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                                <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 items-start">
+                                  <span className={`font-bold text-sm ${row.isWinner ? "text-yellow-400" : row.side === "A" ? "text-red-400" : "text-blue-400"}`}>
+                                    {row.isWinner && "🏆 "}{row.label}
+                                  </span>
+                                  <div className="flex flex-col gap-0.5">
+                                    {row.group.length === 0
+                                      ? <span className="text-muted-foreground italic">Nenhum</span>
+                                      : row.group.map((e, j) => (
+                                        <span key={j} className="text-muted-foreground truncate max-w-[140px]" title={e.userName}>{e.userName}</span>
+                                      ))
+                                    }
+                                  </div>
+                                  <span className={`font-semibold ${row.isWinner ? "text-yellow-400" : "text-green-400"}`}>
+                                    {row.group.length > 0 ? `R$ ${row.prize.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   {/* Image upload inline */}
                   {uploadingImageFor === d.id && (
                     <div className="mt-2 space-y-2">
