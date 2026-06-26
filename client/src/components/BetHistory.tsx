@@ -518,85 +518,89 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                     </div>
                   )}
 
-                  {/* Cards de bolão */}
-                  {palpites.map((entry: any) => {
-                    const isWon = entry.status === "won";
-                    const isLost = entry.status === "lost";
-                    return (
-                      <div
-                        key={`bolao-${entry.id}`}
-                        className="rounded-xl border overflow-hidden"
-                        style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
-                      >
-                        <div className="flex items-center gap-3 px-4 py-3">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : entry.bolaoStatus === "closed" ? "bg-orange-400" : "bg-yellow-400"}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">{entry.homeTeam} × {entry.awayTeam}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(entry.matchDate)}</p>
-                            {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">Placar final: {entry.actualHomeScore}–{entry.actualAwayScore}</p>
-                            )}
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="flex items-center gap-1.5 justify-end">
-                              <span className="text-xs text-muted-foreground">Palpite:</span>
-                              <span className={`font-black text-sm tabular-nums ${isWon ? "text-green-400" : isLost ? "text-red-400" : "text-yellow-400"}`}>
-                                {entry.myHomeScore}–{entry.myAwayScore}
-                              </span>
-                            </div>
-                            <div className={`text-[11px] mt-0.5 font-medium ${isWon ? "text-green-400" : isLost ? "text-red-400" : entry.bolaoStatus === "closed" ? "text-orange-400" : "text-yellow-400/70"}`}>
-                              {isWon ? "✓ Acertou!" : isLost ? "✗ Errou" : entry.bolaoStatus === "closed" ? "Jogo em breve" : "Aguardando"}
-                            </div>
-                            {isWon && entry.prizeAmount != null && (
-                              <div className="text-[11px] mt-0.5 font-bold text-green-300">
-                                + R${entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {/* Todas as entradas misturadas por data (mais recente primeiro) */}
+                  {[
+                    ...palpites.map((e: any) => ({ ...e, _kind: "bolao" })),
+                    ...duelos.map((e: any) => ({ ...e, _kind: "duelo" })),
+                  ]
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((entry: any) => {
+                      const isWon = entry.status === "won";
+                      const isLost = entry.status === "lost";
 
-                  {/* Cards de duelo */}
-                  {duelos.map((entry: any) => {
-                    const isWon = entry.status === "won";
-                    const isLost = entry.status === "lost";
-                    const sideColor = entry.mySide === "A" ? "#ef4444" : "#3b82f6";
-                    return (
-                      <div
-                        key={`duelo-${entry.id}`}
-                        className="rounded-xl border overflow-hidden"
-                        style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
-                        data-testid={`duelo-history-${entry.id}`}
-                      >
-                        <div className="flex items-start gap-3 px-4 py-3">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : "bg-yellow-400"}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide mb-0.5">Duelo</p>
-                            <p className="text-xs text-muted-foreground truncate">{entry.title}</p>
-                            <p className="text-sm font-semibold mt-0.5" style={{ color: sideColor }}>{entry.myOption}</p>
-                            {entry.dueloStatus === "finished" && entry.winnerOption && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">Vencedor: {entry.winnerOption}</p>
-                            )}
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className={`text-xs font-semibold ${isWon ? "text-green-400" : isLost ? "text-red-400" : "text-yellow-400"}`}>
-                              {isWon ? "✓ Ganhou!" : isLost ? "✗ Perdeu" : "Aguardando"}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground mt-0.5">
-                              − R$ {(entry.entryFee ?? 10).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </div>
-                            {isWon && entry.prizeAmount != null && (
-                              <div className="text-[11px] mt-0.5 font-bold text-green-300">
-                                + R$ {entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      if (entry._kind === "bolao") {
+                        return (
+                          <div
+                            key={`bolao-${entry.id}`}
+                            className="rounded-xl border overflow-hidden"
+                            style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
+                          >
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : entry.bolaoStatus === "closed" ? "bg-orange-400" : "bg-yellow-400"}`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground truncate">{entry.homeTeam} × {entry.awayTeam}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(entry.matchDate)}</p>
+                                {entry.bolaoStatus === "finished" && entry.actualHomeScore !== null && (
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">Placar final: {entry.actualHomeScore}–{entry.actualAwayScore}</p>
+                                )}
                               </div>
-                            )}
+                              <div className="text-right flex-shrink-0">
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <span className="text-xs text-muted-foreground">Palpite:</span>
+                                  <span className={`font-black text-sm tabular-nums ${isWon ? "text-green-400" : isLost ? "text-red-400" : "text-yellow-400"}`}>
+                                    {entry.myHomeScore}–{entry.myAwayScore}
+                                  </span>
+                                </div>
+                                <div className={`text-[11px] mt-0.5 font-medium ${isWon ? "text-green-400" : isLost ? "text-red-400" : entry.bolaoStatus === "closed" ? "text-orange-400" : "text-yellow-400/70"}`}>
+                                  {isWon ? "✓ Acertou!" : isLost ? "✗ Errou" : entry.bolaoStatus === "closed" ? "Jogo em breve" : "Aguardando"}
+                                </div>
+                                {isWon && entry.prizeAmount != null && (
+                                  <div className="text-[11px] mt-0.5 font-bold text-green-300">
+                                    + R${entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Duelo card
+                      const sideColor = entry.mySide === "A" ? "#ef4444" : "#3b82f6";
+                      return (
+                        <div
+                          key={`duelo-${entry.id}`}
+                          className="rounded-xl border overflow-hidden"
+                          style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
+                          data-testid={`duelo-history-${entry.id}`}
+                        >
+                          <div className="flex items-start gap-3 px-4 py-3">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : "bg-yellow-400"}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide mb-0.5">Duelo</p>
+                              <p className="text-xs text-muted-foreground truncate">{entry.title}</p>
+                              <p className="text-sm font-semibold mt-0.5" style={{ color: sideColor }}>{entry.myOption}</p>
+                              {entry.dueloStatus === "finished" && entry.winnerOption && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Vencedor: {entry.winnerOption}</p>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className={`text-xs font-semibold ${isWon ? "text-green-400" : isLost ? "text-red-400" : "text-yellow-400"}`}>
+                                {isWon ? "✓ Ganhou!" : isLost ? "✗ Perdeu" : "Aguardando"}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground mt-0.5">
+                                − R$ {(entry.entryFee ?? 10).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                              </div>
+                              {isWon && entry.prizeAmount != null && (
+                                <div className="text-[11px] mt-0.5 font-bold text-green-300">
+                                  + R$ {entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               )
             )}
