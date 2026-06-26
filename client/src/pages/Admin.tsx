@@ -6503,31 +6503,34 @@ function DueloAdminSection() {
   interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; }
   const { data: duelos = [] } = useQuery<DueloAdmin[]>({ queryKey: ["/api/admin/duelo"], staleTime: 10_000 });
 
+  const compressImage = (dataUrl: string, onDone: (b64: string, preview: string) => void) => {
+    const img = document.createElement("img");
+    img.onload = () => {
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL("image/jpeg", 0.72);
+      onDone(compressed.split(",")[1], compressed);
+    };
+    img.src = dataUrl;
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const mime = "image/jpeg";
-    setImageMime(mime);
+    setImageMime("image/jpeg");
     const reader = new FileReader();
     reader.onload = ev => {
-      const dataUrl = ev.target?.result as string;
-      const img = document.createElement("img");
-      img.onload = () => {
-        const MAX = 1200;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, w, h);
-        const compressed = canvas.toDataURL("image/jpeg", 0.82);
-        setImagePreview(compressed);
-        setImageBase64(compressed.split(",")[1]);
-      };
-      img.src = dataUrl;
+      compressImage(ev.target?.result as string, (b64, preview) => {
+        setImagePreview(preview);
+        setImageBase64(b64);
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -6582,23 +6585,10 @@ function DueloAdminSection() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const dataUrl = ev.target?.result as string;
-      const img = document.createElement("img");
-      img.onload = () => {
-        const MAX = 1200;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-        const compressed = canvas.toDataURL("image/jpeg", 0.82);
-        setUploadPreview(compressed);
-        setUploadBase64(compressed.split(",")[1]);
-      };
-      img.src = dataUrl;
+      compressImage(ev.target?.result as string, (b64, preview) => {
+        setUploadPreview(preview);
+        setUploadBase64(b64);
+      });
     };
     reader.readAsDataURL(file);
   };
