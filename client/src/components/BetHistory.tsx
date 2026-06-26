@@ -369,7 +369,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
     ]).then(([bolaoData, dueloData]) => {
       setPalpites(bolaoData);
       setDuelos(dueloData);
-      if (bolaoData.length === 0 && dueloData.length === 0) setActiveTab("apostas");
+      if (bolaoData.length > 0 || dueloData.length > 0) setActiveTab("bolao");
     }).finally(() => {
       setPalpitesLoading(false);
       setDuelosLoading(false);
@@ -419,20 +419,18 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
               <Receipt className="w-3.5 h-3.5" />
               Histórico
             </button>
-            {(palpites.length > 0 || duelos.length > 0) && (
-              <button
-                onClick={() => setActiveTab("bolao")}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
-                style={{
-                  borderColor: activeTab === "bolao" ? "#f59e0b" : "transparent",
-                  color: activeTab === "bolao" ? "#f59e0b" : "hsl(var(--muted-foreground))",
-                }}
-                data-testid="tab-bolao-history"
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                Meus Palpites
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab("bolao")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
+              style={{
+                borderColor: activeTab === "bolao" ? "#f59e0b" : "transparent",
+                color: activeTab === "bolao" ? "#f59e0b" : "hsl(var(--muted-foreground))",
+              }}
+              data-testid="tab-bolao-history"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              Meus Palpites
+            </button>
           </div>
         </CardHeader>
 
