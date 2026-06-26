@@ -6506,18 +6506,40 @@ function DueloAdminSection() {
   const [expandedDuelo, setExpandedDuelo] = useState<Record<number, boolean>>({});
 
   function DueloEntriesTable({ d }: { d: DueloAdmin }) {
-    const { data: entries = [], isLoading } = useQuery<DueloEntry[]>({
-      queryKey: ["/api/admin/duelo", d.id, "entries"],
-      queryFn: () => fetch(`/api/admin/duelo/${d.id}/entries`, { credentials: "include" }).then(r => r.json()),
-      staleTime: 0,
-    });
+    const [entries, setEntries] = useState<DueloEntry[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+      setIsLoading(true);
+      setError(null);
+      fetch(`/api/admin/duelo/${d.id}/entries`, { credentials: "include" })
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then(data => {
+          if (Array.isArray(data)) {
+            setEntries(data);
+          } else {
+            setError(JSON.stringify(data));
+          }
+          setIsLoading(false);
+        })
+        .catch(err => {
+          setError(err.message);
+          setIsLoading(false);
+        });
+    }, [d.id]);
+
     const groupA = entries.filter(e => e.side === "A");
     const groupB = entries.filter(e => e.side === "B");
     const prizeA = groupA.length > 0 ? Math.round((d.prizePool / groupA.length) * 100) / 100 : 0;
     const prizeB = groupB.length > 0 ? Math.round((d.prizePool / groupB.length) * 100) / 100 : 0;
     const isWinnerA = d.status === "finished" && d.winnerSide === "A";
     const isWinnerB = d.status === "finished" && d.winnerSide === "B";
-    if (isLoading) return <p className="text-xs text-muted-foreground py-2">Carregando...</p>;
+    if (isLoading) return <p className="text-xs text-muted-foreground py-2">Carregando participantes...</p>;
+    if (error) return <p className="text-xs text-red-400 py-2">Erro: {error}</p>;
     return (
       <div className="rounded-lg overflow-hidden border border-border text-xs">
         <div className="grid grid-cols-[1fr_1fr_1fr] bg-muted/60 px-3 py-2 font-semibold text-muted-foreground gap-2">
