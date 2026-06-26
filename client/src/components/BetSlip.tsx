@@ -738,7 +738,7 @@ export function BetSlip({
                 <label className="text-sm font-medium mb-2 block">Valor da Aposta (R$)</label>
                 <Input
                   type="number"
-                  min="1"
+                  min="5"
                   step="0.01"
                   value={stake}
                   onChange={(e) => setStake(e.target.value)}
@@ -762,6 +762,10 @@ export function BetSlip({
                   </button>
                 ))}
               </div>
+
+              {stakeNum > 0 && stakeNum < 5 && (
+                <p className="text-xs text-red-500 font-semibold">Valor mínimo de aposta: R$ 5,00</p>
+              )}
 
               {isCappedAtMax && (
                 <div className="bg-red-500/10 border border-red-500 rounded-md p-2 flex items-start gap-2" data-testid="alert-preview-capped-max">
@@ -854,7 +858,7 @@ export function BetSlip({
                 className="w-full" 
                 size="lg"
                 onClick={handlePlaceBet}
-                disabled={isPlacing || selections.length === 0 || parseFloat(stake) <= 0 || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}
+                disabled={isPlacing || selections.length === 0 || parseFloat(stake) < 5 || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}
                 data-testid="button-place-bet"
               >
                 {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}
