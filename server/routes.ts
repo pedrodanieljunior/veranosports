@@ -4591,6 +4591,144 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Duelo routes ────────────────────────────────────────────────────────────
+  app.get("/api/duelo/active", async (req, res) => {
+    try {
+      const duelos = await storage.getActiveDuelos();
+      const now = Date.now();
+      const parseManausText = (s: string) => {
+        const str = s.length === 16 ? s + ":00-04:00" : s.length === 19 ? s + "-04:00" : s;
+        const d = new Date(str); return isNaN(d.getTime()) ? null : d;
+      };
+      const visible = duelos.filter(d => {
+        if (d.startsAt) { const t = parseManausText(d.startsAt); if (t && now < t.getTime()) return false; }
+        if (d.endsAt)   { const t = parseManausText(d.endsAt);   if (t && now >= t.getTime()) return false; }
+        return true;
+      });
+      const userId = req.session?.userId;
+      const result = await Promise.all(visible.map(async d => {
+        const entries = await storage.getDueloEntries(d.id);
+        const totalEntries = entries.length;
+        const countA = entries.filter(e => e.side === "A").length;
+        const countB = entries.filter(e => e.side === "B").length;
+        const pctA = totalEntries > 0 ? Math.round((countA / totalEntries) * 100) : 50;
+        const pctB = totalEntries > 0 ? Math.round((countB / totalEntries) * 100) : 50;
+        const grossPool = Math.round(totalEntries * (d.entryFee ?? 10) * 100) / 100;
+        const prizePool = Math.round(grossPool * (1 - (d.houseCut ?? 0) / 100) * 100) / 100;
+        const userEntry = userId ? entries.find(e => e.userId === userId) ?? null : null;
+        const { imageData, mimeType, ...dueloWithoutImage } = d;
+        return { ...dueloWithoutImage, hasImage: !!imageData, totalEntries, countA, countB, pctA, pctB, prizePool, userEntry };
+      }));
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/duelo/:id/image", async (req, res) => {
+    try {
+      const [duelo] = await storage.getDuelos().then(ds => ds.filter(d => d.id === parseInt(req.params.id)));
+      if (!duelo?.imageData) return res.status(404).end();
+      const buf = Buffer.from(duelo.imageData, "base64");
+      res.set("Content-Type", duelo.mimeType || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400");
+      res.send(buf);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/duelo/:id/enter", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });
+      const dueloId = parseInt(req.params.id);
+      const { side } = req.body as { side: string };
+      if (side !== "A" && side !== "B") return res.status(400).json({ error: "Lado inválido" });
+      const duelos = await storage.getDuelos();
+      const duelo = duelos.find(d => d.id === dueloId);
+      if (!duelo || duelo.status !== "open" || !duelo.active) return res.status(400).json({ error: "Duelo não disponível" });
+      const entries = await storage.getDueloEntries(dueloId);
+      if (entries.some(e => e.userId === req.session!.userId)) return res.status(400).json({ error: "Você já participou deste duelo" });
+      const user = await storage.getUserByCpf(req.session.userId);
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+      const fee = duelo.entryFee ?? 10;
+      if (user.balance < fee) return res.status(400).json({ error: `Saldo insuficiente. Você precisa de R$${fee.toFixed(2)} para participar.` });
+      const newBalance = Math.round((user.balance - fee) * 100) / 100;
+      await storage.updateUserBalance(req.session.userId, newBalance);
+      await storage.createTransaction({ userId: req.session.userId, type: "duelo_entry", amount: -fee, balanceAfter: newBalance, description: `Duelo: ${duelo.title} — Lado ${side}` });
+      const entry = await storage.createDueloEntry({ dueloId, userId: req.session.userId, side });
+      res.json({ entry, newBalance });
+    } catch (e: any) { res.status(500).json({ error: e.message || "Erro ao participar" }); }
+  });
+
+  app.get("/api/admin/duelo", requireAdmin, async (_req, res) => {
+    try {
+      const duelos = await storage.getDuelos();
+      const result = await Promise.all(duelos.map(async d => {
+        const entries = await storage.getDueloEntries(d.id);
+        const countA = entries.filter(e => e.side === "A").length;
+        const countB = entries.filter(e => e.side === "B").length;
+        const grossPool = Math.round(entries.length * (d.entryFee ?? 10) * 100) / 100;
+        const prizePool = Math.round(grossPool * (1 - (d.houseCut ?? 0) / 100) * 100) / 100;
+        const { imageData, mimeType, ...dueloWithoutImage } = d;
+        return { ...dueloWithoutImage, hasImage: !!imageData, totalEntries: entries.length, countA, countB, prizePool };
+      }));
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/admin/duelo", requireAdmin, async (req, res) => {
+    try {
+      const { imageBase64, imageMime, ...rest } = req.body;
+      const data: any = { ...rest };
+      if (imageBase64) { data.imageData = imageBase64; data.mimeType = imageMime || "image/jpeg"; }
+      const duelo = await storage.createDuelo(data);
+      res.json(duelo);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/admin/duelo/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { imageBase64, imageMime, ...rest } = req.body;
+      const data: any = { ...rest };
+      if (imageBase64) { data.imageData = imageBase64; data.mimeType = imageMime || "image/jpeg"; }
+      const duelo = await storage.updateDuelo(id, data);
+      if (!duelo) return res.status(404).json({ error: "Não encontrado" });
+      res.json(duelo);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/admin/duelo/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteDuelo(parseInt(req.params.id));
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/admin/duelo/:id/finish", requireAdmin, async (req, res) => {
+    try {
+      const dueloId = parseInt(req.params.id);
+      const { winnerSide } = req.body as { winnerSide: string };
+      if (winnerSide !== "A" && winnerSide !== "B") return res.status(400).json({ error: "Lado inválido" });
+      const result = await storage.finishDuelo(dueloId, winnerSide);
+      if (result.prizePerWinner > 0) {
+        const entries = await storage.getDueloEntries(dueloId);
+        for (const w of entries.filter(e => e.prizeAwarded)) {
+          const user = await storage.getUserByCpf(w.userId);
+          if (user) {
+            const newBal = Math.round((user.balance + result.prizePerWinner) * 100) / 100;
+            await storage.updateUserBalance(w.userId, newBal);
+            const duelos = await storage.getDuelos();
+            const duelo = duelos.find(d => d.id === dueloId);
+            await storage.createTransaction({ userId: w.userId, type: "duelo_win", amount: result.prizePerWinner, balanceAfter: newBal, description: `Prêmio do duelo: ${duelo?.title ?? dueloId} — R$${result.prizePerWinner.toFixed(2)}` });
+          }
+        }
+      }
+      if (result.houseProfit > 0) {
+        caixaExtras = Math.round((caixaExtras + result.houseProfit) * 100) / 100;
+        await storage.setSetting("caixaExtras", String(caixaExtras));
+      }
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // Boost card routes
   app.get("/api/boost-cards", async (_req, res) => {
     try {

@@ -13,6 +13,7 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { BoostCard } from "@/components/BoostCard";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { BolaoCard } from "@/components/BolaoCard";
+import { DueloCard } from "@/components/DueloCard";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/use-presence";
@@ -137,6 +138,18 @@ export default function Copa() {
 
   const { data: copaCards = [] } = useQuery<any[]>({
     queryKey: ["/api/copa-world-cup-cards"], staleTime: 60_000, refetchInterval: 60_000,
+  });
+
+  const { data: duelosData = [] } = useQuery<any[]>({
+    queryKey: ["/api/duelo/active"],
+    queryFn: async () => {
+      const res = await fetch("/api/duelo/active");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchInterval: 30_000,
   });
 
   const { data: bolaoData } = useQuery<any>({
@@ -341,6 +354,21 @@ export default function Copa() {
         </div>
       </header>
 
+
+      {/* ===== DUELOS ===== */}
+      {duelosData.length > 0 && !isSearching && !isTyping && (
+        <div className="pt-3">
+          {duelosData.map((duelo: any) => (
+            <DueloCard
+              key={duelo.id}
+              duelo={duelo}
+              isLoggedIn={!!user}
+              userBalance={user?.balance ?? 0}
+              onLoginRequired={() => setAuthMode("login")}
+            />
+          ))}
+        </div>
+      )}
 
       {/* ===== BOLÃO DA COPA ===== */}
       {bolaoData && !isSearching && !isTyping && (

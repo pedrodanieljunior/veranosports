@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -121,6 +121,16 @@ export interface IStorage {
   processAllUsersClubFwPayout(weekStart: string): Promise<{ processed: number; totalBonus: number }>;
   fixOvercreditedClubFw(): Promise<{ fixed: number; totalDeducted: number; details: string[] }>;
   getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]>;
+  // Duelo
+  getDuelos(): Promise<Duelo[]>;
+  getActiveDuelos(): Promise<Duelo[]>;
+  createDuelo(data: Partial<Duelo>): Promise<Duelo>;
+  updateDuelo(id: number, data: Partial<Duelo>): Promise<Duelo | undefined>;
+  deleteDuelo(id: number): Promise<boolean>;
+  getDueloEntries(dueloId: number): Promise<DueloEntry[]>;
+  getDueloEntriesByUser(userId: string): Promise<DueloEntry[]>;
+  createDueloEntry(data: { dueloId: number; userId: string; side: string }): Promise<DueloEntry>;
+  finishDuelo(dueloId: number, winnerSide: string): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }>;
   // Bolão
   getBoloes(): Promise<Bolao[]>;
   getActiveBolao(): Promise<Bolao | null>;
@@ -1224,6 +1234,53 @@ export class DatabaseStorage implements IStorage {
   async getActiveBolao(): Promise<Bolao | null> {
     const rows = await db.select().from(baloesTable).where(and(eq(baloesTable.active, true), eq(baloesTable.status, "open"))).limit(1);
     return rows[0] ?? null;
+  }
+
+  // ── Duelo ──────────────────────────────────────────────────────────────────
+  async getDuelos(): Promise<Duelo[]> {
+    return db.select().from(duelosTable).orderBy(desc(duelosTable.createdAt));
+  }
+  async getActiveDuelos(): Promise<Duelo[]> {
+    return db.select().from(duelosTable).where(and(eq(duelosTable.active, true), eq(duelosTable.status, "open"))).orderBy(desc(duelosTable.createdAt));
+  }
+  async createDuelo(data: Partial<Duelo>): Promise<Duelo> {
+    const [row] = await db.insert(duelosTable).values(data as any).returning();
+    return row;
+  }
+  async updateDuelo(id: number, data: Partial<Duelo>): Promise<Duelo | undefined> {
+    const [row] = await db.update(duelosTable).set(data as any).where(eq(duelosTable.id, id)).returning();
+    return row ?? undefined;
+  }
+  async deleteDuelo(id: number): Promise<boolean> {
+    const result = await db.delete(duelosTable).where(eq(duelosTable.id, id)).returning();
+    return result.length > 0;
+  }
+  async getDueloEntries(dueloId: number): Promise<DueloEntry[]> {
+    return db.select().from(dueloEntriesTable).where(eq(dueloEntriesTable.dueloId, dueloId)).orderBy(desc(dueloEntriesTable.createdAt));
+  }
+  async getDueloEntriesByUser(userId: string): Promise<DueloEntry[]> {
+    return db.select().from(dueloEntriesTable).where(eq(dueloEntriesTable.userId, userId)).orderBy(desc(dueloEntriesTable.createdAt));
+  }
+  async createDueloEntry(data: { dueloId: number; userId: string; side: string }): Promise<DueloEntry> {
+    const [row] = await db.insert(dueloEntriesTable).values({ ...data, prizeAwarded: false }).returning();
+    return row;
+  }
+  async finishDuelo(dueloId: number, winnerSide: string): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }> {
+    const [duelo] = await db.select().from(duelosTable).where(eq(duelosTable.id, dueloId)).limit(1);
+    if (!duelo) throw new Error("Duelo não encontrado");
+    const entries = await db.select().from(dueloEntriesTable).where(eq(dueloEntriesTable.dueloId, dueloId));
+    const totalEntries = entries.length;
+    const grossTotal = Math.round(totalEntries * (duelo.entryFee ?? 10) * 100) / 100;
+    const houseCutPct = duelo.houseCut ?? 0;
+    const total = Math.round(grossTotal * (1 - houseCutPct / 100) * 100) / 100;
+    const houseProfit = Math.round((grossTotal - total) * 100) / 100;
+    const winners = entries.filter(e => e.side === winnerSide);
+    const prizePerWinner = winners.length > 0 ? Math.round((total / winners.length) * 100) / 100 : 0;
+    await db.update(duelosTable).set({ status: "finished", winnerSide }).where(eq(duelosTable.id, dueloId));
+    for (const w of winners) {
+      await db.update(dueloEntriesTable).set({ prizeAwarded: true, prizeAmount: prizePerWinner }).where(eq(dueloEntriesTable.id, w.id));
+    }
+    return { winners: winners.length, prizePerWinner, totalEntries, total, houseProfit };
   }
 
   async createBolao(data: InsertBolao): Promise<Bolao> {

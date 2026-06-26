@@ -507,6 +507,41 @@ export const insertBolaoEntrySchema = createInsertSchema(bolaoEntriesTable).omit
 export type InsertBolao = z.infer<typeof insertBolaoSchema>;
 export type InsertBolaoEntry = z.infer<typeof insertBolaoEntrySchema>;
 
+// ─── Duelo ────────────────────────────────────────────────────────────────────
+export const duelosTable = pgTable("duelos", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  optionA: text("option_a").notNull(),
+  optionB: text("option_b").notNull(),
+  imageData: text("image_data"),
+  mimeType: text("mime_type"),
+  entryFee: real("entry_fee").notNull().default(10),
+  houseCut: real("house_cut").notNull().default(0),
+  status: text("status").notNull().default("open"), // open | finished
+  winnerSide: text("winner_side"), // A | B | null
+  active: boolean("active").notNull().default(true),
+  startsAt: text("starts_at"),
+  endsAt: text("ends_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const dueloEntriesTable = pgTable("duelo_entries", {
+  id: serial("id").primaryKey(),
+  dueloId: integer("duelo_id").notNull(),
+  userId: text("user_id").notNull(),
+  side: text("side").notNull(), // A | B
+  prizeAwarded: boolean("prize_awarded").notNull().default(false),
+  prizeAmount: real("prize_amount"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type Duelo = typeof duelosTable.$inferSelect;
+export type DueloEntry = typeof dueloEntriesTable.$inferSelect;
+export const insertDueloSchema = createInsertSchema(duelosTable).omit({ id: true, createdAt: true });
+export const insertDueloEntrySchema = createInsertSchema(dueloEntriesTable).omit({ id: true, createdAt: true, prizeAwarded: true });
+export type InsertDuelo = z.infer<typeof insertDueloSchema>;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),

@@ -6487,6 +6487,208 @@ function fmtBolaoTime(s: string): string {
   return s;
 }
 
+function DueloAdminSection() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [finishModal, setFinishModal] = useState<{ id: number; title: string } | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMime, setImageMime] = useState<string>("image/jpeg");
+  const [form, setForm] = useState({ title: "", description: "", optionA: "", optionB: "", entryFee: "10", houseCut: "10", startsAt: "", endsAt: "" });
+
+  interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; }
+  const { data: duelos = [] } = useQuery<DueloAdmin[]>({ queryKey: ["/api/admin/duelo"], staleTime: 10_000 });
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageMime(file.type || "image/jpeg");
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target?.result as string;
+      setImagePreview(dataUrl);
+      setImageBase64(dataUrl.split(",")[1]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/duelo", {
+        title: form.title.trim(), description: form.description.trim(),
+        optionA: form.optionA.trim(), optionB: form.optionB.trim(),
+        entryFee: parseFloat(form.entryFee) || 10, houseCut: parseFloat(form.houseCut) || 0,
+        active: true, status: "open",
+        startsAt: form.startsAt || null, endsAt: form.endsAt || null,
+        imageBase64, imageMime,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] });
+      setForm({ title: "", description: "", optionA: "", optionB: "", entryFee: "10", houseCut: "10", startsAt: "", endsAt: "" });
+      setImagePreview(null); setImageBase64(null); setShowForm(false);
+      toast({ title: "Duelo criado!" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/duelo/${id}`, { active });
+      if (!res.ok) throw new Error("Erro");
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] }); queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] }); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/duelo/${id}`, undefined);
+      if (!res.ok) throw new Error("Erro");
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] }); queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] }); toast({ title: "Duelo excluído" }); },
+  });
+
+  const finishMutation = useMutation({
+    mutationFn: async ({ id, winnerSide }: { id: number; winnerSide: string }) => {
+      const res = await apiRequest("POST", `/api/admin/duelo/${id}/finish`, { winnerSide });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] });
+      setFinishModal(null);
+      toast({ title: `✅ Duelo finalizado! ${data.winners} ganhador(es) — R$ ${data.prizePerWinner?.toFixed(2)} cada` });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-base flex items-center gap-2">⚔️ Duelos</h3>
+        <Button size="sm" onClick={() => setShowForm(v => !v)}>{showForm ? "Cancelar" : "+ Novo Duelo"}</Button>
+      </div>
+
+      {showForm && (
+        <Card className="mb-4">
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <label className="text-xs font-medium mb-1 block">Título do Duelo</label>
+                <input className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" placeholder="Ex: Quem vai ganhar a Copa?" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-medium mb-1 block">Descrição (opcional)</label>
+                <input className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" placeholder="Descrição do duelo..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Opção A</label>
+                <input className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" placeholder="Ex: Brasil" value={form.optionA} onChange={e => setForm(f => ({ ...f, optionA: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Opção B</label>
+                <input className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" placeholder="Ex: Argentina" value={form.optionB} onChange={e => setForm(f => ({ ...f, optionB: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Valor da entrada (R$)</label>
+                <input type="number" className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" value={form.entryFee} onChange={e => setForm(f => ({ ...f, entryFee: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Taxa da casa (%)</label>
+                <input type="number" className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" value={form.houseCut} onChange={e => setForm(f => ({ ...f, houseCut: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Início (opcional)</label>
+                <input type="datetime-local" className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" value={form.startsAt} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Fim (opcional)</label>
+                <input type="datetime-local" className="w-full px-3 py-1.5 text-sm rounded-md bg-muted border border-border" value={form.endsAt} onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))} />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-medium mb-1 block">Imagem de capa</label>
+                <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-sm" />
+                {imagePreview && <img src={imagePreview} alt="preview" className="mt-2 h-24 w-full object-cover rounded-md" />}
+              </div>
+            </div>
+            <Button className="w-full" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.title || !form.optionA || !form.optionB}>
+              {createMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</> : "Criar Duelo"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {duelos.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum duelo cadastrado.</p>}
+        {duelos.map(d => (
+          <Card key={d.id} className={d.status === "finished" ? "opacity-60" : ""}>
+            <CardContent className="pt-3 pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <p className="font-semibold text-sm">{d.title}</p>
+                    {d.status === "finished" && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500">Finalizado</Badge>}
+                    {d.status === "open" && <Badge variant="outline" className={`text-[10px] ${d.active ? "text-blue-400 border-blue-400" : "text-muted-foreground"}`}>{d.active ? "Ativo" : "Inativo"}</Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{d.optionA} vs {d.optionB}</p>
+                  <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+                    <span>{d.totalEntries} participantes</span>
+                    <span>A: {d.countA} · B: {d.countB}</span>
+                    <span>Prêmio: R$ {d.prizePool.toFixed(2)}</span>
+                    <span>Entrada: R$ {d.entryFee.toFixed(2)}</span>
+                  </div>
+                  {d.winnerSide && <p className="text-xs text-green-500 mt-0.5">Vencedor: Opção {d.winnerSide} ({d.winnerSide === "A" ? d.optionA : d.optionB})</p>}
+                </div>
+                <div className="flex flex-col gap-1 shrink-0">
+                  {d.status === "open" && (
+                    <>
+                      <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => toggleMutation.mutate({ id: d.id, active: !d.active })}>
+                        {d.active ? "Desativar" : "Ativar"}
+                      </Button>
+                      <Button size="sm" className="text-xs h-7 bg-purple-600 hover:bg-purple-700" onClick={() => setFinishModal({ id: d.id, title: d.title })}>
+                        Finalizar
+                      </Button>
+                    </>
+                  )}
+                  <Button size="sm" variant="destructive" className="text-xs h-7" onClick={() => deleteMutation.mutate(d.id)}>
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={!!finishModal} onOpenChange={open => !open && setFinishModal(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Finalizar: {finishModal?.title}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">Selecione o lado vencedor para distribuir os prêmios:</p>
+          {finishModal && (() => {
+            const d = duelos.find(x => x.id === finishModal.id);
+            if (!d) return null;
+            return (
+              <div className="flex gap-3">
+                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={() => finishMutation.mutate({ id: finishModal.id, winnerSide: "A" })} disabled={finishMutation.isPending}>
+                  {finishMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : `✅ ${d.optionA} (A)`}
+                </Button>
+                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={() => finishMutation.mutate({ id: finishModal.id, winnerSide: "B" })} disabled={finishMutation.isPending}>
+                  {finishMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : `✅ ${d.optionB} (B)`}
+                </Button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function BolaoTab() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -6828,6 +7030,8 @@ function BolaoTab() {
           )}
         </DialogContent>
       </Dialog>
+
+      <DueloAdminSection />
     </div>
   );
 }
