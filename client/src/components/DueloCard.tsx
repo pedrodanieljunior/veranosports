@@ -131,8 +131,6 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
             const label = side === "A" ? duelo.optionA : duelo.optionB;
             const pct = side === "A" ? duelo.pctA : duelo.pctB;
             const count = side === "A" ? duelo.countA : duelo.countB;
-            const myCount = side === "A" ? duelo.userCountA : duelo.userCountB;
-            const isMyVote = myCount > 0;
             const isWinning = side === "A" ? duelo.pctA >= duelo.pctB : duelo.pctB > duelo.pctA;
 
             return (
@@ -142,19 +140,15 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                 disabled={enterMutation.isPending}
                 className="flex-1 rounded-lg p-3 transition-all active:scale-95 disabled:cursor-default"
                 style={{
-                  background: isMyVote
-                    ? (side === "A" ? "rgba(220,38,38,0.2)" : "rgba(37,99,235,0.2)")
-                    : "rgba(255,255,255,0.07)",
-                  border: isMyVote
-                    ? (side === "A" ? "2px solid #ef4444" : "2px solid #3b82f6")
-                    : isWinning && duelo.totalEntries > 0
-                      ? (side === "A" ? "2px solid rgba(220,38,38,0.5)" : "2px solid rgba(37,99,235,0.5)")
-                      : "2px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.07)",
+                  border: isWinning && duelo.totalEntries > 0
+                    ? (side === "A" ? "2px solid rgba(220,38,38,0.5)" : "2px solid rgba(37,99,235,0.5)")
+                    : "2px solid rgba(255,255,255,0.12)",
                 }}
                 data-testid={`duelo-vote-${side}`}
               >
                 {/* Option label */}
-                <p className="font-black text-sm text-center mb-2 leading-tight" style={{ color: isMyVote ? (side === "A" ? "#fca5a5" : "#93c5fd") : "#fff" }}>
+                <p className="font-black text-sm text-center mb-2 leading-tight" style={{ color: "#fff" }}>
                   {label}
                 </p>
 
@@ -173,23 +167,13 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
 
                 {/* Pct + count */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold" style={{ color: isMyVote ? (side === "A" ? "#fca5a5" : "#93c5fd") : "rgba(255,255,255,0.7)" }}>
+                  <span className="text-xs font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>
                     {duelo.totalEntries === 0 ? "—" : `${pct}%`}
                   </span>
                   <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
                     {count} {count === 1 ? "voto" : "votos"}
                   </span>
                 </div>
-
-                {/* My vote badge */}
-                {isMyVote && (
-                  <div className="flex items-center justify-center gap-1 mt-1.5">
-                    <CheckCircle2 className="w-3 h-3" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }} />
-                    <span className="text-[10px] font-bold" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }}>
-                      {myCount === 1 ? "Seu voto" : `Seus votos: ${myCount}`}
-                    </span>
-                  </div>
-                )}
               </button>
             );
           })}
