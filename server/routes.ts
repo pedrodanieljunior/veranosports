@@ -4634,6 +4634,20 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // Dedicated multipart image upload for duelo (bypasses JSON body limit)
+  const dueloImgUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
+  app.post("/api/admin/duelo/:id/image", requireAdmin, dueloImgUpload.single("image"), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!req.file) return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      const imageData = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype || "image/jpeg";
+      const duelo = await storage.updateDuelo(id, { imageData, mimeType } as any);
+      if (!duelo) return res.status(404).json({ error: "Duelo não encontrado" });
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   app.post("/api/duelo/:id/enter", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });

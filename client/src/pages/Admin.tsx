@@ -6497,7 +6497,7 @@ function DueloAdminSection() {
   const [imageMime, setImageMime] = useState<string>("image/jpeg");
   const [form, setForm] = useState({ title: "", description: "", optionA: "", optionB: "", entryFee: "10", houseCut: "10", startsAt: "", endsAt: "" });
   const [uploadingImageFor, setUploadingImageFor] = useState<number | null>(null);
-  const [uploadBase64, setUploadBase64] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
   interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; }
@@ -6567,14 +6567,16 @@ function DueloAdminSection() {
   });
 
   const uploadImageMutation = useMutation({
-    mutationFn: async ({ id, base64, mime }: { id: number; base64: string; mime: string }) => {
-      const res = await apiRequest("PATCH", `/api/admin/duelo/${id}`, { imageBase64: base64, imageMime: mime });
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`/api/admin/duelo/${id}/image`, { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] });
       queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] });
-      setUploadingImageFor(null); setUploadBase64(null); setUploadPreview(null);
+      setUploadingImageFor(null); setUploadFile(null); setUploadPreview(null);
       toast({ title: "✅ Imagem salva!" });
     },
     onError: (e: Error) => toast({ title: "Erro ao salvar imagem", description: e.message, variant: "destructive" }),
@@ -6583,13 +6585,9 @@ function DueloAdminSection() {
   const handleUploadForDuelo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadFile(file);
     const reader = new FileReader();
-    reader.onload = ev => {
-      compressImage(ev.target?.result as string, (b64, preview) => {
-        setUploadPreview(preview);
-        setUploadBase64(b64);
-      });
-    };
+    reader.onload = ev => setUploadPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -6698,10 +6696,10 @@ function DueloAdminSection() {
                       <input type="file" accept="image/*" onChange={handleUploadForDuelo} className="w-full text-xs" />
                       {uploadPreview && <img src={uploadPreview} alt="preview" className="h-20 w-full object-cover rounded-md" />}
                       <div className="flex gap-1">
-                        <Button size="sm" className="text-xs h-7 bg-purple-600 hover:bg-purple-700 flex-1" disabled={!uploadBase64 || uploadImageMutation.isPending} onClick={() => uploadBase64 && uploadImageMutation.mutate({ id: d.id, base64: uploadBase64, mime: "image/jpeg" })}>
+                        <Button size="sm" className="text-xs h-7 bg-purple-600 hover:bg-purple-700 flex-1" disabled={!uploadFile || uploadImageMutation.isPending} onClick={() => uploadFile && uploadImageMutation.mutate({ id: d.id, file: uploadFile })}>
                           {uploadImageMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Salvar"}
                         </Button>
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setUploadingImageFor(null); setUploadBase64(null); setUploadPreview(null); }}>
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setUploadingImageFor(null); setUploadFile(null); setUploadPreview(null); }}>
                           Cancelar
                         </Button>
                       </div>
