@@ -4615,9 +4615,11 @@ export async function registerRoutes(
         const pctB = totalEntries > 0 ? Math.round((countB / totalEntries) * 100) : 0;
         const grossPool = Math.round(totalEntries * (d.entryFee ?? 10) * 100) / 100;
         const prizePool = Math.round(grossPool * (1 - (d.houseCut ?? 0) / 100) * 100) / 100;
-        const userEntry = userId ? entries.find(e => e.userId === userId) ?? null : null;
+        const userEntries = userId ? entries.filter(e => e.userId === userId) : [];
+        const userCountA = userEntries.filter(e => e.side === "A").length;
+        const userCountB = userEntries.filter(e => e.side === "B").length;
         const { imageData, mimeType, ...dueloWithoutImage } = d;
-        return { ...dueloWithoutImage, hasImage: !!imageData, totalEntries, countA, countB, pctA, pctB, prizePool, userEntry };
+        return { ...dueloWithoutImage, hasImage: !!imageData, totalEntries, countA, countB, pctA, pctB, prizePool, userCountA, userCountB };
       }));
       res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -4658,7 +4660,6 @@ export async function registerRoutes(
       const duelo = duelos.find(d => d.id === dueloId);
       if (!duelo || duelo.status !== "open" || !duelo.active) return res.status(400).json({ error: "Duelo não disponível" });
       const entries = await storage.getDueloEntries(dueloId);
-      if (entries.some(e => e.userId === req.session!.userId)) return res.status(400).json({ error: "Você já participou deste duelo" });
       const user = await storage.getUserByCpf(req.session.userId);
       if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
       const fee = duelo.entryFee ?? 10;

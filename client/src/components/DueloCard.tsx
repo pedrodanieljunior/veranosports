@@ -19,7 +19,8 @@ interface DueloData {
   pctA: number;
   pctB: number;
   prizePool: number;
-  userEntry: { side: string } | null;
+  userCountA: number;
+  userCountB: number;
 }
 
 interface DueloCardProps {
@@ -35,7 +36,6 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
   const [pendingSide, setPendingSide] = useState<string | null>(null);
   const fee = duelo.entryFee ?? 10;
   const hasEnoughBalance = userBalance >= fee;
-  const alreadyVoted = !!duelo.userEntry;
 
   const enterMutation = useMutation({
     mutationFn: async (side: string) => {
@@ -131,14 +131,15 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
             const label = side === "A" ? duelo.optionA : duelo.optionB;
             const pct = side === "A" ? duelo.pctA : duelo.pctB;
             const count = side === "A" ? duelo.countA : duelo.countB;
-            const isMyVote = duelo.userEntry?.side === side;
+            const myCount = side === "A" ? duelo.userCountA : duelo.userCountB;
+            const isMyVote = myCount > 0;
             const isWinning = side === "A" ? duelo.pctA >= duelo.pctB : duelo.pctB > duelo.pctA;
 
             return (
               <button
                 key={side}
-                onClick={() => !alreadyVoted && handleVote(side)}
-                disabled={enterMutation.isPending || alreadyVoted}
+                onClick={() => handleVote(side)}
+                disabled={enterMutation.isPending}
                 className="flex-1 rounded-lg p-3 transition-all active:scale-95 disabled:cursor-default"
                 style={{
                   background: isMyVote
@@ -184,7 +185,9 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                 {isMyVote && (
                   <div className="flex items-center justify-center gap-1 mt-1.5">
                     <CheckCircle2 className="w-3 h-3" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }} />
-                    <span className="text-[10px] font-bold" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }}>Seu voto</span>
+                    <span className="text-[10px] font-bold" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }}>
+                      {myCount === 1 ? "Seu voto" : `Seus votos: ${myCount}`}
+                    </span>
                   </div>
                 )}
               </button>
@@ -193,7 +196,7 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
         </div>
 
         {/* Enter footer */}
-        {!alreadyVoted && !pendingSide && (
+        {!pendingSide && (
           <div className="text-center">
             {enterMutation.isPending ? (
               <div className="flex items-center justify-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
