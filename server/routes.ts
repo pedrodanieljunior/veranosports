@@ -2383,12 +2383,14 @@ export async function registerRoutes(
   app.get("/api/admin/users/:cpf/history", requireAdmin, async (req, res) => {
     try {
       const { cpf } = req.params;
-      const [transactions, bets, withdrawals, bolaoEntries, allBoloes] = await Promise.all([
+      const [transactions, bets, withdrawals, bolaoEntries, allBoloes, dueloEntries, allDuelos] = await Promise.all([
         storage.getTransactionsByUser(cpf),
         storage.getBetSlipsByUser(cpf),
         storage.getUserWithdrawalsByUser(cpf),
         storage.getBolaoEntriesByUser(cpf),
         storage.getBoloes(),
+        storage.getDueloEntriesByUser(cpf),
+        storage.getDuelos(),
       ]);
 
       const txTypeLabel: Record<string, string> = {
@@ -2445,6 +2447,23 @@ export async function registerRoutes(
           subtitle: bolao ? `${bolao.homeTeam} × ${bolao.awayTeam}` : `Bolão #${e.bolaoId}`,
           amount: null,
           status: e.prizeAwarded ? "won" : bolao?.status === "finished" ? "lost" : "pending",
+        });
+      }
+
+      for (const e of dueloEntries) {
+        const duelo = allDuelos.find(d => d.id === e.dueloId);
+        const myOption = e.side === "A" ? duelo?.optionA : duelo?.optionB;
+        let status = "pending";
+        if (duelo?.status === "finished" && duelo.winnerSide) {
+          status = e.side === duelo.winnerSide ? "won" : "lost";
+        }
+        events.push({
+          id: `dlo-${e.id}`, kind: "duelo",
+          date: e.createdAt as string,
+          title: `Duelo: ${myOption ?? e.side}`,
+          subtitle: duelo?.title ?? `Duelo #${e.dueloId}`,
+          amount: null,
+          status,
         });
       }
 
@@ -4459,6 +4478,43 @@ export async function registerRoutes(
       res.json(result);
     } catch (e) {
       res.status(500).json({ error: "Erro ao buscar palpites" });
+    }
+  });
+
+  app.get("/api/duelo/my-entries", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.json([]);
+      const allDuelos = await storage.getDuelos();
+      const userEntries = await storage.getDueloEntriesByUser(req.session.userId);
+      const result = userEntries.map(e => {
+        const duelo = allDuelos.find(d => d.id === e.dueloId);
+        if (!duelo) return null;
+        let status: "pending" | "won" | "lost" = "pending";
+        if (duelo.status === "finished" && duelo.winnerSide) {
+          status = e.side === duelo.winnerSide ? "won" : "lost";
+        }
+        const prizeAmount: number | null = (status === "won" && e.prizeAmount != null) ? e.prizeAmount : null;
+        return {
+          id: e.id,
+          dueloId: duelo.id,
+          title: duelo.title,
+          optionA: duelo.optionA,
+          optionB: duelo.optionB,
+          mySide: e.side,
+          myOption: e.side === "A" ? duelo.optionA : duelo.optionB,
+          dueloStatus: duelo.status,
+          winnerSide: duelo.winnerSide,
+          winnerOption: duelo.winnerSide ? (duelo.winnerSide === "A" ? duelo.optionA : duelo.optionB) : null,
+          prizeAwarded: e.prizeAwarded,
+          prizeAmount,
+          entryFee: duelo.entryFee,
+          status,
+          createdAt: e.createdAt,
+        };
+      }).filter(Boolean);
+      res.json(result);
+    } catch (e) {
+      res.status(500).json({ error: "Erro ao buscar duelos" });
     }
   });
 

@@ -352,9 +352,11 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
 }
 
 export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
-  const [activeTab, setActiveTab] = useState<"apostas" | "bolao">("apostas");
+  const [activeTab, setActiveTab] = useState<"apostas" | "bolao" | "duelo">("apostas");
   const [palpites, setPalpites] = useState<any[]>([]);
   const [palpitesLoading, setPalpitesLoading] = useState(true);
+  const [duelos, setDuelos] = useState<any[]>([]);
+  const [duelosLoading, setDuelosLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -368,6 +370,15 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
       })
       .catch(() => setPalpites([]))
       .finally(() => setPalpitesLoading(false));
+  }, []);
+
+  useEffect(() => {
+    setDuelosLoading(true);
+    fetch("/api/duelo/my-entries", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setDuelos(data))
+      .catch(() => setDuelos([]))
+      .finally(() => setDuelosLoading(false));
   }, []);
 
   const { data: cashoutSettings } = useQuery<{ earlyExitPct: number; cashOutPct: number }>({
@@ -425,6 +436,20 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
               >
                 <Trophy className="w-3.5 h-3.5" />
                 Meus Palpites
+              </button>
+            )}
+            {duelos.length > 0 && (
+              <button
+                onClick={() => setActiveTab("duelo")}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors border-b-2"
+                style={{
+                  borderColor: activeTab === "duelo" ? "#dc2626" : "transparent",
+                  color: activeTab === "duelo" ? "#dc2626" : "hsl(var(--muted-foreground))",
+                }}
+                data-testid="tab-duelo-history"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Meus Duelos
               </button>
             )}
           </div>
@@ -543,6 +568,66 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                             {isWon && entry.prizeAmount != null && (
                               <div className="text-[11px] mt-0.5 font-bold text-green-300">
                                 + R${entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+            {/* ── Aba Meus Duelos ── */}
+            {activeTab === "duelo" && (
+              duelosLoading ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
+                  <div className="w-4 h-4 border-2 border-red-400/40 border-t-red-400 rounded-full animate-spin" />
+                  Carregando...
+                </div>
+              ) : duelos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <CheckCircle2 className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                  <p className="text-muted-foreground">Nenhum duelo registrado ainda</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {duelos.map((entry: any) => {
+                    const isWon = entry.status === "won";
+                    const isLost = entry.status === "lost";
+                    const isSideA = entry.mySide === "A";
+                    const sideColor = isSideA ? "#ef4444" : "#3b82f6";
+                    return (
+                      <div
+                        key={entry.id}
+                        className="rounded-xl border overflow-hidden"
+                        style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
+                        data-testid={`duelo-history-${entry.id}`}
+                      >
+                        <div className="flex items-start gap-3 px-4 py-3">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : "bg-yellow-400"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground truncate">{entry.title}</p>
+                            <p className="text-sm font-semibold mt-0.5" style={{ color: sideColor }}>
+                              {entry.myOption}
+                            </p>
+                            {entry.dueloStatus === "finished" && entry.winnerOption && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Vencedor: {entry.winnerOption}</p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                              {new Date(entry.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className={`text-xs font-semibold ${isWon ? "text-green-400" : isLost ? "text-red-400" : "text-yellow-400"}`}>
+                              {isWon ? "✓ Ganhou!" : isLost ? "✗ Perdeu" : "Aguardando"}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              − R$ {(entry.entryFee ?? 10).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </div>
+                            {isWon && entry.prizeAmount != null && (
+                              <div className="text-[11px] mt-0.5 font-bold text-green-300">
+                                + R$ {entry.prizeAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                               </div>
                             )}
                           </div>
