@@ -4484,36 +4484,42 @@ export async function registerRoutes(
   app.get("/api/duelo/my-entries", async (req, res) => {
     try {
       if (!req.session?.userId) return res.json([]);
-      const allDuelos = await storage.getDuelos();
-      const userEntries = await storage.getDueloEntriesByUser(req.session.userId);
-      const result = userEntries.map(e => {
-        const duelo = allDuelos.find(d => d.id === e.dueloId);
-        if (!duelo) return null;
+      const userId = req.session.userId;
+      const rows = await pool.query(`
+        SELECT de.id, de.side, de.prize_awarded, de.prize_amount, de.created_at,
+               d.id as duelo_id, d.title, d.option_a, d.option_b, d.entry_fee,
+               d.status as duelo_status, d.winner_side
+        FROM duelo_entries de
+        JOIN duelos d ON d.id = de.duelo_id
+        WHERE de.user_id = $1
+        ORDER BY de.created_at DESC
+      `, [userId]);
+      const result = rows.rows.map((r: any) => {
         let status: "pending" | "won" | "lost" = "pending";
-        if (duelo.status === "finished" && duelo.winnerSide) {
-          status = e.side === duelo.winnerSide ? "won" : "lost";
+        if (r.duelo_status === "finished" && r.winner_side) {
+          status = r.side === r.winner_side ? "won" : "lost";
         }
-        const prizeAmount: number | null = (status === "won" && e.prizeAmount != null) ? e.prizeAmount : null;
         return {
-          id: e.id,
-          dueloId: duelo.id,
-          title: duelo.title,
-          optionA: duelo.optionA,
-          optionB: duelo.optionB,
-          mySide: e.side,
-          myOption: e.side === "A" ? duelo.optionA : duelo.optionB,
-          dueloStatus: duelo.status,
-          winnerSide: duelo.winnerSide,
-          winnerOption: duelo.winnerSide ? (duelo.winnerSide === "A" ? duelo.optionA : duelo.optionB) : null,
-          prizeAwarded: e.prizeAwarded,
-          prizeAmount,
-          entryFee: duelo.entryFee,
+          id: r.id,
+          dueloId: r.duelo_id,
+          title: r.title,
+          optionA: r.option_a,
+          optionB: r.option_b,
+          mySide: r.side,
+          myOption: r.side === "A" ? r.option_a : r.option_b,
+          dueloStatus: r.duelo_status,
+          winnerSide: r.winner_side,
+          winnerOption: r.winner_side ? (r.winner_side === "A" ? r.option_a : r.option_b) : null,
+          prizeAwarded: r.prize_awarded,
+          prizeAmount: (status === "won" && r.prize_amount != null) ? Number(r.prize_amount) : null,
+          entryFee: r.entry_fee,
           status,
-          createdAt: e.createdAt,
+          createdAt: r.created_at,
         };
-      }).filter(Boolean);
+      });
       res.json(result);
-    } catch (e) {
+    } catch (e: any) {
+      console.error("[duelo/my-entries]", e?.message);
       res.status(500).json({ error: "Erro ao buscar duelos" });
     }
   });

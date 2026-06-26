@@ -360,21 +360,25 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const fetchPalpites = () => {
     setPalpitesLoading(true);
     setDuelosLoading(true);
     Promise.all([
       fetch("/api/bolao/my-entries", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
       fetch("/api/duelo/my-entries", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([bolaoData, dueloData]) => {
-      setPalpites(bolaoData);
-      setDuelos(dueloData);
-      if (bolaoData.length > 0 || dueloData.length > 0) setActiveTab("bolao");
-    }).finally(() => {
+      const b = Array.isArray(bolaoData) ? bolaoData : [];
+      const d = Array.isArray(dueloData) ? dueloData : [];
+      setPalpites(b);
+      setDuelos(d);
+      if (b.length > 0 || d.length > 0) setActiveTab("bolao");
+    }).catch(() => {}).finally(() => {
       setPalpitesLoading(false);
       setDuelosLoading(false);
     });
-  }, []);
+  };
+
+  useEffect(() => { fetchPalpites(); }, []);
 
   const { data: cashoutSettings } = useQuery<{ earlyExitPct: number; cashOutPct: number }>({
     queryKey: ["/api/cashout-settings"],
