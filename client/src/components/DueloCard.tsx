@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Trophy, Loader2, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -31,6 +32,7 @@ interface DueloCardProps {
 export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: DueloCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [pendingSide, setPendingSide] = useState<string | null>(null);
   const fee = duelo.entryFee ?? 10;
   const hasEnoughBalance = userBalance >= fee;
   const alreadyVoted = !!duelo.userEntry;
@@ -44,9 +46,13 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
     onSuccess: (_data, side) => {
       queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      setPendingSide(null);
       toast({ title: "✅ Participação confirmada!", description: `Você escolheu: ${side === "A" ? duelo.optionA : duelo.optionB}` });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => {
+      setPendingSide(null);
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    },
   });
 
   const handleVote = (side: string) => {
@@ -55,7 +61,11 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
       toast({ title: "Saldo insuficiente", description: `Você precisa de R$ ${fee.toFixed(2)} em saldo real para participar.`, variant: "destructive" });
       return;
     }
-    enterMutation.mutate(side);
+    setPendingSide(side);
+  };
+
+  const confirmVote = () => {
+    if (pendingSide) enterMutation.mutate(pendingSide);
   };
 
   const fmt = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -183,7 +193,7 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
         </div>
 
         {/* Enter footer */}
-        {!alreadyVoted && (
+        {!alreadyVoted && !pendingSide && (
           <div className="text-center">
             {enterMutation.isPending ? (
               <div className="flex items-center justify-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
@@ -196,6 +206,43 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                   : `Participar por R$ ${fee.toFixed(2)} — clique em um lado`}
               </p>
             )}
+          </div>
+        )}
+
+        {/* Confirmation panel */}
+        {pendingSide && !enterMutation.isPending && (
+          <div
+            className="rounded-lg p-3 mt-1"
+            style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            <p className="text-xs text-center font-semibold text-white mb-1">
+              Confirmar participação?
+            </p>
+            <p className="text-[11px] text-center mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
+              {pendingSide === "A" ? duelo.optionA : duelo.optionB} · R$ {fee.toFixed(2)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={confirmVote}
+                className="flex-1 rounded-md py-1.5 text-xs font-bold text-white transition-all active:scale-95"
+                style={{ background: pendingSide === "A" ? "#dc2626" : "#2563eb" }}
+              >
+                ✅ Confirmar
+              </button>
+              <button
+                onClick={() => setPendingSide(null)}
+                className="flex-1 rounded-md py-1.5 text-xs font-bold transition-all active:scale-95"
+                style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {enterMutation.isPending && (
+          <div className="flex items-center justify-center gap-2 text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <Loader2 className="w-3 h-3 animate-spin" /> Registrando...
           </div>
         )}
       </div>
