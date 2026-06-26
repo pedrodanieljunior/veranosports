@@ -4739,18 +4739,26 @@ export async function registerRoutes(
       const duelos = await storage.getDuelos();
       const result = await Promise.all(duelos.map(async d => {
         const entries = await storage.getDueloEntries(d.id);
-        const entriesWithNames = await Promise.all(entries.map(async e => {
-          const user = await storage.getUserByCpf(e.userId);
-          return { ...e, userName: user?.name ?? e.userId };
-        }));
         const countA = entries.filter(e => e.side === "A").length;
         const countB = entries.filter(e => e.side === "B").length;
         const grossPool = Math.round(entries.length * (d.entryFee ?? 10) * 100) / 100;
         const prizePool = Math.round(grossPool * (1 - (d.houseCut ?? 0) / 100) * 100) / 100;
         const { imageData, mimeType, ...dueloWithoutImage } = d;
-        return { ...dueloWithoutImage, hasImage: !!imageData, totalEntries: entries.length, countA, countB, prizePool, entries: entriesWithNames };
+        return { ...dueloWithoutImage, hasImage: !!imageData, totalEntries: entries.length, countA, countB, prizePool };
       }));
       res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/admin/duelo/:id/entries", requireAdmin, async (req, res) => {
+    try {
+      const dueloId = parseInt(req.params.id);
+      const entries = await storage.getDueloEntries(dueloId);
+      const entriesWithNames = await Promise.all(entries.map(async e => {
+        const user = await storage.getUserByCpf(e.userId);
+        return { ...e, userName: user?.name ?? e.userId };
+      }));
+      res.json(entriesWithNames);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
