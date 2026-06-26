@@ -163,7 +163,7 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                 {/* Pct + count */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold" style={{ color: isMyVote ? "#c084fc" : "rgba(255,255,255,0.7)" }}>
-                    {pct}%
+                    {duelo.totalEntries === 0 ? "—" : `${pct}%`}
                   </span>
                   <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
                     {count} {count === 1 ? "voto" : "votos"}

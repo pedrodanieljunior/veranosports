@@ -4611,8 +4611,8 @@ export async function registerRoutes(
         const totalEntries = entries.length;
         const countA = entries.filter(e => e.side === "A").length;
         const countB = entries.filter(e => e.side === "B").length;
-        const pctA = totalEntries > 0 ? Math.round((countA / totalEntries) * 100) : 50;
-        const pctB = totalEntries > 0 ? Math.round((countB / totalEntries) * 100) : 50;
+        const pctA = totalEntries > 0 ? Math.round((countA / totalEntries) * 100) : 0;
+        const pctB = totalEntries > 0 ? Math.round((countB / totalEntries) * 100) : 0;
         const grossPool = Math.round(totalEntries * (d.entryFee ?? 10) * 100) / 100;
         const prizePool = Math.round(grossPool * (1 - (d.houseCut ?? 0) / 100) * 100) / 100;
         const userEntry = userId ? entries.find(e => e.userId === userId) ?? null : null;
@@ -4629,7 +4629,7 @@ export async function registerRoutes(
       if (!duelo?.imageData) return res.status(404).end();
       const buf = Buffer.from(duelo.imageData, "base64");
       res.set("Content-Type", duelo.mimeType || "image/jpeg");
-      res.set("Cache-Control", "public, max-age=86400");
+      res.set("Cache-Control", "no-cache, must-revalidate");
       res.send(buf);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });

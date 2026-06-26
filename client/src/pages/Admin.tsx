@@ -6496,6 +6496,9 @@ function DueloAdminSection() {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<string>("image/jpeg");
   const [form, setForm] = useState({ title: "", description: "", optionA: "", optionB: "", entryFee: "10", houseCut: "10", startsAt: "", endsAt: "" });
+  const [uploadingImageFor, setUploadingImageFor] = useState<number | null>(null);
+  const [uploadBase64, setUploadBase64] = useState<string | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
   interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; }
   const { data: duelos = [] } = useQuery<DueloAdmin[]>({ queryKey: ["/api/admin/duelo"], staleTime: 10_000 });
@@ -6559,6 +6562,46 @@ function DueloAdminSection() {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] }); queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] }); },
   });
+
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ id, base64, mime }: { id: number; base64: string; mime: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/duelo/${id}`, { imageBase64: base64, imageMime: mime });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/duelo"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/duelo/active"] });
+      setUploadingImageFor(null); setUploadBase64(null); setUploadPreview(null);
+      toast({ title: "✅ Imagem salva!" });
+    },
+    onError: (e: Error) => toast({ title: "Erro ao salvar imagem", description: e.message, variant: "destructive" }),
+  });
+
+  const handleUploadForDuelo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL("image/jpeg", 0.82);
+        setUploadPreview(compressed);
+        setUploadBase64(compressed.split(",")[1]);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -6659,12 +6702,30 @@ function DueloAdminSection() {
                     <span>Entrada: R$ {d.entryFee.toFixed(2)}</span>
                   </div>
                   {d.winnerSide && <p className="text-xs text-green-500 mt-0.5">Vencedor: Opção {d.winnerSide} ({d.winnerSide === "A" ? d.optionA : d.optionB})</p>}
+                  {/* Image upload inline */}
+                  {uploadingImageFor === d.id && (
+                    <div className="mt-2 space-y-2">
+                      <input type="file" accept="image/*" onChange={handleUploadForDuelo} className="w-full text-xs" />
+                      {uploadPreview && <img src={uploadPreview} alt="preview" className="h-20 w-full object-cover rounded-md" />}
+                      <div className="flex gap-1">
+                        <Button size="sm" className="text-xs h-7 bg-purple-600 hover:bg-purple-700 flex-1" disabled={!uploadBase64 || uploadImageMutation.isPending} onClick={() => uploadBase64 && uploadImageMutation.mutate({ id: d.id, base64: uploadBase64, mime: "image/jpeg" })}>
+                          {uploadImageMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Salvar"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setUploadingImageFor(null); setUploadBase64(null); setUploadPreview(null); }}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1 shrink-0">
                   {d.status === "open" && (
                     <>
                       <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => toggleMutation.mutate({ id: d.id, active: !d.active })}>
                         {d.active ? "Desativar" : "Ativar"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-xs h-7 text-purple-400 border-purple-500/40" onClick={() => { setUploadingImageFor(d.id); setUploadBase64(null); setUploadPreview(null); }}>
+                        {d.hasImage ? "🖼️ Trocar" : "🖼️ Imagem"}
                       </Button>
                       <Button size="sm" className="text-xs h-7 bg-purple-600 hover:bg-purple-700" onClick={() => setFinishModal({ id: d.id, title: d.title })}>
                         Finalizar
