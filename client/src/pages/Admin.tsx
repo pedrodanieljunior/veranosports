@@ -6501,7 +6501,7 @@ function DueloAdminSection() {
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
   interface DueloAdmin { id: number; title: string; description: string; optionA: string; optionB: string; hasImage: boolean; entryFee: number; houseCut: number; status: string; winnerSide: string | null; active: boolean; totalEntries: number; countA: number; countB: number; prizePool: number; entries: { id: number; userId: string; userName: string; side: string; prizeAwarded: boolean; createdAt: string }[]; }
-  const { data: duelos = [] } = useQuery<DueloAdmin[]>({ queryKey: ["/api/admin/duelo"], staleTime: 10_000 });
+  const { data: duelos = [] } = useQuery<DueloAdmin[]>({ queryKey: ["/api/admin/duelo"], staleTime: 0 });
   const [expandedDuelo, setExpandedDuelo] = useState<Record<number, boolean>>({});
 
   const compressImage = (dataUrl: string, onDone: (b64: string, preview: string) => void) => {
@@ -6693,7 +6693,7 @@ function DueloAdminSection() {
                   {d.winnerSide && <p className="text-xs text-green-500 mt-0.5">Vencedor: Opção {d.winnerSide} ({d.winnerSide === "A" ? d.optionA : d.optionB})</p>}
 
                   {/* Participantes por opção */}
-                  {(d.entries ?? []).length > 0 && (
+                  {d.totalEntries > 0 && (
                     <div>
                       <button
                         className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-1 mb-2"
