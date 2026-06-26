@@ -6511,7 +6511,7 @@ function DueloAdminSection() {
     const reader = new FileReader();
     reader.onload = ev => {
       const dataUrl = ev.target?.result as string;
-      const img = new Image();
+      const img = document.createElement("img");
       img.onload = () => {
         const MAX = 1200;
         let w = img.width, h = img.height;
@@ -6583,7 +6583,7 @@ function DueloAdminSection() {
     const reader = new FileReader();
     reader.onload = ev => {
       const dataUrl = ev.target?.result as string;
-      const img = new Image();
+      const img = document.createElement("img");
       img.onload = () => {
         const MAX = 1200;
         let w = img.width, h = img.height;
