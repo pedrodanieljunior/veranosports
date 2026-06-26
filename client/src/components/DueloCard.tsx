@@ -64,9 +64,9 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
     <div
       className="mx-3 mb-3 rounded-xl overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #1a0533 0%, #3b0764 40%, #4c1d95 70%, #1a0533 100%)",
-        border: "2px solid #7c3aed",
-        boxShadow: "0 4px 24px rgba(124,58,237,0.35), 0 0 0 1px rgba(124,58,237,0.2)",
+        background: "linear-gradient(135deg, #1a0a0a 0%, #3b0a0a 25%, #1a0a2a 50%, #0a0a3b 75%, #1a0a0a 100%)",
+        border: "2px solid #dc2626",
+        boxShadow: "0 4px 24px rgba(220,38,38,0.3), 0 0 0 1px rgba(37,99,235,0.2)",
       }}
       data-testid="duelo-card"
     >
@@ -86,13 +86,13 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
       <div className="px-4 pt-3 pb-3">
         {/* Header badge */}
         <div className="flex items-center justify-center mb-1">
-          <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#c084fc" }}>
+          <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#f87171" }}>
             ⚔️ Duelo
           </span>
         </div>
 
         {/* Title */}
-        <h3 className="text-center font-black text-lg leading-tight mb-0.5" style={{ color: "#fff", textShadow: "0 1px 8px rgba(192,132,252,0.4)" }}>
+        <h3 className="text-center font-black text-lg leading-tight mb-0.5" style={{ color: "#fff", textShadow: "0 1px 8px rgba(220,38,38,0.5)" }}>
           {duelo.title}
         </h3>
         {duelo.description && (
@@ -102,18 +102,18 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
         {/* Stats row */}
         <div className="flex items-center justify-center gap-4 mb-3">
           <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" style={{ color: "#c084fc" }} />
+            <Users className="w-3.5 h-3.5" style={{ color: "#93c5fd" }} />
             <span className="text-xs font-semibold text-white">{duelo.totalEntries} {duelo.totalEntries === 1 ? "participante" : "participantes"}</span>
           </div>
           <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.2)" }} />
           <div className="flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5" style={{ color: "#c084fc" }} />
+            <Trophy className="w-3.5 h-3.5" style={{ color: "#fca5a5" }} />
             <span className="text-xs font-semibold text-white">R$ {fmt(duelo.prizePool)} em prêmios</span>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="border-t mb-3" style={{ borderColor: "rgba(192,132,252,0.3)" }} />
+        <div className="border-t mb-3" style={{ borderColor: "rgba(220,38,38,0.3)" }} />
 
         {/* Two sides */}
         <div className="flex gap-2 mb-3">
@@ -132,18 +132,18 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                 className="flex-1 rounded-lg p-3 transition-all active:scale-95 disabled:cursor-default"
                 style={{
                   background: isMyVote
-                    ? "rgba(192,132,252,0.25)"
+                    ? (side === "A" ? "rgba(220,38,38,0.2)" : "rgba(37,99,235,0.2)")
                     : "rgba(255,255,255,0.07)",
                   border: isMyVote
-                    ? "2px solid #c084fc"
+                    ? (side === "A" ? "2px solid #ef4444" : "2px solid #3b82f6")
                     : isWinning && duelo.totalEntries > 0
-                      ? "2px solid rgba(192,132,252,0.4)"
+                      ? (side === "A" ? "2px solid rgba(220,38,38,0.5)" : "2px solid rgba(37,99,235,0.5)")
                       : "2px solid rgba(255,255,255,0.12)",
                 }}
                 data-testid={`duelo-vote-${side}`}
               >
                 {/* Option label */}
-                <p className="font-black text-sm text-center mb-2 leading-tight" style={{ color: isMyVote ? "#c084fc" : "#fff" }}>
+                <p className="font-black text-sm text-center mb-2 leading-tight" style={{ color: isMyVote ? (side === "A" ? "#fca5a5" : "#93c5fd") : "#fff" }}>
                   {label}
                 </p>
 
@@ -153,16 +153,16 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${pct}%`,
-                      background: isMyVote
-                        ? "linear-gradient(90deg, #a855f7, #c084fc)"
-                        : "linear-gradient(90deg, #6d28d9, #8b5cf6)",
+                      background: side === "A"
+                        ? "linear-gradient(90deg, #991b1b, #ef4444)"
+                        : "linear-gradient(90deg, #1e3a8a, #3b82f6)",
                     }}
                   />
                 </div>
 
                 {/* Pct + count */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold" style={{ color: isMyVote ? "#c084fc" : "rgba(255,255,255,0.7)" }}>
+                  <span className="text-xs font-bold" style={{ color: isMyVote ? (side === "A" ? "#fca5a5" : "#93c5fd") : "rgba(255,255,255,0.7)" }}>
                     {duelo.totalEntries === 0 ? "—" : `${pct}%`}
                   </span>
                   <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
@@ -173,8 +173,8 @@ export function DueloCard({ duelo, isLoggedIn, userBalance, onLoginRequired }: D
                 {/* My vote badge */}
                 {isMyVote && (
                   <div className="flex items-center justify-center gap-1 mt-1.5">
-                    <CheckCircle2 className="w-3 h-3" style={{ color: "#c084fc" }} />
-                    <span className="text-[10px] font-bold" style={{ color: "#c084fc" }}>Seu voto</span>
+                    <CheckCircle2 className="w-3 h-3" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }} />
+                    <span className="text-[10px] font-bold" style={{ color: side === "A" ? "#fca5a5" : "#93c5fd" }}>Seu voto</span>
                   </div>
                 )}
               </button>
