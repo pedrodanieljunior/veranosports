@@ -6712,7 +6712,7 @@ function DueloAdminSection() {
                       <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => toggleMutation.mutate({ id: d.id, active: !d.active })}>
                         {d.active ? "Desativar" : "Ativar"}
                       </Button>
-                      <Button size="sm" variant="outline" className="text-xs h-7 text-purple-400 border-purple-500/40" onClick={() => { setUploadingImageFor(d.id); setUploadBase64(null); setUploadPreview(null); }}>
+                      <Button size="sm" variant="outline" className="text-xs h-7 text-purple-400 border-purple-500/40" onClick={() => { setUploadingImageFor(d.id); setUploadFile(null); setUploadPreview(null); }}>
                         {d.hasImage ? "🖼️ Trocar" : "🖼️ Imagem"}
                       </Button>
                       <Button size="sm" className="text-xs h-7 bg-purple-600 hover:bg-purple-700" onClick={() => setFinishModal({ id: d.id, title: d.title })}>
