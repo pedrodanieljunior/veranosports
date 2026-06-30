@@ -4684,9 +4684,10 @@ function UsersTab() {
                 else if (ev.kind === "duelo") { kindIcon = "⚔️"; }
                 else if (ev.subKind && txIconMap[ev.subKind]) { kindIcon = txIconMap[ev.subKind]; }
                 const isBetWon = ev.kind === "bet" && ev.subKind === "won";
-                const isBetPending = ev.kind === "bet" && (ev.subKind === "pending" || ev.subKind === "anulado");
+                const isNeutral = (ev.kind === "bet" && (ev.subKind === "pending" || ev.subKind === "anulado" || ev.subKind === "cashed_out"))
+                  || (ev.kind === "transaction" && ev.subKind === "bet");
                 const isIncome = (ev.amount != null && ev.amount > 0) || isBetWon;
-                const isOutcome = ev.amount != null && ev.amount < 0 && !isBetWon && !isBetPending;
+                const isOutcome = ev.amount != null && ev.amount < 0 && !isBetWon && !isNeutral;
                 const statusColor = (ev.status === "won" || ev.status === "paid") ? "text-green-400"
                   : (ev.status === "lost" || ev.status === "rejected") ? "text-red-400"
                   : "text-yellow-400";
