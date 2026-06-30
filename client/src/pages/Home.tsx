@@ -523,6 +523,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
+                    <NotificationPanel />
                     <button
                       onClick={() => { setShowHistory(true); setShowBetSlip(false); }}
                       className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-white font-bold text-sm shadow-sm transition-colors"
@@ -545,6 +546,8 @@ export default function Home() {
 
             {/* Spacer to push content down to align with sidebar leagues */}
             <div className="flex-shrink-0" style={{ height: "7vh" }} />
+
+            <NotificationBanner />
 
             {/* Promo banners */}
             <div className="pb-4 flex-shrink-0" style={{ paddingRight: "8vw" }}>

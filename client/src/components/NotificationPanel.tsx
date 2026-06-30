@@ -137,8 +137,12 @@ export function NotificationBanner() {
 
   const { data: notifications = [] } = useQuery<Notif[]>({
     queryKey: ["/api/notifications"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/notifications");
+      return res.json();
+    },
     enabled: !!user,
-    refetchInterval: 60000,
+    refetchInterval: 30000,
   });
 
   const markOneRead = useMutation({
