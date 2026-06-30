@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Bell, X, Megaphone, Tag, AlertTriangle, CheckCheck } from "lucide-react";
+import { Bell, X, Megaphone, Tag, AlertTriangle, CheckCheck, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Notif {
   id: number;
@@ -13,6 +14,7 @@ interface Notif {
   type: string;
   createdAt: string;
   read: boolean;
+  hasImage?: boolean;
 }
 
 const typeIcon = (type: string) => {
@@ -29,6 +31,7 @@ const typeColor = (type: string) => {
 
 export function NotificationPanel() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -60,8 +63,14 @@ export function NotificationPanel() {
 
   const dismissAll = useMutation({
     mutationFn: () => apiRequest("POST", "/api/notifications/dismiss-all"),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
-    onError: (e) => console.error("dismissAll error:", e),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      toast({ description: "Notificações limpas." });
+    },
+    onError: (e: any) => {
+      console.error("dismissAll error:", e);
+      toast({ variant: "destructive", description: "Erro ao limpar notificações." });
+    },
   });
 
   const handleOpen = () => {
@@ -69,15 +78,19 @@ export function NotificationPanel() {
       const rect = btnRef.current.getBoundingClientRect();
       const panelWidth = 300;
       const margin = 8;
-      // Align panel's right edge to button's right edge, but clamp so it doesn't overflow left
       let left = rect.right - panelWidth;
       if (left < margin) left = margin;
-      // Also clamp so it doesn't overflow right
       if (left + panelWidth > window.innerWidth - margin) left = window.innerWidth - panelWidth - margin;
       setPanelPos({ top: rect.bottom + 6, left });
     }
     setOpen(o => !o);
     if (unreadCount > 0) markAllRead.mutate();
+  };
+
+  const handleDismissAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    dismissAll.mutate();
   };
 
   useEffect(() => {
@@ -106,70 +119,76 @@ export function NotificationPanel() {
       </button>
 
       {open && createPortal(
-        <>
-          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+          onMouseDown={() => setOpen(false)}
+        >
           <div
-            className="fixed z-[9999] rounded-xl shadow-2xl overflow-hidden"
             style={{
+              position: "fixed",
               top: panelPos.top,
               left: panelPos.left,
               width: 300,
+              zIndex: 9999,
               background: "#1a1f2e",
               border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "80vh",
             }}
+            onMouseDown={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="flex items-center gap-2">
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Bell className="w-4 h-4 text-white/70" />
-                <span className="text-sm font-semibold text-white">Notificações</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "white" }}>Notificações</span>
                 {unreadCount > 0 && (
                   <Badge className="h-4 px-1.5 text-[9px] bg-red-500 text-white border-0">{unreadCount}</Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {notifications.some(n => !n.read) && (
-                  <button onClick={() => markAllRead.mutate()} className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  <button
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={() => markAllRead.mutate()}
+                    style={{ fontSize: 10, color: "#60a5fa", display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}
+                  >
                     <CheckCheck className="w-3 h-3" /> Marcar tudo
                   </button>
                 )}
-                {notifications.length > 0 && (
-                  <button
-                    onClick={() => dismissAll.mutate()}
-                    disabled={dismissAll.isPending}
-                    className="text-[10px] text-red-400/70 hover:text-red-400 transition-colors"
-                    title="Limpar todas as notificações"
-                  >
-                    Limpar tudo
-                  </button>
-                )}
-                <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white/80">
+                <button
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={() => setOpen(false)}
+                  style={{ color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", lineHeight: 1 }}
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
+            {/* List */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
               {notifications.length === 0 ? (
-                <div className="py-10 text-center">
+                <div style={{ padding: "40px 16px", textAlign: "center" }}>
                   <Bell className="w-8 h-8 text-white/20 mx-auto mb-2" />
-                  <p className="text-xs text-white/40">Nenhuma notificação</p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Nenhuma notificação</p>
                 </div>
               ) : (
-                <div className="p-2 space-y-1.5">
+                <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                   {notifications.map(n => (
                     <div
                       key={n.id}
                       className={`rounded-xl border overflow-hidden transition-opacity ${!n.read ? "opacity-100" : "opacity-70"}`}
                       style={{ borderColor: n.hasImage ? "rgba(255,255,255,0.12)" : undefined }}
                     >
-                      {/* Banner de imagem */}
                       {n.hasImage && (
                         <div className="w-full h-28 overflow-hidden">
                           <img src={`/api/notifications/${n.id}/image`} alt={n.title} className="w-full h-full object-cover" />
                         </div>
                       )}
-
-                      {/* Corpo */}
                       <div className={`p-3 ${n.hasImage ? "bg-[#0f0f19]" : typeColor(n.type)}`}>
                         <div className="flex items-start justify-between gap-1 mb-1">
                           <div className="flex items-center gap-1.5">
@@ -177,6 +196,7 @@ export function NotificationPanel() {
                             <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
                           </div>
                           <button
+                            onMouseDown={e => e.stopPropagation()}
                             onClick={(e) => { e.stopPropagation(); dismiss.mutate(n.id); }}
                             className="flex-shrink-0 text-white/30 hover:text-red-400 transition-colors"
                             title="Excluir"
@@ -195,8 +215,39 @@ export function NotificationPanel() {
                 </div>
               )}
             </div>
+
+            {/* Footer — Limpar tudo */}
+            {notifications.length > 0 && (
+              <div
+                style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "8px 16px", flexShrink: 0 }}
+                onMouseDown={e => e.stopPropagation()}
+              >
+                <button
+                  onClick={handleDismissAll}
+                  onMouseDown={e => e.stopPropagation()}
+                  disabled={dismissAll.isPending}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "6px 0",
+                    fontSize: 12,
+                    color: dismissAll.isPending ? "rgba(255,255,255,0.3)" : "rgba(248,113,113,0.8)",
+                    background: "none",
+                    border: "none",
+                    cursor: dismissAll.isPending ? "not-allowed" : "pointer",
+                    borderRadius: 6,
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {dismissAll.isPending ? "Limpando..." : "Limpar tudo"}
+                </button>
+              </div>
+            )}
           </div>
-        </>,
+        </div>,
         document.body
       )}
     </>
