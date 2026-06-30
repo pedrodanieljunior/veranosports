@@ -30,7 +30,7 @@ const typeColor = (type: string) => {
 export function NotificationPanel() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const { data: notifications = [] } = useQuery<Notif[]>({
@@ -56,10 +56,14 @@ export function NotificationPanel() {
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setPanelPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      const panelWidth = 300;
+      const margin = 8;
+      // Align panel's right edge to button's right edge, but clamp so it doesn't overflow left
+      let left = rect.right - panelWidth;
+      if (left < margin) left = margin;
+      // Also clamp so it doesn't overflow right
+      if (left + panelWidth > window.innerWidth - margin) left = window.innerWidth - panelWidth - margin;
+      setPanelPos({ top: rect.bottom + 6, left });
     }
     setOpen(o => !o);
     if (unreadCount > 0) markAllRead.mutate();
@@ -94,10 +98,11 @@ export function NotificationPanel() {
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[9999] w-80 rounded-xl shadow-2xl overflow-hidden"
+            className="fixed z-[9999] rounded-xl shadow-2xl overflow-hidden"
             style={{
               top: panelPos.top,
-              right: panelPos.right,
+              left: panelPos.left,
+              width: 300,
               background: "#1a1f2e",
               border: "1px solid rgba(255,255,255,0.1)",
             }}
