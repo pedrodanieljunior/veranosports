@@ -53,6 +53,11 @@ export function NotificationPanel() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
+  const dismiss = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/notifications/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+  });
+
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
@@ -138,14 +143,22 @@ export function NotificationPanel() {
                   {notifications.map(n => (
                     <div
                       key={n.id}
-                      onClick={() => { if (!n.read) markOneRead.mutate(n.id); }}
-                      className={`relative p-3 rounded-lg border cursor-default transition-colors ${typeColor(n.type)} ${!n.read ? "opacity-100" : "opacity-70"}`}
+                      className={`relative p-3 rounded-lg border transition-colors ${typeColor(n.type)} ${!n.read ? "opacity-100" : "opacity-70"}`}
                     >
-                      {!n.read && <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-blue-400" />}
                       <div className="flex items-start gap-2">
                         <span className="mt-0.5 flex-shrink-0">{typeIcon(n.type)}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); dismiss.mutate(n.id); }}
+                              className="flex-shrink-0 text-white/30 hover:text-red-400 transition-colors ml-1 mt-0.5"
+                              title="Excluir notificação"
+                              data-testid={`button-dismiss-notif-${n.id}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
                           <p className="text-[11px] text-white/70 mt-0.5 leading-snug">{n.body}</p>
                           <p className="text-[10px] text-white/40 mt-1">
                             {new Date(n.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}

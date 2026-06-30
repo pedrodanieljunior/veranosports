@@ -558,6 +558,7 @@ export const notificationReadsTable = pgTable("notification_reads", {
   notificationId: integer("notification_id").notNull(),
   userCpf: text("user_cpf").notNull(),
   readAt: timestamp("read_at").notNull().defaultNow(),
+  dismissed: boolean("dismissed").notNull().default(false),
 });
 
 export type Notification = typeof notificationsTable.$inferSelect;

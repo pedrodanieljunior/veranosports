@@ -7397,6 +7397,14 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
+  app.delete("/api/notifications/:id", async (req: any, res) => {
+    try {
+      const cpf = req.session?.userId;
+      if (!cpf) return res.status(401).json({ error: "Não autenticado" });
+      await storage.dismissNotification(Number(req.params.id), cpf);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
 
   return httpServer;
 }

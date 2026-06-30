@@ -149,6 +149,7 @@ export interface IStorage {
   getUnreadCountForUser(userCpf: string): Promise<number>;
   markNotificationRead(notificationId: number, userCpf: string): Promise<void>;
   markAllNotificationsRead(userCpf: string): Promise<void>;
+  dismissNotification(notificationId: number, userCpf: string): Promise<void>;
   deleteNotification(id: number): Promise<boolean>;
   toggleNotificationActive(id: number): Promise<any>;
 }
@@ -1370,10 +1371,26 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(notificationsTable.createdAt));
     const reads = await db.select().from(notificationReadsTable)
       .where(eq(notificationReadsTable.userCpf, userCpf));
-    const readSet = new Set(reads.map(r => r.notificationId));
+    const readSet = new Set(reads.filter(r => !r.dismissed).map(r => r.notificationId));
+    const dismissedSet = new Set(reads.filter(r => r.dismissed).map(r => r.notificationId));
     return all
       .filter(n => !n.targetCpfs || n.targetCpfs.includes(userCpf))
+      .filter(n => !dismissedSet.has(n.id))
       .map(n => ({ ...n, read: readSet.has(n.id) }));
+  }
+
+  async dismissNotification(notificationId: number, userCpf: string) {
+    const existing = await db.select().from(notificationReadsTable)
+      .where(and(eq(notificationReadsTable.notificationId, notificationId), eq(notificationReadsTable.userCpf, userCpf)))
+      .limit(1);
+    if (existing.length > 0) {
+      await db.update(notificationReadsTable)
+        .set({ dismissed: true })
+        .where(and(eq(notificationReadsTable.notificationId, notificationId), eq(notificationReadsTable.userCpf, userCpf)));
+    } else {
+      await db.insert(notificationReadsTable)
+        .values({ notificationId, userCpf, dismissed: true });
+    }
   }
 
   async getUnreadCountForUser(userCpf: string) {
