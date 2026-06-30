@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable, notificationsTable, notificationReadsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -142,6 +142,15 @@ export interface IStorage {
   getBolaoEntriesByUser(userId: string): Promise<BolaoEntry[]>;
   deleteAllBolaoEntriesByUser(userId: string): Promise<void>;
   finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }>;
+  // Notifications
+  createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null }): Promise<any>;
+  getNotifications(): Promise<any[]>;
+  getNotificationsForUser(userCpf: string): Promise<any[]>;
+  getUnreadCountForUser(userCpf: string): Promise<number>;
+  markNotificationRead(notificationId: number, userCpf: string): Promise<void>;
+  markAllNotificationsRead(userCpf: string): Promise<void>;
+  deleteNotification(id: number): Promise<boolean>;
+  toggleNotificationActive(id: number): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1340,6 +1349,66 @@ export class DatabaseStorage implements IStorage {
 
     const houseProfit = Math.round((grossTotal - total) * 100) / 100;
     return { winners: winners.length, prizePerWinner, totalEntries, total, houseProfit };
+  }
+
+  // ── Notifications ───────────────────────────────────────────────────────────
+  async createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null }) {
+    const [n] = await db.insert(notificationsTable).values({
+      title: data.title, body: data.body, type: data.type,
+      targetCpfs: data.targetCpfs ?? null, active: true,
+    }).returning();
+    return n;
+  }
+
+  async getNotifications() {
+    return db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt));
+  }
+
+  async getNotificationsForUser(userCpf: string) {
+    const all = await db.select().from(notificationsTable)
+      .where(eq(notificationsTable.active, true))
+      .orderBy(desc(notificationsTable.createdAt));
+    const reads = await db.select().from(notificationReadsTable)
+      .where(eq(notificationReadsTable.userCpf, userCpf));
+    const readSet = new Set(reads.map(r => r.notificationId));
+    return all
+      .filter(n => !n.targetCpfs || n.targetCpfs.includes(userCpf))
+      .map(n => ({ ...n, read: readSet.has(n.id) }));
+  }
+
+  async getUnreadCountForUser(userCpf: string) {
+    const notifications = await this.getNotificationsForUser(userCpf);
+    return notifications.filter(n => !n.read).length;
+  }
+
+  async markNotificationRead(notificationId: number, userCpf: string) {
+    await db.insert(notificationReadsTable)
+      .values({ notificationId, userCpf })
+      .onConflictDoNothing();
+  }
+
+  async markAllNotificationsRead(userCpf: string) {
+    const notifications = await this.getNotificationsForUser(userCpf);
+    const unread = notifications.filter(n => !n.read);
+    for (const n of unread) {
+      await db.insert(notificationReadsTable)
+        .values({ notificationId: n.id, userCpf })
+        .onConflictDoNothing();
+    }
+  }
+
+  async deleteNotification(id: number) {
+    await db.delete(notificationReadsTable).where(eq(notificationReadsTable.notificationId, id));
+    const result = await db.delete(notificationsTable).where(eq(notificationsTable.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async toggleNotificationActive(id: number) {
+    const [current] = await db.select().from(notificationsTable).where(eq(notificationsTable.id, id)).limit(1);
+    if (!current) return null;
+    const [updated] = await db.update(notificationsTable)
+      .set({ active: !current.active }).where(eq(notificationsTable.id, id)).returning();
+    return updated;
   }
 }
 

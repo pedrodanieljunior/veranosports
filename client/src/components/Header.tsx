@@ -1,6 +1,7 @@
 import { History, Receipt, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
+import { NotificationPanel } from "@/components/NotificationPanel";
 import veranoLogo from "@assets/verano-logo-transparent.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
 
@@ -59,6 +60,7 @@ export function Header({
             </>
           ) : !loading && user ? (
             <>
+              <NotificationPanel />
               <button
                 onClick={onOpenHistory}
                 className="relative flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm shadow-md text-white transition-colors"

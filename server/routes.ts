@@ -7346,6 +7346,57 @@ export async function registerRoutes(
   // Verifica a cada 30 minutos
   setInterval(runClubFwPayoutIfDue, 30 * 60 * 1000);
 
+  // ── Notificações ─────────────────────────────────────────────────────────────
+  app.get("/api/admin/notifications", requireAdmin, async (_req, res) => {
+    try { res.json(await storage.getNotifications()); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.post("/api/admin/notifications", requireAdmin, async (req, res) => {
+    try {
+      const { title, body, type = "info", targetCpfs } = req.body;
+      if (!title || !body) return res.status(400).json({ error: "title e body obrigatórios" });
+      res.json(await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null }));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.patch("/api/admin/notifications/:id/toggle", requireAdmin, async (req, res) => {
+    try { res.json(await storage.toggleNotificationActive(Number(req.params.id))); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.delete("/api/admin/notifications/:id", requireAdmin, async (req, res) => {
+    try { res.json({ ok: await storage.deleteNotification(Number(req.params.id)) }); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.get("/api/notifications", async (req: any, res) => {
+    try {
+      const cpf = req.session?.userId;
+      if (!cpf) return res.json([]);
+      res.json(await storage.getNotificationsForUser(cpf));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.get("/api/notifications/unread-count", async (req: any, res) => {
+    try {
+      const cpf = req.session?.userId;
+      if (!cpf) return res.json({ count: 0 });
+      res.json({ count: await storage.getUnreadCountForUser(cpf) });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.post("/api/notifications/read-all", async (req: any, res) => {
+    try {
+      const cpf = req.session?.userId;
+      if (!cpf) return res.status(401).json({ error: "Não autenticado" });
+      await storage.markAllNotificationsRead(cpf);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.post("/api/notifications/:id/read", async (req: any, res) => {
+    try {
+      const cpf = req.session?.userId;
+      if (!cpf) return res.status(401).json({ error: "Não autenticado" });
+      await storage.markNotificationRead(Number(req.params.id), cpf);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
 
@@ -7836,3 +7887,4 @@ function checkSelectionResult(
   console.log(`    Mercado não reconhecido: mk="${marketKey}", outcome="${selection.outcome}"`);
   return false;
 }
+

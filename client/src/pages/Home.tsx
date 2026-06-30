@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { History, Receipt, Search, X, BookOpen, UserCircle } from "lucide-react";
+import { NotificationPanel, NotificationBanner } from "@/components/NotificationPanel";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -339,6 +340,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
+                  <NotificationPanel />
                   <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#1565C0" }} data-testid="button-open-history-mobile">
                     <History className="w-3.5 h-3.5" /><span>Apostas</span>
                     {betHistory.filter(b => b.status === "pending").length > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{betHistory.filter(b => b.status === "pending").length}</Badge>}
@@ -404,6 +406,7 @@ export default function Home() {
             </div>
           </div>
         </header>
+        <NotificationBanner />
         <div className="px-3 pt-2">
           <MobileBannerCarousel />
         </div>

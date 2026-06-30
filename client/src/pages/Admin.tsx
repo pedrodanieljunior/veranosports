@@ -86,6 +86,12 @@ import {
   Loader2,
   X,
   Download,
+  Bell,
+  Megaphone,
+  Tag,
+  AlertTriangle,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -1201,6 +1207,10 @@ export default function Admin() {
             <TabsTrigger value="bolao" data-testid="tab-bolao">
               <Trophy className="w-4 h-4 mr-2 text-yellow-400" />
               Bolão
+            </TabsTrigger>
+            <TabsTrigger value="notificacoes" data-testid="tab-notificacoes">
+              <Bell className="w-4 h-4 mr-2 text-blue-400" />
+              Notificações
             </TabsTrigger>
           </TabsList>
 
@@ -2808,6 +2818,10 @@ export default function Admin() {
 
           <TabsContent value="bolao">
             <BolaoTab />
+          </TabsContent>
+
+          <TabsContent value="notificacoes">
+            <NotificationsAdminTab />
           </TabsContent>
 
         </Tabs>
@@ -7232,6 +7246,162 @@ function BolaoTab() {
       </Dialog>
 
       <DueloAdminSection />
+    </div>
+  );
+}
+
+// ── Aba Notificações ──────────────────────────────────────────────────────────
+function NotificationsAdminTab() {
+  const [form, setForm] = useState({ title: "", body: "", type: "info", targetCpfs: "" });
+  const [sending, setSending] = useState(false);
+  const { toast } = useToast();
+
+  const { data: notifications = [], refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/notifications"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/notifications");
+      return res.json();
+    },
+  });
+
+  const handleCreate = async () => {
+    if (!form.title.trim() || !form.body.trim()) {
+      toast({ title: "Preencha título e mensagem", variant: "destructive" }); return;
+    }
+    setSending(true);
+    try {
+      const cpfs = form.targetCpfs.trim() ? form.targetCpfs.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : null;
+      await apiRequest("POST", "/api/admin/notifications", { title: form.title, body: form.body, type: form.type, targetCpfs: cpfs });
+      setForm({ title: "", body: "", type: "info", targetCpfs: "" });
+      refetch();
+      toast({ title: "Notificação enviada!" });
+    } catch { toast({ title: "Erro ao enviar", variant: "destructive" }); }
+    setSending(false);
+  };
+
+  const toggle = async (id: number) => {
+    await apiRequest("PATCH", `/api/admin/notifications/${id}/toggle`);
+    refetch();
+  };
+
+  const remove = async (id: number) => {
+    if (!confirm("Excluir notificação?")) return;
+    await apiRequest("DELETE", `/api/admin/notifications/${id}`);
+    refetch();
+  };
+
+  const typeLabel: Record<string, { label: string; icon: any; color: string }> = {
+    info: { label: "Informação", icon: Megaphone, color: "text-blue-400" },
+    promo: { label: "Promoção", icon: Tag, color: "text-green-400" },
+    alert: { label: "Alerta", icon: AlertTriangle, color: "text-yellow-400" },
+  };
+
+  return (
+    <div className="space-y-6 p-4">
+      {/* Formulário de criação */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="w-4 h-4 text-blue-400" />
+            Nova Notificação
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Título</label>
+              <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Super Boost disponível!" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+              <select
+                value={form.type}
+                onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="info">📢 Informação</option>
+                <option value="promo">🏷️ Promoção</option>
+                <option value="alert">⚠️ Alerta</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
+            <textarea
+              value={form.body}
+              onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+              placeholder="Texto da notificação que o usuário verá..."
+              rows={3}
+              className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Destinatários (CPFs separados por vírgula ou Enter — deixe vazio para enviar a <strong>todos</strong>)
+            </label>
+            <textarea
+              value={form.targetCpfs}
+              onChange={e => setForm(f => ({ ...f, targetCpfs: e.target.value }))}
+              placeholder="12345678901, 98765432100&#10;Deixe vazio para todos os usuários"
+              rows={2}
+              className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+            />
+          </div>
+          <Button onClick={handleCreate} disabled={sending} className="w-full">
+            {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</> : <><Bell className="w-4 h-4 mr-2" />Enviar Notificação</>}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Lista de notificações */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Notificações enviadas ({notifications.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma notificação criada ainda.</p>
+          ) : (
+            <div className="space-y-2">
+              {notifications.map((n: any) => {
+                const t = typeLabel[n.type] ?? typeLabel.info;
+                const Icon = t.icon;
+                return (
+                  <div key={n.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-opacity ${n.active ? "" : "opacity-50"}`} style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${t.color}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">{n.title}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${n.active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                          {n.active ? "Ativa" : "Inativa"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{t.label}</span>
+                        {n.targetCpfs ? (
+                          <span className="text-[10px] text-yellow-400">{n.targetCpfs.length} destinatário(s)</span>
+                        ) : (
+                          <span className="text-[10px] text-blue-400">Todos</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">
+                        {new Date(n.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => toggle(n.id)} title={n.active ? "Desativar" : "Ativar"}>
+                        {n.active ? <ToggleRight className="w-4 h-4 text-green-400" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="w-8 h-8 text-red-400 hover:text-red-300" onClick={() => remove(n.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

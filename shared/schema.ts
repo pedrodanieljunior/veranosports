@@ -542,6 +542,29 @@ export const insertDueloSchema = createInsertSchema(duelosTable).omit({ id: true
 export const insertDueloEntrySchema = createInsertSchema(dueloEntriesTable).omit({ id: true, createdAt: true, prizeAwarded: true });
 export type InsertDuelo = z.infer<typeof insertDueloSchema>;
 
+// ─── Notificações ─────────────────────────────────────────────────────────────
+export const notificationsTable = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  type: text("type").notNull().default("info"), // info | promo | alert
+  targetCpfs: text("target_cpfs").array(), // null = todos
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const notificationReadsTable = pgTable("notification_reads", {
+  id: serial("id").primaryKey(),
+  notificationId: integer("notification_id").notNull(),
+  userCpf: text("user_cpf").notNull(),
+  readAt: timestamp("read_at").notNull().defaultNow(),
+});
+
+export type Notification = typeof notificationsTable.$inferSelect;
+export type NotificationRead = typeof notificationReadsTable.$inferSelect;
+export const insertNotificationSchema = createInsertSchema(notificationsTable).omit({ id: true, createdAt: true });
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),
