@@ -7256,6 +7256,7 @@ function NotificationsAdminTab() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [sending, setSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const { data: notifications = [], refetch } = useQuery<any[]>({
@@ -7358,19 +7359,24 @@ function NotificationsAdminTab() {
             <label className="text-xs font-medium text-muted-foreground">
               Imagem <span className="text-muted-foreground/60">(opcional — tamanho ideal: <strong>600 × 200 px</strong>, proporção 3:1)</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background hover:border-primary/60 transition-colors text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 justify-start gap-2 text-muted-foreground font-normal"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <Image className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{imageFile ? imageFile.name : "Selecionar imagem…"}</span>
-              </div>
+              </Button>
               {imageFile && (
-                <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-red-400" type="button"
+                <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0 text-muted-foreground hover:text-red-400" type="button"
                   onClick={() => { setImageFile(null); setImagePreview(""); }}>
                   <X className="w-4 h-4" />
                 </Button>
               )}
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-            </label>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            </div>
             {imagePreview && (
               <img src={imagePreview} alt="preview" className="mt-1 h-24 w-full object-cover rounded-md border border-border" />
             )}
