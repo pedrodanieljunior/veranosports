@@ -2398,15 +2398,17 @@ export async function registerRoutes(
         bet_placed: "Aposta colocada", adjustment: "Ajuste manual",
         bolao_win: "Prêmio do bolão", bolao_entry: "Palpite do bolão",
         bonus: "Bônus", cashout: "Cash Out", early_exit: "Saída antecipada",
-        referral_bonus: "Bônus indicação",
+        referral_bonus: "Bônus de indicação", withdrawal_refund: "Reembolso de saque",
+        duelo_entry: "Entrada em duelo", duelo_win: "Prêmio de duelo",
+        bet: "Aposta",
       };
 
-      type Event = { id: string; kind: string; date: string; title: string; subtitle: string; amount: number | null; status: string | null };
+      type Event = { id: string; kind: string; subKind: string; date: string; title: string; subtitle: string; amount: number | null; status: string | null };
       const events: Event[] = [];
 
       for (const tx of transactions) {
         events.push({
-          id: `tx-${tx.id}`, kind: "transaction",
+          id: `tx-${tx.id}`, kind: "transaction", subKind: tx.type,
           date: tx.createdAt as string,
           title: txTypeLabel[tx.type] ?? tx.type,
           subtitle: tx.description ?? "",
@@ -2418,7 +2420,7 @@ export async function registerRoutes(
       for (const bet of bets) {
         const label = bet.status === "won" ? "Apostou e ganhou" : bet.status === "lost" ? "Apostou e perdeu" : bet.status === "cashed_out" ? "Cash Out" : bet.status === "anulado" ? "Aposta anulada" : "Aposta pendente";
         events.push({
-          id: `bet-${bet.id}`, kind: "bet",
+          id: `bet-${bet.id}`, kind: "bet", subKind: bet.status ?? "pending",
           date: bet.createdAt as string,
           title: label,
           subtitle: `${bet.selections.length} seleção(ões) · odds ${bet.totalOdds.toFixed(2)} · R$ ${bet.stake.toFixed(2)}`,
@@ -2429,7 +2431,7 @@ export async function registerRoutes(
 
       for (const w of withdrawals) {
         events.push({
-          id: `wd-${w.id}`, kind: "saque",
+          id: `wd-${w.id}`, kind: "saque", subKind: w.status ?? "pending",
           date: w.createdAt as string,
           title: `Saque solicitado${w.status === "paid" ? " (pago)" : w.status === "rejected" ? " (rejeitado)" : " (pendente)"}`,
           subtitle: w.pixKey ? `Chave: ${w.pixKey}` : "",
@@ -2441,7 +2443,7 @@ export async function registerRoutes(
       for (const e of bolaoEntries) {
         const bolao = allBoloes.find(b => b.id === e.bolaoId);
         events.push({
-          id: `blp-${e.id}`, kind: "bolao",
+          id: `blp-${e.id}`, kind: "bolao", subKind: "entry",
           date: e.createdAt as string,
           title: `Palpite: ${e.homeScore}×${e.awayScore}`,
           subtitle: bolao ? `${bolao.homeTeam} × ${bolao.awayTeam}` : `Bolão #${e.bolaoId}`,
@@ -2458,7 +2460,7 @@ export async function registerRoutes(
           status = e.side === duelo.winnerSide ? "won" : "lost";
         }
         events.push({
-          id: `dlo-${e.id}`, kind: "duelo",
+          id: `dlo-${e.id}`, kind: "duelo", subKind: "entry",
           date: e.createdAt as string,
           title: `Duelo: ${myOption ?? e.side}`,
           subtitle: duelo?.title ?? `Duelo #${e.dueloId}`,

@@ -4678,9 +4678,20 @@ function UsersTab() {
               {historyEvents.map((ev: any) => {
                 const isIncome = ev.amount != null && ev.amount > 0;
                 const isOutcome = ev.amount != null && ev.amount < 0;
-                const kindIcon: Record<string, string> = {
-                  transaction: "💳", bet: "🎯", saque: "💸", bolao: "🏆", duelo: "⚔️",
-                };
+                const kindIcon = (() => {
+                  if (ev.kind === "bet") return ev.subKind === "won" ? "🏅" : ev.subKind === "lost" ? "❌" : ev.subKind === "cashed_out" ? "💱" : "🎯";
+                  if (ev.kind === "saque") return ev.subKind === "paid" ? "💸" : ev.subKind === "rejected" ? "🚫" : "⏳";
+                  if (ev.kind === "bolao") return "🏆";
+                  if (ev.kind === "duelo") return "⚔️";
+                  // transactions por subKind
+                  const txIcons: Record<string, string> = {
+                    deposit: "💰", bonus: "🎁", referral_bonus: "👥", win: "🏅",
+                    withdrawal: "💸", withdrawal_refund: "↩️", adjustment: "🔧",
+                    cashout: "💱", bolao_win: "🏆", bolao_entry: "🏆",
+                    duelo_entry: "⚔️", duelo_win: "⚔️", early_exit: "🚪", bet: "🎯",
+                  };
+                  return txIcons[ev.subKind] ?? "💳";
+                })();
                 const statusColor = (ev.status === "won" || ev.status === "paid") ? "text-green-400"
                   : (ev.status === "lost" || ev.status === "rejected") ? "text-red-400"
                   : "text-yellow-400";
