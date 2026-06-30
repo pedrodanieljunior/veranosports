@@ -4653,30 +4653,33 @@ function UsersTab() {
 
     {/* ── Modal Histórico do Usuário ── */}
     <Dialog open={!!historyUser} onOpenChange={open => { if (!open) setHistoryUser(null); }}>
-      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-lg w-full p-0 gap-0 overflow-hidden">
+        <div className="px-6 pt-6 pb-3 border-b border-border">
+          <DialogTitle className="flex items-center gap-2 text-base">
             <FileText className="w-4 h-4" />
             Histórico — {users.find(u => u.cpf === historyUser)?.name ?? historyUser}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-1">
             Todas as atividades: transações, apostas, saques e palpites.
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="flex-1 min-h-0 -mx-1 px-1">
+            {!historyLoading && historyEvents.length > 0 && (
+              <span className="ml-1 font-medium text-foreground/70">({historyEvents.length} registros)</span>
+            )}
+          </p>
+        </div>
+        <div className="overflow-y-auto" style={{ maxHeight: "65vh" }}>
           {historyLoading ? (
-            <div className="space-y-2 py-4">
+            <div className="space-y-2 p-4">
               {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
             </div>
           ) : historyEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade registrada.</p>
+            <p className="text-sm text-muted-foreground text-center py-10">Nenhuma atividade registrada.</p>
           ) : (
-            <div className="space-y-1.5 py-2">
+            <div className="space-y-1 p-3">
               {historyEvents.map((ev: any) => {
                 const isIncome = ev.amount != null && ev.amount > 0;
                 const isOutcome = ev.amount != null && ev.amount < 0;
                 const kindIcon: Record<string, string> = {
-                  transaction: "💳", bet: "🎯", saque: "💸", bolao: "🏆",
+                  transaction: "💳", bet: "🎯", saque: "💸", bolao: "🏆", duelo: "⚔️",
                 };
                 const statusColor = (ev.status === "won" || ev.status === "paid") ? "text-green-400"
                   : (ev.status === "lost" || ev.status === "rejected") ? "text-red-400"
@@ -4708,7 +4711,7 @@ function UsersTab() {
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
     </>
