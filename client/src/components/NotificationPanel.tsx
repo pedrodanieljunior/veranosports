@@ -144,12 +144,12 @@ export function NotificationPanel() {
                     <div
                       key={n.id}
                       className={`rounded-xl border overflow-hidden transition-opacity ${!n.read ? "opacity-100" : "opacity-70"}`}
-                      style={{ borderColor: n.imageUrl ? "rgba(255,255,255,0.12)" : undefined }}
+                      style={{ borderColor: n.hasImage ? "rgba(255,255,255,0.12)" : undefined }}
                     >
                       {/* Banner de imagem */}
-                      {n.imageUrl && (
+                      {n.hasImage && (
                         <div className="relative w-full h-24 overflow-hidden">
-                          <img src={n.imageUrl} alt={n.title} className="w-full h-full object-cover" style={{ filter: "brightness(0.8)" }} />
+                          <img src={`/api/notifications/${n.id}/image`} alt={n.title} className="w-full h-full object-cover" style={{ filter: "brightness(0.8)" }} />
                           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(15,15,25,0.95) 100%)" }} />
                           {/* Dismiss no canto da imagem */}
                           <button

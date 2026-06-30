@@ -143,7 +143,8 @@ export interface IStorage {
   deleteAllBolaoEntriesByUser(userId: string): Promise<void>;
   finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }>;
   // Notifications
-  createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null }): Promise<any>;
+  createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null; imageData?: string | null; mimeType?: string | null }): Promise<any>;
+  updateNotificationImage(id: number, imageData: string, mimeType: string): Promise<void>;
   getNotifications(): Promise<any[]>;
   getNotificationsForUser(userCpf: string): Promise<any[]>;
   getUnreadCountForUser(userCpf: string): Promise<number>;
@@ -1353,17 +1354,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ── Notifications ───────────────────────────────────────────────────────────
-  async createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null }) {
+  async createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null; imageData?: string | null; mimeType?: string | null }) {
     const [n] = await db.insert(notificationsTable).values({
       title: data.title, body: data.body, type: data.type,
       targetCpfs: data.targetCpfs ?? null, active: true,
       imageUrl: data.imageUrl ?? null,
+      imageData: data.imageData ?? null,
+      mimeType: data.mimeType ?? null,
     }).returning();
     return n;
   }
 
+  async updateNotificationImage(id: number, imageData: string, mimeType: string) {
+    await db.update(notificationsTable).set({ imageData, mimeType }).where(eq(notificationsTable.id, id));
+  }
+
   async getNotifications() {
-    return db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt));
+    const rows = await db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt));
+    return rows.map(({ imageData, mimeType, ...rest }) => ({ ...rest, hasImage: !!imageData }));
   }
 
   async getNotificationsForUser(userCpf: string) {
@@ -1377,7 +1385,7 @@ export class DatabaseStorage implements IStorage {
     return all
       .filter(n => !n.targetCpfs || n.targetCpfs.includes(userCpf))
       .filter(n => !dismissedSet.has(n.id))
-      .map(n => ({ ...n, read: readSet.has(n.id) }));
+      .map(({ imageData, mimeType, ...n }) => ({ ...n, hasImage: !!imageData, read: readSet.has(n.id) }));
   }
 
   async dismissNotification(notificationId: number, userCpf: string) {

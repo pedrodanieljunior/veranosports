@@ -7353,9 +7353,29 @@ export async function registerRoutes(
   });
   app.post("/api/admin/notifications", requireAdmin, async (req, res) => {
     try {
-      const { title, body, type = "info", targetCpfs, imageUrl } = req.body;
+      const { title, body, type = "info", targetCpfs, imageData, mimeType } = req.body;
       if (!title || !body) return res.status(400).json({ error: "title e body obrigatórios" });
-      res.json(await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null, imageUrl: imageUrl ?? null }));
+      res.json(await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null, imageData: imageData ?? null, mimeType: mimeType ?? null }));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  const notifImgUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+  app.post("/api/admin/notifications/:id/image", requireAdmin, notifImgUpload.single("image"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "Arquivo não enviado" });
+      const imageData = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype;
+      await storage.updateNotificationImage(Number(req.params.id), imageData, mimeType);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+  app.get("/api/notifications/:id/image", async (req: any, res) => {
+    try {
+      const [n] = await db.select().from(notificationsTable).where(eq(notificationsTable.id, Number(req.params.id))).limit(1);
+      if (!n?.imageData) return res.status(404).end();
+      const buf = Buffer.from(n.imageData, "base64");
+      res.set("Content-Type", n.mimeType || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400");
+      res.send(buf);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
   app.patch("/api/admin/notifications/:id/toggle", requireAdmin, async (req, res) => {

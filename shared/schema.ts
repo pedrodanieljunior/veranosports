@@ -551,6 +551,8 @@ export const notificationsTable = pgTable("notifications", {
   targetCpfs: text("target_cpfs").array(), // null = todos
   active: boolean("active").notNull().default(true),
   imageUrl: text("image_url"),
+  imageData: text("image_data"),
+  mimeType: text("mime_type"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

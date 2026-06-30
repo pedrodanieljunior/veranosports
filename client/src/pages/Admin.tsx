@@ -7252,7 +7252,9 @@ function BolaoTab() {
 
 // ── Aba Notificações ──────────────────────────────────────────────────────────
 function NotificationsAdminTab() {
-  const [form, setForm] = useState({ title: "", body: "", type: "info", targetCpfs: "", imageUrl: "" });
+  const [form, setForm] = useState({ title: "", body: "", type: "info", targetCpfs: "" });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
@@ -7264,6 +7266,15 @@ function NotificationsAdminTab() {
     },
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = ev => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const handleCreate = async () => {
     if (!form.title.trim() || !form.body.trim()) {
       toast({ title: "Preencha título e mensagem", variant: "destructive" }); return;
@@ -7271,8 +7282,16 @@ function NotificationsAdminTab() {
     setSending(true);
     try {
       const cpfs = form.targetCpfs.trim() ? form.targetCpfs.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : null;
-      await apiRequest("POST", "/api/admin/notifications", { title: form.title, body: form.body, type: form.type, targetCpfs: cpfs, imageUrl: form.imageUrl.trim() || null });
-      setForm({ title: "", body: "", type: "info", targetCpfs: "", imageUrl: "" });
+      const res = await apiRequest("POST", "/api/admin/notifications", { title: form.title, body: form.body, type: form.type, targetCpfs: cpfs });
+      const created = await res.json();
+      if (imageFile && created?.id) {
+        const fd = new FormData();
+        fd.append("image", imageFile);
+        await fetch(`/api/admin/notifications/${created.id}/image`, { method: "POST", body: fd, credentials: "include" });
+      }
+      setForm({ title: "", body: "", type: "info", targetCpfs: "" });
+      setImageFile(null);
+      setImagePreview("");
       refetch();
       toast({ title: "Notificação enviada!" });
     } catch { toast({ title: "Erro ao enviar", variant: "destructive" }); }
@@ -7336,14 +7355,24 @@ function NotificationsAdminTab() {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">URL da Imagem <span className="text-muted-foreground/60">(opcional — aparece como banner na notificação)</span></label>
-            <Input
-              value={form.imageUrl}
-              onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-              placeholder="https://exemplo.com/imagem.jpg"
-            />
-            {form.imageUrl.trim() && (
-              <img src={form.imageUrl} alt="preview" className="mt-1 h-20 w-full object-cover rounded-md border border-border" onError={e => (e.currentTarget.style.display = "none")} />
+            <label className="text-xs font-medium text-muted-foreground">
+              Imagem <span className="text-muted-foreground/60">(opcional — aparece como banner na notificação)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background hover:border-primary/60 transition-colors text-sm text-muted-foreground">
+                <Image className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{imageFile ? imageFile.name : "Selecionar imagem…"}</span>
+              </div>
+              {imageFile && (
+                <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-red-400" type="button"
+                  onClick={() => { setImageFile(null); setImagePreview(""); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            </label>
+            {imagePreview && (
+              <img src={imagePreview} alt="preview" className="mt-1 h-24 w-full object-cover rounded-md border border-border" />
             )}
           </div>
           <div className="space-y-1">
@@ -7379,7 +7408,7 @@ function NotificationsAdminTab() {
                 const Icon = t.icon;
                 return (
                   <div key={n.id} className={`rounded-lg border overflow-hidden transition-opacity ${n.active ? "" : "opacity-50"}`} style={{ background: "rgba(255,255,255,0.03)" }}>
-                    {n.imageUrl && <img src={n.imageUrl} alt={n.title} className="w-full h-20 object-cover" style={{ filter: "brightness(0.75)" }} />}
+                    {n.hasImage && <img src={`/api/notifications/${n.id}/image`} alt={n.title} className="w-full h-20 object-cover" style={{ filter: "brightness(0.75)" }} />}
                     <div className="flex items-start gap-3 p-3">
                     <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${t.color}`} />
                     <div className="flex-1 min-w-0">
