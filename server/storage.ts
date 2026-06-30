@@ -152,6 +152,7 @@ export interface IStorage {
   markNotificationRead(notificationId: number, userCpf: string): Promise<void>;
   markAllNotificationsRead(userCpf: string): Promise<void>;
   dismissNotification(notificationId: number, userCpf: string): Promise<void>;
+  dismissAllNotifications(userCpf: string): Promise<void>;
   deleteNotification(id: number): Promise<boolean>;
   toggleNotificationActive(id: number): Promise<any>;
 }
@@ -1407,6 +1408,14 @@ export class DatabaseStorage implements IStorage {
     } else {
       await db.insert(notificationReadsTable)
         .values({ notificationId, userCpf, dismissed: true });
+    }
+  }
+
+  async dismissAllNotifications(userCpf: string) {
+    const all = await db.select({ id: notificationsTable.id })
+      .from(notificationsTable).where(eq(notificationsTable.active, true));
+    for (const n of all) {
+      await this.dismissNotification(n.id, userCpf);
     }
   }
 

@@ -58,6 +58,11 @@ export function NotificationPanel() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
+  const dismissAll = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/notifications"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+  });
+
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
@@ -124,6 +129,16 @@ export function NotificationPanel() {
                 {notifications.some(n => !n.read) && (
                   <button onClick={() => markAllRead.mutate()} className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1">
                     <CheckCheck className="w-3 h-3" /> Marcar tudo
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={() => dismissAll.mutate()}
+                    disabled={dismissAll.isPending}
+                    className="text-[10px] text-red-400/70 hover:text-red-400 transition-colors"
+                    title="Limpar todas as notificações"
+                  >
+                    Limpar tudo
                   </button>
                 )}
                 <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white/80">
