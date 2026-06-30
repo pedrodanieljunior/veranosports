@@ -148,9 +148,8 @@ export function NotificationPanel() {
                     >
                       {/* Banner de imagem */}
                       {n.hasImage && (
-                        <div className="relative w-full h-24 overflow-hidden">
-                          <img src={`/api/notifications/${n.id}/image`} alt={n.title} className="w-full h-full object-cover" style={{ filter: "brightness(0.8)" }} />
-                          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(15,15,25,0.95) 100%)" }} />
+                        <div className="relative w-full h-28 overflow-hidden">
+                          <img src={`/api/notifications/${n.id}/image`} alt={n.title} className="w-full h-full object-cover" />
                           {/* Dismiss no canto da imagem */}
                           <button
                             onClick={(e) => { e.stopPropagation(); dismiss.mutate(n.id); }}
@@ -160,24 +159,17 @@ export function NotificationPanel() {
                           >
                             <X className="w-3 h-3 text-white" />
                           </button>
-                          {/* Título sobre a imagem */}
-                          <div className="absolute bottom-0 left-0 right-0 px-3 pb-2">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              {typeIcon(n.type)}
-                              <p className="text-xs font-bold text-white leading-tight drop-shadow">{n.title}</p>
-                            </div>
-                          </div>
                         </div>
                       )}
 
                       {/* Corpo */}
-                      <div className={`p-3 ${n.hasImage ? "pt-2" : ""} ${n.hasImage ? "bg-[#0f0f19]" : typeColor(n.type)}`}>
-                        {!n.hasImage && (
-                          <div className="flex items-start justify-between gap-1 mb-1">
-                            <div className="flex items-center gap-1.5">
-                              {typeIcon(n.type)}
-                              <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
-                            </div>
+                      <div className={`p-3 ${n.hasImage ? "bg-[#0f0f19]" : typeColor(n.type)}`}>
+                        <div className="flex items-start justify-between gap-1 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            {typeIcon(n.type)}
+                            <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
+                          </div>
+                          {!n.hasImage && (
                             <button
                               onClick={(e) => { e.stopPropagation(); dismiss.mutate(n.id); }}
                               className="flex-shrink-0 text-white/30 hover:text-red-400 transition-colors"
@@ -186,8 +178,8 @@ export function NotificationPanel() {
                             >
                               <X className="w-3 h-3" />
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                         <p className="text-[11px] text-white/70 leading-snug">{n.body}</p>
                         <p className="text-[10px] text-white/40 mt-1">
                           {new Date(n.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
