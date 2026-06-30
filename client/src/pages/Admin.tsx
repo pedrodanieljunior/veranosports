@@ -4683,8 +4683,9 @@ function UsersTab() {
                 else if (ev.kind === "bolao") { kindIcon = "🏆"; }
                 else if (ev.kind === "duelo") { kindIcon = "⚔️"; }
                 else if (ev.subKind && txIconMap[ev.subKind]) { kindIcon = txIconMap[ev.subKind]; }
-                const isIncome = ev.amount != null && ev.amount > 0;
-                const isOutcome = ev.amount != null && ev.amount < 0;
+                const isBetWon = ev.kind === "bet" && ev.subKind === "won";
+                const isIncome = (ev.amount != null && ev.amount > 0) || isBetWon;
+                const isOutcome = ev.amount != null && ev.amount < 0 && !isBetWon;
                 const statusColor = (ev.status === "won" || ev.status === "paid") ? "text-green-400"
                   : (ev.status === "lost" || ev.status === "rejected") ? "text-red-400"
                   : "text-yellow-400";
