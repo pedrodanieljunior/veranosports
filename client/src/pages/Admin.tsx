@@ -4676,22 +4676,15 @@ function UsersTab() {
           ) : (
             <div className="space-y-1 p-3">
               {historyEvents.map((ev: any) => {
+                const txIconMap: Record<string, string> = { deposit: "💰", bonus: "🎁", referral_bonus: "👥", win: "🏅", withdrawal: "💸", withdrawal_refund: "↩️", adjustment: "🔧", cashout: "💱", bolao_win: "🏆", bolao_entry: "🏆", duelo_entry: "⚔️", duelo_win: "⚔️", early_exit: "🚪", bet: "🎯" };
+                let kindIcon = "💳";
+                if (ev.kind === "bet") { kindIcon = ev.subKind === "won" ? "🏅" : ev.subKind === "lost" ? "❌" : ev.subKind === "cashed_out" ? "💱" : "🎯"; }
+                else if (ev.kind === "saque") { kindIcon = ev.subKind === "paid" ? "💸" : ev.subKind === "rejected" ? "🚫" : "⏳"; }
+                else if (ev.kind === "bolao") { kindIcon = "🏆"; }
+                else if (ev.kind === "duelo") { kindIcon = "⚔️"; }
+                else if (ev.subKind && txIconMap[ev.subKind]) { kindIcon = txIconMap[ev.subKind]; }
                 const isIncome = ev.amount != null && ev.amount > 0;
                 const isOutcome = ev.amount != null && ev.amount < 0;
-                const kindIcon = (() => {
-                  if (ev.kind === "bet") return ev.subKind === "won" ? "🏅" : ev.subKind === "lost" ? "❌" : ev.subKind === "cashed_out" ? "💱" : "🎯";
-                  if (ev.kind === "saque") return ev.subKind === "paid" ? "💸" : ev.subKind === "rejected" ? "🚫" : "⏳";
-                  if (ev.kind === "bolao") return "🏆";
-                  if (ev.kind === "duelo") return "⚔️";
-                  // transactions por subKind
-                  const txIcons: Record<string, string> = {
-                    deposit: "💰", bonus: "🎁", referral_bonus: "👥", win: "🏅",
-                    withdrawal: "💸", withdrawal_refund: "↩️", adjustment: "🔧",
-                    cashout: "💱", bolao_win: "🏆", bolao_entry: "🏆",
-                    duelo_entry: "⚔️", duelo_win: "⚔️", early_exit: "🚪", bet: "🎯",
-                  };
-                  return txIcons[ev.subKind] ?? "💳";
-                })();
                 const statusColor = (ev.status === "won" || ev.status === "paid") ? "text-green-400"
                   : (ev.status === "lost" || ev.status === "rejected") ? "text-red-400"
                   : "text-yellow-400";
