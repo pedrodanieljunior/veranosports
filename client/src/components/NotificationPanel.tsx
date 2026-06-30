@@ -143,27 +143,55 @@ export function NotificationPanel() {
                   {notifications.map(n => (
                     <div
                       key={n.id}
-                      className={`relative p-3 rounded-lg border transition-colors ${typeColor(n.type)} ${!n.read ? "opacity-100" : "opacity-70"}`}
+                      className={`rounded-xl border overflow-hidden transition-opacity ${!n.read ? "opacity-100" : "opacity-70"}`}
+                      style={{ borderColor: n.imageUrl ? "rgba(255,255,255,0.12)" : undefined }}
                     >
-                      <div className="flex items-start gap-2">
-                        <span className="mt-0.5 flex-shrink-0">{typeIcon(n.type)}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1">
-                            <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
+                      {/* Banner de imagem */}
+                      {n.imageUrl && (
+                        <div className="relative w-full h-24 overflow-hidden">
+                          <img src={n.imageUrl} alt={n.title} className="w-full h-full object-cover" style={{ filter: "brightness(0.8)" }} />
+                          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(15,15,25,0.95) 100%)" }} />
+                          {/* Dismiss no canto da imagem */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); dismiss.mutate(n.id); }}
+                            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center bg-black/50 hover:bg-red-500/80 transition-colors"
+                            title="Excluir"
+                            data-testid={`button-dismiss-notif-${n.id}`}
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                          {/* Título sobre a imagem */}
+                          <div className="absolute bottom-0 left-0 right-0 px-3 pb-2">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              {typeIcon(n.type)}
+                              <p className="text-xs font-bold text-white leading-tight drop-shadow">{n.title}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Corpo */}
+                      <div className={`p-3 ${n.imageUrl ? "pt-2" : ""} ${n.imageUrl ? "bg-[#0f0f19]" : typeColor(n.type)}`}>
+                        {!n.imageUrl && (
+                          <div className="flex items-start justify-between gap-1 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              {typeIcon(n.type)}
+                              <p className="text-xs font-semibold text-white leading-tight">{n.title}</p>
+                            </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); dismiss.mutate(n.id); }}
-                              className="flex-shrink-0 text-white/30 hover:text-red-400 transition-colors ml-1 mt-0.5"
-                              title="Excluir notificação"
+                              className="flex-shrink-0 text-white/30 hover:text-red-400 transition-colors"
+                              title="Excluir"
                               data-testid={`button-dismiss-notif-${n.id}`}
                             >
                               <X className="w-3 h-3" />
                             </button>
                           </div>
-                          <p className="text-[11px] text-white/70 mt-0.5 leading-snug">{n.body}</p>
-                          <p className="text-[10px] text-white/40 mt-1">
-                            {new Date(n.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
+                        )}
+                        <p className="text-[11px] text-white/70 leading-snug">{n.body}</p>
+                        <p className="text-[10px] text-white/40 mt-1">
+                          {new Date(n.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </p>
                       </div>
                     </div>
                   ))}

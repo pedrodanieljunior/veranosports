@@ -143,7 +143,7 @@ export interface IStorage {
   deleteAllBolaoEntriesByUser(userId: string): Promise<void>;
   finishBolao(bolaoId: number, homeScore: number, awayScore: number): Promise<{ winners: number; prizePerWinner: number; totalEntries: number; total: number; houseProfit: number }>;
   // Notifications
-  createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null }): Promise<any>;
+  createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null }): Promise<any>;
   getNotifications(): Promise<any[]>;
   getNotificationsForUser(userCpf: string): Promise<any[]>;
   getUnreadCountForUser(userCpf: string): Promise<number>;
@@ -1353,10 +1353,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ── Notifications ───────────────────────────────────────────────────────────
-  async createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null }) {
+  async createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null }) {
     const [n] = await db.insert(notificationsTable).values({
       title: data.title, body: data.body, type: data.type,
       targetCpfs: data.targetCpfs ?? null, active: true,
+      imageUrl: data.imageUrl ?? null,
     }).returning();
     return n;
   }

@@ -7353,9 +7353,9 @@ export async function registerRoutes(
   });
   app.post("/api/admin/notifications", requireAdmin, async (req, res) => {
     try {
-      const { title, body, type = "info", targetCpfs } = req.body;
+      const { title, body, type = "info", targetCpfs, imageUrl } = req.body;
       if (!title || !body) return res.status(400).json({ error: "title e body obrigatórios" });
-      res.json(await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null }));
+      res.json(await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null, imageUrl: imageUrl ?? null }));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
   app.patch("/api/admin/notifications/:id/toggle", requireAdmin, async (req, res) => {

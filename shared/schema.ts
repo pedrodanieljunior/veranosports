@@ -550,6 +550,7 @@ export const notificationsTable = pgTable("notifications", {
   type: text("type").notNull().default("info"), // info | promo | alert
   targetCpfs: text("target_cpfs").array(), // null = todos
   active: boolean("active").notNull().default(true),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

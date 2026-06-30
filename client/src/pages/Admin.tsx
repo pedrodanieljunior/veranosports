@@ -7252,7 +7252,7 @@ function BolaoTab() {
 
 // ── Aba Notificações ──────────────────────────────────────────────────────────
 function NotificationsAdminTab() {
-  const [form, setForm] = useState({ title: "", body: "", type: "info", targetCpfs: "" });
+  const [form, setForm] = useState({ title: "", body: "", type: "info", targetCpfs: "", imageUrl: "" });
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
@@ -7271,8 +7271,8 @@ function NotificationsAdminTab() {
     setSending(true);
     try {
       const cpfs = form.targetCpfs.trim() ? form.targetCpfs.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : null;
-      await apiRequest("POST", "/api/admin/notifications", { title: form.title, body: form.body, type: form.type, targetCpfs: cpfs });
-      setForm({ title: "", body: "", type: "info", targetCpfs: "" });
+      await apiRequest("POST", "/api/admin/notifications", { title: form.title, body: form.body, type: form.type, targetCpfs: cpfs, imageUrl: form.imageUrl.trim() || null });
+      setForm({ title: "", body: "", type: "info", targetCpfs: "", imageUrl: "" });
       refetch();
       toast({ title: "Notificação enviada!" });
     } catch { toast({ title: "Erro ao enviar", variant: "destructive" }); }
@@ -7336,6 +7336,17 @@ function NotificationsAdminTab() {
             />
           </div>
           <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">URL da Imagem <span className="text-muted-foreground/60">(opcional — aparece como banner na notificação)</span></label>
+            <Input
+              value={form.imageUrl}
+              onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+              placeholder="https://exemplo.com/imagem.jpg"
+            />
+            {form.imageUrl.trim() && (
+              <img src={form.imageUrl} alt="preview" className="mt-1 h-20 w-full object-cover rounded-md border border-border" onError={e => (e.currentTarget.style.display = "none")} />
+            )}
+          </div>
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">
               Destinatários (CPFs separados por vírgula ou Enter — deixe vazio para enviar a <strong>todos</strong>)
             </label>
@@ -7367,7 +7378,9 @@ function NotificationsAdminTab() {
                 const t = typeLabel[n.type] ?? typeLabel.info;
                 const Icon = t.icon;
                 return (
-                  <div key={n.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-opacity ${n.active ? "" : "opacity-50"}`} style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <div key={n.id} className={`rounded-lg border overflow-hidden transition-opacity ${n.active ? "" : "opacity-50"}`} style={{ background: "rgba(255,255,255,0.03)" }}>
+                    {n.imageUrl && <img src={n.imageUrl} alt={n.title} className="w-full h-20 object-cover" style={{ filter: "brightness(0.75)" }} />}
+                    <div className="flex items-start gap-3 p-3">
                     <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${t.color}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -7394,6 +7407,7 @@ function NotificationsAdminTab() {
                       <Button variant="ghost" size="icon" className="w-8 h-8 text-red-400 hover:text-red-300" onClick={() => remove(n.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
+                    </div>
                     </div>
                   </div>
                 );
