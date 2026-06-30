@@ -7370,10 +7370,10 @@ export async function registerRoutes(
   });
   app.get("/api/notifications/:id/image", async (req: any, res) => {
     try {
-      const [n] = await db.select().from(notificationsTable).where(eq(notificationsTable.id, Number(req.params.id))).limit(1);
-      if (!n?.imageData) return res.status(404).end();
-      const buf = Buffer.from(n.imageData, "base64");
-      res.set("Content-Type", n.mimeType || "image/jpeg");
+      const img = await storage.getNotificationImage(Number(req.params.id));
+      if (!img) return res.status(404).end();
+      const buf = Buffer.from(img.imageData, "base64");
+      res.set("Content-Type", img.mimeType || "image/jpeg");
       res.set("Cache-Control", "public, max-age=86400");
       res.send(buf);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

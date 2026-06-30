@@ -145,6 +145,7 @@ export interface IStorage {
   // Notifications
   createNotification(data: { title: string; body: string; type: string; targetCpfs?: string[] | null; imageUrl?: string | null; imageData?: string | null; mimeType?: string | null }): Promise<any>;
   updateNotificationImage(id: number, imageData: string, mimeType: string): Promise<void>;
+  getNotificationImage(id: number): Promise<{ imageData: string; mimeType: string | null } | null>;
   getNotifications(): Promise<any[]>;
   getNotificationsForUser(userCpf: string): Promise<any[]>;
   getUnreadCountForUser(userCpf: string): Promise<number>;
@@ -1367,6 +1368,13 @@ export class DatabaseStorage implements IStorage {
 
   async updateNotificationImage(id: number, imageData: string, mimeType: string) {
     await db.update(notificationsTable).set({ imageData, mimeType }).where(eq(notificationsTable.id, id));
+  }
+
+  async getNotificationImage(id: number) {
+    const [n] = await db.select({ imageData: notificationsTable.imageData, mimeType: notificationsTable.mimeType })
+      .from(notificationsTable).where(eq(notificationsTable.id, id)).limit(1);
+    if (!n?.imageData) return null;
+    return { imageData: n.imageData, mimeType: n.mimeType };
   }
 
   async getNotifications() {
