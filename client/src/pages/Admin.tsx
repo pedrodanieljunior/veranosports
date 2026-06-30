@@ -4677,8 +4677,8 @@ function UsersTab() {
             <div className="space-y-1 p-3">
               {historyEvents.map((ev: any) => {
                 const txIconMap: Record<string, string> = { deposit: "💰", bonus: "🎁", referral_bonus: "👥", win: "🏅", withdrawal: "💸", withdrawal_refund: "↩️", adjustment: "🔧", cashout: "💱", bolao_win: "🏆", bolao_entry: "🏆", duelo_entry: "⚔️", duelo_win: "⚔️", early_exit: "🚪", bet: "🎯" };
-                let kindIcon = "💳";
-                if (ev.kind === "bet") { kindIcon = ev.subKind === "won" ? "🏅" : ev.subKind === "lost" ? "❌" : ev.subKind === "cashed_out" ? "💱" : "🎯"; }
+                let kindIcon: React.ReactNode = "💳";
+                if (ev.kind === "bet") { kindIcon = ev.subKind === "won" ? <Check className="w-4 h-4 text-green-400" /> : ev.subKind === "lost" ? "❌" : ev.subKind === "cashed_out" ? "💱" : "🎯"; }
                 else if (ev.kind === "saque") { kindIcon = ev.subKind === "paid" ? "💸" : ev.subKind === "rejected" ? "🚫" : "⏳"; }
                 else if (ev.kind === "bolao") { kindIcon = "🏆"; }
                 else if (ev.kind === "duelo") { kindIcon = "⚔️"; }
