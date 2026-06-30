@@ -32,12 +32,10 @@ export function NotificationPanel() {
 
   const { data: notifications = [] } = useQuery<Notif[]>({
     queryKey: ["/api/notifications"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/notifications");
-      return res.json();
-    },
-    enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 15000,
+    refetchOnMount: true,
+    staleTime: 0,
+    retry: 1,
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -137,12 +135,10 @@ export function NotificationBanner() {
 
   const { data: notifications = [] } = useQuery<Notif[]>({
     queryKey: ["/api/notifications"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/notifications");
-      return res.json();
-    },
-    enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 15000,
+    refetchOnMount: true,
+    staleTime: 0,
+    retry: 1,
   });
 
   const markOneRead = useMutation({

@@ -7370,7 +7370,8 @@ export async function registerRoutes(
     try {
       const cpf = req.session?.userId;
       if (!cpf) return res.json([]);
-      res.json(await storage.getNotificationsForUser(cpf));
+      const result = await storage.getNotificationsForUser(cpf);
+      res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
   app.get("/api/notifications/unread-count", async (req: any, res) => {

@@ -25,6 +25,7 @@ import { LiveTestCard } from "@/components/LiveTestCard";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
+import { NotificationPanel, NotificationBanner } from "@/components/NotificationPanel";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
@@ -296,6 +297,7 @@ export default function Copa() {
               </>
             ) : (
               <>
+                <NotificationPanel />
                 <button onClick={() => { setShowHistory(true); setShowBetSlip(false); }} className="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-md whitespace-nowrap" style={{ background: "#1565C0", color: "white" }} data-testid="button-history-copa">
                   <History className="w-3.5 h-3.5" /><span>Apostas</span>
                   {pendingBets > 0 && <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] bg-red-500 text-white border-0">{pendingBets}</Badge>}
@@ -354,6 +356,7 @@ export default function Copa() {
         </div>
       </header>
 
+      <NotificationBanner />
 
       {/* ===== DUELOS ===== */}
       {duelosData.length > 0 && !isSearching && !isTyping && (
