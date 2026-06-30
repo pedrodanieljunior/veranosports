@@ -4697,7 +4697,7 @@ function UsersTab() {
                   : "text-yellow-400";
                 return (
                   <div key={ev.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <span className="text-base mt-0.5 flex-shrink-0">{kindIcon[ev.kind] ?? "📋"}</span>
+                    <span className="text-base mt-0.5 flex-shrink-0">{kindIcon}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium leading-tight">{ev.title}</p>
                       {ev.subtitle && <p className="text-xs text-muted-foreground mt-0.5 truncate">{ev.subtitle}</p>}
