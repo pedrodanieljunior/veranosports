@@ -56,8 +56,7 @@ export function NotificationPanel() {
     <div className="relative">
       <button
         onClick={() => { setOpen(o => !o); if (unreadCount > 0) markAllRead.mutate(); }}
-        className="relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
-        style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
+        className="relative flex items-center justify-center p-1 transition-opacity hover:opacity-70"
         data-testid="button-notifications"
       >
         <Bell className="w-4 h-4 text-white" />
