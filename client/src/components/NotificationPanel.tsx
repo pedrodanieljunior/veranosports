@@ -59,8 +59,9 @@ export function NotificationPanel() {
   });
 
   const dismissAll = useMutation({
-    mutationFn: () => apiRequest("DELETE", "/api/notifications"),
+    mutationFn: () => apiRequest("POST", "/api/notifications/dismiss-all"),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+    onError: (e) => console.error("dismissAll error:", e),
   });
 
   const handleOpen = () => {

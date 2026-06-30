@@ -7425,7 +7425,7 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
-  app.delete("/api/notifications", async (req: any, res) => {
+  app.post("/api/notifications/dismiss-all", async (req: any, res) => {
     try {
       const cpf = req.session?.userId;
       if (!cpf) return res.status(401).json({ error: "Não autenticado" });
