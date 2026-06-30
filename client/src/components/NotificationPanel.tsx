@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Bell, X, Megaphone, Tag, AlertTriangle, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,8 @@ const typeColor = (type: string) => {
 export function NotificationPanel() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const { data: notifications = [] } = useQuery<Notif[]>({
     queryKey: ["/api/notifications"],
@@ -50,12 +53,32 @@ export function NotificationPanel() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPanelPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(o => !o);
+    if (unreadCount > 0) markAllRead.mutate();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   if (!user) return null;
 
   return (
-    <div className="relative">
+    <>
       <button
-        onClick={() => { setOpen(o => !o); if (unreadCount > 0) markAllRead.mutate(); }}
+        ref={btnRef}
+        onClick={handleOpen}
         className="relative flex items-center justify-center p-1 transition-opacity hover:opacity-70"
         data-testid="button-notifications"
       >
@@ -67,10 +90,18 @@ export function NotificationPanel() {
         )}
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-50 w-80 rounded-xl shadow-2xl overflow-hidden" style={{ background: "#1a1f2e", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-[9999] w-80 rounded-xl shadow-2xl overflow-hidden"
+            style={{
+              top: panelPos.top,
+              right: panelPos.right,
+              background: "#1a1f2e",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-white/70" />
@@ -103,7 +134,7 @@ export function NotificationPanel() {
                     <div
                       key={n.id}
                       onClick={() => { if (!n.read) markOneRead.mutate(n.id); }}
-                      className={`relative p-3 rounded-lg border cursor-default transition-colors ${typeColor(n.type)} ${!n.read ? "opacity-100" : "opacity-60"}`}
+                      className={`relative p-3 rounded-lg border cursor-default transition-colors ${typeColor(n.type)} ${!n.read ? "opacity-100" : "opacity-70"}`}
                     >
                       {!n.read && <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-blue-400" />}
                       <div className="flex items-start gap-2">
@@ -122,9 +153,10 @@ export function NotificationPanel() {
               )}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
@@ -147,29 +179,29 @@ export function NotificationBanner() {
 
   if (!user) return null;
 
-  const banner = notifications.find(n => !n.read && !dismissed.has(n.id));
-  if (!banner) return null;
+  const visible = notifications.filter(n => !n.read && !dismissed.has(n.id));
+  if (visible.length === 0) return null;
 
-  const dismiss = () => {
-    setDismissed(prev => new Set(prev).add(banner.id));
-    markOneRead.mutate(banner.id);
-  };
-
-  const bgStyle = banner.type === "promo"
-    ? "from-green-900/80 to-green-800/60 border-green-500/40"
-    : banner.type === "alert"
-    ? "from-yellow-900/80 to-yellow-800/60 border-yellow-500/40"
-    : "from-blue-900/80 to-blue-800/60 border-blue-500/40";
+  const notif = visible[0];
 
   return (
-    <div className={`mx-3 mt-2 rounded-xl border bg-gradient-to-r ${bgStyle} px-4 py-3 flex items-start gap-3`}>
-      <span className="mt-0.5 flex-shrink-0">{typeIcon(banner.type)}</span>
+    <div
+      className={`flex items-start gap-3 px-4 py-3 border-b ${typeColor(notif.type)}`}
+      style={{ borderColor: "rgba(255,255,255,0.08)" }}
+    >
+      <span className="mt-0.5 flex-shrink-0">{typeIcon(notif.type)}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-white leading-tight">{banner.title}</p>
-        <p className="text-[11px] text-white/80 mt-0.5 leading-snug">{banner.body}</p>
+        <p className="text-xs font-semibold text-white leading-tight">{notif.title}</p>
+        <p className="text-[11px] text-white/70 mt-0.5 leading-snug">{notif.body}</p>
       </div>
-      <button onClick={dismiss} className="flex-shrink-0 text-white/50 hover:text-white/90 mt-0.5">
-        <X className="w-4 h-4" />
+      <button
+        onClick={() => {
+          markOneRead.mutate(notif.id);
+          setDismissed(prev => new Set([...prev, notif.id]));
+        }}
+        className="flex-shrink-0 text-white/40 hover:text-white/80 mt-0.5"
+      >
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );
