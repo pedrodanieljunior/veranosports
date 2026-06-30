@@ -7356,7 +7356,7 @@ function NotificationsAdminTab() {
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">
-              Imagem <span className="text-muted-foreground/60">(opcional — aparece como banner na notificação)</span>
+              Imagem <span className="text-muted-foreground/60">(opcional — tamanho ideal: <strong>600 × 200 px</strong>, proporção 3:1)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer group">
               <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background hover:border-primary/60 transition-colors text-sm text-muted-foreground">
