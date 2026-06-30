@@ -48,23 +48,35 @@ export function NotificationPanel() {
 
   const markAllRead = useMutation({
     mutationFn: () => apiRequest("POST", "/api/notifications/read-all"),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+    onSuccess: () => {
+      queryClient.setQueryData(["/api/notifications"], (old: Notif[] | undefined) =>
+        (old ?? []).map(n => ({ ...n, read: true }))
+      );
+    },
   });
 
   const markOneRead = useMutation({
     mutationFn: (id: number) => apiRequest("POST", `/api/notifications/${id}/read`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData(["/api/notifications"], (old: Notif[] | undefined) =>
+        (old ?? []).map(n => n.id === id ? { ...n, read: true } : n)
+      );
+    },
   });
 
   const dismiss = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/notifications/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData(["/api/notifications"], (old: Notif[] | undefined) =>
+        (old ?? []).filter(n => n.id !== id)
+      );
+    },
   });
 
   const dismissAll = useMutation({
     mutationFn: () => apiRequest("POST", "/api/notifications/dismiss-all"),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.setQueryData(["/api/notifications"], []);
       toast({ description: "Notificações limpas." });
     },
     onError: (e: any) => {

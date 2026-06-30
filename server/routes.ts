@@ -7390,6 +7390,7 @@ export async function registerRoutes(
     try {
       const cpf = req.session?.userId;
       if (!cpf) return res.json([]);
+      res.set("Cache-Control", "no-store");
       const result = await storage.getNotificationsForUser(cpf);
       res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -7428,10 +7429,15 @@ export async function registerRoutes(
   app.post("/api/notifications/dismiss-all", async (req: any, res) => {
     try {
       const cpf = req.session?.userId;
+      console.log("[dismiss-all] cpf=", cpf);
       if (!cpf) return res.status(401).json({ error: "Não autenticado" });
       await storage.dismissAllNotifications(cpf);
+      console.log("[dismiss-all] done for", cpf);
       res.json({ ok: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) {
+      console.error("[dismiss-all] error:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   return httpServer;

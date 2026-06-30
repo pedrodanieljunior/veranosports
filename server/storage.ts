@@ -1,5 +1,5 @@
 import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable, notificationsTable, notificationReadsTable } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, desc, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -1412,11 +1412,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async dismissAllNotifications(userCpf: string) {
-    await db.execute(sql`
-      INSERT INTO notification_reads (notification_id, user_cpf, dismissed)
-      SELECT id, ${userCpf}, true FROM notifications WHERE active = true
-      ON CONFLICT (notification_id, user_cpf) DO UPDATE SET dismissed = true
-    `);
+    const result = await pool.query(
+      `INSERT INTO notification_reads (notification_id, user_cpf, dismissed)
+       SELECT id, $1, true FROM notifications WHERE active = true
+       ON CONFLICT (notification_id, user_cpf) DO UPDATE SET dismissed = true`,
+      [userCpf]
+    );
+    console.log("[dismissAll] rowCount=", result.rowCount, "cpf=", userCpf);
   }
 
   async getUnreadCountForUser(userCpf: string) {
