@@ -1412,11 +1412,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async dismissAllNotifications(userCpf: string) {
-    const all = await db.select({ id: notificationsTable.id })
-      .from(notificationsTable).where(eq(notificationsTable.active, true));
-    for (const n of all) {
-      await this.dismissNotification(n.id, userCpf);
-    }
+    await db.execute(sql`
+      INSERT INTO notification_reads (notification_id, user_cpf, dismissed)
+      SELECT id, ${userCpf}, true FROM notifications WHERE active = true
+      ON CONFLICT (notification_id, user_cpf) DO UPDATE SET dismissed = true
+    `);
   }
 
   async getUnreadCountForUser(userCpf: string) {
