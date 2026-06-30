@@ -171,8 +171,8 @@ export function NotificationPanel() {
                       )}
 
                       {/* Corpo */}
-                      <div className={`p-3 ${n.imageUrl ? "pt-2" : ""} ${n.imageUrl ? "bg-[#0f0f19]" : typeColor(n.type)}`}>
-                        {!n.imageUrl && (
+                      <div className={`p-3 ${n.hasImage ? "pt-2" : ""} ${n.hasImage ? "bg-[#0f0f19]" : typeColor(n.type)}`}>
+                        {!n.hasImage && (
                           <div className="flex items-start justify-between gap-1 mb-1">
                             <div className="flex items-center gap-1.5">
                               {typeIcon(n.type)}
