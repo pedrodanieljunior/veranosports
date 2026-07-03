@@ -7599,11 +7599,13 @@ function GraficosTab() {
       const user = allUsers.find(u => u.cpf === v.userId);
       const resolved = v.won + v.lost;
       const winRate = resolved > 0 ? v.won / resolved : 0;
+      const roi = v.stake > 0 ? (v.paidOut - v.stake) / v.stake : 0;
       return {
         ...v,
         name: user?.name ?? v.userId,
         resolved,
         winRate,
+        roi,
         profit: v.stake - v.paidOut,
       };
     });
@@ -7615,11 +7617,12 @@ function GraficosTab() {
     return rows.map(v => {
       const isEligible = v.resolved >= 5;
       const isHighVolume = v.stake >= percentile75 && percentile75 > 0;
-      const isHighWinRate = v.winRate >= 0.6;
-      let profileQuadrant: "risco" | "potencial" | "atencao" | "neutro" = "neutro";
-      if (isEligible && isHighVolume && !isHighWinRate) profileQuadrant = "risco";
-      else if (isEligible && isHighVolume && isHighWinRate) profileQuadrant = "potencial";
-      else if (isEligible && !isHighVolume && isHighWinRate) profileQuadrant = "atencao";
+      const isHighQuality = v.roi >= 0;
+      let profileQuadrant: "elite" | "potencial" | "baleia_risco" | "casual" | "neutro" = "neutro";
+      if (isEligible && isHighVolume && isHighQuality) profileQuadrant = "elite";
+      else if (isEligible && !isHighVolume && isHighQuality) profileQuadrant = "potencial";
+      else if (isEligible && isHighVolume && !isHighQuality) profileQuadrant = "baleia_risco";
+      else if (isEligible && !isHighVolume && !isHighQuality) profileQuadrant = "casual";
       const normalizedVolume = maxStake > 0 ? v.stake / maxStake : 0;
       const impactScore = isEligible ? v.winRate * 0.4 + normalizedVolume * 0.6 : null;
       return {
@@ -7948,25 +7951,29 @@ function GraficosTab() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Star className="w-4 h-4 text-yellow-400" />
-                  Ranking de Usuários (Perfil Potencial)
+                  Ranking de Usuários (Matriz de Qualidade)
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Usuários com 5+ bilhetes resolvidos são classificados por quadrante (volume × taxa de acerto) e ordenados por Score de Impacto (40% taxa de acerto + 60% volume).
+                  Usuários com 5+ bilhetes resolvidos são classificados em 4 categorias (volume × ROI) e ordenados por Score de Impacto (40% taxa de acerto + 60% volume). A categoria usa o ROI (retorno pago ÷ apostado) como filtro de qualidade — não apenas volume.
                 </p>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3 text-xs">
                   <div className="flex items-center gap-1.5">
-                    <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20">Perfil de Risco</Badge>
-                    <span className="text-muted-foreground">Volume alto (top 25%) + taxa de acerto baixa (apostador compulsivo)</span>
+                    <Badge variant="destructive" className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20">Elite</Badge>
+                    <span className="text-muted-foreground">Volume alto (top 25%) + ROI alto — reter (VIP / benefícios)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Badge variant="destructive" className="text-[10px] bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/20">Perfil Potencial</Badge>
-                    <span className="text-muted-foreground">Volume alto + taxa de acerto alta (a "baleia")</span>
+                    <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20">Potencial</Badge>
+                    <span className="text-muted-foreground">Volume baixo/médio + ROI alto — incentivar (aumentar limite)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20">Perfil de Atenção</Badge>
-                    <span className="text-muted-foreground">Volume médio/baixo + taxa de acerto alta (o "estrategista")</span>
+                    <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20">Baleia de Risco</Badge>
+                    <span className="text-muted-foreground">Volume alto + ROI baixo — monitoramento responsável</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="destructive" className="text-[10px] bg-slate-500/20 text-slate-400 border-slate-500/40 hover:bg-slate-500/20">Apostador Casual</Badge>
+                    <span className="text-muted-foreground">Volume baixo + ROI baixo — marketing (reengajamento)</span>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -8000,12 +8007,14 @@ function GraficosTab() {
                           <td className={`text-right py-2 px-2 font-mono font-bold ${u.profit >= 0 ? "text-green-400" : "text-red-400"}`}>{R$(u.profit)}</td>
                           <td className="text-center py-2 px-2 font-mono">{u.impactScore !== null ? (u.impactScore * 100).toFixed(0) : <span className="text-muted-foreground">—</span>}</td>
                           <td className="text-center py-2 pl-2">
-                            {u.profileQuadrant === "risco" ? (
-                              <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20" data-testid={`badge-profile-risco-${u.userId}`}>Perfil de Risco</Badge>
+                            {u.profileQuadrant === "elite" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20" data-testid={`badge-profile-elite-${u.userId}`}>Elite</Badge>
                             ) : u.profileQuadrant === "potencial" ? (
-                              <Badge variant="destructive" className="text-[10px] bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/20" data-testid={`badge-profile-potencial-${u.userId}`}>Perfil Potencial</Badge>
-                            ) : u.profileQuadrant === "atencao" ? (
-                              <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20" data-testid={`badge-profile-atencao-${u.userId}`}>Perfil de Atenção</Badge>
+                              <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20" data-testid={`badge-profile-potencial-${u.userId}`}>Potencial</Badge>
+                            ) : u.profileQuadrant === "baleia_risco" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20" data-testid={`badge-profile-baleia-risco-${u.userId}`}>Baleia de Risco</Badge>
+                            ) : u.profileQuadrant === "casual" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-slate-500/20 text-slate-400 border-slate-500/40 hover:bg-slate-500/20" data-testid={`badge-profile-casual-${u.userId}`}>Apostador Casual</Badge>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
