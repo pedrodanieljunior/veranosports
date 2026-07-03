@@ -7731,13 +7731,17 @@ function GraficosTab() {
             </CardHeader>
             <CardContent className="p-3">
               <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <BarChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
                   <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
-                  <Line type="monotone" dataKey="Lucro" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
+                  <Bar dataKey="Lucro" radius={[3, 3, 0, 0]}>
+                    {gfDailyData.map((entry, i) => (
+                      <Cell key={i} fill={entry.Lucro >= 0 ? "#22c55e" : "#ef4444"} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
