@@ -7955,6 +7955,20 @@ function GraficosTab() {
                 </p>
               </CardHeader>
               <CardContent className="p-3">
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20">Perfil de Risco</Badge>
+                    <span className="text-muted-foreground">Volume alto (top 25%) + taxa de acerto baixa (apostador compulsivo)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="destructive" className="text-[10px] bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/20">Perfil Potencial</Badge>
+                    <span className="text-muted-foreground">Volume alto + taxa de acerto alta (a "baleia")</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20">Perfil de Atenção</Badge>
+                    <span className="text-muted-foreground">Volume médio/baixo + taxa de acerto alta (o "estrategista")</span>
+                  </div>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
