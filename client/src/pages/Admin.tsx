@@ -7516,13 +7516,12 @@ function GraficosTab() {
   }, [gfBets]);
 
   const gfDailyData = useMemo(() => {
-    const map = new Map<string, { key: string; date: string; Entrada: number; Retorno: number; GanhoPotencial: number }>();
+    const map = new Map<string, { key: string; date: string; Entrada: number; Retorno: number }>();
     gfBets.forEach(b => {
       const dt = new Date(b.createdAt);
       const key = format(dt, "yyyy-MM-dd");
-      const cur = map.get(key) ?? { key, date: format(dt, "dd/MM"), Entrada: 0, Retorno: 0, GanhoPotencial: 0 };
+      const cur = map.get(key) ?? { key, date: format(dt, "dd/MM"), Entrada: 0, Retorno: 0 };
       cur.Entrada += b.stake;
-      cur.GanhoPotencial += b.potentialWin;
       if (b.status === "won") cur.Retorno += paidOutOf(b);
       map.set(key, cur);
     });
@@ -7532,7 +7531,6 @@ function GraficosTab() {
         date: v.date,
         Entrada: parseFloat(v.Entrada.toFixed(2)),
         Retorno: parseFloat(v.Retorno.toFixed(2)),
-        "Ganho Potencial": parseFloat(v.GanhoPotencial.toFixed(2)),
         Lucro: parseFloat((v.Entrada - v.Retorno).toFixed(2)),
         LucroUsuario: parseFloat((v.Retorno - v.Entrada).toFixed(2)),
       }));
@@ -7557,16 +7555,15 @@ function GraficosTab() {
   }, [gfDailyData]);
 
   const gfUserRanking = useMemo(() => {
-    const map = new Map<string, { userId: string; total: number; won: number; lost: number; pending: number; stake: number; paidOut: number; potentialWin: number }>();
+    const map = new Map<string, { userId: string; total: number; won: number; lost: number; pending: number; stake: number; paidOut: number }>();
     gfDateFilteredBets.forEach(b => {
       const uid = b.userId ?? "desconhecido";
-      const cur = map.get(uid) ?? { userId: uid, total: 0, won: 0, lost: 0, pending: 0, stake: 0, paidOut: 0, potentialWin: 0 };
+      const cur = map.get(uid) ?? { userId: uid, total: 0, won: 0, lost: 0, pending: 0, stake: 0, paidOut: 0 };
       cur.total++;
       if (b.status === "won") { cur.won++; cur.paidOut += paidOutOf(b); }
       else if (b.status === "lost") cur.lost++;
       else if (b.status === "pending") cur.pending++;
       cur.stake += b.stake;
-      cur.potentialWin += b.potentialWin;
       map.set(uid, cur);
     });
     return Array.from(map.values()).map(v => {
@@ -7590,7 +7587,6 @@ function GraficosTab() {
   const pendingBets = gfBets.filter(b => b.status === "pending").length;
   const resolvedBets = wonBets + lostBets;
   const totalStake = gfBets.reduce((s, b) => s + b.stake, 0);
-  const totalPotentialWin = gfBets.reduce((s, b) => s + b.potentialWin, 0);
   const totalPaidOut = gfBets.filter(b => b.status === "won").reduce((s, b) => s + paidOutOf(b), 0);
   const pendingExposure = gfBets.filter(b => b.status === "pending").reduce((s, b) => s + paidOutOf(b), 0);
   const houseProfit = totalStake - totalPaidOut;
@@ -7672,7 +7668,6 @@ function GraficosTab() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400" />, label: "Total Apostado", value: R$(totalStake), color: "text-blue-400" },
-              { icon: <Zap className="w-5 h-5 text-purple-400" />, label: "Ganho Potencial Total", value: R$(totalPotentialWin), color: "text-purple-400" },
               { icon: <ArrowDownCircle className="w-5 h-5 text-red-400" />, label: "Prêmios Pagos", value: R$(totalPaidOut), color: "text-red-400" },
               { icon: houseProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-400" /> : <TrendingDown className="w-5 h-5 text-red-400" />, label: "Lucro (Casa)", value: R$(houseProfit), color: houseProfit >= 0 ? "text-green-400" : "text-red-400" },
             ].map(({ icon, label, value, color }) => (
@@ -7716,12 +7711,12 @@ function GraficosTab() {
             </CardContent>
           </Card>
 
-          {/* Gráfico: Entrada x Retorno x Ganho Potencial ao longo do tempo */}
+          {/* Gráfico: Entrada x Retorno ao longo do tempo */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-primary" />
-                Valor Apostado, Retorno e Ganho Potencial por Dia
+                Valor Apostado e Retorno por Dia
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3">
@@ -7733,7 +7728,6 @@ function GraficosTab() {
                   <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
                   <Legend />
                   <Bar dataKey="Entrada" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Ganho Potencial" fill="#a855f7" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Retorno" fill="#ef4444" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -7835,7 +7829,6 @@ function GraficosTab() {
                         <th className="text-center py-2 px-2 text-red-400">Perdidos</th>
                         <th className="text-center py-2 px-2">Taxa Acerto</th>
                         <th className="text-right py-2 px-2">Apostado</th>
-                        <th className="text-right py-2 px-2">Ganho Potencial</th>
                         <th className="text-right py-2 px-2">Lucro (Casa)</th>
                         <th className="text-center py-2 pl-2">Perfil</th>
                       </tr>
@@ -7853,7 +7846,6 @@ function GraficosTab() {
                           <td className="text-center py-2 px-2 text-red-400">{u.lost}</td>
                           <td className="text-center py-2 px-2">{PCT(u.won, u.resolved)}</td>
                           <td className="text-right py-2 px-2 font-mono">{R$(u.stake)}</td>
-                          <td className="text-right py-2 px-2 font-mono">{R$(u.potentialWin)}</td>
                           <td className={`text-right py-2 px-2 font-mono font-bold ${u.profit >= 0 ? "text-green-400" : "text-red-400"}`}>{R$(u.profit)}</td>
                           <td className="text-center py-2 pl-2">
                             {u.isHighPotential ? (
