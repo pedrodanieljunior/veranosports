@@ -7844,42 +7844,6 @@ function GraficosTab() {
             </CardContent>
           </Card>
 
-          {/* Gráfico: Evolução do lucro */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                Evolução do Lucro (Casa) por Dia
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3">
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gfLucroGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset={gfLucroGradientOffset} stopColor="#22c55e" stopOpacity={1} />
-                      <stop offset={gfLucroGradientOffset} stopColor="#ef4444" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
-                  <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
-                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
-                  <Line
-                    type="monotone"
-                    dataKey="Lucro"
-                    stroke="url(#gfLucroGradient)"
-                    strokeWidth={2}
-                    dot={(props: any) => {
-                      const { cx, cy, payload, index } = props;
-                      return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3} fill={payload.Lucro >= 0 ? "#22c55e" : "#ef4444"} stroke="none" />;
-                    }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
           {/* Gráfico: Evolução do lucro do usuário */}
           <Card>
             <CardHeader className="pb-2">
@@ -7909,6 +7873,42 @@ function GraficosTab() {
                     dot={(props: any) => {
                       const { cx, cy, payload, index } = props;
                       return <circle key={`dot-usuario-${index}`} cx={cx} cy={cy} r={3} fill={payload.LucroUsuario >= 0 ? "#22c55e" : "#ef4444"} stroke="none" />;
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico: Evolução do lucro */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Evolução do Lucro (Casa) por Dia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gfLucroGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset={gfLucroGradientOffset} stopColor="#22c55e" stopOpacity={1} />
+                      <stop offset={gfLucroGradientOffset} stopColor="#ef4444" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
+                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="Lucro"
+                    stroke="url(#gfLucroGradient)"
+                    strokeWidth={2}
+                    dot={(props: any) => {
+                      const { cx, cy, payload, index } = props;
+                      return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3} fill={payload.Lucro >= 0 ? "#22c55e" : "#ef4444"} stroke="none" />;
                     }}
                   />
                 </LineChart>
