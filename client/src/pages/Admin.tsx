@@ -7803,13 +7803,23 @@ function GraficosTab() {
             <CardContent className="p-3">
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gfEntradaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#60a5fa" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#1d4ed8" stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="gfRetornoGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4ade80" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#15803d" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
                   <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Legend />
-                  <Bar dataKey="Entrada" fill="#22c55e" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Retorno" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Entrada" fill="url(#gfEntradaGradient)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Retorno" fill="url(#gfRetornoGradient)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
