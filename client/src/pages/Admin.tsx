@@ -7754,7 +7754,7 @@ function GraficosTab() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400" />, label: "Total Apostado", value: R$(totalStake), color: "text-blue-400" },
-              { icon: <ArrowDownCircle className="w-5 h-5 text-red-400" />, label: "Prêmios Pagos", value: R$(totalPaidOut), color: "text-red-400" },
+              { icon: <ArrowDownCircle className="w-5 h-5 text-red-400" />, label: "Bilhetes Pagos", value: R$(totalPaidOut), color: "text-red-400" },
               { icon: houseProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-400" /> : <TrendingDown className="w-5 h-5 text-red-400" />, label: "Lucro (Casa)", value: R$(houseProfit), color: houseProfit >= 0 ? "text-green-400" : "text-red-400" },
               { icon: <AlertTriangle className="w-5 h-5 text-yellow-400" />, label: "Exposição Pendente", value: R$(pendingExposure), color: "text-yellow-400" },
             ].map(({ icon, label, value, color }) => (
