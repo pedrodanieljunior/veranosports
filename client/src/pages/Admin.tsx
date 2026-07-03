@@ -7744,7 +7744,7 @@ function GraficosTab() {
             ].map(({ icon, label, value }) => (
               <Card key={label}>
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-muted-foreground">{label}</p></div>
+                  <div className="flex items-center gap-2 mb-1">{icon}<p className="text-[11px] leading-tight text-muted-foreground">{label}</p></div>
                   <p className="text-lg font-bold">{value}</p>
                 </CardContent>
               </Card>
