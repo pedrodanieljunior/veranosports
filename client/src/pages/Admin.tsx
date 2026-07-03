@@ -7621,13 +7621,19 @@ function GraficosTab() {
       else if (isEligible && isHighVolume && isHighWinRate) profileQuadrant = "potencial";
       else if (isEligible && !isHighVolume && isHighWinRate) profileQuadrant = "atencao";
       const normalizedVolume = maxStake > 0 ? v.stake / maxStake : 0;
-      const impactScore = v.winRate * 0.4 + normalizedVolume * 0.6;
+      const impactScore = isEligible ? v.winRate * 0.4 + normalizedVolume * 0.6 : null;
       return {
         ...v,
+        isEligible,
         profileQuadrant,
         impactScore,
       };
-    }).sort((a, b) => b.impactScore - a.impactScore);
+    }).sort((a, b) => {
+      if (a.impactScore === null && b.impactScore === null) return b.stake - a.stake;
+      if (a.impactScore === null) return 1;
+      if (b.impactScore === null) return -1;
+      return b.impactScore - a.impactScore;
+    });
   }, [gfDateFilteredBets, allUsers]);
 
   const totalBets = gfBets.length;
@@ -7978,7 +7984,7 @@ function GraficosTab() {
                           <td className="text-center py-2 px-2">{PCT(u.won, u.resolved)}</td>
                           <td className="text-right py-2 px-2 font-mono">{R$(u.stake)}</td>
                           <td className={`text-right py-2 px-2 font-mono font-bold ${u.profit >= 0 ? "text-green-400" : "text-red-400"}`}>{R$(u.profit)}</td>
-                          <td className="text-center py-2 px-2 font-mono">{(u.impactScore * 100).toFixed(0)}</td>
+                          <td className="text-center py-2 px-2 font-mono">{u.impactScore !== null ? (u.impactScore * 100).toFixed(0) : <span className="text-muted-foreground">—</span>}</td>
                           <td className="text-center py-2 pl-2">
                             {u.profileQuadrant === "risco" ? (
                               <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20" data-testid={`badge-profile-risco-${u.userId}`}>Perfil de Risco</Badge>
