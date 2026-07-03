@@ -7670,6 +7670,7 @@ function GraficosTab() {
               { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400" />, label: "Total Apostado", value: R$(totalStake), color: "text-blue-400" },
               { icon: <ArrowDownCircle className="w-5 h-5 text-red-400" />, label: "Prêmios Pagos", value: R$(totalPaidOut), color: "text-red-400" },
               { icon: houseProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-400" /> : <TrendingDown className="w-5 h-5 text-red-400" />, label: "Lucro (Casa)", value: R$(houseProfit), color: houseProfit >= 0 ? "text-green-400" : "text-red-400" },
+              { icon: <AlertTriangle className="w-5 h-5 text-yellow-400" />, label: "Exposição Pendente", value: R$(pendingExposure), color: "text-yellow-400" },
             ].map(({ icon, label, value, color }) => (
               <Card key={label}>
                 <CardContent className="p-3">
@@ -7679,12 +7680,6 @@ function GraficosTab() {
               </Card>
             ))}
           </div>
-
-          {pendingExposure > 0 && (
-            <p className="text-xs text-yellow-400 flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" /> Exposição pendente (bilhetes em aberto): {R$(pendingExposure)}
-            </p>
-          )}
 
           {/* Gráfico: Ganhos x Perdidos */}
           <Card>
