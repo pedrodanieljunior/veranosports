@@ -7618,13 +7618,13 @@ function GraficosTab() {
       const isEligible = v.resolved >= 5;
       const isHighVolume = v.stake >= percentile75 && percentile75 > 0;
       const isHighQuality = v.roi >= 0;
-      let profileQuadrant: "elite" | "potencial" | "baleia_risco" | "casual" | "neutro" = "neutro";
-      if (isEligible && isHighVolume && isHighQuality) profileQuadrant = "elite";
+      const normalizedVolume = maxStake > 0 ? v.stake / maxStake : 0;
+      const impactScore = isEligible ? v.winRate * 0.4 + normalizedVolume * 0.6 : null;
+      let profileQuadrant: "elite" | "premium" | "potencial" | "baleia_risco" | "casual" | "neutro" = "neutro";
+      if (isEligible && isHighVolume && isHighQuality) profileQuadrant = (impactScore ?? 0) >= 0.6 ? "elite" : "premium";
       else if (isEligible && !isHighVolume && isHighQuality) profileQuadrant = "potencial";
       else if (isEligible && isHighVolume && !isHighQuality) profileQuadrant = "baleia_risco";
       else if (isEligible && !isHighVolume && !isHighQuality) profileQuadrant = "casual";
-      const normalizedVolume = maxStake > 0 ? v.stake / maxStake : 0;
-      const impactScore = isEligible ? v.winRate * 0.4 + normalizedVolume * 0.6 : null;
       return {
         ...v,
         isEligible,
@@ -7961,7 +7961,11 @@ function GraficosTab() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3 text-xs">
                   <div className="flex items-center gap-1.5">
                     <Badge variant="destructive" className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20">Elite</Badge>
-                    <span className="text-muted-foreground">Volume alto (top 25%) + ROI alto — reter (VIP / benefícios)</span>
+                    <span className="text-muted-foreground">Volume alto (top 25%) + ROI alto + Score ≥ 60 — reter (VIP / benefícios)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="destructive" className="text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/40 hover:bg-cyan-500/20">Premium</Badge>
+                    <span className="text-muted-foreground">Volume alto + ROI alto + Score {"<"} 60 — reter (VIP / benefícios)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20">Potencial</Badge>
@@ -8009,6 +8013,8 @@ function GraficosTab() {
                           <td className="text-center py-2 pl-2">
                             {u.profileQuadrant === "elite" ? (
                               <Badge variant="destructive" className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20" data-testid={`badge-profile-elite-${u.userId}`}>Elite</Badge>
+                            ) : u.profileQuadrant === "premium" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/40 hover:bg-cyan-500/20" data-testid={`badge-profile-premium-${u.userId}`}>Premium</Badge>
                             ) : u.profileQuadrant === "potencial" ? (
                               <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20" data-testid={`badge-profile-potencial-${u.userId}`}>Potencial</Badge>
                             ) : u.profileQuadrant === "baleia_risco" ? (
