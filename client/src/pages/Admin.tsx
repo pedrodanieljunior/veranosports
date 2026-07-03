@@ -109,6 +109,8 @@ import {
   ResponsiveContainer,
   Legend,
   Cell,
+  LineChart,
+  Line,
 } from "recharts";
 import { format, startOfWeek, startOfMonth, subDays, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1211,6 +1213,10 @@ export default function Admin() {
             <TabsTrigger value="notificacoes" data-testid="tab-notificacoes">
               <Bell className="w-4 h-4 mr-2 text-blue-400" />
               Notificações
+            </TabsTrigger>
+            <TabsTrigger value="graficos" data-testid="tab-graficos">
+              <TrendingUp className="w-4 h-4 mr-2 text-green-400" />
+              Gráficos
             </TabsTrigger>
           </TabsList>
 
@@ -2822,6 +2828,10 @@ export default function Admin() {
 
           <TabsContent value="notificacoes">
             <NotificationsAdminTab />
+          </TabsContent>
+
+          <TabsContent value="graficos">
+            <GraficosTab />
           </TabsContent>
 
         </Tabs>
@@ -7451,6 +7461,347 @@ function NotificationsAdminTab() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ── Aba Gráficos ────────────────────────────────────────────────────────────
+function GraficosTab() {
+  const [gfUserFilter, setGfUserFilter] = useState<string>("all");
+  const [gfDateFrom, setGfDateFrom] = useState<string>("");
+  const [gfDateTo, setGfDateTo] = useState<string>("");
+
+  const { data: bets = [], isLoading: betsLoading } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/admin/bets"],
+  });
+  const { data: allUsers = [] } = useQuery<{ cpf: string; name: string; balance: number }[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return res.json();
+    },
+  });
+
+  const paidOutOf = (b: BetSlipType) => Math.max(0, b.potentialWin - (b.bonusUsed ?? 0));
+
+  const gfDateFilteredBets = useMemo(() => {
+    let filtered = bets;
+    if (gfDateFrom) {
+      const from = new Date(gfDateFrom + "T00:00:00");
+      filtered = filtered.filter(b => new Date(b.createdAt) >= from);
+    }
+    if (gfDateTo) {
+      const to = new Date(gfDateTo + "T23:59:59");
+      filtered = filtered.filter(b => new Date(b.createdAt) <= to);
+    }
+    return filtered;
+  }, [bets, gfDateFrom, gfDateTo]);
+
+  const gfBets = useMemo(() => {
+    if (gfUserFilter === "all") return gfDateFilteredBets;
+    return gfDateFilteredBets.filter(b => b.userId === gfUserFilter);
+  }, [gfDateFilteredBets, gfUserFilter]);
+
+  const gfWonLostData = useMemo(() => {
+    const won = gfBets.filter(b => b.status === "won").length;
+    const lost = gfBets.filter(b => b.status === "lost").length;
+    const pending = gfBets.filter(b => b.status === "pending").length;
+    const cashedOut = gfBets.filter(b => b.status === "cashed_out").length;
+    return [
+      { name: "Ganhos", value: won, fill: "#22c55e" },
+      { name: "Perdidos", value: lost, fill: "#ef4444" },
+      { name: "Pendentes", value: pending, fill: "#eab308" },
+      { name: "Cash Out", value: cashedOut, fill: "#8b5cf6" },
+    ];
+  }, [gfBets]);
+
+  const gfDailyData = useMemo(() => {
+    const map = new Map<string, { key: string; date: string; Entrada: number; Retorno: number; GanhoPotencial: number }>();
+    gfBets.forEach(b => {
+      const dt = new Date(b.createdAt);
+      const key = format(dt, "yyyy-MM-dd");
+      const cur = map.get(key) ?? { key, date: format(dt, "dd/MM"), Entrada: 0, Retorno: 0, GanhoPotencial: 0 };
+      cur.Entrada += b.stake;
+      cur.GanhoPotencial += b.potentialWin;
+      if (b.status === "won") cur.Retorno += paidOutOf(b);
+      map.set(key, cur);
+    });
+    return Array.from(map.values())
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(v => ({
+        date: v.date,
+        Entrada: parseFloat(v.Entrada.toFixed(2)),
+        Retorno: parseFloat(v.Retorno.toFixed(2)),
+        "Ganho Potencial": parseFloat(v.GanhoPotencial.toFixed(2)),
+        Lucro: parseFloat((v.Entrada - v.Retorno).toFixed(2)),
+      }));
+  }, [gfBets]);
+
+  const gfUserRanking = useMemo(() => {
+    const map = new Map<string, { userId: string; total: number; won: number; lost: number; pending: number; stake: number; paidOut: number; potentialWin: number }>();
+    gfDateFilteredBets.forEach(b => {
+      const uid = b.userId ?? "desconhecido";
+      const cur = map.get(uid) ?? { userId: uid, total: 0, won: 0, lost: 0, pending: 0, stake: 0, paidOut: 0, potentialWin: 0 };
+      cur.total++;
+      if (b.status === "won") { cur.won++; cur.paidOut += paidOutOf(b); }
+      else if (b.status === "lost") cur.lost++;
+      else if (b.status === "pending") cur.pending++;
+      cur.stake += b.stake;
+      cur.potentialWin += b.potentialWin;
+      map.set(uid, cur);
+    });
+    return Array.from(map.values()).map(v => {
+      const user = allUsers.find(u => u.cpf === v.userId);
+      const resolved = v.won + v.lost;
+      const winRate = resolved > 0 ? v.won / resolved : 0;
+      return {
+        ...v,
+        name: user?.name ?? v.userId,
+        resolved,
+        winRate,
+        profit: v.stake - v.paidOut,
+        isHighPotential: resolved >= 5 && winRate >= 0.6,
+      };
+    }).sort((a, b) => b.stake - a.stake);
+  }, [gfDateFilteredBets, allUsers]);
+
+  const totalBets = gfBets.length;
+  const wonBets = gfBets.filter(b => b.status === "won").length;
+  const lostBets = gfBets.filter(b => b.status === "lost").length;
+  const pendingBets = gfBets.filter(b => b.status === "pending").length;
+  const resolvedBets = wonBets + lostBets;
+  const totalStake = gfBets.reduce((s, b) => s + b.stake, 0);
+  const totalPotentialWin = gfBets.reduce((s, b) => s + b.potentialWin, 0);
+  const totalPaidOut = gfBets.filter(b => b.status === "won").reduce((s, b) => s + paidOutOf(b), 0);
+  const pendingExposure = gfBets.filter(b => b.status === "pending").reduce((s, b) => s + paidOutOf(b), 0);
+  const houseProfit = totalStake - totalPaidOut;
+
+  const selectedUserName = gfUserFilter === "all" ? "Todos os usuários" : (allUsers.find(u => u.cpf === gfUserFilter)?.name ?? gfUserFilter);
+
+  return (
+    <div className="space-y-5">
+      {/* Filtros */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={gfUserFilter} onValueChange={setGfUserFilter}>
+            <SelectTrigger className="w-[220px] h-9 text-xs" data-testid="select-graficos-user">
+              <SelectValue placeholder="Selecione um usuário" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os usuários</SelectItem>
+              {allUsers.map(u => (
+                <SelectItem key={u.cpf} value={u.cpf}>{u.name} ({u.cpf})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={gfDateFrom}
+              onChange={e => setGfDateFrom(e.target.value)}
+              data-testid="input-graficos-date-from"
+              className="py-1.5 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted-foreground">até</span>
+            <input
+              type="date"
+              value={gfDateTo}
+              onChange={e => setGfDateTo(e.target.value)}
+              data-testid="input-graficos-date-to"
+              className="py-1.5 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            {(gfDateFrom || gfDateTo || gfUserFilter !== "all") && (
+              <button
+                onClick={() => { setGfDateFrom(""); setGfDateTo(""); setGfUserFilter("all"); }}
+                data-testid="button-graficos-clear"
+                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-md border border-border bg-background hover:bg-muted transition-colors"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Analisando: <span className="font-semibold text-foreground">{selectedUserName}</span>
+        </p>
+      </div>
+
+      {betsLoading ? (
+        <div className="text-center py-10 text-muted-foreground text-sm">Carregando dados...</div>
+      ) : totalBets === 0 ? (
+        <div className="text-center py-10 text-muted-foreground text-sm">Nenhum bilhete encontrado para o filtro selecionado.</div>
+      ) : (
+        <>
+          {/* KPI cards linha 1 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { icon: <CalendarDays className="w-5 h-5 text-primary" />, label: "Total de Bilhetes", value: totalBets.toString() },
+              { icon: <Trophy className="w-5 h-5 text-green-400" />, label: "Ganhos / Perdidos / Pendentes", value: <span><span className="text-green-400">{wonBets}</span> / <span className="text-red-400">{lostBets}</span> / <span className="text-yellow-400">{pendingBets}</span></span> },
+              { icon: <Target className="w-5 h-5 text-green-400" />, label: "Taxa de Acerto", value: PCT(wonBets, resolvedBets) },
+              { icon: <XCircle className="w-5 h-5 text-red-400" />, label: "Taxa de Erros", value: PCT(lostBets, resolvedBets) },
+            ].map(({ icon, label, value }) => (
+              <Card key={label}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-muted-foreground">{label}</p></div>
+                  <p className="text-lg font-bold">{value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* KPI cards linha 2 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { icon: <ArrowUpCircle className="w-5 h-5 text-blue-400" />, label: "Total Apostado", value: R$(totalStake), color: "text-blue-400" },
+              { icon: <Zap className="w-5 h-5 text-purple-400" />, label: "Ganho Potencial Total", value: R$(totalPotentialWin), color: "text-purple-400" },
+              { icon: <ArrowDownCircle className="w-5 h-5 text-red-400" />, label: "Prêmios Pagos", value: R$(totalPaidOut), color: "text-red-400" },
+              { icon: houseProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-400" /> : <TrendingDown className="w-5 h-5 text-red-400" />, label: "Lucro (Casa)", value: R$(houseProfit), color: houseProfit >= 0 ? "text-green-400" : "text-red-400" },
+            ].map(({ icon, label, value, color }) => (
+              <Card key={label}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-muted-foreground">{label}</p></div>
+                  <p className={`text-lg font-bold ${color}`}>{value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {pendingExposure > 0 && (
+            <p className="text-xs text-yellow-400 flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" /> Exposição pendente (bilhetes em aberto): {R$(pendingExposure)}
+            </p>
+          )}
+
+          {/* Gráfico: Ganhos x Perdidos */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-primary" />
+                Relação de Bilhetes Ganhos e Perdidos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={gfWonLostData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#666" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#666" allowDecimals={false} />
+                  <Tooltip formatter={(v: number) => `${v} bilhetes`} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                    {gfWonLostData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico: Entrada x Retorno x Ganho Potencial ao longo do tempo */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-primary" />
+                Valor Apostado, Retorno e Ganho Potencial por Dia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
+                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Legend />
+                  <Bar dataKey="Entrada" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Ganho Potencial" fill="#a855f7" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Retorno" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico: Evolução do lucro */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Evolução do Lucro (Casa) por Dia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={gfDailyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
+                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Line type="monotone" dataKey="Lucro" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Ranking de usuários — identificação de perfil potencial */}
+          {gfUserFilter === "all" && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Star className="w-4 h-4 text-yellow-400" />
+                  Ranking de Usuários (Perfil Potencial)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Usuários com 5+ bilhetes resolvidos e taxa de acerto ≥ 60% são marcados como "Perfil de Atenção" — vale a pena analisar de perto.
+                </p>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground">
+                        <th className="text-left py-2 pr-3">Usuário</th>
+                        <th className="text-center py-2 px-2">Bilhetes</th>
+                        <th className="text-center py-2 px-2 text-green-400">Ganhos</th>
+                        <th className="text-center py-2 px-2 text-red-400">Perdidos</th>
+                        <th className="text-center py-2 px-2">Taxa Acerto</th>
+                        <th className="text-right py-2 px-2">Apostado</th>
+                        <th className="text-right py-2 px-2">Ganho Potencial</th>
+                        <th className="text-right py-2 px-2">Lucro (Casa)</th>
+                        <th className="text-center py-2 pl-2">Perfil</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gfUserRanking.map(u => (
+                        <tr key={u.userId} className="border-b border-border/40 hover:bg-muted/30">
+                          <td className="py-2 pr-3 font-medium">
+                            <button className="hover:underline text-left" onClick={() => setGfUserFilter(u.userId)} data-testid={`link-graficos-user-${u.userId}`}>
+                              {u.name}
+                            </button>
+                          </td>
+                          <td className="text-center py-2 px-2">{u.total}</td>
+                          <td className="text-center py-2 px-2 text-green-400">{u.won}</td>
+                          <td className="text-center py-2 px-2 text-red-400">{u.lost}</td>
+                          <td className="text-center py-2 px-2">{PCT(u.won, u.resolved)}</td>
+                          <td className="text-right py-2 px-2 font-mono">{R$(u.stake)}</td>
+                          <td className="text-right py-2 px-2 font-mono">{R$(u.potentialWin)}</td>
+                          <td className={`text-right py-2 px-2 font-mono font-bold ${u.profit >= 0 ? "text-green-400" : "text-red-400"}`}>{R$(u.profit)}</td>
+                          <td className="text-center py-2 pl-2">
+                            {u.isHighPotential ? (
+                              <Badge variant="destructive" className="text-[10px]" data-testid={`badge-high-potential-${u.userId}`}>Perfil de Atenção</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
 }
