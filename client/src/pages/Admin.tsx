@@ -7781,7 +7781,7 @@ function GraficosTab() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" allowDecimals={false} />
-                  <Tooltip cursor={{ fill: "transparent" }} formatter={(v: number) => [`${v} bilhetes`, ""]} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
+                  <Tooltip cursor={{ fill: "transparent" }} separator="" formatter={(v: number) => [`${v} bilhetes`, ""]} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Bar dataKey="value" radius={[3, 3, 0, 0]}>
                     {gfWonLostData.map((entry, i) => (
                       <Cell key={i} fill={entry.fill} />
