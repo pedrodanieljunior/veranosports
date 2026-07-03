@@ -7484,8 +7484,34 @@ function GraficosTab() {
       return res.json();
     },
   });
+  const { data: allDeposits = [] } = useQuery<Deposit[]>({
+    queryKey: ["/api/admin/deposits"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/deposits");
+      return res.json();
+    },
+  });
+  const { data: allUserWithdrawals = [] } = useQuery<UserWithdrawal[]>({
+    queryKey: ["/api/admin/user-withdrawals"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/user-withdrawals");
+      return res.json();
+    },
+  });
 
   const paidOutOf = (b: BetSlipType) => Math.max(0, b.potentialWin - (b.bonusUsed ?? 0));
+
+  const gfUserDeposits = useMemo(() => {
+    if (gfUserFilter === "all") return 0;
+    return allDeposits.filter(d => d.userId === gfUserFilter && d.status === "confirmed").reduce((s, d) => s + d.amount, 0);
+  }, [allDeposits, gfUserFilter]);
+
+  const gfUserWithdrawals = useMemo(() => {
+    if (gfUserFilter === "all") return 0;
+    return allUserWithdrawals.filter(w => w.userId === gfUserFilter && (w.status === "paid" || w.status === "approved")).reduce((s, w) => s + w.amount, 0);
+  }, [allUserWithdrawals, gfUserFilter]);
+
+  const gfUserRealProfit = gfUserDeposits - gfUserWithdrawals;
 
   const gfDateFilteredBets = useMemo(() => {
     let filtered = bets;
@@ -7674,6 +7700,32 @@ function GraficosTab() {
           Analisando: <span className="font-semibold text-foreground">{selectedUserName}</span>
         </p>
       </div>
+
+      {gfUserFilter !== "all" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1"><ArrowUpCircle className="w-5 h-5 text-blue-400" /><p className="text-xs text-muted-foreground">Depósitos</p></div>
+              <p className="text-lg font-bold text-blue-400" data-testid="text-graficos-user-deposits">{R$(gfUserDeposits)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1"><ArrowDownCircle className="w-5 h-5 text-orange-400" /><p className="text-xs text-muted-foreground">Saques</p></div>
+              <p className="text-lg font-bold text-orange-400" data-testid="text-graficos-user-withdrawals">{R$(gfUserWithdrawals)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1">
+                {gfUserRealProfit > 0 ? <TrendingUp className="w-5 h-5 text-green-400" /> : gfUserRealProfit < 0 ? <TrendingDown className="w-5 h-5 text-red-400" /> : <Zap className="w-5 h-5 text-blue-400" />}
+                <p className="text-xs text-muted-foreground">Lucro Real</p>
+              </div>
+              <p className={`text-lg font-bold ${gfUserRealProfit > 0 ? "text-green-400" : gfUserRealProfit < 0 ? "text-red-400" : "text-blue-400"}`} data-testid="text-graficos-user-real-profit">{R$(gfUserRealProfit)}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {betsLoading ? (
         <div className="text-center py-10 text-muted-foreground text-sm">Carregando dados...</div>
