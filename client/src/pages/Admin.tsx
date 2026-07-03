@@ -7595,7 +7595,7 @@ function GraficosTab() {
       cur.stake += b.stake;
       map.set(uid, cur);
     });
-    return Array.from(map.values()).map(v => {
+    const rows = Array.from(map.values()).map(v => {
       const user = allUsers.find(u => u.cpf === v.userId);
       const resolved = v.won + v.lost;
       const winRate = resolved > 0 ? v.won / resolved : 0;
@@ -7605,9 +7605,29 @@ function GraficosTab() {
         resolved,
         winRate,
         profit: v.stake - v.paidOut,
-        isHighPotential: resolved >= 5 && winRate >= 0.6,
       };
-    }).sort((a, b) => b.stake - a.stake);
+    });
+
+    const stakes = rows.map(r => r.stake).sort((a, b) => a - b);
+    const percentile75 = stakes.length > 0 ? stakes[Math.floor(stakes.length * 0.75)] : 0;
+    const maxStake = stakes.length > 0 ? stakes[stakes.length - 1] : 0;
+
+    return rows.map(v => {
+      const isEligible = v.resolved >= 5;
+      const isHighVolume = v.stake >= percentile75 && percentile75 > 0;
+      const isHighWinRate = v.winRate >= 0.6;
+      let profileQuadrant: "risco" | "potencial" | "atencao" | "neutro" = "neutro";
+      if (isEligible && isHighVolume && !isHighWinRate) profileQuadrant = "risco";
+      else if (isEligible && isHighVolume && isHighWinRate) profileQuadrant = "potencial";
+      else if (isEligible && !isHighVolume && isHighWinRate) profileQuadrant = "atencao";
+      const normalizedVolume = maxStake > 0 ? v.stake / maxStake : 0;
+      const impactScore = v.winRate * 0.4 + normalizedVolume * 0.6;
+      return {
+        ...v,
+        profileQuadrant,
+        impactScore,
+      };
+    }).sort((a, b) => b.impactScore - a.impactScore);
   }, [gfDateFilteredBets, allUsers]);
 
   const totalBets = gfBets.length;
@@ -7925,7 +7945,7 @@ function GraficosTab() {
                   Ranking de Usuários (Perfil Potencial)
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Usuários com 5+ bilhetes resolvidos e taxa de acerto ≥ 60% são marcados como "Perfil de Atenção" — vale a pena analisar de perto.
+                  Usuários com 5+ bilhetes resolvidos são classificados por quadrante (volume × taxa de acerto) e ordenados por Score de Impacto (40% taxa de acerto + 60% volume).
                 </p>
               </CardHeader>
               <CardContent className="p-3">
@@ -7940,6 +7960,7 @@ function GraficosTab() {
                         <th className="text-center py-2 px-2">Taxa Acerto</th>
                         <th className="text-right py-2 px-2">Apostado</th>
                         <th className="text-right py-2 px-2">Lucro (Casa)</th>
+                        <th className="text-center py-2 px-2">Score</th>
                         <th className="text-center py-2 pl-2">Perfil</th>
                       </tr>
                     </thead>
@@ -7957,9 +7978,14 @@ function GraficosTab() {
                           <td className="text-center py-2 px-2">{PCT(u.won, u.resolved)}</td>
                           <td className="text-right py-2 px-2 font-mono">{R$(u.stake)}</td>
                           <td className={`text-right py-2 px-2 font-mono font-bold ${u.profit >= 0 ? "text-green-400" : "text-red-400"}`}>{R$(u.profit)}</td>
+                          <td className="text-center py-2 px-2 font-mono">{(u.impactScore * 100).toFixed(0)}</td>
                           <td className="text-center py-2 pl-2">
-                            {u.isHighPotential ? (
-                              <Badge variant="destructive" className="text-[10px]" data-testid={`badge-high-potential-${u.userId}`}>Perfil de Atenção</Badge>
+                            {u.profileQuadrant === "risco" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/20" data-testid={`badge-profile-risco-${u.userId}`}>Perfil de Risco</Badge>
+                            ) : u.profileQuadrant === "potencial" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/20" data-testid={`badge-profile-potencial-${u.userId}`}>Perfil Potencial</Badge>
+                            ) : u.profileQuadrant === "atencao" ? (
+                              <Badge variant="destructive" className="text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/20" data-testid={`badge-profile-atencao-${u.userId}`}>Perfil de Atenção</Badge>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
