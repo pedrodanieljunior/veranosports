@@ -7614,6 +7614,7 @@ function GraficosTab() {
   const wonBets = gfBets.filter(b => b.status === "won").length;
   const lostBets = gfBets.filter(b => b.status === "lost").length;
   const pendingBets = gfBets.filter(b => b.status === "pending").length;
+  const otherBets = totalBets - wonBets - lostBets - pendingBets;
   const resolvedBets = wonBets + lostBets;
   const totalStake = gfBets.reduce((s, b) => s + b.stake, 0);
   const totalPaidOut = gfBets.filter(b => b.status === "won").reduce((s, b) => s + paidOutOf(b), 0);
@@ -7737,7 +7738,7 @@ function GraficosTab() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { icon: <CalendarDays className="w-5 h-5 text-primary" />, label: "Total de Bilhetes", value: totalBets.toString() },
-              { icon: <Trophy className="w-5 h-5 text-green-400" />, label: "Ganhos / Perdidos / Pendentes", value: <span><span className="text-green-400">{wonBets}</span> / <span className="text-red-400">{lostBets}</span> / <span className="text-yellow-400">{pendingBets}</span></span> },
+              { icon: <Trophy className="w-5 h-5 text-green-400" />, label: "Ganhos / Perdidos / Pendentes / Outros", value: <span><span className="text-green-400">{wonBets}</span> / <span className="text-red-400">{lostBets}</span> / <span className="text-yellow-400">{pendingBets}</span> / <span className="text-purple-400">{otherBets}</span></span> },
               { icon: <Target className="w-5 h-5 text-green-400" />, label: "Taxa de Acerto", value: PCT(wonBets, resolvedBets) },
               { icon: <XCircle className="w-5 h-5 text-red-400" />, label: "Taxa de Erros", value: PCT(lostBets, resolvedBets) },
             ].map(({ icon, label, value }) => (
