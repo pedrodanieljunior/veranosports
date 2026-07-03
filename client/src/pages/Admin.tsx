@@ -7511,7 +7511,7 @@ function GraficosTab() {
     return allUserWithdrawals.filter(w => w.userId === gfUserFilter && (w.status === "paid" || w.status === "approved")).reduce((s, w) => s + w.amount, 0);
   }, [allUserWithdrawals, gfUserFilter]);
 
-  const gfUserRealProfit = gfUserDeposits - gfUserWithdrawals;
+  const gfUserRealProfit = gfUserWithdrawals - gfUserDeposits;
 
   const gfDateFilteredBets = useMemo(() => {
     let filtered = bets;
