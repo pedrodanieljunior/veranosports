@@ -7537,10 +7537,10 @@ function GraficosTab() {
     const pending = gfBets.filter(b => b.status === "pending").length;
     const cashedOut = gfBets.filter(b => b.status === "cashed_out").length;
     return [
-      { name: "Ganhos", value: won, fill: "#22c55e" },
-      { name: "Perdidos", value: lost, fill: "#ef4444" },
-      { name: "Pendentes", value: pending, fill: "#eab308" },
-      { name: "Cash Out", value: cashedOut, fill: "#8b5cf6" },
+      { name: "Ganhos", value: won, fill: "#22c55e", gradientFill: "url(#gfGanhosGradient)" },
+      { name: "Perdidos", value: lost, fill: "#ef4444", gradientFill: "url(#gfPerdidosGradient)" },
+      { name: "Pendentes", value: pending, fill: "#eab308", gradientFill: "url(#gfPendentesGradient)" },
+      { name: "Cash Out", value: cashedOut, fill: "#8b5cf6", gradientFill: "url(#gfCashOutGradient)" },
     ];
   }, [gfBets]);
 
@@ -7778,13 +7778,31 @@ function GraficosTab() {
             <CardContent className="p-3">
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={gfWonLostData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gfGanhosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4ade80" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#15803d" stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="gfPerdidosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f87171" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#b91c1c" stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="gfPendentesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#fde047" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#ca8a04" stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="gfCashOutGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a78bfa" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#6d28d9" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" allowDecimals={false} />
                   <Tooltip cursor={{ fill: "transparent" }} separator="" formatter={(v: number) => [`${v} bilhetes`, ""]} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Bar dataKey="value" radius={[3, 3, 0, 0]}>
                     {gfWonLostData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
+                      <Cell key={i} fill={entry.gradientFill} />
                     ))}
                   </Bar>
                 </BarChart>
