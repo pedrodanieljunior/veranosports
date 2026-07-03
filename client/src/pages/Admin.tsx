@@ -7781,7 +7781,7 @@ function GraficosTab() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" allowDecimals={false} />
-                  <Tooltip formatter={(v: number) => `${v} bilhetes`} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Tooltip formatter={(v: number) => `${v} bilhetes`} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Bar dataKey="value" radius={[3, 3, 0, 0]}>
                     {gfWonLostData.map((entry, i) => (
                       <Cell key={i} fill={entry.fill} />
@@ -7806,7 +7806,7 @@ function GraficosTab() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
-                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Legend />
                   <Bar dataKey="Entrada" fill="#22c55e" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Retorno" fill="#ef4444" radius={[3, 3, 0, 0]} />
@@ -7835,7 +7835,7 @@ function GraficosTab() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
-                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Line
                     type="monotone"
                     dataKey="Lucro"
@@ -7871,7 +7871,7 @@ function GraficosTab() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#666" />
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
-                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
+                  <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, color: "#fff" }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
                   <Line
                     type="monotone"
                     dataKey="LucroUsuario"
