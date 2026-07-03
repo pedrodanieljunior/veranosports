@@ -7716,12 +7716,12 @@ function GraficosTab() {
             </CardContent>
           </Card>
 
-          {/* Gráfico: Entrada x Retorno x Ganho Potencial ao longo do tempo */}
+          {/* Gráfico: Entrada x Retorno x Lucro Usuário ao longo do tempo */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-primary" />
-                Valor Apostado, Retorno e Ganho Potencial por Dia
+                Valor Apostado, Retorno e Lucro Usuário por Dia
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3">
@@ -7733,7 +7733,7 @@ function GraficosTab() {
                   <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
                   <Legend />
                   <Bar dataKey="Entrada" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Ganho Potencial" fill="#a855f7" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="LucroUsuario" name="Lucro Usuário" fill="#a855f7" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Retorno" fill="#ef4444" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
