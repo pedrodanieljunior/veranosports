@@ -7727,7 +7727,7 @@ function GraficosTab() {
                   <YAxis tick={{ fontSize: 10 }} stroke="#666" tickFormatter={v => `R$${(v / 1000).toFixed(1)}k`} />
                   <Tooltip formatter={(v: number) => R$(v)} contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }} />
                   <Legend />
-                  <Bar dataKey="Entrada" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Entrada" fill="#22c55e" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Retorno" fill="#ef4444" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
