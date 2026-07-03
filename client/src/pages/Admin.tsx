@@ -74,6 +74,7 @@ import {
   Pencil,
   Filter,
   Check,
+  ChevronsUpDown,
   Timer,
   Lock,
   Unlock,
@@ -127,6 +128,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { useComboBonus } from "@/hooks/use-combo-bonus";
@@ -7468,6 +7470,7 @@ function NotificationsAdminTab() {
 // ── Aba Gráficos ────────────────────────────────────────────────────────────
 function GraficosTab() {
   const [gfUserFilter, setGfUserFilter] = useState<string>("all");
+  const [gfUserPopoverOpen, setGfUserPopoverOpen] = useState(false);
   const [gfDateFrom, setGfDateFrom] = useState<string>("");
   const [gfDateTo, setGfDateTo] = useState<string>("");
 
@@ -7598,17 +7601,48 @@ function GraficosTab() {
       {/* Filtros */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={gfUserFilter} onValueChange={setGfUserFilter}>
-            <SelectTrigger className="w-[220px] h-9 text-xs" data-testid="select-graficos-user">
-              <SelectValue placeholder="Selecione um usuário" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os usuários</SelectItem>
-              {allUsers.map(u => (
-                <SelectItem key={u.cpf} value={u.cpf}>{u.name} ({u.cpf})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={gfUserPopoverOpen} onOpenChange={setGfUserPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                role="combobox"
+                aria-expanded={gfUserPopoverOpen}
+                data-testid="select-graficos-user"
+                className="w-[220px] h-9 text-xs flex items-center justify-between rounded-md border border-border bg-background px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <span className="truncate">{selectedUserName}</span>
+                <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[280px] p-0">
+              <Command>
+                <CommandInput placeholder="Buscar usuário..." className="text-xs" data-testid="input-search-graficos-user" />
+                <CommandList>
+                  <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="Todos os usuários"
+                      onSelect={() => { setGfUserFilter("all"); setGfUserPopoverOpen(false); }}
+                      data-testid="option-graficos-user-all"
+                    >
+                      <Check className={`mr-2 h-4 w-4 ${gfUserFilter === "all" ? "opacity-100" : "opacity-0"}`} />
+                      Todos os usuários
+                    </CommandItem>
+                    {allUsers.map(u => (
+                      <CommandItem
+                        key={u.cpf}
+                        value={`${u.name} ${u.cpf}`}
+                        onSelect={() => { setGfUserFilter(u.cpf); setGfUserPopoverOpen(false); }}
+                        data-testid={`option-graficos-user-${u.cpf}`}
+                      >
+                        <Check className={`mr-2 h-4 w-4 ${gfUserFilter === u.cpf ? "opacity-100" : "opacity-0"}`} />
+                        {u.name} ({u.cpf})
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <div className="flex items-center gap-1.5">
             <input
               type="date"
