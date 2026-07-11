@@ -3985,8 +3985,15 @@ export async function registerRoutes(
       }
 
       // Carregar matriz de correlação ao vivo para bilhetes ao vivo
+      // Mesclar defaults para garantir que o backend use os mesmos coeficientes que o frontend
+      const LIVE_CORR_DEFAULTS_BET: Record<string, number> = {
+        "1_5": 0.90, "1_6": 0.90, "1_8": 0.85, "1_12": 0.92,
+        "5_6": 0.75, "5_8": 0.80, "5_12": 0.90,
+        "6_8": 0.82, "6_12": 0.88, "8_12": 0.88,
+      };
       const liveCorrRaw = await storage.getSetting("live_correlation_matrix");
-      const liveCorrMatrix: Record<string, number> = liveCorrRaw ? JSON.parse(liveCorrRaw) : {};
+      const liveCorrSaved: Record<string, number> = liveCorrRaw ? JSON.parse(liveCorrRaw) : {};
+      const liveCorrMatrix: Record<string, number> = { ...LIVE_CORR_DEFAULTS_BET, ...liveCorrSaved };
       const LIVE_CORR_NORM_IDS_BE = new Set([1, 8, 12, 5, 6]);
       function normLiveCorrIdBE(mk: string): number | null {
         if (!mk.startsWith("live_m")) return null;

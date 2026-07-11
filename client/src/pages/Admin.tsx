@@ -197,13 +197,11 @@ function computeBetPayout(bet: { stake: number; selections: any[]; totalOdds?: n
   const isCombo = checkIsComboBonus(bet.selections);
   const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
   const comboPct = isCombo ? getComboBonus(dc, bonusTable) : 0;
-  // For live correlated bets: compute from matrix if available, else fall back to stored totalOdds
-  const liveCorrOdds = (!isCombo && corrMatrix) ? computeLiveCorrelatedOdds(bet.selections, corrMatrix) : null;
-  const baseOdds = liveCorrOdds != null
-    ? liveCorrOdds
-    : (!isCombo && bet.totalOdds != null && bet.totalOdds > 0)
-      ? bet.totalOdds
-      : computeTotalOdds(bet.selections);
+  // Always prefer stored totalOdds as ground truth — it was computed correctly at bet time.
+  // Only fall back to live recomputation if totalOdds is missing (legacy bets).
+  const baseOdds = (!isCombo && bet.totalOdds != null && bet.totalOdds > 0)
+    ? bet.totalOdds
+    : (corrMatrix ? (computeLiveCorrelatedOdds(bet.selections, corrMatrix) ?? computeTotalOdds(bet.selections)) : computeTotalOdds(bet.selections));
   const displayTotalOdds = isCombo
     ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
     : baseOdds;
@@ -2273,7 +2271,12 @@ export default function Admin() {
                                 <div className="rounded-xl border border-purple-500/50 bg-muted/20 p-2 space-y-2">
                                   {Object.entries(grouped).map(([gameId, sels]) => {
                                     const first = sels[0];
-                                    const gameOdds = fmtOdds(computeTotalOdds(sels, checkIsComboBonus(bet.selections)));
+                                    const isSingleGameBet = Object.keys(grouped).length === 1;
+                                    // Single-game: stored totalOdds IS the game odd (includes correlation)
+                                    // Multi-game: show naive per-game product (can't recover exact correlated contribution from stored total)
+                                    const gameOdds = isSingleGameBet && bet.totalOdds
+                                      ? fmtOdds(bet.totalOdds)
+                                      : fmtOdds(computeTotalOdds(sels, checkIsComboBonus(bet.selections)));
                                     const isCopaGrupo = sels.some(s => s.marketKey === "copa_grupo");
                                     const copaBadge = isCopaGrupo ? copaCardBadgeMap.get(gameId) : undefined;
                                     const gameLabel = copaBadge
