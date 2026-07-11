@@ -334,6 +334,22 @@ export function BetSlip({
   }, [comboApplies, hasSGPActive, hasLiveCorr, grouped, selections, sgpOddsMap, corrMatrix]);
 
   const stakeNum = parseFloat(stake || "0");
+
+  // Detect boost selection and get its configured minimum stake
+  const boostSel = selections.find(s => s.marketKey === "boost");
+  const { data: activeBoostCards = [] } = useQuery<any[]>({
+    queryKey: ["/api/boost-cards"],
+    staleTime: 60_000,
+    enabled: !!boostSel,
+  });
+  const boostCardForSel = boostSel
+    ? activeBoostCards.find((c: any) => `boost-${c.id}` === boostSel.gameId)
+    : null;
+  // If boost selection: use card's minStake (or 1 if not configured); otherwise normal R$5
+  const effectiveMinStake = boostSel
+    ? (boostCardForSel?.minStake != null ? boostCardForSel.minStake : 1)
+    : 5;
+
   const hasBonusBalance = (user?.bonusBalance ?? 0) > 0;
   const totalAvailableWithBonus = (user?.balance ?? 0) + (user?.bonusBalance ?? 0);
   const isInsufficientBalance = user !== null && stakeNum > 0 && (
@@ -800,8 +816,10 @@ export function BetSlip({
                 ))}
               </div>
 
-              {stakeNum > 0 && stakeNum < 5 && (
-                <p className="text-xs text-red-500 font-semibold">Valor mínimo de aposta: R$ 5,00</p>
+              {stakeNum > 0 && stakeNum < effectiveMinStake && (
+                <p className="text-xs text-red-500 font-semibold">
+                  Valor mínimo de aposta: R$ {effectiveMinStake.toFixed(2).replace(".", ",")}
+                </p>
               )}
 
               {isCappedAtMax && (
@@ -895,7 +913,7 @@ export function BetSlip({
                 className="w-full" 
                 size="lg"
                 onClick={handlePlaceBet}
-                disabled={isPlacing || selections.length === 0 || parseFloat(stake) < 5 || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}
+                disabled={isPlacing || selections.length === 0 || stakeNum < effectiveMinStake || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}
                 data-testid="button-place-bet"
               >
                 {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}
