@@ -54,8 +54,11 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
     };
   };
 
+  const imgUrl = (card as any).imageUrl as string | undefined;
   const cardStyle = {
-    background: `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 60%, ${colorFrom} 100%)`,
+    background: imgUrl
+      ? `linear-gradient(135deg, ${colorFrom}cc 0%, ${colorTo}dd 60%, ${colorFrom}cc 100%), url(${imgUrl}) center/cover no-repeat`
+      : `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 60%, ${colorFrom} 100%)`,
     border: isAnySelected ? "2px solid rgba(255,255,255,0.6)" : "2px solid rgba(255,255,255,0.18)",
     boxShadow: isAnySelected
       ? `0 0 0 1px rgba(255,255,255,0.2), 0 6px 28px rgba(0,0,0,0.55)`

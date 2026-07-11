@@ -138,7 +138,7 @@ export const insertBetSlipSchema = z.object({
   sessionId: z.string().optional(),
   userId: z.string().optional(),
   selections: z.array(selectionSchema).min(1, "Selecione pelo menos uma aposta"),
-  stake: z.number().min(5, "Valor mínimo de R$5,00"),
+  stake: z.number().min(1, "Valor mínimo de R$1,00"),
 });
 
 export type InsertBetSlip = z.infer<typeof insertBetSlipSchema>;
@@ -198,6 +198,7 @@ export const boostCardsTable = pgTable("boost_cards", {
   gradientTo: text("gradient_to").default("#1a0a0a"),
   maxStake: real("max_stake"),
   minStake: real("min_stake"),
+  imageUrl: text("image_url").default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -226,6 +227,7 @@ export const boostCardSchema = z.object({
   gradientTo: z.string().default("#1a0a0a"),
   maxStake: z.number().nullable().optional(),
   minStake: z.number().nullable().optional(),
+  imageUrl: z.string().optional().default(""),
   createdAt: z.string(),
 });
 
@@ -248,6 +250,7 @@ export const insertBoostCardSchema = z.object({
   gradientTo: z.string().optional().default("#1a0a0a"),
   maxStake: z.number().nullable().optional(),
   minStake: z.number().nullable().optional(),
+  imageUrl: z.string().optional().default(""),
 });
 
 export type InsertBoostCard = z.infer<typeof insertBoostCardSchema>;

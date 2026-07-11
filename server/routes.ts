@@ -3874,6 +3874,15 @@ export async function registerRoutes(
         }
       }
 
+      // Mínimo de R$5 para apostas normais (Super Boost pode ter mínimo menor configurado pelo admin)
+      const hasBoostSel = validatedData.selections.some(s => s.marketKey === "boost");
+      if (!hasBoostSel && validatedData.stake < 5) {
+        return res.status(400).json({
+          error: "Valor mínimo de aposta é R$5,00.",
+          isMinStakeRequired: true,
+        });
+      }
+
       // Verificar maxStake de Super Boost cards
       {
         const boostSel = validatedData.selections.find(s => s.marketKey === "boost");

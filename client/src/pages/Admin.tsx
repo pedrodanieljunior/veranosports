@@ -3321,6 +3321,7 @@ function BoostTab() {
     gradientTo: "#1a0a0a",
     maxStake: "",
     minStake: "",
+    imageUrl: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3436,6 +3437,7 @@ function BoostTab() {
       gradientTo: (card as any).gradientTo || "#1a0a0a",
       maxStake: (card as any).maxStake != null ? String((card as any).maxStake) : "",
       minStake: (card as any).minStake != null ? String((card as any).minStake) : "",
+      imageUrl: (card as any).imageUrl || "",
     });
     setShowForm(true);
   };
@@ -3469,6 +3471,7 @@ function BoostTab() {
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
         minStake: form.minStake ? parseFloat(form.minStake) : null,
+        imageUrl: form.imageUrl || "",
       };
       if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3492,6 +3495,7 @@ function BoostTab() {
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
         minStake: form.minStake ? parseFloat(form.minStake) : null,
+        imageUrl: form.imageUrl || "",
       };
       if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3900,6 +3904,23 @@ function BoostTab() {
                     </div>
                   ))}
                   <p className="text-[11px] text-muted-foreground">Campo "orig." = odd original (riscada) · "⚡boost" = odd boostada</p>
+                </div>
+              )}
+            </div>
+
+            {/* Image URL */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Imagem do card (URL, opcional)</label>
+              <input
+                type="url"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                placeholder="https://... (imagem de fundo do card)"
+                value={form.imageUrl}
+                onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+              />
+              {form.imageUrl && (
+                <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
+                  <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
                 </div>
               )}
             </div>
