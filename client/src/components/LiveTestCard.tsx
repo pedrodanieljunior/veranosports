@@ -752,11 +752,11 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                   data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
                   onClick={() => !isBlocked && onToggleSelection(sel)}
                   disabled={isBlocked}
-                  title={isCorrLocked ? "Bloqueado — 2 mercados correlacionados já selecionados" : undefined}
+                  title={isCorrLocked ? "Bloqueado — 2 mercados correlacionados já selecionados" : isMutexLocked ? "Incompatível com mercado já selecionado" : undefined}
                   className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
                     isSuspended
                       ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
-                      : isCorrLocked
+                      : isCorrLocked || isMutexLocked
                       ? "opacity-30 cursor-not-allowed bg-gray-900 border-cyan-500/20 text-gray-500"
                       : movement === "up"
                       ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-blue-700 text-white"
@@ -769,7 +769,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 >
                   <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
                   <div className="flex items-center gap-0.5">
-                    {isSuspended || isCorrLocked ? (
+                    {isSuspended || isCorrLocked || isMutexLocked ? (
                       <Lock className="w-3.5 h-3.5 text-gray-500" />
                     ) : (
                       <>
