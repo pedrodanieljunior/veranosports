@@ -89,6 +89,21 @@ export function BetSlip({
 
   const MAX_BET_PAYOUT = limits?.maxBetPayout ?? 15000;
 
+  // ── Live Correlation ─────────────────────────────────────────────────
+  const LIVE_CORR_NORM_IDS = new Set([1, 8, 12, 5, 6]);
+  const normLiveCorrId = (mk: string): number | null => {
+    if (!mk.startsWith("live_m")) return null;
+    const id = parseInt(mk.slice(6), 10);
+    if (id === 25) return 5;
+    return LIVE_CORR_NORM_IDS.has(id) ? id : null;
+  };
+  const isLiveCorrEligible = (mk: string) => normLiveCorrId(mk) !== null;
+  const { data: corrMatrix } = useQuery<Record<string, number>>({
+    queryKey: ["/api/live-correlation"],
+    queryFn: () => fetch("/api/live-correlation").then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // ── SGP (Same Game Parlay) ────────────────────────────────────────────
   const SGP_ELIGIBLE = useMemo(() => new Set([
     'h2h', 'match_winner', 'goals over/under', 'goals over/under - second half',
@@ -155,8 +170,17 @@ export function BetSlip({
     Object.values(grouped).some(sels => new Set(sels.map(s => s.marketKey)).size >= 2),
     [grouped]);
 
-  // Per-game contribution to total odds, respecting SGP and h2h context
+  // Detect games with a live correlated pair
+  const hasLiveCorr = useMemo(() =>
+    Object.values(grouped).some(sels =>
+      sels.filter(s => isLiveCorrEligible(s.marketKey)).length === 2
+    ),
+    [grouped]
+  );
+
+  // Per-game contribution to total odds, respecting SGP, live correlation and h2h context
   const computeGameContrib = (gameId: string, sels: Selection[], isComboCtx: boolean): number => {
+    // 1. SGP for pre-match markets
     const sgpOdd = sgpOddsMap.get(gameId);
     if (sgpOdd) {
       const eligible = sels.filter(s => isSGPEligible(s.marketKey));
@@ -170,7 +194,18 @@ export function BetSlip({
         return contrib;
       }
     }
-    // Fallback: naive product (h2h uses originalOdds in combo context)
+    // 2. Live correlation for ao-vivo markets
+    const liveCorrSels = sels.filter(s => isLiveCorrEligible(s.marketKey));
+    if (liveCorrSels.length === 2 && corrMatrix) {
+      const idA = normLiveCorrId(liveCorrSels[0].marketKey)!;
+      const idB = normLiveCorrId(liveCorrSels[1].marketKey)!;
+      const pairKey = `${Math.min(idA, idB)}_${Math.max(idA, idB)}`;
+      const coeff = corrMatrix[pairKey] ?? 1.0;
+      const corrOdd = liveCorrSels[0].odds * liveCorrSels[1].odds * coeff;
+      const nonCorr = sels.filter(s => !isLiveCorrEligible(s.marketKey));
+      return nonCorr.reduce((acc, s) => acc * s.odds, corrOdd);
+    }
+    // 3. Fallback: naive product (h2h uses originalOdds in combo context)
     return sels.reduce((acc, s) => {
       const isH2H = s.marketKey === 'h2h' || s.marketKey === 'match_winner';
       return acc * ((isComboCtx && isH2H && s.originalOdds) ? s.originalOdds : s.odds);
@@ -672,6 +707,23 @@ export function BetSlip({
                     ) : (
                       <p className="text-xs text-purple-700">Mercados do mesmo jogo combinados com odds especiais.</p>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {hasLiveCorr && (
+                <div className="rounded-xl overflow-hidden border-2 border-cyan-500 shadow-lg shadow-cyan-500/20" data-testid="banner-live-corr">
+                  <div className="bg-gradient-to-r from-cyan-600 to-teal-500 px-3 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
+                      <span className="text-white font-extrabold text-sm tracking-wide">CORRELAÇÃO AO VIVO</span>
+                    </div>
+                    <span className="bg-white/20 text-white font-extrabold text-xs px-2 py-0.5 rounded-full">
+                      LIVE
+                    </span>
+                  </div>
+                  <div className="bg-cyan-500/10 px-3 py-2">
+                    <p className="text-xs text-cyan-700">Odds calculadas com coeficiente de correlação — mais justas que multiplicação simples.</p>
                   </div>
                 </div>
               )}

@@ -93,6 +93,7 @@ import {
   AlertTriangle,
   ToggleLeft,
   ToggleRight,
+  Link2,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -1219,6 +1220,10 @@ export default function Admin() {
             <TabsTrigger value="graficos" data-testid="tab-graficos">
               <TrendingUp className="w-4 h-4 mr-2 text-green-400" />
               Gráficos
+            </TabsTrigger>
+            <TabsTrigger value="correlacao" data-testid="tab-correlacao">
+              <Link2 className="w-4 h-4 mr-2 text-cyan-400" />
+              Correlação
             </TabsTrigger>
           </TabsList>
 
@@ -2834,6 +2839,10 @@ export default function Admin() {
 
           <TabsContent value="graficos">
             <GraficosTab />
+          </TabsContent>
+
+          <TabsContent value="correlacao">
+            <LiveCorrelationTab />
           </TabsContent>
 
         </Tabs>
@@ -7460,6 +7469,154 @@ function NotificationsAdminTab() {
                 );
               })}
             </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Aba Correlação Ao Vivo ──────────────────────────────────────────────────
+const CORR_PAIRS = [
+  { key: "1_5",  a: "Resultado Final",       b: "Gols Over/Under" },
+  { key: "1_6",  a: "Resultado Final",       b: "Gols O/U 1º Tempo" },
+  { key: "1_8",  a: "Resultado Final",       b: "Ambas Marcam" },
+  { key: "1_12", a: "Resultado Final",       b: "Dupla Chance" },
+  { key: "5_6",  a: "Gols Over/Under",       b: "Gols O/U 1º Tempo" },
+  { key: "5_8",  a: "Gols Over/Under",       b: "Ambas Marcam" },
+  { key: "5_12", a: "Gols Over/Under",       b: "Dupla Chance" },
+  { key: "6_8",  a: "Gols O/U 1º Tempo",    b: "Ambas Marcam" },
+  { key: "6_12", a: "Gols O/U 1º Tempo",    b: "Dupla Chance" },
+  { key: "8_12", a: "Ambas Marcam",          b: "Dupla Chance" },
+];
+
+const CORR_DEFAULTS: Record<string, number> = {
+  "1_5": 0.90, "1_6": 0.90, "1_8": 0.85, "1_12": 0.92,
+  "5_6": 0.75, "5_8": 0.80, "5_12": 0.90,
+  "6_8": 0.82, "6_12": 0.88, "8_12": 0.88,
+};
+
+function LiveCorrelationTab() {
+  const queryClient = useQueryClient();
+  const { data: savedMatrix, isLoading } = useQuery<Record<string, number>>({
+    queryKey: ["/api/live-correlation"],
+    queryFn: () => fetch("/api/live-correlation").then(r => r.json()),
+  });
+
+  const [matrix, setMatrix] = useState<Record<string, number>>(CORR_DEFAULTS);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (savedMatrix) setMatrix({ ...CORR_DEFAULTS, ...savedMatrix });
+  }, [savedMatrix]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      fetch("/api/admin/live-correlation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(matrix),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/live-correlation"] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
+  const setVal = (key: string, val: number) =>
+    setMatrix(prev => ({ ...prev, [key]: Math.min(1, Math.max(0.1, +val.toFixed(2))) }));
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Link2 className="w-4 h-4 text-cyan-400" />
+            Coeficientes de Correlação — Jogos Ao Vivo
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Quando o usuário combinar dois mercados ao vivo elegíveis no mesmo bilhete, a odd resultante será:
+            <span className="font-mono bg-muted px-1 rounded ml-1">odd₁ × odd₂ × coeficiente</span>.
+            Valores menores tornam a odd mais conservadora (mais justa). Aplica-se apenas a mercados <strong>ao vivo</strong>.
+          </p>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          {isLoading ? (
+            <div className="text-xs text-muted-foreground">Carregando...</div>
+          ) : (
+            <>
+              <div className="grid gap-3">
+                {CORR_PAIRS.map(({ key, a, b }) => {
+                  const val = matrix[key] ?? CORR_DEFAULTS[key];
+                  const pct = Math.round(val * 100);
+                  const color = val >= 0.90 ? "text-green-400" : val >= 0.80 ? "text-yellow-400" : "text-red-400";
+                  return (
+                    <div key={key} className="flex items-center gap-3 p-2 rounded-lg border border-border bg-muted/20">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Badge variant="outline" className="text-[10px] border-cyan-500/40 text-cyan-400">{a}</Badge>
+                          <Link2 className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <Badge variant="outline" className="text-[10px] border-cyan-500/40 text-cyan-400">{b}</Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <input
+                          type="range"
+                          min={0.1}
+                          max={1.0}
+                          step={0.01}
+                          value={val}
+                          onChange={e => setVal(key, parseFloat(e.target.value))}
+                          className="w-28 accent-cyan-400"
+                          data-testid={`slider-corr-${key}`}
+                        />
+                        <span className={`font-mono text-sm font-bold w-12 text-right ${color}`}>{pct}%</span>
+                        <input
+                          type="number"
+                          min={0.10}
+                          max={1.00}
+                          step={0.01}
+                          value={val.toFixed(2)}
+                          onChange={e => setVal(key, parseFloat(e.target.value))}
+                          className="w-16 text-xs bg-background border border-border rounded px-2 py-1 font-mono text-center"
+                          data-testid={`input-corr-${key}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <Button
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-white"
+                  data-testid="button-save-correlation"
+                >
+                  {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  Salvar Coeficientes
+                </Button>
+                {saved && <span className="text-xs text-green-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Salvo com sucesso</span>}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMatrix(CORR_DEFAULTS)}
+                  className="ml-auto text-xs"
+                  data-testid="button-reset-correlation"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" /> Restaurar padrões
+                </Button>
+              </div>
+
+              <div className="mt-2 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20 text-xs text-muted-foreground space-y-1">
+                <p className="font-semibold text-cyan-400">📌 Mercados elegíveis para correlação (ao vivo):</p>
+                <p>Resultado Final · Dupla Chance · Ambas Marcam · Gols Over/Under · Gols O/U 1º Tempo</p>
+                <p className="mt-1">Ao selecionar 2 desses mercados do mesmo jogo, os demais ficam bloqueados e a odd é calculada com o coeficiente acima.</p>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

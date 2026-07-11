@@ -5766,6 +5766,29 @@ export async function registerRoutes(
     return res.json({ isLocked: liveMarketsLocked, activeFixtureId: activeLiveFixtureId });
   });
 
+  // ── Live Correlation Matrix ──────────────────────────────────────────────
+  const LIVE_CORR_DEFAULTS: Record<string, number> = {
+    "1_5": 0.90, "1_6": 0.90, "1_8": 0.85, "1_12": 0.92,
+    "5_6": 0.75, "5_8": 0.80, "5_12": 0.90,
+    "6_8": 0.82, "6_12": 0.88, "8_12": 0.88,
+  };
+
+  app.get("/api/live-correlation", async (_req, res) => {
+    const raw = await storage.getSetting("live_correlation_matrix");
+    const saved = raw ? JSON.parse(raw) as Record<string, number> : {};
+    const matrix = { ...LIVE_CORR_DEFAULTS, ...saved };
+    return res.json(matrix);
+  });
+
+  app.post("/api/admin/live-correlation", requireAdmin, async (req, res) => {
+    const body = req.body as Record<string, number>;
+    if (typeof body !== "object" || Array.isArray(body)) {
+      return res.status(400).json({ error: "invalid" });
+    }
+    await storage.setSetting("live_correlation_matrix", JSON.stringify(body));
+    return res.json({ ok: true });
+  });
+
   // Admin: generate a mobile control token (24h)
   app.post("/api/admin/live-control/generate-token", requireAdmin, (_req, res) => {
     mobileControlToken = randomBytes(20).toString("hex");

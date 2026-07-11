@@ -18,6 +18,9 @@ const MARKET_LABELS: Record<number, string> = {
   65: "Próximos 10 min",
 };
 
+// Mercados elegíveis para correlação ao vivo
+const LIVE_CORR_IDS = new Set([1, 8, 12, 5, 6, 25]);
+
 const OUTCOME_LABELS: Record<string, string> = {
   Home: "1",
   Draw: "X",
@@ -703,6 +706,16 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               : market.values;
             if (filteredValues.length === 0) return null;
 
+            // Correlation lock: count eligible markets already selected for this game
+            const isCorrMarket = LIVE_CORR_IDS.has(market.id);
+            const corrActiveCount = isCorrMarket
+              ? selections.filter(s =>
+                  s.gameId === gameId &&
+                  s.marketKey.startsWith("live_m") &&
+                  LIVE_CORR_IDS.has(parseInt(s.marketKey.slice(6), 10))
+                ).length
+              : 0;
+
             const renderBtn = (v: typeof filteredValues[0]) => {
               const rawOdd = v.odd;
               const isSuspended = !!v.suspended;
@@ -715,20 +728,24 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 awayTeam: translateTeamName(data.teams.away.name),
                 commenceTime, sportTitle: "Futebol Ao Vivo",
                 marketKey: `live_m${market.id}`, bookmaker: "API-Football",
-                marketName: MARKET_LABELS[market.id],
                 outcome: translateOutcomeForStorage(v.value), odds: rawOdd, result: "pending",
               };
               const active = !isSuspended && isSelected(selections, id);
+              const isCorrLocked = isCorrMarket && !active && corrActiveCount >= 2;
               const outcomeLabel = translateOutcome(v.value);
+              const isBlocked = isSuspended || isCorrLocked;
               return (
                 <button
                   key={v.value}
                   data-testid={`button-live-${market.id}-${v.value.replace(/\s/g, "_")}`}
-                  onClick={() => !isSuspended && onToggleSelection(sel)}
-                  disabled={isSuspended}
+                  onClick={() => !isBlocked && onToggleSelection(sel)}
+                  disabled={isBlocked}
+                  title={isCorrLocked ? "Bloqueado — 2 mercados correlacionados já selecionados" : undefined}
                   className={`relative flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors min-w-[60px] ${
                     isSuspended
                       ? "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400"
+                      : isCorrLocked
+                      ? "opacity-30 cursor-not-allowed bg-gray-900 border-cyan-500/20 text-gray-500"
                       : movement === "up"
                       ? active ? "bg-yellow-400 border-green-400 text-black" : "border-green-500/60 bg-blue-700 text-white"
                       : movement === "down"
@@ -740,7 +757,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 >
                   <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
                   <div className="flex items-center gap-0.5">
-                    {isSuspended ? (
+                    {isSuspended || isCorrLocked ? (
                       <Lock className="w-3.5 h-3.5 text-gray-500" />
                     ) : (
                       <>
