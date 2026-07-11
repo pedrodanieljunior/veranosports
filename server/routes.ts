@@ -5610,22 +5610,28 @@ export async function registerRoutes(
 
       // Fetch in parallel: live games + upcoming per key league
       // Using ?next=N because ?from/to requires season context and returns 0 without it
-      const [liveRes, serieB_upRes, serieC_upRes, wc_upRes, friendly_upRes] = await Promise.all([
+      const tomorrowDate = toBrazilDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+
+      const [liveRes, serieB_todayRes, serieB_upRes, serieC_todayRes, serieC_upRes, wc_upRes, friendly_upRes] = await Promise.all([
         fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
-        fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&next=20`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
-        fetch(`${API_FOOTBALL_BASE}/fixtures?league=75&season=2026&next=20`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=75&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=75&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=1&season=2026&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=10&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
       ]);
-      const [liveData, serieB_upData, serieC_upData, wc_upData, friendly_upData] = await Promise.all([
-        liveRes.json(), serieB_upRes.json(), serieC_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
+      const [liveData, serieB_todayData, serieB_upData, serieC_todayData, serieC_upData, wc_upData, friendly_upData] = await Promise.all([
+        liveRes.json(), serieB_todayRes.json(), serieB_upRes.json(), serieC_todayRes.json(), serieC_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
       ]);
 
       // Live: all live fixtures (will be filtered below)
       const liveFixtures = liveData.response ?? [];
-      // Upcoming: only within 48h window
+      // Today + tomorrow + upcoming: covers live, ongoing and scheduled games
       const upcomingAll = [
+        ...(serieB_todayData.response ?? []),
         ...(serieB_upData.response ?? []),
+        ...(serieC_todayData.response ?? []),
         ...(serieC_upData.response ?? []),
         ...(wc_upData.response ?? []),
         ...(friendly_upData.response ?? []),
