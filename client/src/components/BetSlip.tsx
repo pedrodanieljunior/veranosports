@@ -711,22 +711,6 @@ export function BetSlip({
                 </div>
               )}
 
-              {hasLiveCorr && (
-                <div className="rounded-xl overflow-hidden border-2 border-cyan-500 shadow-lg shadow-cyan-500/20" data-testid="banner-live-corr">
-                  <div className="bg-gradient-to-r from-cyan-600 to-teal-500 px-3 py-2.5 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-white fill-white flex-shrink-0" />
-                      <span className="text-white font-extrabold text-sm tracking-wide">CORRELAÇÃO AO VIVO</span>
-                    </div>
-                    <span className="bg-white/20 text-white font-extrabold text-xs px-2 py-0.5 rounded-full">
-                      LIVE
-                    </span>
-                  </div>
-                  <div className="bg-cyan-500/10 px-3 py-2">
-                    <p className="text-xs text-cyan-700">Odds calculadas com coeficiente de correlação — mais justas que multiplicação simples.</p>
-                  </div>
-                </div>
-              )}
 
               {hasMultiMarketSameGame && !(comboApplies && comboBonusPct > 0) && (
                 <div className="rounded-xl overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20" data-testid="banner-best-odds">
