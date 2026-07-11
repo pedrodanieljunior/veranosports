@@ -21,7 +21,11 @@ const MARKET_LABELS: Record<number, string> = {
 // Mercados elegíveis para correlação ao vivo
 const LIVE_CORR_IDS = new Set([1, 8, 12, 5, 6, 25]);
 // Pares mutuamente exclusivos: se um estiver selecionado, o outro fica bloqueado
-const MUTEX_PAIRS: Array<[number, number]> = [[1, 12]];
+const MUTEX_PAIRS: Array<[number, number]> = [
+  [1, 12],   // Resultado Final ↔ Dupla Chance
+  [5, 8],    // Gols O/U (id 5) ↔ Ambas Marcam
+  [8, 25],   // Ambas Marcam ↔ Gols O/U (id 25, usado pela API)
+];
 
 const OUTCOME_LABELS: Record<string, string> = {
   Home: "1",
