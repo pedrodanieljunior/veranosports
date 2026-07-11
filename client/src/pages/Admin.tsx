@@ -3320,6 +3320,7 @@ function BoostTab() {
     gradientFrom: "#0f2d6b",
     gradientTo: "#1a0a0a",
     maxStake: "",
+    minStake: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3434,6 +3435,7 @@ function BoostTab() {
       gradientFrom: (card as any).gradientFrom || "#0f2d6b",
       gradientTo: (card as any).gradientTo || "#1a0a0a",
       maxStake: (card as any).maxStake != null ? String((card as any).maxStake) : "",
+      minStake: (card as any).minStake != null ? String((card as any).minStake) : "",
     });
     setShowForm(true);
   };
@@ -3466,6 +3468,7 @@ function BoostTab() {
         gradientFrom: form.gradientFrom || "#0f2d6b",
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
+        minStake: form.minStake ? parseFloat(form.minStake) : null,
       };
       if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3488,6 +3491,7 @@ function BoostTab() {
         gradientFrom: form.gradientFrom || "#0f2d6b",
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
+        minStake: form.minStake ? parseFloat(form.minStake) : null,
       };
       if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3932,16 +3936,28 @@ function BoostTab() {
               </div>
             </div>
 
-            {/* Max stake */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Aposta máxima (opcional)</label>
-              <input
-                type="number" step="1" min="1"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Ex: 50 — deixe em branco para sem limite"
-                value={form.maxStake}
-                onChange={e => setForm(f => ({ ...f, maxStake: e.target.value }))}
-              />
+            {/* Min/Max stake */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Aposta mínima (opcional)</label>
+                <input
+                  type="number" step="1" min="1"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Ex: 5"
+                  value={form.minStake}
+                  onChange={e => setForm(f => ({ ...f, minStake: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Aposta máxima (opcional)</label>
+                <input
+                  type="number" step="1" min="1"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Ex: 50"
+                  value={form.maxStake}
+                  onChange={e => setForm(f => ({ ...f, maxStake: e.target.value }))}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

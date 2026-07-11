@@ -3882,6 +3882,12 @@ export async function registerRoutes(
           if (!isNaN(boostCardId)) {
             const allCards = await storage.getBoostCards();
             const boostCard = allCards.find(c => c.id === boostCardId);
+            if (boostCard && (boostCard as any).minStake != null && validatedData.stake < (boostCard as any).minStake) {
+              return res.status(400).json({
+                error: `A aposta mínima para este Super Boost é R$${((boostCard as any).minStake as number).toFixed(2).replace(".", ",")}.`,
+                isMinStakeRequired: true,
+              });
+            }
             if (boostCard && (boostCard as any).maxStake != null && validatedData.stake > (boostCard as any).maxStake) {
               return res.status(400).json({
                 error: `A aposta máxima para este Super Boost é R$${((boostCard as any).maxStake as number).toFixed(2).replace(".", ",")}.`,

@@ -197,6 +197,7 @@ export const boostCardsTable = pgTable("boost_cards", {
   gradientFrom: text("gradient_from").default("#0f2d6b"),
   gradientTo: text("gradient_to").default("#1a0a0a"),
   maxStake: real("max_stake"),
+  minStake: real("min_stake"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -224,6 +225,7 @@ export const boostCardSchema = z.object({
   gradientFrom: z.string().default("#0f2d6b"),
   gradientTo: z.string().default("#1a0a0a"),
   maxStake: z.number().nullable().optional(),
+  minStake: z.number().nullable().optional(),
   createdAt: z.string(),
 });
 
@@ -245,6 +247,7 @@ export const insertBoostCardSchema = z.object({
   gradientFrom: z.string().optional().default("#0f2d6b"),
   gradientTo: z.string().optional().default("#1a0a0a"),
   maxStake: z.number().nullable().optional(),
+  minStake: z.number().nullable().optional(),
 });
 
 export type InsertBoostCard = z.infer<typeof insertBoostCardSchema>;
