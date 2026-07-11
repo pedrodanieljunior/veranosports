@@ -172,11 +172,14 @@ const DEFAULT_COMBO_BONUS_PCT: Record<number, number> = {
   2: 5, 3: 10, 4: 15, 5: 20, 6: 27, 7: 34, 8: 41, 9: 49, 10: 58, 11: 65, 12: 72,
 };
 
-function computeBetPayout(bet: { stake: number; selections: any[] }, bonusTable?: Record<number, number>) {
+function computeBetPayout(bet: { stake: number; selections: any[]; totalOdds?: number }, bonusTable?: Record<number, number>) {
   const isCombo = checkIsComboBonus(bet.selections);
   const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
   const comboPct = isCombo ? getComboBonus(dc, bonusTable) : 0;
-  const baseOdds = computeTotalOdds(bet.selections);
+  // Prefer stored totalOdds (already has correlation applied) over naive recalculation
+  const baseOdds = (!isCombo && bet.totalOdds != null && bet.totalOdds > 0)
+    ? bet.totalOdds
+    : computeTotalOdds(bet.selections);
   const displayTotalOdds = isCombo
     ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
     : baseOdds;
