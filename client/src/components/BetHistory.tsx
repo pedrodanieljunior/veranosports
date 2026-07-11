@@ -390,7 +390,6 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
       const d = Array.isArray(dueloData) ? dueloData : [];
       setPalpites(b);
       setDuelos(d);
-      if (b.length > 0 || d.length > 0) setActiveTab("bolao");
     }).catch(() => {}).finally(() => {
       setPalpitesLoading(false);
       setDuelosLoading(false);
