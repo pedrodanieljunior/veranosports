@@ -71,6 +71,8 @@ const bannerUpload = multer({
   },
 });
 
+const boostImgUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
+
 // Formatar nome de time com Title Case, preservando conectivos portugueses em minúsculo
 // Dicionário de tradução de nomes de seleções nacionais (Inglês → Português)
 const NATIONAL_TEAM_PT: Record<string, string> = {
@@ -4883,17 +4885,49 @@ export async function registerRoutes(
   app.get("/api/boost-cards", async (_req, res) => {
     try {
       const cards = await storage.getActiveBoostCards();
-      res.json(cards);
+      const result = cards.map(c => {
+        const { imageData, mimeType, ...rest } = c as any;
+        return { ...rest, hasImage: !!imageData };
+      });
+      res.json(result);
     } catch (error) {
       console.error("Error fetching boost cards:", error);
       res.status(500).json({ error: "Failed to fetch boost cards" });
     }
   });
 
+  app.post("/api/admin/boost-cards/:id/image", requireAdmin, boostImgUpload.single("image"), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!req.file) return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      const imageData = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype || "image/jpeg";
+      await storage.updateBoostCard(id, { imageData, mimeType } as any);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/boost-cards/:id/image", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const cards = await storage.getBoostCards();
+      const card = cards.find(c => c.id === id);
+      if (!card || !(card as any).imageData) return res.status(404).end();
+      const buf = Buffer.from((card as any).imageData, "base64");
+      res.set("Content-Type", (card as any).mimeType || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=3600");
+      res.send(buf);
+    } catch (e: any) { res.status(500).end(); }
+  });
+
   app.get("/api/admin/boost-cards", async (_req, res) => {
     try {
       const cards = await storage.getBoostCards();
-      res.json(cards);
+      const result = cards.map(c => {
+        const { imageData, mimeType, ...rest } = c as any;
+        return { ...rest, hasImage: !!imageData };
+      });
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch boost cards" });
     }

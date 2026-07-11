@@ -3303,6 +3303,9 @@ function BoostTab() {
   const { toast } = useToast();
   const [editingCard, setEditingCard] = useState<BoostCard | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [boostUploadFile, setBoostUploadFile] = useState<File | null>(null);
+  const [boostUploadPreview, setBoostUploadPreview] = useState<string | null>(null);
+  const boostFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const emptyForm = {
     eventName: "",
@@ -3321,7 +3324,6 @@ function BoostTab() {
     gradientTo: "#1a0a0a",
     maxStake: "",
     minStake: "",
-    imageUrl: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3408,6 +3410,32 @@ function BoostTab() {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const uploadBoostImageMutation = useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`/api/admin/boost-cards/${id}/image`, { method: "POST", body: fd, credentials: "include" });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
+      setBoostUploadFile(null); setBoostUploadPreview(null);
+      toast({ title: "✅ Imagem salva!" });
+    },
+    onError: (e: Error) => toast({ title: "Erro ao salvar imagem", description: e.message, variant: "destructive" }),
+  });
+
+  const handleBoostFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBoostUploadFile(file);
+    const reader = new FileReader();
+    reader.onload = ev => setBoostUploadPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const toLocalDatetime = (iso: string) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -3437,7 +3465,6 @@ function BoostTab() {
       gradientTo: (card as any).gradientTo || "#1a0a0a",
       maxStake: (card as any).maxStake != null ? String((card as any).maxStake) : "",
       minStake: (card as any).minStake != null ? String((card as any).minStake) : "",
-      imageUrl: (card as any).imageUrl || "",
     });
     setShowForm(true);
   };
@@ -3471,7 +3498,6 @@ function BoostTab() {
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
         minStake: form.minStake ? parseFloat(form.minStake) : null,
-        imageUrl: form.imageUrl || "",
       };
       if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3495,7 +3521,6 @@ function BoostTab() {
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
         minStake: form.minStake ? parseFloat(form.minStake) : null,
-        imageUrl: form.imageUrl || "",
       };
       if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3908,22 +3933,47 @@ function BoostTab() {
               )}
             </div>
 
-            {/* Image URL */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Imagem do card (URL, opcional)</label>
-              <input
-                type="url"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                placeholder="https://... (imagem de fundo do card)"
-                value={form.imageUrl}
-                onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-              />
-              {form.imageUrl && (
-                <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
-                  <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
+            {/* Image upload (duelo-style) — só disponível ao editar um card existente */}
+            {editingCard ? (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Imagem de fundo (opcional)</label>
+                <div className="flex items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" className="text-xs h-8"
+                    onClick={() => boostFileInputRef.current?.click()}>
+                    🖼️ {(editingCard as any).hasImage ? "Trocar imagem" : "Adicionar imagem"}
+                  </Button>
+                  {boostUploadFile && (
+                    <Button type="button" size="sm" className="text-xs h-8 bg-purple-600 hover:bg-purple-700"
+                      disabled={uploadBoostImageMutation.isPending}
+                      onClick={() => uploadBoostImageMutation.mutate({ id: editingCard.id, file: boostUploadFile! })}>
+                      {uploadBoostImageMutation.isPending ? "Salvando..." : "Salvar imagem"}
+                    </Button>
+                  )}
+                  {boostUploadFile && (
+                    <Button type="button" size="sm" variant="ghost" className="text-xs h-8"
+                      onClick={() => { setBoostUploadFile(null); setBoostUploadPreview(null); }}>
+                      Cancelar
+                    </Button>
+                  )}
                 </div>
-              )}
-            </div>
+                <input ref={boostFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden" onChange={handleBoostFileSelect} />
+                {boostUploadPreview && (
+                  <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
+                    <img src={boostUploadPreview} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {!boostUploadPreview && (editingCard as any).hasImage && (
+                  <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
+                    <img src={`/api/boost-cards/${editingCard.id}/image`} alt="Imagem atual" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+                💡 Salve o card primeiro para depois adicionar uma imagem de fundo.
+              </p>
+            )}
 
             {/* Gradient colors */}
             <div className="space-y-2">
