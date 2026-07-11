@@ -5610,14 +5610,15 @@ export async function registerRoutes(
 
       // Fetch in parallel: live games + upcoming per key league
       // Using ?next=N because ?from/to requires season context and returns 0 without it
-      const [liveRes, serieB_upRes, wc_upRes, friendly_upRes] = await Promise.all([
+      const [liveRes, serieB_upRes, serieC_upRes, wc_upRes, friendly_upRes] = await Promise.all([
         fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&next=20`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=75&season=2026&next=20`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=1&season=2026&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=10&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
       ]);
-      const [liveData, serieB_upData, wc_upData, friendly_upData] = await Promise.all([
-        liveRes.json(), serieB_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
+      const [liveData, serieB_upData, serieC_upData, wc_upData, friendly_upData] = await Promise.all([
+        liveRes.json(), serieB_upRes.json(), serieC_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
       ]);
 
       // Live: all live fixtures (will be filtered below)
@@ -5625,6 +5626,7 @@ export async function registerRoutes(
       // Upcoming: only within 48h window
       const upcomingAll = [
         ...(serieB_upData.response ?? []),
+        ...(serieC_upData.response ?? []),
         ...(wc_upData.response ?? []),
         ...(friendly_upData.response ?? []),
       ].filter(f => new Date(f.fixture.date).getTime() <= cutoffMs);
@@ -5654,18 +5656,18 @@ export async function registerRoutes(
         732, // Copa América Qualifiers (when applicable)
       ]);
 
-      // Filter: only Brazil Série B (ID 72) and approved senior national-team competitions
+      // Filter: Brazil Série B (72), Série C (75) and approved senior national-team competitions
       // Also exclude youth fixtures (U17 / U19 / U20 / U21 / U23 in team names)
       const YOUTH_RE = /\bU\d{2}\b/i;
       const isYouth = (f: any) =>
         YOUTH_RE.test(f.teams?.home?.name ?? "") || YOUTH_RE.test(f.teams?.away?.name ?? "");
-      const isSerieB = (f: any) => f.league?.id === 72;
+      const isBrazilClub = (f: any) => f.league?.id === 72 || f.league?.id === 75;
       const isSelecoes = (f: any) => SELECOES_LEAGUE_IDS.has(f.league?.id) && !isYouth(f);
 
       const fixtures = allFixtures.filter(f => {
         if (seen.has(f.fixture.id)) return false;
         seen.add(f.fixture.id);
-        return isSerieB(f) || isSelecoes(f);
+        return isBrazilClub(f) || isSelecoes(f);
       });
 
       const LIVE_STATUSES = ["1H","HT","2H","ET","BT","P","INT"];
