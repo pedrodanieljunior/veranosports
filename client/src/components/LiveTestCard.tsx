@@ -20,11 +20,10 @@ const MARKET_LABELS: Record<number, string> = {
 
 // Mercados elegíveis para correlação ao vivo
 const LIVE_CORR_IDS = new Set([1, 8, 12, 5, 6, 25]);
-// Pares mutuamente exclusivos: se um estiver selecionado, o outro fica bloqueado
-const MUTEX_PAIRS: Array<[number, number]> = [
-  [1, 12],   // Resultado Final ↔ Dupla Chance
-  [5, 8],    // Gols O/U (id 5) ↔ Ambas Marcam
-  [8, 25],   // Ambas Marcam ↔ Gols O/U (id 25, usado pela API)
+// Grupos mutuamente exclusivos: mercados que não podem ser combinados
+const MUTEX_GROUPS: Array<number[]> = [
+  [1, 12],       // Resultado Final ↔ Dupla Chance
+  [5, 8, 25],    // Gols O/U (id 5 ou 25) ↔ Ambas Marcam (id 8)
 ];
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -722,12 +721,15 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 ).length
               : 0;
 
-            // Mutex lock: check if this market is blocked by a mutually-exclusive partner already selected
-            const isMutexBlocked = MUTEX_PAIRS.some(([a, b]) => {
-              const partner = market.id === a ? b : market.id === b ? a : null;
-              if (!partner) return false;
-              return selections.some(s =>
-                s.gameId === gameId && s.marketKey === `live_m${partner}`
+            // Mutex lock: check if any member of the same exclusive group is already selected
+            const isMutexBlocked = MUTEX_GROUPS.some(group => {
+              if (!group.includes(market.id)) return false;
+              // This market belongs to this group — check if any OTHER member is selected
+              const others = group.filter(id => id !== market.id);
+              return others.some(otherId =>
+                selections.some(s =>
+                  s.gameId === gameId && s.marketKey === `live_m${otherId}`
+                )
               );
             });
 
