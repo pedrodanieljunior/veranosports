@@ -307,9 +307,9 @@ export function BetSlip({
   const comboApplies = checkIsComboBonus(selections);
   const distinctGameCount = Object.keys(grouped).length;
 
-  // Compute total odds: use correlated SGP odds for eligible games, fallback otherwise
+  // Compute total odds: use correlated SGP/live-corr odds for eligible games, fallback otherwise
   const totalOdds = useMemo(() => {
-    if (hasSGPActive) {
+    if (hasSGPActive || hasLiveCorr) {
       const isComboCtx = distinctGameCount > 1;
       let total = 1;
       for (const [gameId, sels] of Object.entries(grouped)) {
@@ -318,12 +318,12 @@ export function BetSlip({
       return roundOdds(total);
     }
     return roundOdds(computeTotalOdds(selections));
-  }, [hasSGPActive, grouped, selections, sgpOddsMap, distinctGameCount]);
+  }, [hasSGPActive, hasLiveCorr, grouped, selections, sgpOddsMap, distinctGameCount, corrMatrix]);
 
   const comboBonusPct = comboApplies ? getComboBonus(distinctGameCount, comboBonusTable) : 0;
   const baseOddsForBonus = useMemo(() => {
     if (!comboApplies) return 0;
-    if (hasSGPActive) {
+    if (hasSGPActive || hasLiveCorr) {
       let base = 1;
       for (const [gameId, sels] of Object.entries(grouped)) {
         base *= computeGameContrib(gameId, sels, true);
@@ -331,7 +331,7 @@ export function BetSlip({
       return base;
     }
     return selections.reduce((acc, s) => acc * (s.originalOdds ?? s.odds), 1);
-  }, [comboApplies, hasSGPActive, grouped, selections, sgpOddsMap]);
+  }, [comboApplies, hasSGPActive, hasLiveCorr, grouped, selections, sgpOddsMap, corrMatrix]);
 
   const stakeNum = parseFloat(stake || "0");
   const hasBonusBalance = (user?.bonusBalance ?? 0) > 0;
