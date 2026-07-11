@@ -11,6 +11,27 @@ import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds } from "@/lib/formatOdds";
 import { useToast } from "@/hooks/use-toast";
 import { checkIsComboBonus, getComboBonus, computeTotalOdds } from "@shared/oddsUtils";
+
+// Live correlation helpers (mirrors Admin.tsx logic)
+const LIVE_CORR_NORM_IDS_BH = new Set([1, 8, 12, 5, 6]);
+function normLiveCorrIdBH(mk: string): number | null {
+  if (!mk.startsWith("live_m")) return null;
+  const id = parseInt(mk.slice(6), 10);
+  if (id === 25) return 5;
+  return LIVE_CORR_NORM_IDS_BH.has(id) ? id : null;
+}
+function computeLiveCorrelatedOddsBH(sels: Selection[], corrMatrix: Record<string, number>): number | null {
+  const liveSels = sels.filter(s => normLiveCorrIdBH(s.marketKey) !== null);
+  if (liveSels.length !== 2) return null;
+  const idA = normLiveCorrIdBH(liveSels[0].marketKey)!;
+  const idB = normLiveCorrIdBH(liveSels[1].marketKey)!;
+  const pairKey = `${Math.min(idA, idB)}_${Math.max(idA, idB)}`;
+  const coeff = corrMatrix[pairKey];
+  if (coeff == null) return null;
+  const corrOdds = liveSels[0].odds * liveSels[1].odds * coeff;
+  const nonLive = sels.filter(s => normLiveCorrIdBH(s.marketKey) === null);
+  return nonLive.reduce((acc, s) => acc * s.odds, corrOdds);
+}
 import { getCashOutState } from "@shared/cashOutUtils";
 import { queryClient } from "@/lib/queryClient";
 
@@ -20,7 +41,7 @@ interface BetHistoryProps {
   onClose: () => void;
 }
 
-function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExitPct: number; cashOutPct: number }) {
+function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetSlipType; earlyExitPct: number; cashOutPct: number; corrMatrix?: Record<string, number> }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState<"ea" | "cashout" | null>(null);
@@ -35,8 +56,9 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
   const firstGame = bet.selections[0];
   const distinctGameCount = new Set(bet.selections.map(s => s.gameId)).size;
   const comboPct = isCombo ? getComboBonus(distinctGameCount) : 0;
-  // Always compute odds from selections (correct for multi-market h2h originalOdds, combo, single boost)
-  const baseOdds = computeTotalOdds(bet.selections);
+  // Use live correlation if applicable, else naive
+  const liveCorrOdds = !isCombo ? computeLiveCorrelatedOddsBH(bet.selections, corrMatrix) : null;
+  const baseOdds = liveCorrOdds != null ? liveCorrOdds : computeTotalOdds(bet.selections);
   const displayTotalOdds = isCombo
     ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
     : baseOdds;
@@ -207,7 +229,8 @@ function BetCard({ bet, earlyExitPct, cashOutPct }: { bet: BetSlipType; earlyExi
           <div className="space-y-3">
             {Object.entries(grouped).map(([gameId, sels]) => {
               const first = sels[0];
-              const gameOdds = fmtOdds(computeTotalOdds(sels, isCombo));
+              const perGameLive = !isCombo ? computeLiveCorrelatedOddsBH(sels, corrMatrix) : null;
+              const gameOdds = fmtOdds(perGameLive != null ? perGameLive : computeTotalOdds(sels, isCombo));
               return (
                 <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
                   <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
@@ -387,6 +410,11 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
   const earlyExitPct = cashoutSettings?.earlyExitPct ?? 20;
   const cashOutPct = cashoutSettings?.cashOutPct ?? 20;
 
+  const { data: corrMatrix = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/live-correlation"],
+    staleTime: 60 * 1000,
+  });
+
   const fmtDate = (d: string) => {
     try { return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
     catch { return d; }
@@ -457,7 +485,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
               ) : (
                 <div className="space-y-2">
                   {bets.map((bet) => (
-                    <BetCard key={bet.id} bet={bet} earlyExitPct={earlyExitPct} cashOutPct={cashOutPct} />
+                    <BetCard key={bet.id} bet={bet} earlyExitPct={earlyExitPct} cashOutPct={cashOutPct} corrMatrix={corrMatrix} />
                   ))}
                 </div>
               )
