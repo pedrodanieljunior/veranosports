@@ -10,7 +10,6 @@ const MARKET_LABELS: Record<number, string> = {
   5: "Gols Over/Under",
   8: "Ambas Marcam",
   13: "Vencedor 1º Tempo",
-  12: "Dupla Chance",
   6: "Over/Under 1º Tempo",
   20: "Escanteios Over/Under",
   119: "Total Cartões",
@@ -19,7 +18,7 @@ const MARKET_LABELS: Record<number, string> = {
 };
 
 // Mercados elegíveis para correlação ao vivo
-const LIVE_CORR_IDS = new Set([1, 8, 12, 5, 6, 25]);
+const LIVE_CORR_IDS = new Set([1, 8, 5, 6, 25]);
 
 const OUTCOME_LABELS: Record<string, string> = {
   Home: "1",
@@ -666,18 +665,13 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       {data.markets.length > 0 && !isFinished && (
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
           {(() => {
-            const ORDER = [1, 12, 8, 25, 20, 119];
-            // Always show Resultado Final and Dupla Chance — inject as suspended if API didn't return them
+            const ORDER = [1, 8, 25, 20, 119];
+            // Always show Resultado Final — inject as suspended if API didn't return it
             const ALWAYS_SHOW = [
               { id: 1, name: "Fulltime Result", values: [
                 { value: "Home", odd: 0, suspended: true },
                 { value: "Draw", odd: 0, suspended: true },
                 { value: "Away", odd: 0, suspended: true },
-              ]},
-              { id: 12, name: "Double Chance", values: [
-                { value: "Home/Draw", odd: 0, suspended: true },
-                { value: "Home/Away", odd: 0, suspended: true },
-                { value: "Draw/Away", odd: 0, suspended: true },
               ]},
             ];
             const existingIds = new Set(data.markets.map((m: any) => m.id));

@@ -90,7 +90,7 @@ export function BetSlip({
   const MAX_BET_PAYOUT = limits?.maxBetPayout ?? 15000;
 
   // ── Live Correlation ─────────────────────────────────────────────────
-  const LIVE_CORR_NORM_IDS = new Set([1, 8, 12, 5, 6]);
+  const LIVE_CORR_NORM_IDS = new Set([1, 8, 5, 6]);
   const normLiveCorrId = (mk: string): number | null => {
     if (!mk.startsWith("live_m")) return null;
     const id = parseInt(mk.slice(6), 10);
