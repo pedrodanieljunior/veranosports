@@ -3949,6 +3949,20 @@ export async function registerRoutes(
         byGameForSGP.get(sel.gameId)!.push(sel);
       }
 
+      // Carregar matriz de correlação ao vivo para bilhetes ao vivo
+      const liveCorrRaw = await storage.getSetting("live_correlation_matrix");
+      const liveCorrMatrix: Record<string, number> = liveCorrRaw ? JSON.parse(liveCorrRaw) : {};
+      const LIVE_CORR_NORM_IDS_BE = new Set([1, 8, 12, 5, 6]);
+      function normLiveCorrIdBE(mk: string): number | null {
+        if (!mk.startsWith("live_m")) return null;
+        const id = parseInt(mk.slice(6), 10);
+        if (id === 25) return 5;
+        return LIVE_CORR_NORM_IDS_BE.has(id) ? id : null;
+      }
+      function isLiveCorrEligibleBE(mk: string): boolean {
+        return normLiveCorrIdBE(mk) !== null;
+      }
+
       const sgpGameOdds = new Map<string, number>();
       await Promise.all(Array.from(byGameForSGP.entries()).map(async ([gameId, gameSels]) => {
         const eligible = gameSels.filter((s: any) => isSGPEligibleMarket(s.marketKey));
@@ -3981,7 +3995,7 @@ export async function registerRoutes(
         } catch { /* fallback to naive */ }
       }));
 
-      // Calcular odd de cada jogo considerando SGP
+      // Calcular odd de cada jogo considerando SGP e correlação ao vivo
       function gameContribution(gameId: string, gameSels: any[], isComboCtx: boolean): number {
         const sgpOdd = sgpGameOdds.get(gameId);
         if (sgpOdd) {
@@ -3995,6 +4009,18 @@ export async function registerRoutes(
             }
             return contrib;
           }
+        }
+        // Live correlation: aplicar coeficiente para pares de mercados ao vivo
+        const liveSels = gameSels.filter((s: any) => isLiveCorrEligibleBE(s.marketKey));
+        if (liveSels.length === 2) {
+          const idA = normLiveCorrIdBE(liveSels[0].marketKey)!;
+          const idB = normLiveCorrIdBE(liveSels[1].marketKey)!;
+          const pairKey = `${Math.min(idA, idB)}_${Math.max(idA, idB)}`;
+          const coeff = liveCorrMatrix[pairKey] ?? 1.0;
+          const corrOdds = liveSels[0].odds * liveSels[1].odds * coeff;
+          // Multiplicar quaisquer seleções adicionais não elegíveis (ex.: escanteios)
+          const nonLive = gameSels.filter((s: any) => !isLiveCorrEligibleBE(s.marketKey));
+          return nonLive.reduce((acc: number, s: any) => acc * s.odds, corrOdds);
         }
         // Naive: usar originalOdds para h2h em contexto de combo
         return gameSels.reduce((acc: number, s: any) => {
