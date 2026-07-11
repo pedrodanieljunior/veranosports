@@ -543,9 +543,10 @@ export function BetSlip({
                       const first = sels[0];
                       const sgpOdd = sgpOddsMap.get(gameId);
                       const isSGPGame = !!sgpOdd && sels.filter(s => isSGPEligible(s.marketKey)).length >= 2;
+                      const isLiveCorrGame = sels.filter(s => isLiveCorrEligible(s.marketKey)).length === 2 && !!corrMatrix;
                       const isSGPQueryLoading = sgpLoading && sgpGames.some(g => g.gameId === gameId);
                       const isComboCtx = distinctGameCount > 1;
-                      const gameOdds = isSGPGame
+                      const gameOdds = (isSGPGame || isLiveCorrGame)
                         ? roundOdds(computeGameContrib(gameId, sels, isComboCtx))
                         : roundOdds(computeTotalOdds(sels, isComboCtx));
                       const isMulti = sels.length >= 2;
