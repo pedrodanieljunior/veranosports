@@ -7481,7 +7481,6 @@ const CORR_PAIRS = [
   { key: "1_5",  a: "Resultado Final",       b: "Gols Over/Under" },
   { key: "1_6",  a: "Resultado Final",       b: "Gols O/U 1º Tempo" },
   { key: "1_8",  a: "Resultado Final",       b: "Ambas Marcam" },
-  { key: "1_12", a: "Resultado Final",       b: "Dupla Chance" },
   { key: "5_6",  a: "Gols Over/Under",       b: "Gols O/U 1º Tempo" },
   { key: "5_8",  a: "Gols Over/Under",       b: "Ambas Marcam" },
   { key: "5_12", a: "Gols Over/Under",       b: "Dupla Chance" },
@@ -7491,7 +7490,7 @@ const CORR_PAIRS = [
 ];
 
 const CORR_DEFAULTS: Record<string, number> = {
-  "1_5": 0.90, "1_6": 0.90, "1_8": 0.85, "1_12": 0.92,
+  "1_5": 0.90, "1_6": 0.90, "1_8": 0.85,
   "5_6": 0.75, "5_8": 0.80, "5_12": 0.90,
   "6_8": 0.82, "6_12": 0.88, "8_12": 0.88,
 };

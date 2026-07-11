@@ -9,6 +9,7 @@ const MARKET_LABELS: Record<number, string> = {
   1: "Resultado Final",
   5: "Gols Over/Under",
   8: "Ambas Marcam",
+  12: "Dupla Chance",
   13: "Vencedor 1º Tempo",
   6: "Over/Under 1º Tempo",
   20: "Escanteios Over/Under",
@@ -18,7 +19,9 @@ const MARKET_LABELS: Record<number, string> = {
 };
 
 // Mercados elegíveis para correlação ao vivo
-const LIVE_CORR_IDS = new Set([1, 8, 5, 6, 25]);
+const LIVE_CORR_IDS = new Set([1, 8, 12, 5, 6, 25]);
+// Pares mutuamente exclusivos: se um estiver selecionado, o outro fica bloqueado
+const MUTEX_PAIRS: Array<[number, number]> = [[1, 12]];
 
 const OUTCOME_LABELS: Record<string, string> = {
   Home: "1",
@@ -665,13 +668,18 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       {data.markets.length > 0 && !isFinished && (
         <div className={`px-4 pb-4 space-y-3 border-t ${dividerCls} pt-3`}>
           {(() => {
-            const ORDER = [1, 8, 25, 20, 119];
-            // Always show Resultado Final — inject as suspended if API didn't return it
+            const ORDER = [1, 12, 8, 25, 20, 119];
+            // Always show Resultado Final and Dupla Chance — inject as suspended if API didn't return them
             const ALWAYS_SHOW = [
               { id: 1, name: "Fulltime Result", values: [
                 { value: "Home", odd: 0, suspended: true },
                 { value: "Draw", odd: 0, suspended: true },
                 { value: "Away", odd: 0, suspended: true },
+              ]},
+              { id: 12, name: "Double Chance", values: [
+                { value: "Home/Draw", odd: 0, suspended: true },
+                { value: "Home/Away", odd: 0, suspended: true },
+                { value: "Draw/Away", odd: 0, suspended: true },
               ]},
             ];
             const existingIds = new Set(data.markets.map((m: any) => m.id));
@@ -710,6 +718,15 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                 ).length
               : 0;
 
+            // Mutex lock: check if this market is blocked by a mutually-exclusive partner already selected
+            const isMutexBlocked = MUTEX_PAIRS.some(([a, b]) => {
+              const partner = market.id === a ? b : market.id === b ? a : null;
+              if (!partner) return false;
+              return selections.some(s =>
+                s.gameId === gameId && s.marketKey === `live_m${partner}`
+              );
+            });
+
             const renderBtn = (v: typeof filteredValues[0]) => {
               const rawOdd = v.odd;
               const isSuspended = !!v.suspended;
@@ -726,8 +743,9 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               };
               const active = !isSuspended && isSelected(selections, id);
               const isCorrLocked = isCorrMarket && !active && corrActiveCount >= 2;
+              const isMutexLocked = !active && isMutexBlocked;
               const outcomeLabel = translateOutcome(v.value);
-              const isBlocked = isSuspended || isCorrLocked;
+              const isBlocked = isSuspended || isCorrLocked || isMutexLocked;
               return (
                 <button
                   key={v.value}
