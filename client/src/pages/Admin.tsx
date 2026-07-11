@@ -3344,12 +3344,28 @@ function BoostTab() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
       return res.json();
     },
-    onSuccess: (createdCard: BoostCard) => {
+    onSuccess: async (createdCard: BoostCard) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
-      toast({ title: "✅ Super Boost criado!", description: "Agora você pode adicionar uma imagem de fundo." });
       // Transiciona para modo de edição com o card recém-criado, mantendo o form aberto
       setEditingCard(createdCard);
+      // Se o usuário já selecionou uma imagem antes de criar, fazer upload automático
+      if (boostUploadFile) {
+        try {
+          const fd = new FormData();
+          fd.append("image", boostUploadFile);
+          const res = await fetch(`/api/admin/boost-cards/${createdCard.id}/image`, { method: "POST", body: fd, credentials: "include" });
+          if (res.ok) {
+            setBoostUploadFile(null);
+            setBoostUploadPreview(null);
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
+            toast({ title: "✅ Super Boost criado com imagem!" });
+            return;
+          }
+        } catch { /* fallthrough */ }
+      }
+      toast({ title: "✅ Super Boost criado!", description: "Você pode adicionar uma imagem de fundo abaixo." });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -3935,47 +3951,47 @@ function BoostTab() {
               )}
             </div>
 
-            {/* Image upload (duelo-style) — só disponível ao editar um card existente */}
-            {editingCard ? (
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Imagem de fundo (opcional)</label>
-                <div className="flex items-center gap-2">
-                  <Button type="button" size="sm" variant="outline" className="text-xs h-8"
-                    onClick={() => boostFileInputRef.current?.click()}>
-                    🖼️ {(editingCard as any).hasImage ? "Trocar imagem" : "Adicionar imagem"}
+            {/* Image upload — disponível durante criação e edição */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Imagem de fundo (opcional)</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button type="button" size="sm" variant="outline" className="text-xs h-8"
+                  onClick={() => boostFileInputRef.current?.click()}>
+                  🖼️ {editingCard && (editingCard as any).hasImage ? "Trocar imagem" : "Selecionar imagem"}
+                </Button>
+                {boostUploadFile && editingCard && (
+                  <Button type="button" size="sm" className="text-xs h-8 bg-purple-600 hover:bg-purple-700"
+                    disabled={uploadBoostImageMutation.isPending}
+                    onClick={() => uploadBoostImageMutation.mutate({ id: editingCard.id, file: boostUploadFile! })}>
+                    {uploadBoostImageMutation.isPending ? "Salvando..." : "Salvar imagem"}
                   </Button>
-                  {boostUploadFile && (
-                    <Button type="button" size="sm" className="text-xs h-8 bg-purple-600 hover:bg-purple-700"
-                      disabled={uploadBoostImageMutation.isPending}
-                      onClick={() => uploadBoostImageMutation.mutate({ id: editingCard.id, file: boostUploadFile! })}>
-                      {uploadBoostImageMutation.isPending ? "Salvando..." : "Salvar imagem"}
-                    </Button>
-                  )}
-                  {boostUploadFile && (
-                    <Button type="button" size="sm" variant="ghost" className="text-xs h-8"
-                      onClick={() => { setBoostUploadFile(null); setBoostUploadPreview(null); }}>
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-                <input ref={boostFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp"
-                  className="hidden" onChange={handleBoostFileSelect} />
-                {boostUploadPreview && (
-                  <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
-                    <img src={boostUploadPreview} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
                 )}
-                {!boostUploadPreview && (editingCard as any).hasImage && (
-                  <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
-                    <img src={`/api/boost-cards/${editingCard.id}/image`} alt="Imagem atual" className="w-full h-full object-cover" />
-                  </div>
+                {boostUploadFile && (
+                  <Button type="button" size="sm" variant="ghost" className="text-xs h-8"
+                    onClick={() => { setBoostUploadFile(null); setBoostUploadPreview(null); }}>
+                    Remover
+                  </Button>
                 )}
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
-                💡 Salve o card primeiro para depois adicionar uma imagem de fundo.
-              </p>
-            )}
+              {!editingCard && boostUploadFile && (
+                <p className="text-[11px] text-purple-400">📎 Imagem selecionada — será salva automaticamente ao criar o card.</p>
+              )}
+              {!editingCard && !boostUploadFile && (
+                <p className="text-[11px] text-muted-foreground">Selecione antes de criar, ou adicione depois ao editar o card.</p>
+              )}
+              <input ref={boostFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden" onChange={handleBoostFileSelect} />
+              {boostUploadPreview && (
+                <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
+                  <img src={boostUploadPreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+              {!boostUploadPreview && editingCard && (editingCard as any).hasImage && (
+                <div className="mt-1 rounded-md overflow-hidden border border-border h-20 w-full">
+                  <img src={`/api/boost-cards/${editingCard.id}/image`} alt="Imagem atual" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
 
             {/* Gradient colors */}
             <div className="space-y-2">
