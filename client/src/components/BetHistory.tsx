@@ -56,13 +56,9 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
   const firstGame = bet.selections[0];
   const distinctGameCount = new Set(bet.selections.map(s => s.gameId)).size;
   const comboPct = isCombo ? getComboBonus(distinctGameCount) : 0;
-  // Use live correlation if applicable, else naive
-  const liveCorrOdds = !isCombo ? computeLiveCorrelatedOddsBH(bet.selections, corrMatrix) : null;
-  const baseOdds = liveCorrOdds != null ? liveCorrOdds : computeTotalOdds(bet.selections);
-  const displayTotalOdds = isCombo
-    ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
-    : baseOdds;
-  const displayPotentialWin = Math.round(bet.stake * displayTotalOdds * 100) / 100;
+  // Use stored values as ground truth — they are already correctly calculated
+  const displayTotalOdds = bet.totalOdds;
+  const displayPotentialWin = bet.potentialWin;
   const bonusUsed = bet.bonusUsed ?? 0;
   const netReturn = bonusUsed > 0 ? Math.max(0, displayPotentialWin - bonusUsed) : displayPotentialWin;
   const comboBonusPctStr = (comboPct * 100) % 1 === 0
