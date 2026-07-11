@@ -4914,14 +4914,12 @@ export async function registerRoutes(
   app.get("/api/boost-cards/:id/image", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      // Query DB directly to get imageData (mapBoostCard strips it for size)
-      const { db: dbDirect } = await import("./db");
-      const { boostCardsTable: bct } = await import("@shared/schema");
-      const { eq: eqDirect } = await import("drizzle-orm");
-      const [row] = await dbDirect.select({ imageData: bct.imageData, mimeType: bct.mimeType }).from(bct).where(eqDirect(bct.id, id));
-      if (!row?.imageData) return res.status(404).end();
-      const buf = Buffer.from(row.imageData, "base64");
-      res.set("Content-Type", row.mimeType || "image/jpeg");
+      // Use raw pool query to avoid Drizzle import issues (mapBoostCard strips imageData)
+      const result = await pool.query("SELECT image_data, mime_type FROM boost_cards WHERE id = $1", [id]);
+      const row = result.rows[0];
+      if (!row?.image_data) return res.status(404).end();
+      const buf = Buffer.from(row.image_data, "base64");
+      res.set("Content-Type", row.mime_type || "image/jpeg");
       res.set("Cache-Control", "public, max-age=3600");
       res.send(buf);
     } catch (e: any) { res.status(500).end(); }
