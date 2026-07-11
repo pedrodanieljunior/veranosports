@@ -61,7 +61,7 @@ export default function Home() {
       const newNow = Date.now();
       setNow(newNow);
       setSelections(prev => {
-        const filtered = prev.filter(s => new Date(s.commenceTime).getTime() > newNow);
+        const filtered = prev.filter(s => s.marketKey?.startsWith("live_m") || new Date(s.commenceTime).getTime() > newNow);
         if (filtered.length < prev.length) {
           toast({ title: "Jogo iniciado", description: "Uma ou mais seleções foram removidas pois o jogo já começou.", variant: "destructive" });
         }
