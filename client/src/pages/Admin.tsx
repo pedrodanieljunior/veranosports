@@ -172,14 +172,38 @@ const DEFAULT_COMBO_BONUS_PCT: Record<number, number> = {
   2: 5, 3: 10, 4: 15, 5: 20, 6: 27, 7: 34, 8: 41, 9: 49, 10: 58, 11: 65, 12: 72,
 };
 
-function computeBetPayout(bet: { stake: number; selections: any[]; totalOdds?: number }, bonusTable?: Record<number, number>) {
+const LIVE_CORR_NORM_IDS_ADMIN = new Set([1, 8, 12, 5, 6]);
+function normLiveCorrIdAdmin(mk: string): number | null {
+  if (!mk.startsWith("live_m")) return null;
+  const id = parseInt(mk.slice(6), 10);
+  if (id === 25) return 5;
+  return LIVE_CORR_NORM_IDS_ADMIN.has(id) ? id : null;
+}
+
+function computeLiveCorrelatedOdds(sels: any[], corrMatrix: Record<string, number>): number | null {
+  const liveSels = sels.filter((s: any) => normLiveCorrIdAdmin(s.marketKey) !== null);
+  if (liveSels.length !== 2) return null;
+  const idA = normLiveCorrIdAdmin(liveSels[0].marketKey)!;
+  const idB = normLiveCorrIdAdmin(liveSels[1].marketKey)!;
+  const pairKey = `${Math.min(idA, idB)}_${Math.max(idA, idB)}`;
+  const coeff = corrMatrix[pairKey];
+  if (coeff == null) return null;
+  const corrOdds = liveSels[0].odds * liveSels[1].odds * coeff;
+  const nonLive = sels.filter((s: any) => normLiveCorrIdAdmin(s.marketKey) === null);
+  return nonLive.reduce((acc: number, s: any) => acc * s.odds, corrOdds);
+}
+
+function computeBetPayout(bet: { stake: number; selections: any[]; totalOdds?: number }, bonusTable?: Record<number, number>, corrMatrix?: Record<string, number>) {
   const isCombo = checkIsComboBonus(bet.selections);
   const dc = new Set(bet.selections.map((s: any) => s.gameId)).size;
   const comboPct = isCombo ? getComboBonus(dc, bonusTable) : 0;
-  // Prefer stored totalOdds (already has correlation applied) over naive recalculation
-  const baseOdds = (!isCombo && bet.totalOdds != null && bet.totalOdds > 0)
-    ? bet.totalOdds
-    : computeTotalOdds(bet.selections);
+  // For live correlated bets: compute from matrix if available, else fall back to stored totalOdds
+  const liveCorrOdds = (!isCombo && corrMatrix) ? computeLiveCorrelatedOdds(bet.selections, corrMatrix) : null;
+  const baseOdds = liveCorrOdds != null
+    ? liveCorrOdds
+    : (!isCombo && bet.totalOdds != null && bet.totalOdds > 0)
+      ? bet.totalOdds
+      : computeTotalOdds(bet.selections);
   const displayTotalOdds = isCombo
     ? Math.floor(baseOdds * (1 + comboPct) * 100) / 100
     : baseOdds;
@@ -574,6 +598,10 @@ export default function Admin() {
   });
 
   const { fractionTable: comboBonusTable } = useComboBonus();
+  const { data: liveCorrMatrix = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/live-correlation"],
+    staleTime: 60 * 1000,
+  });
 
   const { data: comboBonusSettings = DEFAULT_COMBO_BONUS_PCT, isLoading: comboBonusLoading } = useQuery<Record<string, number>>({
     queryKey: ["/api/admin/combo-bonus"],
@@ -1396,7 +1424,7 @@ export default function Admin() {
                                   <div className="text-right whitespace-nowrap">
                                     <p className="text-xs text-muted-foreground">Retorno</p>
                                     {(() => {
-                                      const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet, comboBonusTable);
+                                      const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet, comboBonusTable, liveCorrMatrix);
                                       const bonusUsed = bet.bonusUsed ?? 0;
                                       const netReturn = Math.max(0, displayPotentialWin - bonusUsed);
                                       return (
@@ -2362,7 +2390,7 @@ export default function Admin() {
                                 Aposta: <span className="font-bold">R$&nbsp;{bet.stake.toFixed(2)}</span>
                               </span>
                               {(() => {
-                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, bonusLabel } = computeBetPayout(bet, comboBonusTable);
+                                const { displayPotentialWin, baseReturn, bonusReturn, baseOdds, bonusLabel } = computeBetPayout(bet, comboBonusTable, liveCorrMatrix);
                                 const bonusUsed = bet.bonusUsed ?? 0;
                                 const netReturn = Math.max(0, displayPotentialWin - bonusUsed);
                                 return (
@@ -4622,7 +4650,7 @@ function UsersTab() {
                               <div className="flex justify-between mt-1 flex-wrap gap-1">
                                 <span>Stake: R$ {bet.stake.toFixed(2).replace(".", ",")}</span>
                                 {(() => {
-                                  const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet);
+                                  const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet, undefined, liveCorrMatrix);
                                   if (bet.status === "cashed_out" && (bet as any).cashOutValue != null) {
                                     return (
                                       <span className="text-emerald-400">
