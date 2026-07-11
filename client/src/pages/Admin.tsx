@@ -3317,6 +3317,9 @@ function BoostTab() {
     startsAt: "",
     endsAt: "",
     active: true,
+    gradientFrom: "#0f2d6b",
+    gradientTo: "#1a0a0a",
+    maxStake: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3428,6 +3431,9 @@ function BoostTab() {
       startsAt: toLocalDatetime(card.startsAt),
       endsAt: toLocalDatetime(card.endsAt),
       active: card.active,
+      gradientFrom: (card as any).gradientFrom || "#0f2d6b",
+      gradientTo: (card as any).gradientTo || "#1a0a0a",
+      maxStake: (card as any).maxStake != null ? String((card as any).maxStake) : "",
     });
     setShowForm(true);
   };
@@ -3457,6 +3463,9 @@ function BoostTab() {
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
         active: form.active,
+        gradientFrom: form.gradientFrom || "#0f2d6b",
+        gradientTo: form.gradientTo || "#1a0a0a",
+        maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
       };
       if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3476,6 +3485,9 @@ function BoostTab() {
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
         active: form.active,
+        gradientFrom: form.gradientFrom || "#0f2d6b",
+        gradientTo: form.gradientTo || "#1a0a0a",
+        maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
       };
       if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3886,6 +3898,50 @@ function BoostTab() {
                   <p className="text-[11px] text-muted-foreground">Campo "orig." = odd original (riscada) · "⚡boost" = odd boostada</p>
                 </div>
               )}
+            </div>
+
+            {/* Gradient colors */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Cores do card (degradê)</label>
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-2 flex-1">
+                  <label className="text-[11px] text-muted-foreground whitespace-nowrap">Cor 1</label>
+                  <input
+                    type="color"
+                    className="w-10 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
+                    value={form.gradientFrom}
+                    onChange={e => setForm(f => ({ ...f, gradientFrom: e.target.value }))}
+                  />
+                  <span className="text-[11px] text-muted-foreground font-mono">{form.gradientFrom}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-1">
+                  <label className="text-[11px] text-muted-foreground whitespace-nowrap">Cor 2</label>
+                  <input
+                    type="color"
+                    className="w-10 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
+                    value={form.gradientTo}
+                    onChange={e => setForm(f => ({ ...f, gradientTo: e.target.value }))}
+                  />
+                  <span className="text-[11px] text-muted-foreground font-mono">{form.gradientTo}</span>
+                </div>
+                {/* Preview */}
+                <div
+                  className="w-12 h-8 rounded-md flex-shrink-0 border border-border"
+                  style={{ background: `linear-gradient(135deg, ${form.gradientFrom}, ${form.gradientTo})` }}
+                />
+              </div>
+            </div>
+
+            {/* Max stake */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Aposta máxima (opcional)</label>
+              <input
+                type="number" step="1" min="1"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Ex: 50 — deixe em branco para sem limite"
+                value={form.maxStake}
+                onChange={e => setForm(f => ({ ...f, maxStake: e.target.value }))}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

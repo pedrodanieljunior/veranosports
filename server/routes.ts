@@ -3874,6 +3874,24 @@ export async function registerRoutes(
         }
       }
 
+      // Verificar maxStake de Super Boost cards
+      {
+        const boostSel = validatedData.selections.find(s => s.marketKey === "boost");
+        if (boostSel) {
+          const boostCardId = parseInt(String(boostSel.gameId).replace("boost-", ""), 10);
+          if (!isNaN(boostCardId)) {
+            const allCards = await storage.getBoostCards();
+            const boostCard = allCards.find(c => c.id === boostCardId);
+            if (boostCard && (boostCard as any).maxStake != null && validatedData.stake > (boostCard as any).maxStake) {
+              return res.status(400).json({
+                error: `A aposta máxima para este Super Boost é R$${((boostCard as any).maxStake as number).toFixed(2).replace(".", ",")}.`,
+                isMaxStakeExceeded: true,
+              });
+            }
+          }
+        }
+      }
+
       // Verificar se algum jogo do bilhete está bloqueado (limite de apostas simples atingido)
       {
         const blockedIds = await storage.getBlockedGameIds();
