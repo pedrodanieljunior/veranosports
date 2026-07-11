@@ -4012,11 +4012,13 @@ export async function registerRoutes(
         }
         // Live correlation: aplicar coeficiente para pares de mercados ao vivo
         const liveSels = gameSels.filter((s: any) => isLiveCorrEligibleBE(s.marketKey));
+        console.log(`[LIVE-CORR-BE] gameId=${gameId} liveSels=${liveSels.length} matrix=${JSON.stringify(liveCorrMatrix).slice(0,80)}`);
         if (liveSels.length === 2) {
           const idA = normLiveCorrIdBE(liveSels[0].marketKey)!;
           const idB = normLiveCorrIdBE(liveSels[1].marketKey)!;
           const pairKey = `${Math.min(idA, idB)}_${Math.max(idA, idB)}`;
           const coeff = liveCorrMatrix[pairKey] ?? 1.0;
+          console.log(`[LIVE-CORR-BE] pairKey=${pairKey} coeff=${coeff} corrOdds=${liveSels[0].odds * liveSels[1].odds * coeff}`);
           const corrOdds = liveSels[0].odds * liveSels[1].odds * coeff;
           // Multiplicar quaisquer seleções adicionais não elegíveis (ex.: escanteios)
           const nonLive = gameSels.filter((s: any) => !isLiveCorrEligibleBE(s.marketKey));
