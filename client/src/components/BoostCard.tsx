@@ -98,7 +98,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
         <div className="px-4 pt-4 pb-3">
           {/* Header badge */}
           <div className="flex items-center justify-center mb-1">
-            <span className="text-[11px] font-black tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <span className="text-[11px] font-black tracking-widest uppercase" style={{ color: "#FFD700" }}>
               ⚡ Super Boost Verano
             </span>
           </div>
