@@ -560,6 +560,11 @@ export class DatabaseStorage implements IStorage {
       endsAt: r.endsAt.toISOString(),
       active: r.active,
       result: (r.result as "pending" | "won" | "lost") ?? "pending",
+      gradientFrom: (r as any).gradientFrom ?? "#0f2d6b",
+      gradientTo: (r as any).gradientTo ?? "#1a0a0a",
+      maxStake: (r as any).maxStake ?? null,
+      minStake: (r as any).minStake ?? null,
+      hasImage: !!((r as any).imageData),
       createdAt: r.createdAt.toISOString(),
     };
   }

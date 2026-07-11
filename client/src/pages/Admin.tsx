@@ -3364,13 +3364,12 @@ function BoostTab() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erro"); }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedCard: BoostCard) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/boost-cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/boost-cards"] });
-      toast({ title: "Super Boost atualizado!" });
-      setShowForm(false);
-      setEditingCard(null);
-      setForm(emptyForm);
+      toast({ title: "✅ Super Boost atualizado!", description: "Você pode agora adicionar ou trocar a imagem de fundo." });
+      // Mantém o form aberto em modo de edição com o card atualizado
+      setEditingCard(updatedCard);
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
