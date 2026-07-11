@@ -213,17 +213,12 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
             </div>
           )}
 
-          {/* Min/Max stake notice */}
-          {((card as any).minStake != null && (card as any).minStake > 0) || (card.maxStake != null && card.maxStake > 0) ? (
+          {/* Max stake notice */}
+          {card.maxStake != null && card.maxStake > 0 && (
             <p className="text-center text-[10px] mt-2" style={{ color: "rgba(255,255,255,0.4)" }}>
-              {(card as any).minStake != null && (card as any).minStake > 0 && card.maxStake != null && card.maxStake > 0
-                ? `Aposta: R$ ${(card as any).minStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} – R$ ${card.maxStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                : (card as any).minStake != null && (card as any).minStake > 0
-                ? `Aposta mínima: R$ ${(card as any).minStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                : `Aposta máxima: R$ ${card.maxStake!.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-              }
+              {`Aposta máxima: R$ ${card.maxStake.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </p>
-          ) : null}
+          )}
 
           {/* Selected indicator */}
           {isAnySelected && (
