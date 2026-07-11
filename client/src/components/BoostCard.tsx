@@ -109,7 +109,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
           </p>
 
           {/* Match title */}
-          <h3 className="text-center text-sm font-black leading-tight mb-3 text-white" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
+          <h3 className="text-center text-xs font-black leading-tight mb-2 text-white" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
             {card.matchTitle}
           </h3>
 
@@ -122,7 +122,7 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
 
           {/* Subtitle */}
           {card.subtitle && (
-            <p className="text-center text-sm font-semibold italic mb-2 text-white">
+            <p className="text-center text-base font-semibold italic mb-2 text-white">
               {card.subtitle}
             </p>
           )}
