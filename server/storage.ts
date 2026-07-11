@@ -595,6 +595,10 @@ export class DatabaseStorage implements IStorage {
       startsAt: new Date(data.startsAt),
       endsAt: new Date(data.endsAt),
       active: data.active ?? true,
+      gradientFrom: (data as any).gradientFrom ?? "#0f2d6b",
+      gradientTo: (data as any).gradientTo ?? "#1a0a0a",
+      maxStake: (data as any).maxStake ?? null,
+      minStake: (data as any).minStake ?? null,
     }).returning();
     return this.mapBoostCard(row);
   }
@@ -612,6 +616,12 @@ export class DatabaseStorage implements IStorage {
     if (data.startsAt !== undefined) update.startsAt = new Date(data.startsAt);
     if (data.endsAt !== undefined) update.endsAt = new Date(data.endsAt);
     if (data.active !== undefined) update.active = data.active;
+    if ((data as any).gradientFrom !== undefined) update.gradientFrom = (data as any).gradientFrom;
+    if ((data as any).gradientTo !== undefined) update.gradientTo = (data as any).gradientTo;
+    if ((data as any).maxStake !== undefined) update.maxStake = (data as any).maxStake;
+    if ((data as any).minStake !== undefined) update.minStake = (data as any).minStake;
+    if ((data as any).imageData !== undefined) update.imageData = (data as any).imageData;
+    if ((data as any).mimeType !== undefined) update.mimeType = (data as any).mimeType;
     const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();
     return row ? this.mapBoostCard(row) : undefined;
   }

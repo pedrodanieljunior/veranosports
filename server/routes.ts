@@ -4892,11 +4892,8 @@ export async function registerRoutes(
   app.get("/api/boost-cards", async (_req, res) => {
     try {
       const cards = await storage.getActiveBoostCards();
-      const result = cards.map(c => {
-        const { imageData, mimeType, ...rest } = c as any;
-        return { ...rest, hasImage: !!imageData };
-      });
-      res.json(result);
+      // mapBoostCard already sets hasImage correctly; just return as-is
+      res.json(cards);
     } catch (error) {
       console.error("Error fetching boost cards:", error);
       res.status(500).json({ error: "Failed to fetch boost cards" });
@@ -4917,11 +4914,14 @@ export async function registerRoutes(
   app.get("/api/boost-cards/:id/image", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const cards = await storage.getBoostCards();
-      const card = cards.find(c => c.id === id);
-      if (!card || !(card as any).imageData) return res.status(404).end();
-      const buf = Buffer.from((card as any).imageData, "base64");
-      res.set("Content-Type", (card as any).mimeType || "image/jpeg");
+      // Query DB directly to get imageData (mapBoostCard strips it for size)
+      const { db: dbDirect } = await import("./db");
+      const { boostCardsTable: bct } = await import("@shared/schema");
+      const { eq: eqDirect } = await import("drizzle-orm");
+      const [row] = await dbDirect.select({ imageData: bct.imageData, mimeType: bct.mimeType }).from(bct).where(eqDirect(bct.id, id));
+      if (!row?.imageData) return res.status(404).end();
+      const buf = Buffer.from(row.imageData, "base64");
+      res.set("Content-Type", row.mimeType || "image/jpeg");
       res.set("Cache-Control", "public, max-age=3600");
       res.send(buf);
     } catch (e: any) { res.status(500).end(); }
@@ -4930,11 +4930,8 @@ export async function registerRoutes(
   app.get("/api/admin/boost-cards", async (_req, res) => {
     try {
       const cards = await storage.getBoostCards();
-      const result = cards.map(c => {
-        const { imageData, mimeType, ...rest } = c as any;
-        return { ...rest, hasImage: !!imageData };
-      });
-      res.json(result);
+      // mapBoostCard already sets hasImage correctly; just return as-is
+      res.json(cards);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch boost cards" });
     }
