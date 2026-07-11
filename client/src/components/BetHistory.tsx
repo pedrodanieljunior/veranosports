@@ -225,8 +225,16 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
           <div className="space-y-3">
             {Object.entries(grouped).map(([gameId, sels]) => {
               const first = sels[0];
-              const perGameLive = !isCombo ? computeLiveCorrelatedOddsBH(sels, corrMatrix) : null;
-              const gameOdds = fmtOdds(perGameLive != null ? perGameLive : computeTotalOdds(sels, isCombo));
+              // Single-game bet: totalOdds IS the game odd (already correlated/stored correctly)
+              // Multi-game combo: compute per-game contribution using corrMatrix or naive fallback
+              const isSingleGame = Object.keys(grouped).length === 1;
+              let gameOdds: string;
+              if (isSingleGame && !isCombo) {
+                gameOdds = fmtOdds(displayTotalOdds);
+              } else {
+                const perGameLive = computeLiveCorrelatedOddsBH(sels, corrMatrix);
+                gameOdds = fmtOdds(perGameLive != null ? perGameLive : computeTotalOdds(sels, isCombo));
+              }
               return (
                 <div key={gameId} className="rounded-xl bg-muted border border-border overflow-hidden" data-testid={`card-history-game-${gameId}`}>
                   <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border">
