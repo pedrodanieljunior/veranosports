@@ -7481,15 +7481,19 @@ const CORR_PAIRS = [
   { key: "1_5",  a: "Resultado Final",       b: "Gols Over/Under" },
   { key: "1_6",  a: "Resultado Final",       b: "Gols O/U 1º Tempo" },
   { key: "1_8",  a: "Resultado Final",       b: "Ambas Marcam" },
+  { key: "1_12", a: "Resultado Final",       b: "Dupla Chance" },
   { key: "5_6",  a: "Gols Over/Under",       b: "Gols O/U 1º Tempo" },
   { key: "5_8",  a: "Gols Over/Under",       b: "Ambas Marcam" },
+  { key: "5_12", a: "Gols Over/Under",       b: "Dupla Chance" },
   { key: "6_8",  a: "Gols O/U 1º Tempo",    b: "Ambas Marcam" },
+  { key: "6_12", a: "Gols O/U 1º Tempo",    b: "Dupla Chance" },
+  { key: "8_12", a: "Ambas Marcam",          b: "Dupla Chance" },
 ];
 
 const CORR_DEFAULTS: Record<string, number> = {
-  "1_5": 0.90, "1_6": 0.90, "1_8": 0.85,
-  "5_6": 0.75, "5_8": 0.80,
-  "6_8": 0.82,
+  "1_5": 0.90, "1_6": 0.90, "1_8": 0.85, "1_12": 0.92,
+  "5_6": 0.75, "5_8": 0.80, "5_12": 0.90,
+  "6_8": 0.82, "6_12": 0.88, "8_12": 0.88,
 };
 
 function LiveCorrelationTab() {
@@ -7609,7 +7613,7 @@ function LiveCorrelationTab() {
 
               <div className="mt-2 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20 text-xs text-muted-foreground space-y-1">
                 <p className="font-semibold text-cyan-400">📌 Mercados elegíveis para correlação (ao vivo):</p>
-                <p>Resultado Final · Ambas Marcam · Gols Over/Under · Gols O/U 1º Tempo</p>
+                <p>Resultado Final · Dupla Chance · Ambas Marcam · Gols Over/Under · Gols O/U 1º Tempo</p>
                 <p className="mt-1">Ao selecionar 2 desses mercados do mesmo jogo, os demais ficam bloqueados e a odd é calculada com o coeficiente acima.</p>
               </div>
             </>
