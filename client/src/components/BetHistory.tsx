@@ -276,14 +276,14 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
           <div className="rounded-xl bg-muted border border-border overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
               <span className="text-muted-foreground text-sm">Odds total</span>
-              <span className="text-foreground font-bold">{fmtOdds(baseOdds)}</span>
+              <span className="text-foreground font-bold">{fmtOdds(displayTotalOdds)}</span>
             </div>
             <div className="flex items-center justify-between px-4 py-2 border-b border-border">
               <span className="text-muted-foreground text-sm">Valor Apostado</span>
               <span className="text-foreground font-medium">R$ {bet.stake.toFixed(2)}</span>
             </div>
             {isCombo && comboPct > 0 && (() => {
-              const displayedBaseOdds = Math.round(baseOdds * 100) / 100;
+              const displayedBaseOdds = Math.round((displayTotalOdds / (1 + comboPct)) * 100) / 100;
               const bonusAmt = (displayPotentialWin - bet.stake * displayedBaseOdds).toFixed(2);
               return (
                 <div className="flex items-center justify-between px-4 py-2 border-b border-border">
