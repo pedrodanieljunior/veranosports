@@ -4343,8 +4343,10 @@ function UsersTab() {
     queryKey: ["/api/bets", selectedUser?.cpf],
     queryFn: async () => {
       if (!selectedUser) return [];
-      const res = await fetch(`/api/bets?userId=${encodeURIComponent(selectedUser.cpf)}`);
-      return res.json();
+      const res = await fetch(`/api/bets?userId=${encodeURIComponent(selectedUser.cpf)}`, { credentials: "include" });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
     },
     enabled: !!selectedUser,
   });
@@ -4794,7 +4796,12 @@ function UsersTab() {
                     ) : (
                       <ScrollArea className="h-48">
                         <div className="space-y-2">
-                          {userBets.map(bet => (
+                          {userBets.map(bet => {
+                            if (!bet || !bet.id) return null;
+                            const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
+                            let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
+                            try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
+                            return (
                             <div key={bet.id} className="p-2 border rounded text-xs">
                               <div className="flex justify-between">
                                 <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
@@ -4809,29 +4816,24 @@ function UsersTab() {
                                 </Badge>
                               </div>
                               <div className="flex justify-between mt-1 flex-wrap gap-1">
-                                <span>Stake: R$ {bet.stake.toFixed(2).replace(".", ",")}</span>
-                                {(() => {
-                                  const { displayPotentialWin, baseReturn, bonusReturn, bonusLabel } = computeBetPayout(bet, undefined, liveCorrMatrix);
-                                  if (bet.status === "cashed_out" && (bet as any).cashOutValue != null) {
-                                    return (
-                                      <span className="text-emerald-400">
-                                        Cash Out: R$ {fmtBRL((bet as any).cashOutValue)}
-                                        <span className="text-zinc-500 text-[10px] ml-1 line-through">R$&nbsp;{fmtBRL(displayPotentialWin)}</span>
-                                      </span>
-                                    );
-                                  }
-                                  return (
-                                    <span className="text-green-600">
-                                      Retorno: R$ {fmtBRL(displayPotentialWin)}
-                                      {baseReturn !== null && bonusReturn !== null && (
-                                        <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(bonusReturn)}&nbsp;{bonusLabel})</span>
-                                      )}
-                                    </span>
-                                  );
-                                })()}
+                                <span>Stake: R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                                {bet.status === "cashed_out" && (bet as any).cashOutValue != null ? (
+                                  <span className="text-emerald-400">
+                                    Cash Out: R$ {fmtBRL((bet as any).cashOutValue)}
+                                    <span className="text-zinc-500 text-[10px] ml-1 line-through">R$&nbsp;{fmtBRL(payout.displayPotentialWin)}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-green-600">
+                                    Retorno: R$ {fmtBRL(payout.displayPotentialWin)}
+                                    {payout.baseReturn !== null && payout.bonusReturn !== null && (
+                                      <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(payout.baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(payout.bonusReturn)}&nbsp;{payout.bonusLabel})</span>
+                                    )}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </ScrollArea>
                     )}
