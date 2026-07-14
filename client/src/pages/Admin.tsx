@@ -7855,6 +7855,8 @@ function AnalisesTab() {
     },
   });
 
+  const [autoAnalyzed, setAutoAnalyzed] = useState(false);
+
   const handleSelectBet = (bet: BetSlipType) => {
     setSelectedBetId(bet.id);
     setAporte(String(bet.stake ?? ""));
@@ -7865,6 +7867,61 @@ function AnalisesTab() {
     e.stopPropagation();
     setExpandedBetId(prev => prev === betId ? null : betId);
   };
+
+  const clearFE = () => {
+    setFeCorrelacaoBilhetes(false);
+    setFeAltaCorrelacao(false);
+    setFeExposicao6(false);
+    setFeExposicao10(false);
+    setFeConcentracaoCliente(false);
+    setFeBaixaRecuperacao(false);
+    setAutoAnalyzed(false);
+  };
+
+  useEffect(() => {
+    if (!selectedBetId || pendingBets.length === 0) return;
+    const selectedBet = pendingBets.find(b => b.id === selectedBetId);
+    if (!selectedBet) return;
+
+    const sels: any[] = Array.isArray(selectedBet.selections) ? selectedBet.selections : [];
+    const selectedGameIds = new Set(sels.map((s: any) => s.gameId).filter(Boolean));
+
+    const correlatedBets = pendingBets.filter(b => {
+      if (b.id === selectedBetId) return false;
+      const otherSels: any[] = Array.isArray(b.selections) ? b.selections : [];
+      return otherSels.some((s: any) => selectedGameIds.size > 0 && selectedGameIds.has(s.gameId));
+    });
+
+    const cN = parseFloat(caixa.replace(",", ".")) || 0;
+
+    const totalEventExposure = pendingBets
+      .filter(b => {
+        const bSels: any[] = Array.isArray(b.selections) ? b.selections : [];
+        return bSels.some((s: any) => selectedGameIds.size > 0 && selectedGameIds.has(s.gameId));
+      })
+      .reduce((sum, b) => {
+        const ll = Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0));
+        return sum + ll;
+      }, 0);
+
+    const exposurePct = cN > 0 ? (totalEventExposure / cN) * 100 : 0;
+
+    const allActiveLucro = pendingBets.reduce((sum, b) => {
+      return sum + Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0));
+    }, 0);
+    const betLucro = Math.max(0, (selectedBet.stake ?? 0) * (selectedBet.totalOdds ?? 1) - (selectedBet.stake ?? 0));
+    const clientConcentration = allActiveLucro > 0 ? betLucro / allActiveLucro : 0;
+
+    const otherBetsCount = pendingBets.filter(b => b.id !== selectedBetId).length;
+
+    setFeCorrelacaoBilhetes(correlatedBets.length >= 1);
+    setFeAltaCorrelacao(correlatedBets.length >= 2);
+    setFeExposicao6(exposurePct > 6);
+    setFeExposicao10(exposurePct > 10);
+    setFeConcentracaoCliente(clientConcentration > 0.3);
+    setFeBaixaRecuperacao(otherBetsCount < 5);
+    setAutoAnalyzed(true);
+  }, [selectedBetId, pendingBets, caixa]);
 
   const aporteNum = parseFloat(aporte.replace(",", ".")) || 0;
   const oddNum = parseFloat(odd.replace(",", ".")) || 0;
@@ -8038,10 +8095,28 @@ function AnalisesTab() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
-                  Fator de Exposição (FE) — agravantes operacionais
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
+                    Fator de Exposição (FE) — agravantes operacionais
+                  </label>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {autoAnalyzed && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 rounded px-1.5 py-0.5">
+                        <Brain className="w-3 h-3" />
+                        Auto
+                      </span>
+                    )}
+                    {(feCorrelacaoBilhetes || feAltaCorrelacao || feExposicao6 || feExposicao10 || feConcentracaoCliente || feBaixaRecuperacao) && (
+                      <button
+                        onClick={clearFE}
+                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="rounded-lg border border-border divide-y divide-border/60">
                   {[
                     { state: feCorrelacaoBilhetes, setter: setFeCorrelacaoBilhetes, label: "Correlação de bilhetes", desc: "Há outro bilhete dependente do mesmo resultado", pts: "+1" },
