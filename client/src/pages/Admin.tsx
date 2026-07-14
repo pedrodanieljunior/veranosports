@@ -6654,24 +6654,28 @@ function AdminLiveGameTab() {
   const [searchLive, setSearchLive] = useState("");
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
-  // Live game odds overrides
-  const [liveOddsEdits, setLiveOddsEdits] = useState<Record<string, number>>({});
+  // Live game odds overrides — string state so user can type freely (e.g. "-", "1.", "")
+  const [liveOddsEdits, setLiveOddsEdits] = useState<Record<string, string>>({});
   const [liveOddsSaved, setLiveOddsSaved] = useState(false);
+  const liveOddsInitedRef = useRef<number | null>(null);
 
-  const { data: allGameOverrides = [] } = useQuery<{ gameId: string; marketKey: string; adjustPercent: number }[]>({
+  const { data: allGameOverrides = [], isSuccess: overridesLoaded } = useQuery<{ gameId: string; marketKey: string; adjustPercent: number }[]>({
     queryKey: ["/api/admin/game-market-overrides"],
     queryFn: () => fetch("/api/admin/game-market-overrides", { credentials: "include" }).then(r => r.json()),
+    staleTime: 60_000,
     enabled: !!data?.activeFixtureId,
   });
 
   useEffect(() => {
-    if (!data?.activeFixtureId) return;
+    if (!data?.activeFixtureId || !overridesLoaded) return;
+    if (liveOddsInitedRef.current === data.activeFixtureId) return;
+    liveOddsInitedRef.current = data.activeFixtureId;
     const liveGameId = `api-football-${data.activeFixtureId}`;
     const relevant = allGameOverrides.filter(o => o.gameId === liveGameId);
-    const init: Record<string, number> = {};
-    for (const o of relevant) init[o.marketKey] = o.adjustPercent;
+    const init: Record<string, string> = {};
+    for (const o of relevant) init[o.marketKey] = String(o.adjustPercent);
     setLiveOddsEdits(init);
-  }, [allGameOverrides, data?.activeFixtureId]);
+  }, [allGameOverrides, data?.activeFixtureId, overridesLoaded]);
 
   const saveLiveOddsMut = useMutation({
     mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
@@ -6912,7 +6916,7 @@ function AdminLiveGameTab() {
                     homeTeam: activeGame.home,
                     awayTeam: activeGame.away,
                     marketKey: m.marketKey,
-                    adjustPercent: liveOddsEdits[m.marketKey] ?? 0,
+                    adjustPercent: parseFloat(liveOddsEdits[m.marketKey] ?? "0") || 0,
                   }));
                   saveLiveOddsMut.mutate(payload);
                 }}
@@ -6941,8 +6945,9 @@ function AdminLiveGameTab() {
           <CardContent>
             <div className="space-y-1.5">
               {LIVE_MARKET_SETTINGS.map(setting => {
-                const current = liveOddsEdits[setting.marketKey] ?? 0;
-                const isModified = current !== 0;
+                const rawStr = liveOddsEdits[setting.marketKey] ?? "0";
+                const numVal = parseFloat(rawStr) || 0;
+                const isModified = numVal !== 0;
                 return (
                   <div
                     key={setting.marketKey}
@@ -6952,26 +6957,28 @@ function AdminLiveGameTab() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{setting.marketName}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {current > 0
-                          ? <span className="text-cyan-400">+{current}%</span>
-                          : current < 0
-                          ? <span className="text-red-400">{current}%</span>
+                        {numVal > 0
+                          ? <span className="text-cyan-400">+{numVal}%</span>
+                          : numVal < 0
+                          ? <span className="text-red-400">{numVal}%</span>
                           : <span>Sem ajuste</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={() => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? 0) - 1 }))}
+                        onClick={() => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: String((parseFloat(prev[setting.marketKey] ?? "0") || 0) - 1) }))}
                         data-testid={`button-live-dec-${setting.marketKey}`}
                         className="w-7 h-7 flex items-center justify-center rounded border border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
                       >−</button>
                       <div className="relative w-14">
                         <input
-                          type="number"
-                          value={current}
-                          onChange={e => {
+                          type="text"
+                          inputMode="numeric"
+                          value={rawStr}
+                          onChange={e => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: e.target.value }))}
+                          onBlur={e => {
                             const v = parseFloat(e.target.value);
-                            if (!isNaN(v)) setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: v }));
+                            setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: String(isNaN(v) ? 0 : v) }));
                           }}
                           className="w-full text-center pr-4 h-7 rounded border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
                           data-testid={`input-live-odds-${setting.marketKey}`}
@@ -6979,7 +6986,7 @@ function AdminLiveGameTab() {
                         <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
                       </div>
                       <button
-                        onClick={() => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? 0) + 1 }))}
+                        onClick={() => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: String((parseFloat(prev[setting.marketKey] ?? "0") || 0) + 1) }))}
                         data-testid={`button-live-inc-${setting.marketKey}`}
                         className="w-7 h-7 flex items-center justify-center rounded border border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
                       >+</button>
