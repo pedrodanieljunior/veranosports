@@ -6554,6 +6554,18 @@ type AdminGame = {
 };
 type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean };
 
+const LIVE_MARKET_SETTINGS = [
+  { marketKey: "live_m1",   marketName: "Resultado Final (1x2)" },
+  { marketKey: "live_m5",   marketName: "Gols Over/Under (2.5)" },
+  { marketKey: "live_m6",   marketName: "1º Tempo Over/Under" },
+  { marketKey: "live_m8",   marketName: "Ambas Marcam" },
+  { marketKey: "live_m12",  marketName: "Dupla Chance" },
+  { marketKey: "live_m13",  marketName: "Resultado 1º Tempo" },
+  { marketKey: "live_m20",  marketName: "Escanteios Over/Under" },
+  { marketKey: "live_m25",  marketName: "Gols O/U (todas linhas)" },
+  { marketKey: "live_m119", marketName: "Total Cartões" },
+];
+
 function AdminLiveGameTab() {
   const { data, isLoading, refetch } = useQuery<LiveGamesResp>({
     queryKey: ["/api/admin/live-games"],
@@ -6641,6 +6653,41 @@ function AdminLiveGameTab() {
 
   const [searchLive, setSearchLive] = useState("");
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+
+  // Live game odds overrides
+  const [liveOddsEdits, setLiveOddsEdits] = useState<Record<string, number>>({});
+  const [liveOddsSaved, setLiveOddsSaved] = useState(false);
+
+  const { data: allGameOverrides = [] } = useQuery<{ gameId: string; marketKey: string; adjustPercent: number }[]>({
+    queryKey: ["/api/admin/game-market-overrides"],
+    queryFn: () => fetch("/api/admin/game-market-overrides", { credentials: "include" }).then(r => r.json()),
+    enabled: !!data?.activeFixtureId,
+  });
+
+  useEffect(() => {
+    if (!data?.activeFixtureId) return;
+    const liveGameId = `api-football-${data.activeFixtureId}`;
+    const relevant = allGameOverrides.filter(o => o.gameId === liveGameId);
+    const init: Record<string, number> = {};
+    for (const o of relevant) init[o.marketKey] = o.adjustPercent;
+    setLiveOddsEdits(init);
+  }, [allGameOverrides, data?.activeFixtureId]);
+
+  const saveLiveOddsMut = useMutation({
+    mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
+      const r = await fetch("/api/admin/game-market-overrides", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error("Falha ao salvar");
+      return r.json();
+    },
+    onSuccess: () => {
+      setLiveOddsSaved(true);
+      setTimeout(() => setLiveOddsSaved(false), 2500);
+    },
+  });
 
   const activeGame = data?.games.find(g => g.id === data.activeFixtureId);
   // Prefer fast-polling lockStatus (5s) over the 30s live-games response
@@ -6846,6 +6893,103 @@ function AdminLiveGameTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Odds por Mercado (jogo ao vivo ativo) ── */}
+      {data?.activeFixtureId && activeGame && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TrendingUp className="w-4 h-4 text-cyan-400" />
+                Odds por Mercado
+              </CardTitle>
+              <button
+                onClick={() => {
+                  const liveGameId = `api-football-${data.activeFixtureId}`;
+                  const payload = LIVE_MARKET_SETTINGS.map(m => ({
+                    gameId: liveGameId,
+                    homeTeam: activeGame.home,
+                    awayTeam: activeGame.away,
+                    marketKey: m.marketKey,
+                    adjustPercent: liveOddsEdits[m.marketKey] ?? 0,
+                  }));
+                  saveLiveOddsMut.mutate(payload);
+                }}
+                disabled={saveLiveOddsMut.isPending}
+                data-testid="button-save-live-odds"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  liveOddsSaved
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                } disabled:opacity-50`}
+              >
+                {saveLiveOddsMut.isPending ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : liveOddsSaved ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <CheckCircle className="w-3.5 h-3.5" />
+                )}
+                {liveOddsSaved ? "Salvo!" : "Salvar Ajustes"}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ajuste % adicional nas odds de cada mercado para <span className="font-medium text-foreground">{activeGame.home} × {activeGame.away}</span>.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              {LIVE_MARKET_SETTINGS.map(setting => {
+                const current = liveOddsEdits[setting.marketKey] ?? 0;
+                const isModified = current !== 0;
+                return (
+                  <div
+                    key={setting.marketKey}
+                    className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors ${isModified ? "bg-cyan-500/10 border border-cyan-500/20" : "bg-muted/20"}`}
+                    data-testid={`live-odds-row-${setting.marketKey}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{setting.marketName}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {current > 0
+                          ? <span className="text-cyan-400">+{current}%</span>
+                          : current < 0
+                          ? <span className="text-red-400">{current}%</span>
+                          : <span>Sem ajuste</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? 0) - 1 }))}
+                        data-testid={`button-live-dec-${setting.marketKey}`}
+                        className="w-7 h-7 flex items-center justify-center rounded border border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+                      >−</button>
+                      <div className="relative w-14">
+                        <input
+                          type="number"
+                          value={current}
+                          onChange={e => {
+                            const v = parseFloat(e.target.value);
+                            if (!isNaN(v)) setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: v }));
+                          }}
+                          className="w-full text-center pr-4 h-7 rounded border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                          data-testid={`input-live-odds-${setting.marketKey}`}
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                      </div>
+                      <button
+                        onClick={() => setLiveOddsEdits(prev => ({ ...prev, [setting.marketKey]: (prev[setting.marketKey] ?? 0) + 1 }))}
+                        data-testid={`button-live-inc-${setting.marketKey}`}
+                        className="w-7 h-7 flex items-center justify-center rounded border border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+                      >+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Lista de jogos do dia ── */}
       <Card>
