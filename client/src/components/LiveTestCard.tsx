@@ -785,9 +785,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                       <Lock className="w-3.5 h-3.5 text-gray-500" />
                     ) : (
                       <>
-                        {isBoosted && (
-                          <span className="text-[9px] line-through opacity-50 font-normal leading-none">{rawOdd.toFixed(2)}</span>
-                        )}
+
                         <div className="flex items-center gap-0.5">
                           <span className="text-sm font-black text-white">{boostedOdd.toFixed(2)}</span>
                           {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
