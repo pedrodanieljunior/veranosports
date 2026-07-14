@@ -7992,7 +7992,7 @@ function AnalisesTab() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <Brain className="w-5 h-5 text-purple-400" />
-            Motor de Decisão Verano v1.1
+            Motor de Decisão
           </CardTitle>
         </CardHeader>
         <CardContent>
