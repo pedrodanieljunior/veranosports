@@ -1207,27 +1207,27 @@ export default function Admin() {
         <Tabs value={adminTab} onValueChange={setAdminTab}>
           <TabsList className="mb-4 flex-wrap h-auto gap-1">
             <TabsTrigger value="bilhetes" data-testid="tab-bilhetes">
-              <DollarSign className="w-4 h-4 mr-2" />
+              <DollarSign className="w-4 h-4 mr-2 text-green-400" />
               Bilhetes
             </TabsTrigger>
             <TabsTrigger value="limites" data-testid="tab-limites">
-              <BarChart2 className="w-4 h-4 mr-2" />
+              <BarChart2 className="w-4 h-4 mr-2 text-blue-400" />
               Limites por Jogo
             </TabsTrigger>
             <TabsTrigger value="riscos" data-testid="tab-riscos">
-              <ShieldAlert className="w-4 h-4 mr-2" />
+              <ShieldAlert className="w-4 h-4 mr-2 text-orange-400" />
               Riscos
             </TabsTrigger>
             <TabsTrigger value="caixa" data-testid="tab-caixa">
-              <Wallet className="w-4 h-4 mr-2" />
+              <Wallet className="w-4 h-4 mr-2 text-emerald-400" />
               Caixa
             </TabsTrigger>
             <TabsTrigger value="financeiro" data-testid="tab-financeiro">
-              <PieChart className="w-4 h-4 mr-2" />
+              <PieChart className="w-4 h-4 mr-2 text-indigo-400" />
               Financeiro
             </TabsTrigger>
             <TabsTrigger value="pagamentos" data-testid="tab-pagamentos" className="relative">
-              <Banknote className="w-4 h-4 mr-2" />
+              <Banknote className="w-4 h-4 mr-2 text-lime-400" />
               Pagamentos
               {allUserWithdrawals.filter(w => w.status === "pending").length > 0 && (
                 <span className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
@@ -1236,31 +1236,31 @@ export default function Admin() {
               )}
             </TabsTrigger>
             <TabsTrigger value="saques" data-testid="tab-saques">
-              <MinusCircle className="w-4 h-4 mr-2" />
+              <MinusCircle className="w-4 h-4 mr-2 text-red-400" />
               Saques
             </TabsTrigger>
             <TabsTrigger value="mercados" data-testid="tab-mercados">
-              <Target className="w-4 h-4 mr-2" />
+              <Target className="w-4 h-4 mr-2 text-violet-400" />
               Mercados
             </TabsTrigger>
             <TabsTrigger value="banners" data-testid="tab-banners">
-              <Image className="w-4 h-4 mr-2" />
+              <Image className="w-4 h-4 mr-2 text-pink-400" />
               Banners
             </TabsTrigger>
             <TabsTrigger value="regras" data-testid="tab-regras">
-              <BookOpen className="w-4 h-4 mr-2" />
+              <BookOpen className="w-4 h-4 mr-2 text-amber-400" />
               Regras
             </TabsTrigger>
             <TabsTrigger value="copa-mundo" data-testid="tab-copa-mundo">
-              <Trophy className="w-4 h-4 mr-2" />
+              <Trophy className="w-4 h-4 mr-2 text-yellow-400" />
               Copa do Mundo
             </TabsTrigger>
             <TabsTrigger value="boost" data-testid="tab-boost">
-              <Zap className="w-4 h-4 mr-2" />
+              <Zap className="w-4 h-4 mr-2 text-yellow-300" />
               Boost
             </TabsTrigger>
             <TabsTrigger value="depositos" data-testid="tab-depositos" className="relative">
-              <Wallet className="w-4 h-4 mr-2" />
+              <Wallet className="w-4 h-4 mr-2 text-teal-400" />
               Depósitos
               {allDeposits.filter(d => d.status === "pending").length > 0 && (
                 <span className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
@@ -1269,23 +1269,23 @@ export default function Admin() {
               )}
             </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">
-              <Users className="w-4 h-4 mr-2" />
+              <Users className="w-4 h-4 mr-2 text-sky-400" />
               Usuários
             </TabsTrigger>
             <TabsTrigger value="indicacoes" data-testid="tab-indicacoes">
-              <UserCheck className="w-4 h-4 mr-2" />
+              <UserCheck className="w-4 h-4 mr-2 text-cyan-400" />
               Indicações
             </TabsTrigger>
             <TabsTrigger value="defesas" data-testid="tab-defesas">
-              <Shield className="w-4 h-4 mr-2" />
+              <Shield className="w-4 h-4 mr-2 text-blue-500" />
               Defesas
             </TabsTrigger>
             <TabsTrigger value="recompensas" data-testid="tab-recompensas">
-              <Gift className="w-4 h-4 mr-2" />
+              <Gift className="w-4 h-4 mr-2 text-rose-400" />
               Recompensas
             </TabsTrigger>
             <TabsTrigger value="configuracoes" data-testid="tab-configuracoes">
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="w-4 h-4 mr-2 text-zinc-400" />
               Configurações
             </TabsTrigger>
             <TabsTrigger value="ao-vivo" data-testid="tab-ao-vivo">
