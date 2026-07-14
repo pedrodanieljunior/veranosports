@@ -8058,16 +8058,40 @@ function AnalisesTab() {
 
                             {/* Expanded selections */}
                             {isExpanded && sels.length > 0 && (
-                              <div className={`mx-2 mb-2 rounded border divide-y text-[11px] overflow-hidden ${isSelected ? "border-purple-500/30 divide-purple-500/20" : "border-border divide-border/60"}`}>
+                              <div className="mx-2 mb-2 space-y-0">
                                 {sels.map((sel: any, idx: number) => (
-                                  <div key={sel.id ?? idx} className={`px-2.5 py-1.5 flex items-start justify-between gap-2 ${isSelected ? "bg-purple-500/10" : "bg-muted/20"}`}>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium truncate text-foreground">{sel.homeTeam ?? sel.team} {sel.awayTeam ? `x ${sel.awayTeam}` : ""}</p>
-                                      <p className="text-muted-foreground truncate">{sel.outcomeName ?? sel.market}</p>
+                                  <div key={sel.id ?? idx} className="flex gap-2">
+                                    {/* Connector line */}
+                                    <div className="flex flex-col items-center w-4 shrink-0 pt-1">
+                                      <div className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? "bg-purple-400" : "bg-muted-foreground/50"}`} />
+                                      {idx < sels.length - 1 && (
+                                        <div className={`w-px flex-1 mt-0.5 ${isSelected ? "bg-purple-500/40" : "bg-border"}`} style={{ minHeight: "20px" }} />
+                                      )}
                                     </div>
-                                    <span className={`font-bold shrink-0 ${isSelected ? "text-purple-300" : "text-foreground"}`}>{fmtOdds(sel.odds)}</span>
+                                    {/* Selection card */}
+                                    <div className={`flex-1 mb-1.5 rounded px-2.5 py-2 text-[11px] ${isSelected ? "bg-purple-500/10 border border-purple-500/20" : "bg-muted/30 border border-border/60"}`}>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                          <p className={`font-semibold leading-tight ${isSelected ? "text-purple-200" : "text-foreground"}`}>
+                                            {sel.outcomeName ?? sel.outcome ?? sel.market ?? "—"}
+                                          </p>
+                                          <p className="text-muted-foreground text-[10px] mt-0.5 truncate">
+                                            {[sel.homeTeam ?? sel.team, sel.awayTeam].filter(Boolean).join(" x ")}
+                                            {sel.marketKey && <span className="ml-1 opacity-60">· {sel.marketKey}</span>}
+                                          </p>
+                                        </div>
+                                        <span className={`font-bold text-xs shrink-0 ${isSelected ? "text-purple-300" : "text-foreground"}`}>
+                                          {fmtOdds(sel.odds)}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
                                 ))}
+                                {/* Total odds footer */}
+                                <div className={`ml-6 rounded px-2.5 py-1.5 text-[11px] flex justify-between items-center ${isSelected ? "bg-purple-500/15 border border-purple-500/30" : "bg-muted/50 border border-border"}`}>
+                                  <span className="text-muted-foreground">{sels.length} seleç{sels.length === 1 ? "ão" : "ões"} · odd total</span>
+                                  <span className={`font-bold ${isSelected ? "text-purple-300" : "text-foreground"}`}>{fmtOdds(bet.totalOdds)}x</span>
+                                </div>
                               </div>
                             )}
                           </div>
