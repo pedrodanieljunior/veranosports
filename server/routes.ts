@@ -4432,8 +4432,8 @@ export async function registerRoutes(
     }
   });
 
-  // Game market overrides (per-game odds adjustment)
-  app.get("/api/game-market-overrides", async (_req, res) => {
+  // Live market adjustments (per-game odds adjustment) — formerly game-market-overrides
+  app.get("/api/live-market-adj", async (_req, res) => {
     try {
       const cached = cache.get<any[]>("game_market_overrides");
       if (cached) return res.json(cached);
@@ -4446,7 +4446,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/game-market-overrides", requireAdmin, async (_req, res) => {
+  app.get("/api/admin/live-market-adj", requireAdmin, async (_req, res) => {
     try {
       const overrides = await storage.getGameMarketOverrides();
       res.json(overrides);
@@ -4455,7 +4455,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/admin/game-market-overrides", requireAdmin, async (req, res) => {
+  app.put("/api/admin/live-market-adj", requireAdmin, async (req, res) => {
     try {
       const overrides = req.body;
       if (!Array.isArray(overrides)) return res.status(400).json({ error: "Body must be an array" });

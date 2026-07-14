@@ -591,7 +591,7 @@ export default function Admin() {
   }, [marketSettings]);
 
   const { data: gameMarketOverrides = [] } = useQuery<GameMarketOverride[]>({
-    queryKey: ["/api/admin/game-market-overrides"],
+    queryKey: ["/api/admin/live-market-adj"],
     staleTime: 30 * 1000,
     enabled: !!adminMe?.isAdmin,
   });
@@ -622,12 +622,12 @@ export default function Admin() {
 
   const saveGameOverridesMutation = useMutation({
     mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
-      const response = await apiRequest("PUT", "/api/admin/game-market-overrides", payload);
+      const response = await apiRequest("PUT", "/api/admin/live-market-adj", payload);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-market-overrides"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/game-market-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/live-market-adj"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/live-market-adj"] });
       toast({ title: "Odds por jogo salvas", description: "Os ajustes foram aplicados com sucesso." });
     },
     onError: () => {
@@ -6662,8 +6662,8 @@ function AdminLiveGameTab() {
   const liveOddsInitedRef = useRef<number | null>(null);
 
   const { data: allGameOverrides = [], isSuccess: overridesLoaded } = useQuery<{ gameId: string; marketKey: string; adjustPercent: number }[]>({
-    queryKey: ["/api/admin/game-market-overrides"],
-    queryFn: () => fetch("/api/admin/game-market-overrides", { credentials: "include" }).then(r => r.json()),
+    queryKey: ["/api/admin/live-market-adj"],
+    queryFn: () => fetch("/api/admin/live-market-adj", { credentials: "include" }).then(r => r.json()),
     staleTime: 60_000,
     enabled: !!data?.activeFixtureId,
   });
@@ -6681,7 +6681,7 @@ function AdminLiveGameTab() {
 
   const saveLiveOddsMut = useMutation({
     mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
-      const r = await fetch("/api/admin/game-market-overrides", {
+      const r = await fetch("/api/admin/live-market-adj", {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -6696,8 +6696,8 @@ function AdminLiveGameTab() {
       return JSON.parse(text);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-market-overrides"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/game-market-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/live-market-adj"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/live-market-adj"] });
       setLiveOddsSaved(true);
       setTimeout(() => setLiveOddsSaved(false), 2500);
       toast({ title: "Ajustes salvos", description: "As odds ao vivo foram atualizadas." });

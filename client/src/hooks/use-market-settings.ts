@@ -8,7 +8,7 @@ export function useMarketSettings() {
   });
 
   const { data: gameOverrides = [] } = useQuery<GameMarketOverride[]>({
-    queryKey: ["/api/game-market-overrides"],
+    queryKey: ["/api/live-market-adj"],
     staleTime: 30 * 1000,
   });
 
