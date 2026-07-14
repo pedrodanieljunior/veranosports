@@ -7,9 +7,10 @@ interface BoostCardProps {
   card: BoostCardType;
   selections: Selection[];
   onToggleSelection: (selection: Selection) => void;
+  usedByUser?: boolean;
 }
 
-export function BoostCard({ card, selections, onToggleSelection }: BoostCardProps) {
+export function BoostCard({ card, selections, onToggleSelection, usedByUser = false }: BoostCardProps) {
   const hasOutcomes = card.outcomes && card.outcomes.length > 0;
 
   const singleId = `boost-${card.id}`;
@@ -57,18 +58,22 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
     };
   };
 
-  const wrapperBorder = isAnySelected
+  const wrapperBorder = usedByUser
+    ? "2px solid rgba(255,255,255,0.08)"
+    : isAnySelected
     ? "2px solid rgba(255,255,255,0.6)"
     : "2px solid rgba(255,255,255,0.18)";
-  const wrapperShadow = isAnySelected
+  const wrapperShadow = usedByUser
+    ? "0 2px 8px rgba(0,0,0,0.3)"
+    : isAnySelected
     ? "0 0 0 1px rgba(255,255,255,0.2), 0 6px 28px rgba(0,0,0,0.55)"
     : "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.07)";
 
   return (
     <div
-      className={`relative rounded-xl overflow-hidden mx-3 mb-2.5 ${!hasOutcomes ? "cursor-pointer" : ""}`}
+      className={`relative rounded-xl overflow-hidden mx-3 mb-2.5 ${usedByUser ? "opacity-50 cursor-not-allowed" : !hasOutcomes ? "cursor-pointer" : ""}`}
       style={{ border: wrapperBorder, boxShadow: wrapperShadow }}
-      onClick={!hasOutcomes ? () => onToggleSelection(makeSelection()) : undefined}
+      onClick={!usedByUser && !hasOutcomes ? () => onToggleSelection(makeSelection()) : undefined}
       data-testid={`boost-card-${card.id}`}
     >
       {/* ── Image section on top ── */}
@@ -187,8 +192,9 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
                 return (
                   <button
                     key={idx}
-                    onClick={() => onToggleSelection(makeSelection(idx))}
+                    onClick={() => !usedByUser && onToggleSelection(makeSelection(idx))}
                     className="w-full flex items-center justify-between rounded-lg px-3 py-2 transition-all"
+                    disabled={usedByUser}
                     style={{
                       background: isChosen ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.25)",
                       border: isChosen ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
@@ -220,8 +226,18 @@ export function BoostCard({ card, selections, onToggleSelection }: BoostCardProp
             </p>
           )}
 
+          {/* Already used indicator */}
+          {usedByUser && (
+            <div className="mt-2 text-center">
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full text-white"
+                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                ✓ Já utilizado
+              </span>
+            </div>
+          )}
+
           {/* Selected indicator */}
-          {isAnySelected && (
+          {!usedByUser && isAnySelected && (
             <div className="mt-2 text-center">
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full text-white"
                 style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}>

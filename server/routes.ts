@@ -3885,7 +3885,7 @@ export async function registerRoutes(
         });
       }
 
-      // Verificar maxStake de Super Boost cards
+      // Verificar maxStake e uso único de Super Boost cards
       {
         const boostSel = validatedData.selections.find(s => s.marketKey === "boost");
         if (boostSel) {
@@ -3904,6 +3904,21 @@ export async function registerRoutes(
                 error: `A aposta máxima para este Super Boost é R$${((boostCard as any).maxStake as number).toFixed(2).replace(".", ",")}.`,
                 isMaxStakeExceeded: true,
               });
+            }
+            // Verificar uso único por usuário
+            const betUserId = (req.session as any)?.userId;
+            if (betUserId) {
+              const userBets = await storage.getBetSlipsByUser(betUserId);
+              const alreadyUsed = userBets.some(b =>
+                Array.isArray(b.selections) &&
+                b.selections.some((s: any) => s.gameId === `boost-${boostCardId}`)
+              );
+              if (alreadyUsed) {
+                return res.status(400).json({
+                  error: "Você já utilizou este Super Boost. Cada boost pode ser usado apenas uma vez.",
+                  isBoostAlreadyUsed: true,
+                });
+              }
             }
           }
         }

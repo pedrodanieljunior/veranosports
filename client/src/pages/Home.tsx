@@ -423,7 +423,8 @@ export default function Home() {
         {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
           <div className="pt-2">
             {boostCards.map(card => (
-              <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection} />
+              <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection}
+                usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false} />
             ))}
           </div>
         )}
@@ -572,7 +573,8 @@ export default function Home() {
             {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
               <div className="pb-2" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
                 {boostCards.map(card => (
-                  <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection} />
+                  <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection}
+                    usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false} />
                 ))}
               </div>
             )}

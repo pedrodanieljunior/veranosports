@@ -389,7 +389,8 @@ export default function Copa() {
       {boostCards.length > 0 && !isSearching && !isTyping && (
         <div className="pt-3">
           {boostCards.map(card => (
-            <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection} />
+            <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection}
+              usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false} />
           ))}
         </div>
       )}
