@@ -6567,6 +6567,8 @@ const LIVE_MARKET_SETTINGS = [
 ];
 
 function AdminLiveGameTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data, isLoading, refetch } = useQuery<LiveGamesResp>({
     queryKey: ["/api/admin/live-games"],
     queryFn: () => fetch("/api/admin/live-games", { credentials: "include" }).then(r => r.json()),
@@ -6679,17 +6681,22 @@ function AdminLiveGameTab() {
 
   const saveLiveOddsMut = useMutation({
     mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
-      const r = await fetch("/api/admin/game-market-overrides", {
-        method: "PUT", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!r.ok) throw new Error("Falha ao salvar");
+      const r = await apiRequest("PUT", "/api/admin/game-market-overrides", payload);
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as any).error ?? "Falha ao salvar");
+      }
       return r.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-market-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game-market-overrides"] });
       setLiveOddsSaved(true);
       setTimeout(() => setLiveOddsSaved(false), 2500);
+      toast({ title: "Ajustes salvos", description: "As odds ao vivo foram atualizadas." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
     },
   });
 
