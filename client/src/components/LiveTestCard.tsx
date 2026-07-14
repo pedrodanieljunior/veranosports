@@ -3,6 +3,7 @@ import { useRef, useEffect, useState } from "react";
 import { Selection } from "@shared/schema";
 import { Zap, Clock, TrendingUp, TrendingDown, Lock, ChevronDown, ChevronUp } from "lucide-react";
 import { proxyLogoUrl } from "@/lib/imgProxy";
+import { useMarketSettings } from "@/hooks/use-market-settings";
 
 
 const MARKET_LABELS: Record<number, string> = {
@@ -491,6 +492,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const [refetchMs, setRefetchMs] = useState(5_000);
   const [showMap, setShowMap] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
+  const { getGameBoostMultiplier } = useMarketSettings();
 
   const { data: mapData, isLoading: mapLoading } = useQuery<MapData>({
     queryKey: ["/api/football/live-map"],
@@ -739,13 +741,17 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
               const id = selId(gameId, market.id, v.value);
               const moveKey = `m${market.id}-${v.value}`;
               const movement = isSuspended ? undefined : oddMovements[moveKey];
+              const marketKey = `live_m${market.id}`;
+              const boostMult = getGameBoostMultiplier(gameId, marketKey);
+              const boostedOdd = rawOdd > 0 ? Math.round(rawOdd * boostMult * 100) / 100 : rawOdd;
+              const isBoosted = boostMult !== 1 && rawOdd > 0 && !isSuspended;
               const sel: Selection = {
                 id, gameId,
                 homeTeam: translateTeamName(data.teams.home.name),
                 awayTeam: translateTeamName(data.teams.away.name),
                 commenceTime, sportTitle: "Futebol Ao Vivo",
-                marketKey: `live_m${market.id}`, bookmaker: "API-Football",
-                outcome: translateOutcomeForStorage(v.value), odds: rawOdd, result: "pending",
+                marketKey, bookmaker: "API-Football",
+                outcome: translateOutcomeForStorage(v.value), odds: boostedOdd, result: "pending",
               };
               const active = !isSuspended && isSelected(selections, id);
               const isCorrLocked = isCorrMarket && !active && corrActiveCount >= 2;
@@ -774,14 +780,19 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
                   }`}
                 >
                   <span className="text-[10px] opacity-70 font-normal">{outcomeLabel}</span>
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex flex-col items-center gap-0">
                     {isSuspended || isCorrLocked || isMutexLocked ? (
                       <Lock className="w-3.5 h-3.5 text-gray-500" />
                     ) : (
                       <>
-                        <span className="text-sm font-black text-white">{rawOdd.toFixed(2)}</span>
-                        {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
-                        {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
+                        {isBoosted && (
+                          <span className="text-[9px] line-through opacity-50 font-normal leading-none">{rawOdd.toFixed(2)}</span>
+                        )}
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-sm font-black text-white">{boostedOdd.toFixed(2)}</span>
+                          {movement === "up" && <TrendingUp className="w-3 h-3 text-green-400 animate-bounce" />}
+                          {movement === "down" && <TrendingDown className="w-3 h-3 text-red-400 animate-bounce" />}
+                        </div>
                       </>
                     )}
                   </div>
