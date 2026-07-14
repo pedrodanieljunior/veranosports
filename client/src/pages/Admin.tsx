@@ -7845,7 +7845,7 @@ function AnalisesTab() {
   const [selectedBetId, setSelectedBetId] = useState<string | null>(null);
   const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
 
-  const { data: pendingBets = [] } = useQuery<BetSlipType[]>({
+  const { data: pendingBets = [], refetch: refetchPendingBets, isFetching: isFetchingBets } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets", "pending-analises"],
     queryFn: async () => {
       const res = await fetch("/api/admin/bets", { credentials: "include" });
@@ -7853,6 +7853,8 @@ function AnalisesTab() {
       const json = await res.json();
       return Array.isArray(json) ? json.filter((b: BetSlipType) => b.status === "pending") : [];
     },
+    staleTime: 0,
+    refetchInterval: 30_000,
   });
 
   const [autoAnalyzed, setAutoAnalyzed] = useState(false);
@@ -7997,11 +7999,23 @@ function AnalisesTab() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Inputs */}
             <div className="space-y-5">
-              {pendingBets.length > 0 && (
-                <div className="space-y-2">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Preencher a partir de bilhete pendente
+                    {pendingBets.length > 0 && <span className="ml-1.5 text-muted-foreground/60">({pendingBets.length})</span>}
                   </label>
+                  <button
+                    onClick={() => refetchPendingBets()}
+                    disabled={isFetchingBets}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                    data-testid="button-refresh-pending-bets"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isFetchingBets ? "animate-spin" : ""}`} />
+                    Atualizar
+                  </button>
+                </div>
+              {pendingBets.length > 0 && (
                   <ScrollArea className="h-56 rounded border border-border">
                     <div className="p-1 space-y-1">
                       {pendingBets.slice(0, 30).map(bet => {
@@ -8061,8 +8075,8 @@ function AnalisesTab() {
                       })}
                     </div>
                   </ScrollArea>
-                </div>
               )}
+              </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
