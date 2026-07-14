@@ -6681,12 +6681,19 @@ function AdminLiveGameTab() {
 
   const saveLiveOddsMut = useMutation({
     mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
-      const r = await apiRequest("PUT", "/api/admin/game-market-overrides", payload);
+      const r = await fetch("/api/admin/game-market-overrides", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const text = await r.text();
       if (!r.ok) {
-        const body = await r.json().catch(() => ({}));
-        throw new Error((body as any).error ?? "Falha ao salvar");
+        let msg = "Falha ao salvar";
+        try { msg = JSON.parse(text).error ?? JSON.parse(text).message ?? msg; } catch { msg = text.slice(0, 100); }
+        throw new Error(msg);
       }
-      return r.json();
+      return JSON.parse(text);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/game-market-overrides"] });
