@@ -94,6 +94,13 @@ import {
   ToggleLeft,
   ToggleRight,
   Link2,
+  Brain,
+  Calculator,
+  FlaskConical,
+  CheckCircle2,
+  Info,
+  AlertOctagon,
+  Siren,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -1253,6 +1260,10 @@ export default function Admin() {
             <TabsTrigger value="correlacao" data-testid="tab-correlacao">
               <Link2 className="w-4 h-4 mr-2 text-cyan-400" />
               Correlação
+            </TabsTrigger>
+            <TabsTrigger value="analises" data-testid="tab-analises">
+              <Brain className="w-4 h-4 mr-2 text-purple-400" />
+              Análises
             </TabsTrigger>
           </TabsList>
 
@@ -2877,6 +2888,10 @@ export default function Admin() {
 
           <TabsContent value="correlacao">
             <LiveCorrelationTab />
+          </TabsContent>
+
+          <TabsContent value="analises">
+            <AnalisesTab />
           </TabsContent>
 
         </Tabs>
@@ -7817,6 +7832,281 @@ function LiveCorrelationTab() {
 }
 
 // ── Aba Gráficos ────────────────────────────────────────────────────────────
+function AnalisesTab() {
+  const [aporte, setAporte] = useState("");
+  const [odd, setOdd] = useState("");
+  const [caixa, setCaixa] = useState("50000");
+  const [feCorrelacaoBilhetes, setFeCorrelacaoBilhetes] = useState(false);
+  const [feAltaCorrelacao, setFeAltaCorrelacao] = useState(false);
+  const [feExposicao6, setFeExposicao6] = useState(false);
+  const [feExposicao10, setFeExposicao10] = useState(false);
+  const [feConcentracaoCliente, setFeConcentracaoCliente] = useState(false);
+  const [feBaixaRecuperacao, setFeBaixaRecuperacao] = useState(false);
+  const [selectedBetId, setSelectedBetId] = useState<string | null>(null);
+
+  const { data: pendingBets = [] } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/admin/bets", "pending-analises"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/bets", { credentials: "include" });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json.filter((b: BetSlipType) => b.status === "pending") : [];
+    },
+  });
+
+  const handleSelectBet = (bet: BetSlipType) => {
+    setSelectedBetId(bet.id);
+    setAporte(String(bet.stake ?? ""));
+    setOdd(String(bet.totalOdds ?? ""));
+  };
+
+  const aporteNum = parseFloat(aporte.replace(",", ".")) || 0;
+  const oddNum = parseFloat(odd.replace(",", ".")) || 0;
+  const caixaNum = parseFloat(caixa.replace(",", ".")) || 0;
+
+  const probabilidade = oddNum > 0 ? (1 / oddNum) * 100 : 0;
+
+  const getIP = (p: number): number => {
+    if (p <= 5) return 1;
+    if (p <= 10) return 2;
+    if (p <= 20) return 3;
+    if (p <= 35) return 4;
+    return 5;
+  };
+  const getIC = (imp: number): number => {
+    if (imp <= 1) return 1;
+    if (imp <= 3) return 2;
+    if (imp <= 6) return 3;
+    if (imp <= 10) return 4;
+    return 5;
+  };
+
+  const lucroLiquido = aporteNum > 0 && oddNum > 0 ? aporteNum * oddNum - aporteNum : 0;
+  const impactoPct = caixaNum > 0 && lucroLiquido > 0 ? (lucroLiquido / caixaNum) * 100 : 0;
+  const ip = oddNum > 0 ? getIP(probabilidade) : 0;
+  const ic = lucroLiquido > 0 && caixaNum > 0 ? getIC(impactoPct) : 0;
+  const ifaBasico = ip * ic;
+
+  const feRaw =
+    (feCorrelacaoBilhetes ? 1 : 0) +
+    (feAltaCorrelacao ? 2 : 0) +
+    (feExposicao6 ? 1 : 0) +
+    (feExposicao10 ? 2 : 0) +
+    (feConcentracaoCliente ? 1 : 0) +
+    (feBaixaRecuperacao ? 1 : 0);
+  const fe = Math.min(feRaw, 5);
+  const ifaFinal = ip > 0 && ic > 0 ? Math.min(ifaBasico + fe, 25) : 0;
+
+  const ipLabels = ["", "IP1 — Muito baixa (≤5%)", "IP2 — Baixa (5–10%)", "IP3 — Média (10–20%)", "IP4 — Alta (20–35%)", "IP5 — Muito alta (>35%)"];
+  const icLabels = ["", "IC1 — Irrelevante (≤1%)", "IC2 — Baixo (1–3%)", "IC3 — Médio (3–6%)", "IC4 — Alto (6–10%)", "IC5 — Crítico (>10%)"];
+
+  const getAcao = (ifa: number) => {
+    if (ifa <= 4) return { label: "Não defender", color: "text-green-400", icon: <CheckCircle2 className="w-6 h-6" />, bg: "bg-green-500/10 border-green-500/30" };
+    if (ifa <= 8) return { label: "Deixar a variância atuar", color: "text-blue-400", icon: <Info className="w-6 h-6" />, bg: "bg-blue-500/10 border-blue-500/30" };
+    if (ifa <= 12) return { label: "Monitorar", color: "text-yellow-400", icon: <AlertCircle className="w-6 h-6" />, bg: "bg-yellow-500/10 border-yellow-500/30" };
+    if (ifa <= 16) return { label: "Avaliar hedge", color: "text-orange-400", icon: <AlertTriangle className="w-6 h-6" />, bg: "bg-orange-500/10 border-orange-500/30" };
+    if (ifa <= 20) return { label: "Defender parcialmente", color: "text-red-400", icon: <AlertOctagon className="w-6 h-6" />, bg: "bg-red-500/10 border-red-500/30" };
+    return { label: "Defender integralmente", color: "text-red-500", icon: <Siren className="w-6 h-6" />, bg: "bg-red-600/15 border-red-500/40" };
+  };
+
+  const acao = ifaFinal > 0 ? getAcao(ifaFinal) : null;
+  const hasResult = aporteNum > 0 && oddNum > 0 && caixaNum > 0;
+
+  const scaleRows = [
+    { range: "1–4", lo: 1, hi: 4, label: "Não defender", color: "bg-green-500" },
+    { range: "5–8", lo: 5, hi: 8, label: "Deixar a variância atuar", color: "bg-blue-500" },
+    { range: "9–12", lo: 9, hi: 12, label: "Monitorar", color: "bg-yellow-500" },
+    { range: "13–16", lo: 13, hi: 16, label: "Avaliar hedge", color: "bg-orange-500" },
+    { range: "17–20", lo: 17, hi: 20, label: "Defender parcialmente", color: "bg-red-400" },
+    { range: "21–25", lo: 21, hi: 25, label: "Defender integralmente", color: "bg-red-600" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-purple-400" />
+            Motor de Decisão Verano v1.1
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Inputs */}
+            <div className="space-y-5">
+              {pendingBets.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Preencher a partir de bilhete pendente
+                  </label>
+                  <ScrollArea className="h-36 rounded border border-border">
+                    <div className="p-1 space-y-1">
+                      {pendingBets.slice(0, 30).map(bet => (
+                        <button
+                          key={bet.id}
+                          onClick={() => handleSelectBet(bet)}
+                          className={`w-full text-left px-3 py-2 rounded text-xs transition-colors ${
+                            selectedBetId === bet.id
+                              ? "bg-purple-500/20 border border-purple-500/40 text-purple-300"
+                              : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                          }`}
+                          data-testid={`button-select-bet-analise-${bet.id}`}
+                        >
+                          <span className="font-mono">#{(bet.id ?? "").slice(0, 8).toUpperCase()}</span>
+                          <span className="ml-2">R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                          <span className="ml-2 text-muted-foreground">Odds {fmtOdds(bet.totalOdds)}x</span>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Aporte (R$)</label>
+                  <Input
+                    value={aporte}
+                    onChange={(e) => { setAporte(e.target.value); setSelectedBetId(null); }}
+                    placeholder="Ex: 200"
+                    data-testid="input-analise-aporte"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Odd Verano</label>
+                  <Input
+                    value={odd}
+                    onChange={(e) => { setOdd(e.target.value); setSelectedBetId(null); }}
+                    placeholder="Ex: 9.38"
+                    data-testid="input-analise-odd"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Caixa atual (R$)</label>
+                  <Input
+                    value={caixa}
+                    onChange={(e) => setCaixa(e.target.value)}
+                    placeholder="Ex: 50000"
+                    data-testid="input-analise-caixa"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
+                  Fator de Exposição (FE) — agravantes operacionais
+                </label>
+                <div className="rounded-lg border border-border divide-y divide-border/60">
+                  {[
+                    { state: feCorrelacaoBilhetes, setter: setFeCorrelacaoBilhetes, label: "Correlação de bilhetes", desc: "Há outro bilhete dependente do mesmo resultado", pts: "+1" },
+                    { state: feAltaCorrelacao, setter: setFeAltaCorrelacao, label: "Alta correlação", desc: "Dois ou mais bilhetes podem vencer juntos", pts: "+2" },
+                    { state: feExposicao6, setter: setFeExposicao6, label: "Exposição por evento >6%", desc: "Soma do lucro líquido do evento supera 6% do caixa", pts: "+1" },
+                    { state: feExposicao10, setter: setFeExposicao10, label: "Exposição crítica >10%", desc: "Soma do lucro líquido do evento supera 10% do caixa", pts: "+2" },
+                    { state: feConcentracaoCliente, setter: setFeConcentracaoCliente, label: "Concentração de cliente", desc: "Cliente representa parcela muito alta da exposição ativa", pts: "+1" },
+                    { state: feBaixaRecuperacao, setter: setFeBaixaRecuperacao, label: "Baixa recuperação", desc: "Pouco volume de outros clientes para repor eventual perda", pts: "+1" },
+                  ].map(({ state, setter, label, desc, pts }) => (
+                    <label
+                      key={label}
+                      className={`flex items-start gap-3 cursor-pointer px-3 py-2.5 transition-colors ${state ? "bg-cyan-500/8" : "hover:bg-muted/30"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={state}
+                        onChange={(e) => setter(e.target.checked)}
+                        className="mt-0.5 accent-cyan-400 w-4 h-4 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{label}</span>
+                          <span className="text-xs font-bold text-cyan-400">{pts}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <div className="flex justify-between items-center px-3 py-2 bg-muted/20">
+                    <span className="text-xs text-muted-foreground">FE total (máx. 5)</span>
+                    <Badge className={`${fe > 0 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-muted/60 text-muted-foreground border-border"}`}>
+                      FE = {feRaw > 5 ? `${feRaw} → limitado a 5` : fe}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Results */}
+            <div className="space-y-4">
+              {!hasResult ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-center py-16 text-muted-foreground">
+                  <Calculator className="w-14 h-14 opacity-15" />
+                  <p className="text-sm leading-relaxed">Preencha o aporte, a odd e o caixa<br />para ver a análise completa.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-lg border border-border divide-y divide-border text-sm overflow-hidden">
+                    {[
+                      { label: "1. Probabilidade implícita", value: `${probabilidade.toFixed(2)}%`, detail: `P = 1 ÷ ${oddNum.toFixed(2)} × 100`, hi: false, final: false },
+                      { label: "2. Peso de probabilidade", value: `IP = ${ip}`, detail: ipLabels[ip] ?? "", hi: true, final: false },
+                      { label: "3. Lucro líquido", value: `R$ ${lucroLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, detail: `${aporteNum.toFixed(2)} × ${oddNum.toFixed(2)} − ${aporteNum.toFixed(2)}`, hi: false, final: false },
+                      { label: "4. Impacto no caixa", value: `${impactoPct.toFixed(2)}%`, detail: `${lucroLiquido.toFixed(2)} ÷ ${caixaNum.toFixed(2)} × 100`, hi: false, final: false },
+                      { label: "5. Peso de impacto", value: `IC = ${ic}`, detail: icLabels[ic] ?? "", hi: true, final: false },
+                      { label: "6. IFA básico", value: `IFA = ${ifaBasico}`, detail: `IP ${ip} × IC ${ic}`, hi: true, final: false },
+                      ...(fe > 0 ? [{ label: "7. Fator de Exposição", value: `FE = ${fe}`, detail: feRaw > 5 ? `${feRaw} pts → limitado a 5` : "soma dos agravantes marcados", hi: true, final: false }] : []),
+                      { label: `${fe > 0 ? "8" : "7"}. IFA Final`, value: `${ifaFinal}`, detail: fe > 0 ? `min(${ifaBasico} + ${fe}, 25)` : "IFA básico (sem agravantes)", hi: true, final: true },
+                    ].map((row) => (
+                      <div key={row.label} className={`flex items-center justify-between px-3 py-2.5 gap-3 ${row.final ? "bg-muted/40" : ""}`}>
+                        <div className="min-w-0">
+                          <p className={row.hi ? "font-medium" : "text-muted-foreground"}>{row.label}</p>
+                          {row.detail && <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{row.detail}</p>}
+                        </div>
+                        <span className={`font-bold shrink-0 ${row.final ? "text-2xl" : ""}`}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {acao && (
+                    <div className={`rounded-xl border p-4 ${acao.bg}`}>
+                      <div className={`flex items-center gap-3 ${acao.color}`}>
+                        {acao.icon}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] uppercase tracking-wider opacity-60 font-medium">Ação recomendada</p>
+                          <p className="text-xl font-bold">{acao.label}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[11px] opacity-60">IFA_Final</p>
+                          <p className="text-4xl font-black">{ifaFinal}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <div className="px-3 py-2 bg-muted/20 border-b border-border">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tabela de referência</p>
+                    </div>
+                    {scaleRows.map(({ range, lo, hi, label, color }) => {
+                      const active = ifaFinal >= lo && ifaFinal <= hi;
+                      return (
+                        <div key={range} className={`flex items-center gap-3 px-3 py-2 border-b border-border/50 last:border-b-0 ${active ? "bg-muted/50" : ""}`}>
+                          <div className={`w-2.5 h-2.5 rounded-full ${color} shrink-0`} />
+                          <span className="text-xs text-muted-foreground w-10 shrink-0 font-mono">{range}</span>
+                          <span className={`text-xs flex-1 ${active ? "font-bold text-foreground" : "text-muted-foreground"}`}>{label}</span>
+                          {active && <Badge className="text-[10px] bg-white/10 border-white/20 text-white/70">← atual</Badge>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function GraficosTab() {
   const [gfUserFilter, setGfUserFilter] = useState<string>("all");
   const [gfUserPopoverOpen, setGfUserPopoverOpen] = useState(false);
