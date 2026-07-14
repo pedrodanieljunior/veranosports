@@ -7843,6 +7843,7 @@ function AnalisesTab() {
   const [feConcentracaoCliente, setFeConcentracaoCliente] = useState(false);
   const [feBaixaRecuperacao, setFeBaixaRecuperacao] = useState(false);
   const [selectedBetId, setSelectedBetId] = useState<string | null>(null);
+  const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
 
   const { data: pendingBets = [] } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets", "pending-analises"],
@@ -7858,6 +7859,11 @@ function AnalisesTab() {
     setSelectedBetId(bet.id);
     setAporte(String(bet.stake ?? ""));
     setOdd(String(bet.totalOdds ?? ""));
+  };
+
+  const toggleExpand = (betId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedBetId(prev => prev === betId ? null : betId);
   };
 
   const aporteNum = parseFloat(aporte.replace(",", ".")) || 0;
@@ -7939,24 +7945,63 @@ function AnalisesTab() {
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Preencher a partir de bilhete pendente
                   </label>
-                  <ScrollArea className="h-36 rounded border border-border">
+                  <ScrollArea className="h-56 rounded border border-border">
                     <div className="p-1 space-y-1">
-                      {pendingBets.slice(0, 30).map(bet => (
-                        <button
-                          key={bet.id}
-                          onClick={() => handleSelectBet(bet)}
-                          className={`w-full text-left px-3 py-2 rounded text-xs transition-colors ${
-                            selectedBetId === bet.id
-                              ? "bg-purple-500/20 border border-purple-500/40 text-purple-300"
-                              : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
-                          }`}
-                          data-testid={`button-select-bet-analise-${bet.id}`}
-                        >
-                          <span className="font-mono">#{(bet.id ?? "").slice(0, 8).toUpperCase()}</span>
-                          <span className="ml-2">R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
-                          <span className="ml-2 text-muted-foreground">Odds {fmtOdds(bet.totalOdds)}x</span>
-                        </button>
-                      ))}
+                      {pendingBets.slice(0, 30).map(bet => {
+                        const isSelected = selectedBetId === bet.id;
+                        const isExpanded = expandedBetId === bet.id;
+                        const sels: any[] = Array.isArray(bet.selections) ? bet.selections : [];
+                        return (
+                          <div
+                            key={bet.id}
+                            className={`rounded border transition-colors ${
+                              isSelected
+                                ? "bg-purple-500/20 border-purple-500/40"
+                                : "border-transparent hover:border-border hover:bg-muted/40"
+                            }`}
+                          >
+                            {/* Header row */}
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleSelectBet(bet)}
+                                className={`flex-1 text-left px-3 py-2 text-xs transition-colors ${isSelected ? "text-purple-300" : "text-muted-foreground hover:text-foreground"}`}
+                                data-testid={`button-select-bet-analise-${bet.id}`}
+                              >
+                                <span className="font-mono font-semibold">#{(bet.id ?? "").slice(0, 8).toUpperCase()}</span>
+                                <span className="ml-2">R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                                <span className={`ml-2 ${isSelected ? "text-purple-400" : "text-muted-foreground"}`}>Odds {fmtOdds(bet.totalOdds)}x</span>
+                                {sels.length > 0 && (
+                                  <span className={`ml-2 text-[10px] ${isSelected ? "text-purple-400/70" : "text-muted-foreground/60"}`}>{sels.length} seleç{sels.length === 1 ? "ão" : "ões"}</span>
+                                )}
+                              </button>
+                              {sels.length > 0 && (
+                                <button
+                                  onClick={(e) => toggleExpand(bet.id, e)}
+                                  className={`px-2 py-2 transition-colors ${isSelected ? "text-purple-400 hover:text-purple-300" : "text-muted-foreground hover:text-foreground"}`}
+                                  data-testid={`button-expand-bet-${bet.id}`}
+                                >
+                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Expanded selections */}
+                            {isExpanded && sels.length > 0 && (
+                              <div className={`mx-2 mb-2 rounded border divide-y text-[11px] overflow-hidden ${isSelected ? "border-purple-500/30 divide-purple-500/20" : "border-border divide-border/60"}`}>
+                                {sels.map((sel: any, idx: number) => (
+                                  <div key={sel.id ?? idx} className={`px-2.5 py-1.5 flex items-start justify-between gap-2 ${isSelected ? "bg-purple-500/10" : "bg-muted/20"}`}>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-medium truncate text-foreground">{sel.homeTeam ?? sel.team} {sel.awayTeam ? `x ${sel.awayTeam}` : ""}</p>
+                                      <p className="text-muted-foreground truncate">{sel.outcomeName ?? sel.market}</p>
+                                    </div>
+                                    <span className={`font-bold shrink-0 ${isSelected ? "text-purple-300" : "text-foreground"}`}>{fmtOdds(sel.odds)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 </div>
