@@ -3,7 +3,7 @@ import { fmtOdds } from "@/lib/formatOdds";
 import { translateLeagueDisplay } from "@/lib/leagueTranslations";
 import { translateTeam } from "@/lib/teamTranslations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, GameMarketOverride, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa, Game } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -394,6 +394,8 @@ export default function Admin() {
   const [finDateFrom, setFinDateFrom] = useState<string>("");
   const [finDateTo, setFinDateTo] = useState<string>("");
   const [marketBoosts, setMarketBoosts] = useState<Record<string, number>>({});
+  const [gameOverrideEdits, setGameOverrideEdits] = useState<Record<string, Record<string, number>>>({});
+  const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [withdrawalAmount, setWithdrawalAmount] = useState<string>("");
   const [withdrawalDesc, setWithdrawalDesc] = useState<string>("");
   const [adminPassword, setAdminPassword] = useState<string>("");
@@ -587,6 +589,51 @@ export default function Admin() {
       setMarketBoosts(init);
     }
   }, [marketSettings]);
+
+  const { data: gameMarketOverrides = [] } = useQuery<GameMarketOverride[]>({
+    queryKey: ["/api/admin/game-market-overrides"],
+    staleTime: 30 * 1000,
+    enabled: !!adminMe?.isAdmin,
+  });
+
+  useEffect(() => {
+    if (gameMarketOverrides.length > 0) {
+      const init: Record<string, Record<string, number>> = {};
+      gameMarketOverrides.forEach(o => {
+        if (!init[o.gameId]) init[o.gameId] = {};
+        init[o.gameId][o.marketKey] = o.adjustPercent;
+      });
+      setGameOverrideEdits(prev => {
+        const merged = { ...init };
+        for (const gid of Object.keys(prev)) {
+          if (!merged[gid]) merged[gid] = {};
+          Object.assign(merged[gid], prev[gid]);
+        }
+        return merged;
+      });
+    }
+  }, [gameMarketOverrides]);
+
+  const { data: todayGamesForOverrides = [], isLoading: gamesOverrideLoading } = useQuery<Game[]>({
+    queryKey: ["/api/games/today"],
+    staleTime: 5 * 60 * 1000,
+    enabled: !!adminMe?.isAdmin,
+  });
+
+  const saveGameOverridesMutation = useMutation({
+    mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
+      const response = await apiRequest("PUT", "/api/admin/game-market-overrides", payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-market-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game-market-overrides"] });
+      toast({ title: "Odds por jogo salvas", description: "Os ajustes foram aplicados com sucesso." });
+    },
+    onError: () => {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    },
+  });
 
   const saveMarketSettingsMutation = useMutation({
     mutationFn: async (updates: { marketKey: string; boostPercent: number }[]) => {
@@ -2823,6 +2870,161 @@ export default function Admin() {
                               +
                             </Button>
                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            {/* Per-game market overrides */}
+            <Card className="mt-6">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <Signal className="w-5 h-5 text-green-400" />
+                    Odds por Jogo
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[] = [];
+                      todayGamesForOverrides.forEach(game => {
+                        const edits = gameOverrideEdits[game.id] ?? {};
+                        Object.entries(edits).forEach(([marketKey, adjustPercent]) => {
+                          payload.push({ gameId: game.id, homeTeam: game.homeTeam, awayTeam: game.awayTeam, marketKey, adjustPercent });
+                        });
+                      });
+                      saveGameOverridesMutation.mutate(payload);
+                    }}
+                    disabled={saveGameOverridesMutation.isPending}
+                    data-testid="button-save-game-overrides"
+                  >
+                    {saveGameOverridesMutation.isPending ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Salvar Ajustes
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ajuste as odds de mercados específicos para cada jogo. Os valores somam-se ao boost global do mercado.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {gamesOverrideLoading ? (
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : todayGamesForOverrides.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Nenhum jogo disponível no momento.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {todayGamesForOverrides.map(game => {
+                      const isExpanded = expandedGames.has(game.id);
+                      const gameEdits = gameOverrideEdits[game.id] ?? {};
+                      const hasAnyOverride = Object.values(gameEdits).some(v => v !== 0);
+                      return (
+                        <div key={game.id} className={`rounded-lg border transition-colors ${hasAnyOverride ? "border-green-500/40 bg-green-500/5" : "border-border"}`}>
+                          <button
+                            className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left"
+                            onClick={() => setExpandedGames(prev => {
+                              const next = new Set(prev);
+                              if (next.has(game.id)) next.delete(game.id); else next.add(game.id);
+                              return next;
+                            })}
+                            data-testid={`game-override-toggle-${game.id}`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {hasAnyOverride && <div className="w-2 h-2 rounded-full bg-green-400 shrink-0" />}
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">{game.homeTeam} x {game.awayTeam}</p>
+                                <p className="text-xs text-muted-foreground">{game.sportTitle}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {hasAnyOverride && (
+                                <Badge variant="outline" className="text-green-400 border-green-500/40 text-xs">
+                                  {Object.values(gameEdits).filter(v => v !== 0).length} ajuste{Object.values(gameEdits).filter(v => v !== 0).length !== 1 ? "s" : ""}
+                                </Badge>
+                              )}
+                              {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="border-t border-border px-4 pb-3 pt-2 space-y-2">
+                              {marketSettings.map(setting => {
+                                const current = gameEdits[setting.marketKey] ?? 0;
+                                const isModified = current !== 0;
+                                return (
+                                  <div
+                                    key={setting.marketKey}
+                                    className={`flex items-center justify-between gap-3 p-2.5 rounded-md transition-colors ${isModified ? "bg-green-500/10 border border-green-500/20" : "bg-muted/20"}`}
+                                    data-testid={`game-override-row-${game.id}-${setting.marketKey}`}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-medium truncate">{setting.marketName}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {current > 0 ? (
+                                          <span className="text-green-400">+{current}% neste jogo</span>
+                                        ) : current < 0 ? (
+                                          <span className="text-red-400">{current}% neste jogo</span>
+                                        ) : (
+                                          <span>Sem ajuste</span>
+                                        )}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-7 h-7 p-0"
+                                        onClick={() => setGameOverrideEdits(prev => ({
+                                          ...prev,
+                                          [game.id]: { ...(prev[game.id] ?? {}), [setting.marketKey]: ((prev[game.id] ?? {})[setting.marketKey] ?? 0) - 1 }
+                                        }))}
+                                        data-testid={`button-decrease-game-${game.id}-${setting.marketKey}`}
+                                      >
+                                        −
+                                      </Button>
+                                      <div className="relative w-16">
+                                        <Input
+                                          type="number"
+                                          value={current}
+                                          onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            if (!isNaN(val)) {
+                                              setGameOverrideEdits(prev => ({
+                                                ...prev,
+                                                [game.id]: { ...(prev[game.id] ?? {}), [setting.marketKey]: val }
+                                              }));
+                                            }
+                                          }}
+                                          className="text-center pr-5 h-7 text-sm"
+                                          data-testid={`input-game-override-${game.id}-${setting.marketKey}`}
+                                        />
+                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                                      </div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-7 h-7 p-0"
+                                        onClick={() => setGameOverrideEdits(prev => ({
+                                          ...prev,
+                                          [game.id]: { ...(prev[game.id] ?? {}), [setting.marketKey]: ((prev[game.id] ?? {})[setting.marketKey] ?? 0) + 1 }
+                                        }))}
+                                        data-testid={`button-increase-game-${game.id}-${setting.marketKey}`}
+                                      >
+                                        +
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

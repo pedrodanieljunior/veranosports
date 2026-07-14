@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable, notificationsTable, notificationReadsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type GameMarketOverride, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, gameMarketOverridesTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable, notificationsTable, notificationReadsTable } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -53,6 +53,8 @@ export interface IStorage {
   getMarketSettings(): Promise<MarketSetting[]>;
   updateMarketSettings(updates: { marketKey: string; boostPercent: number }[]): Promise<MarketSetting[]>;
   seedMarketSettings(): Promise<void>;
+  getGameMarketOverrides(): Promise<GameMarketOverride[]>;
+  upsertGameMarketOverrides(overrides: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]): Promise<void>;
   getBanners(): Promise<Banner[]>;
   getBannersRaw(): Promise<any[]>;
   upsertBanner(slotNumber: number, filename: string, url: string, imageData?: string, mimeType?: string): Promise<Banner>;
@@ -450,6 +452,24 @@ export class DatabaseStorage implements IStorage {
         .where(eq(marketSettingsTable.marketKey, u.marketKey));
     }
     return this.getMarketSettings();
+  }
+
+  async getGameMarketOverrides(): Promise<GameMarketOverride[]> {
+    return db.select().from(gameMarketOverridesTable).orderBy(gameMarketOverridesTable.id);
+  }
+
+  async upsertGameMarketOverrides(overrides: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]): Promise<void> {
+    for (const o of overrides) {
+      const existing = await db.select().from(gameMarketOverridesTable)
+        .where(and(eq(gameMarketOverridesTable.gameId, o.gameId), eq(gameMarketOverridesTable.marketKey, o.marketKey)));
+      if (existing.length > 0) {
+        await db.update(gameMarketOverridesTable)
+          .set({ adjustPercent: o.adjustPercent, homeTeam: o.homeTeam, awayTeam: o.awayTeam })
+          .where(and(eq(gameMarketOverridesTable.gameId, o.gameId), eq(gameMarketOverridesTable.marketKey, o.marketKey)));
+      } else {
+        await db.insert(gameMarketOverridesTable).values(o);
+      }
+    }
   }
 
   async getBanners(): Promise<Banner[]> {

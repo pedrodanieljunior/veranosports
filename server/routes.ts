@@ -4417,6 +4417,42 @@ export async function registerRoutes(
     }
   });
 
+  // Game market overrides (per-game odds adjustment)
+  app.get("/api/game-market-overrides", async (_req, res) => {
+    try {
+      const cached = cache.get<any[]>("game_market_overrides");
+      if (cached) return res.json(cached);
+      const overrides = await storage.getGameMarketOverrides();
+      cache.set("game_market_overrides", overrides, 60 * 1000);
+      res.json(overrides);
+    } catch (error) {
+      console.error("Error fetching game market overrides:", error);
+      res.status(500).json({ error: "Failed to fetch game market overrides" });
+    }
+  });
+
+  app.get("/api/admin/game-market-overrides", requireAdmin, async (_req, res) => {
+    try {
+      const overrides = await storage.getGameMarketOverrides();
+      res.json(overrides);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch game market overrides" });
+    }
+  });
+
+  app.put("/api/admin/game-market-overrides", requireAdmin, async (req, res) => {
+    try {
+      const overrides = req.body;
+      if (!Array.isArray(overrides)) return res.status(400).json({ error: "Body must be an array" });
+      await storage.upsertGameMarketOverrides(overrides);
+      cache.delete("game_market_overrides");
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating game market overrides:", error);
+      res.status(500).json({ error: "Failed to update game market overrides" });
+    }
+  });
+
   // Combo bonus settings (default percentages as fractions, stored as pct integers in DB)
   const DEFAULT_COMBO_BONUS_PCT: Record<number, number> = {
     2: 5, 3: 10, 4: 15, 5: 20, 6: 27, 7: 34, 8: 41, 9: 49, 10: 58, 11: 65, 12: 72,

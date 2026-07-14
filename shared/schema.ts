@@ -31,6 +31,19 @@ export const marketSettingsTable = pgTable("market_settings", {
   boostPercent: real("boost_percent").notNull().default(0),
 });
 
+export const gameMarketOverridesTable = pgTable("game_market_overrides", {
+  id: serial("id").primaryKey(),
+  gameId: text("game_id").notNull(),
+  homeTeam: text("home_team").notNull(),
+  awayTeam: text("away_team").notNull(),
+  marketKey: text("market_key").notNull(),
+  adjustPercent: real("adjust_percent").notNull().default(0),
+});
+
+export const insertGameMarketOverrideSchema = createInsertSchema(gameMarketOverridesTable).omit({ id: true });
+export type InsertGameMarketOverride = z.infer<typeof insertGameMarketOverrideSchema>;
+export type GameMarketOverride = typeof gameMarketOverridesTable.$inferSelect;
+
 export const betSlipsTable = pgTable("bet_slips", {
   id: text("id").primaryKey(),
   sessionId: text("session_id"),
