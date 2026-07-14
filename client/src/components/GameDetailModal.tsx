@@ -339,10 +339,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                 <span className="text-xs text-gray-600 mb-1 text-center line-clamp-1">{displayLabel}</span>
                 <div className="flex flex-col items-center">
                   <span className="font-bold text-base text-[#0076a8]">{displayOdd.toFixed(2)}</span>
-                  {isBoosted && (
+                  {isBoosted && boostPct > 0 && (
                     <span className="text-[10px] text-gray-500 line-through flex items-center gap-0.5">
                       {value.odd.toFixed(2)}
-                      {boostPct > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-500" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
+                      <TrendingUp className="w-2.5 h-2.5 text-green-500" />
                     </span>
                   )}
                 </div>
@@ -468,7 +468,7 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                           <span className="font-bold text-lg text-[#0076a8]">{displayOdd.toFixed(2)}</span>
                           {h2hBoosted && (h2hBoostPct > 0 ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />)}
                         </div>
-                        {h2hBoosted && (
+                        {h2hBoosted && h2hBoostPct > 0 && (
                           <span className="text-[10px] text-gray-500 line-through">{outcome.price.toFixed(2)}</span>
                         )}
                       </button>
@@ -562,10 +562,10 @@ export function GameDetailModal({ game, open, onClose, selections, onToggleSelec
                               data-testid={`button-modal-totals-${outcome.name}`}
                             >
                               <span className="font-bold text-sm text-[#0076a8]">{displayOdd.toFixed(2)}</span>
-                              {totBoosted && (
+                              {totBoosted && totBoostPct > 0 && (
                                 <span className="text-[9px] text-gray-500 line-through flex items-center gap-0.5">
                                   {outcome.price.toFixed(2)}
-                                  {totBoostPct > 0 ? <TrendingUp className="w-2 h-2 text-green-500" /> : <TrendingDown className="w-2 h-2 text-red-500" />}
+                                  <TrendingUp className="w-2 h-2 text-green-500" />
                                 </span>
                               )}
                             </button>
