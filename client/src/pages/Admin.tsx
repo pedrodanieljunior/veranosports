@@ -8212,6 +8212,7 @@ function AnalisesTab() {
   const [feBaixaRecuperacao, setFeBaixaRecuperacao] = useState(false);
   const [selectedBetId, setSelectedBetId] = useState<string | null>(null);
   const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
+  const [expandedDefensaId, setExpandedDefensaId] = useState<string | null>(null);
 
   const { data: pendingBets = [], refetch: refetchPendingBets, isFetching: isFetchingBets } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets", "pending-analises"],
@@ -8345,6 +8346,50 @@ function AnalisesTab() {
   const acao = ifaFinal > 0 ? getAcao(ifaFinal) : null;
   const hasResult = aporteNum > 0 && oddNum > 0 && caixaNum > 0;
 
+  // Auto-compute IFA for all pending bets and find those needing defense
+  const betsNeedingDefense = useMemo(() => {
+    if (!pendingBets.length || caixaNum <= 0) return [];
+    const allLucro = pendingBets.reduce((sum, b) => sum + Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0)), 0);
+    return pendingBets
+      .map(bet => {
+        const o = bet.totalOdds ?? 1;
+        const s = bet.stake ?? 0;
+        const prob = o > 0 ? (1 / o) * 100 : 0;
+        const lucro = Math.max(0, s * o - s);
+        const impact = caixaNum > 0 ? (lucro / caixaNum) * 100 : 0;
+        const ipB = getIP(prob);
+        const icB = getIC(impact);
+        const ifaB = ipB * icB;
+
+        const sels: any[] = Array.isArray(bet.selections) ? bet.selections : [];
+        const gameIds = new Set(sels.map((s: any) => s.gameId).filter(Boolean));
+        const correlatedCount = pendingBets.filter(b => {
+          if (b.id === bet.id) return false;
+          return (Array.isArray(b.selections) ? b.selections : []).some((s: any) => gameIds.has(s.gameId));
+        }).length;
+        const eventExposure = pendingBets
+          .filter(b => (Array.isArray(b.selections) ? b.selections : []).some((s: any) => gameIds.has(s.gameId)))
+          .reduce((sum, b) => sum + Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0)), 0);
+        const expPct = caixaNum > 0 ? (eventExposure / caixaNum) * 100 : 0;
+        const clientConc = allLucro > 0 ? lucro / allLucro : 0;
+        const otherCount = pendingBets.filter(b => b.id !== bet.id).length;
+
+        const feRawB =
+          (correlatedCount >= 1 ? 1 : 0) +
+          (correlatedCount >= 2 ? 2 : 0) +
+          (expPct > 6 ? 1 : 0) +
+          (expPct > 10 ? 2 : 0) +
+          (clientConc > 0.3 ? 1 : 0) +
+          (otherCount < 5 ? 1 : 0);
+        const feB = Math.min(feRawB, 5);
+        const ifaTotal = Math.min(ifaB + feB, 25);
+
+        return { bet, ifa: ifaTotal, acao: getAcao(ifaTotal) };
+      })
+      .filter(({ ifa }) => ifa >= 17)
+      .sort((a, b) => b.ifa - a.ifa);
+  }, [pendingBets, caixaNum]);
+
   const scaleRows = [
     { range: "1–4", lo: 1, hi: 4, label: "Não defender", color: "bg-green-500" },
     { range: "5–8", lo: 5, hi: 8, label: "Deixar a variância atuar", color: "bg-blue-500" },
@@ -8358,7 +8403,7 @@ function AnalisesTab() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <Brain className="w-5 h-5 text-purple-400" />
             Motor de Decisão
           </CardTitle>
@@ -8627,6 +8672,128 @@ function AnalisesTab() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Painel: Bilhetes para Defender */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Shield className="w-5 h-5 text-red-400" />
+              Bilhetes para Defender
+              {betsNeedingDefense.length > 0 && (
+                <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-xs">
+                  {betsNeedingDefense.length}
+                </Badge>
+              )}
+            </CardTitle>
+            <span className="text-[11px] text-muted-foreground">Caixa base: R$ {caixaNum.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Bilhetes pendentes com IFA ≥ 17 calculado automaticamente. Ajuste o caixa no motor de decisão acima.</p>
+        </CardHeader>
+        <CardContent>
+          {caixaNum <= 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground gap-2">
+              <Calculator className="w-10 h-10 opacity-20" />
+              <p className="text-sm">Informe o caixa atual no motor de decisão acima para calcular automaticamente.</p>
+            </div>
+          ) : betsNeedingDefense.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground gap-2">
+              <CheckCircle2 className="w-10 h-10 text-green-500 opacity-40" />
+              <p className="text-sm font-medium text-green-400">Nenhum bilhete requer defesa no momento</p>
+              <p className="text-xs">Todos os bilhetes pendentes têm IFA abaixo de 17.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {betsNeedingDefense.map(({ bet, ifa, acao: betAcao }) => {
+                const isExpanded = expandedDefensaId === bet.id;
+                const sels: any[] = Array.isArray(bet.selections) ? bet.selections : [];
+                const isIntegral = ifa > 20;
+                return (
+                  <div
+                    key={bet.id}
+                    className={`rounded-lg border transition-colors ${
+                      isIntegral
+                        ? "border-red-500/40 bg-red-600/10"
+                        : "border-red-400/30 bg-red-500/8"
+                    }`}
+                  >
+                    {/* Header row */}
+                    <div className="flex items-center gap-1 px-3 py-2.5">
+                      {/* IFA badge */}
+                      <div className={`shrink-0 w-10 h-10 rounded-lg flex flex-col items-center justify-center ${isIntegral ? "bg-red-600/30 border border-red-500/40" : "bg-red-400/20 border border-red-400/30"}`}>
+                        <span className={`text-[10px] font-medium opacity-70 leading-none ${isIntegral ? "text-red-300" : "text-red-400"}`}>IFA</span>
+                        <span className={`text-base font-black leading-tight ${isIntegral ? "text-red-300" : "text-red-400"}`}>{ifa}</span>
+                      </div>
+                      {/* Bet info */}
+                      <button
+                        onClick={() => handleSelectBet(bet)}
+                        className="flex-1 text-left px-3 min-w-0"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-sm text-foreground">#{(bet.id ?? "").slice(0, 8).toUpperCase()}</span>
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isIntegral ? "bg-red-600/30 text-red-300" : "bg-red-400/20 text-red-400"}`}>
+                            {betAcao.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                          <span>R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                          <span>Odds {fmtOdds(bet.totalOdds)}x</span>
+                          <span>Retorno R$ {(bet.potentialWin ?? 0).toFixed(2).replace(".", ",")}</span>
+                          {sels.length > 0 && <span>{sels.length} seleç{sels.length === 1 ? "ão" : "ões"}</span>}
+                        </div>
+                      </button>
+                      {/* Expand toggle */}
+                      {sels.length > 0 && (
+                        <button
+                          onClick={() => setExpandedDefensaId(prev => prev === bet.id ? null : bet.id)}
+                          className="px-2 py-2 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                          data-testid={`button-expand-defensa-${bet.id}`}
+                        >
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Expanded selections */}
+                    {isExpanded && sels.length > 0 && (
+                      <div className="mx-3 mb-3 space-y-0">
+                        {sels.map((sel: any, idx: number) => (
+                          <div key={sel.id ?? idx} className="flex gap-2">
+                            <div className="flex flex-col items-center w-4 shrink-0 pt-1">
+                              <div className={`w-2 h-2 rounded-full shrink-0 ${isIntegral ? "bg-red-400" : "bg-red-400/70"}`} />
+                              {idx < sels.length - 1 && (
+                                <div className="w-px flex-1 mt-0.5 bg-red-500/30" style={{ minHeight: "20px" }} />
+                              )}
+                            </div>
+                            <div className="flex-1 mb-1.5 rounded px-2.5 py-2 text-[11px] bg-red-500/10 border border-red-500/20">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-semibold leading-tight text-red-200">
+                                    {sel.outcomeName ?? sel.outcome ?? sel.market ?? "—"}
+                                  </p>
+                                  <p className="text-muted-foreground text-[10px] mt-0.5 truncate">
+                                    {[sel.homeTeam ?? sel.team, sel.awayTeam].filter(Boolean).join(" x ")}
+                                    {sel.marketKey && <span className="ml-1 opacity-60">· {sel.marketKey}</span>}
+                                  </p>
+                                </div>
+                                <span className="font-bold text-xs shrink-0 text-red-300">{fmtOdds(sel.odds)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="ml-6 rounded px-2.5 py-1.5 text-[11px] flex justify-between items-center bg-red-500/15 border border-red-500/30">
+                          <span className="text-muted-foreground">{sels.length} seleç{sels.length === 1 ? "ão" : "ões"} · odd total</span>
+                          <span className="font-bold text-red-300">{fmtOdds(bet.totalOdds)}x</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
