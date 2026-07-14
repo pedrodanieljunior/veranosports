@@ -6552,7 +6552,7 @@ type AdminGame = {
   home: string; homeLogo: string; away: string; awayLogo: string;
   league: string; leagueLogo: string; goalsHome: number | null; goalsAway: number | null; isLive: boolean;
 };
-type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean };
+type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean; activeGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null };
 
 const LIVE_MARKET_SETTINGS = [
   { marketKey: "live_m1",   marketName: "Resultado Final (1x2)" },
@@ -6689,7 +6689,8 @@ function AdminLiveGameTab() {
     },
   });
 
-  const activeGame = data?.games.find(g => g.id === data.activeFixtureId);
+  const activeGame = data?.games.find(g => g.id === data.activeFixtureId)
+    ?? (data?.activeGameInfo ? { ...data.activeGameInfo, id: data.activeFixtureId!, date: "", dateLabel: "", status: "NS", statusLong: "", elapsed: null, leagueLogo: "", goalsHome: null, goalsAway: null, isLive: false } as AdminGame : null);
   // Prefer fast-polling lockStatus (5s) over the 30s live-games response
   const isLocked = lockStatus?.isLocked ?? data?.isLocked ?? false;
 

@@ -5873,7 +5873,7 @@ export async function registerRoutes(
         if (!a.isLive && b.isLive) return 1;
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
-      return res.json({ games: visibleGames, activeFixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked });
+      return res.json({ games: visibleGames, activeFixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked, activeGameInfo: activeLiveGameInfo });
     } catch (err) {
       console.error("[admin/live-games]", err);
       return res.status(500).json({ error: "Erro ao buscar jogos" });
