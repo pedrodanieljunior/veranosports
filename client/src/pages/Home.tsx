@@ -106,7 +106,7 @@ export default function Home() {
   const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
   const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
   const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
-  const { data: copaMundoGames = [] } = useQuery<Game[]>({ queryKey: ["/api/copa-mundo-games"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
+  const { data: copaMundoGames = [], isLoading: copaMundoLoading } = useQuery<Game[]>({ queryKey: ["/api/copa-mundo-games"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
 
   // Merge: Brasileirão → Copa do Mundo → outras ligas, deduplicando por ID
   const mergedTodayGames: Game[] = useMemo(() => {
@@ -161,7 +161,7 @@ export default function Home() {
   }, [mergedTodayGames, leagueOddsResults]);
 
   const games = selectedSport ? leagueGames : todayGamesWithOdds;
-  const gamesLoading = selectedSport ? leagueGamesLoading : (todayGamesLoading || brasileiraoLoading);
+  const gamesLoading = selectedSport ? leagueGamesLoading : (todayGamesLoading || brasileiraoLoading || copaMundoLoading);
   const gamesError = selectedSport ? leagueGamesError : todayGamesError;
 
   const isSearching = debouncedSearch.trim().length >= 2;
