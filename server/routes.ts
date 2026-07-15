@@ -2834,29 +2834,21 @@ export async function registerRoutes(
         console.log(`Using API-Football for ${footballLeagues.length} uncovered leagues: ${footballLeagues.map(l => l.key).join(", ")}`);
 
         const nowMs = Date.now();
-        const next72hMs = nowMs + 72 * 60 * 60 * 1000;
+        const next24hMs = nowMs + 24 * 60 * 60 * 1000;
         // Use UTC dates for API queries so games at midnight UTC (e.g. 21:00 BRT) are never missed
         const todayStr = new Date(nowMs).toISOString().split('T')[0];
-        const next72hStr = new Date(next72hMs).toISOString().split('T')[0];
+        const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
 
-        const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = [];
-        const BATCH_SIZE = 5;
-        for (let i = 0; i < footballLeagues.length; i += BATCH_SIZE) {
-          const batch = footballLeagues.slice(i, i + BATCH_SIZE);
-          const batchResults = await Promise.all(
-            batch.map(league =>
-              fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next72hStr}`,
-                { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
-                .then(r => r.ok ? r.json() : { response: [] })
-                .then(data => ({ league, fixtures: data.response || [] }))
-                .catch(() => ({ league, fixtures: [] }))
-            )
-          );
-          fixtureResults.push(...batchResults);
-          if (i + BATCH_SIZE < footballLeagues.length) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-          }
-        }
+        // Buscar fixtures de todas as ligas em paralelo (sem delay — cada request é independente)
+        const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = await Promise.all(
+          footballLeagues.map(league =>
+            fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
+              .then(r => r.ok ? r.json() : { response: [] })
+              .then(data => ({ league, fixtures: data.response || [] }))
+              .catch(() => ({ league, fixtures: [] }))
+          )
+        );
 
         // Coletar fixtures por liga
         // Indicadores de times de base/seleções jovens — filtrados dos amistosos
@@ -2870,7 +2862,7 @@ export async function registerRoutes(
           const upcoming = fixtures.filter((f: any) => {
             const status = f.fixture?.status?.short;
             const gameDate = new Date(f.fixture?.date).getTime();
-            if (!["NS", "TBD"].includes(status) || gameDate <= nowMs || gameDate > next72hMs) return false;
+            if (!["NS", "TBD"].includes(status) || gameDate <= nowMs || gameDate > next24hMs) return false;
             if (isFriendlies) {
               const home = f.teams?.home?.name || "";
               const away = f.teams?.away?.name || "";
@@ -2943,8 +2935,8 @@ export async function registerRoutes(
           }
         };
 
+        // Pré-popular cache das ligas já disponíveis
         for (const { league, fixtures: upcoming } of fixturesByLeague) {
-          // 1. Verificar se o cache da liga já tem os dados (populado pelo endpoint /api/odds/:sportKey)
           const leagueCache = cache.get<any[]>(`odds_${league.key}`);
           if (leagueCache) {
             for (const game of leagueCache) {
@@ -2953,42 +2945,33 @@ export async function registerRoutes(
                 todayOddsMap.set(fid, game.bookmakers);
               }
             }
-            // Só pular busca se todos os fixtures já estão cobertos
-            const allCovered = upcoming.every((f: any) => todayOddsMap.has(f.fixture.id));
-            if (allCovered) continue;
           }
+        }
 
-          // 2. Buscar odds em bloco para esta liga (hoje e amanhã sequencialmente)
-          const fidSet = new Set(upcoming.map((f: any) => f.fixture.id));
+        // Montar lista de buscas necessárias (liga+data) em paralelo — sem loop sequencial
+        const oddsFetchTasks: Array<{ league: typeof fixturesByLeague[0]["league"]; dateStr: string }> = [];
+        for (const { league, fixtures: upcoming } of fixturesByLeague) {
+          const allCovered = upcoming.every((f: any) => todayOddsMap.has(f.fixture.id));
+          if (allCovered) continue;
           for (const dateStr of [todayStr, next24hStr]) {
-            if ([...fidSet].every(fid => todayOddsMap.has(fid))) break; // todos já encontrados
-            try {
-              const r = await fetch(
-                `${API_FOOTBALL_BASE}/odds?league=${league.id}&season=${league.season}&date=${dateStr}`,
-                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-              );
-              if (r.ok) populateFromBulk((await r.json()).response || []);
-            } catch (e) { /* silently ignore */ }
+            oddsFetchTasks.push({ league, dateStr });
           }
+        }
 
-          // 3. Fallback individual para fixtures ainda sem odds após o bulk
-          const missed = upcoming.filter((f: any) => !todayOddsMap.has(f.fixture.id));
-          for (const fixture of missed) {
-            const fid = fixture.fixture.id;
-            try {
-              const r = await fetch(
-                `${API_FOOTBALL_BASE}/odds?fixture=${fid}`,
-                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-              );
-              if (r.ok) {
-                const d = await r.json();
-                const allBks: any[] = d.response?.[0]?.bookmakers || [];
-                const bk = pickBestBookmaker(allBks);
-                const result = extractH2hFromBk(bk);
-                if (result) todayOddsMap.set(fid, result);
-              }
-            } catch (e) { /* silently ignore */ }
-          }
+        // Buscar TODAS as odds em paralelo (sem await sequencial por liga)
+        const oddsResults = await Promise.allSettled(
+          oddsFetchTasks.map(({ league, dateStr }) =>
+            fetch(
+              `${API_FOOTBALL_BASE}/odds?league=${league.id}&season=${league.season}&date=${dateStr}`,
+              { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+            )
+              .then(r => r.ok ? r.json() : { response: [] })
+              .then(data => ({ entries: data.response || [] }))
+              .catch(() => ({ entries: [] }))
+          )
+        );
+        for (const result of oddsResults) {
+          if (result.status === "fulfilled") populateFromBulk(result.value.entries);
         }
 
         for (const { league, fixtures: upcoming } of fixturesByLeague) {
