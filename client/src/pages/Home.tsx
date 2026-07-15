@@ -106,15 +106,27 @@ export default function Home() {
   const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
   const { data: brasileiraoGames = [], isLoading: brasileiraoLoading } = useQuery<Game[]>({ queryKey: ["/api/games/brasileirao"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
   const { data: leagueGames = [], isLoading: leagueGamesLoading, error: leagueGamesError } = useQuery<Game[]>({ queryKey: [`/api/odds/${selectedSport}`], enabled: !!selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
+  const { data: copaMundoGames = [] } = useQuery<Game[]>({ queryKey: ["/api/copa-mundo-games"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
 
-  // Merge: Brasileirão sempre primeiro, deduplicando com os jogos de hoje
+  // Merge: Brasileirão → Copa do Mundo → outras ligas, deduplicando por ID
   const mergedTodayGames: Game[] = useMemo(() => {
-    const todayIds = new Set(todayGames.map(g => g.id));
-    const extraBr = brasileiraoGames.filter(g => !todayIds.has(g.id));
-    const brFromToday = todayGames.filter(g => g.sportKey === "soccer_brazil_campeonato");
-    const otherToday = todayGames.filter(g => g.sportKey !== "soccer_brazil_campeonato");
-    return [...brFromToday, ...extraBr, ...otherToday];
-  }, [todayGames, brasileiraoGames]);
+    const next48hMs = Date.now() + 48 * 60 * 60 * 1000;
+    const seen = new Set<string>();
+    const add = (g: Game) => { seen.add(g.id); return g; };
+
+    // 1) Brasileirão: preferir do endpoint próprio, complementar com games/today
+    const br = brasileiraoGames.map(add);
+    const todayBr = todayGames.filter(g => g.sportKey === "soccer_brazil_campeonato" && !seen.has(g.id)).map(add);
+
+    // 2) Copa do Mundo: primeiro do games/today, complementar com copa-mundo-games (48h)
+    const todayCopa = todayGames.filter(g => g.sportKey === "soccer_fifa_world_cup" && !seen.has(g.id)).map(add);
+    const extraCopa = copaMundoGames.filter(g => !seen.has(g.id) && new Date(g.commenceTime).getTime() <= next48hMs).map(add);
+
+    // 3) Resto das ligas de hoje
+    const rest = todayGames.filter(g => !seen.has(g.id)).map(add);
+
+    return [...br, ...todayBr, ...todayCopa, ...extraCopa, ...rest];
+  }, [todayGames, brasileiraoGames, copaMundoGames]);
 
   // Buscar odds de cada liga que aparece nos jogos do dia
   const uniqueSportKeys = useMemo(() =>
