@@ -2839,16 +2839,31 @@ export async function registerRoutes(
         const todayStr = new Date(nowMs).toISOString().split('T')[0];
         const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
 
-        // Buscar fixtures de todas as ligas em paralelo (sem delay — cada request é independente)
-        const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = await Promise.all(
-          footballLeagues.map(league =>
-            fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
-              { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
-              .then(r => r.ok ? r.json() : { response: [] })
-              .then(data => ({ league, fixtures: data.response || [] }))
-              .catch(() => ({ league, fixtures: [] }))
-          )
-        );
+        // Helper com timeout por request (evita travamento indefinido)
+        const fetchWithTimeout = (url: string, opts: RequestInit, timeoutMs = 8000) => {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+          return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+        };
+
+        // Buscar fixtures em batches de 10 com timeout por request
+        const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = [];
+        const FX_BATCH = 10;
+        for (let i = 0; i < footballLeagues.length; i += FX_BATCH) {
+          const batch = footballLeagues.slice(i, i + FX_BATCH);
+          const batchResults = await Promise.all(
+            batch.map(league =>
+              fetchWithTimeout(
+                `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+              )
+                .then(r => r.ok ? r.json() : { response: [] })
+                .then(data => ({ league, fixtures: data.response || [] }))
+                .catch(() => ({ league, fixtures: [] }))
+            )
+          );
+          fixtureResults.push(...batchResults);
+        }
 
         // Coletar fixtures por liga
         // Indicadores de times de base/seleções jovens — filtrados dos amistosos
@@ -2958,10 +2973,10 @@ export async function registerRoutes(
           }
         }
 
-        // Buscar TODAS as odds em paralelo (sem await sequencial por liga)
+        // Buscar TODAS as odds em paralelo com timeout por request
         const oddsResults = await Promise.allSettled(
           oddsFetchTasks.map(({ league, dateStr }) =>
-            fetch(
+            fetchWithTimeout(
               `${API_FOOTBALL_BASE}/odds?league=${league.id}&season=${league.season}&date=${dateStr}`,
               { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
             )
@@ -3021,7 +3036,20 @@ export async function registerRoutes(
         .map(({ _priority, ...g }) => g);
 
       console.log(`Games today endpoint - Found ${finalGames.length} games across all leagues`);
-      cache.set(cacheKey, finalGames, 5 * 60 * 1000); // cache 5 minutos
+      // Não sobrescrever cache com 0 jogos — provável cota da API esgotada
+      const existingStale = cache.getStale<any[]>(cacheKey);
+      if (finalGames.length === 0 && existingStale && existingStale.length > 0) {
+        console.log(`[games/today] API retornou 0 jogos — mantendo cache anterior com ${existingStale.length} jogos (possível cota esgotada)`);
+        // Estender o stale para mais 20 minutos para não perder os dados
+        cache.set(cacheKey, existingStale, 20 * 60 * 1000);
+        resolvePending(existingStale);
+        if (!respondedWithStale) {
+          const blockedIds = await storage.getBlockedGameIds();
+          return res.json(blockedIds.size > 0 ? existingStale.filter((g: any) => !blockedIds.has(g.id)) : existingStale);
+        }
+        return;
+      }
+      cache.set(cacheKey, finalGames, 20 * 60 * 1000); // cache 20 minutos
       resolvePending(finalGames); // Notificar endpoints que aguardavam este resultado
       if (!respondedWithStale) {
         const blockedIds = await storage.getBlockedGameIds();
