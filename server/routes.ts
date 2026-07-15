@@ -2834,10 +2834,10 @@ export async function registerRoutes(
         console.log(`Using API-Football for ${footballLeagues.length} uncovered leagues: ${footballLeagues.map(l => l.key).join(", ")}`);
 
         const nowMs = Date.now();
-        const next24hMs = nowMs + 24 * 60 * 60 * 1000;
+        const next72hMs = nowMs + 72 * 60 * 60 * 1000;
         // Use UTC dates for API queries so games at midnight UTC (e.g. 21:00 BRT) are never missed
         const todayStr = new Date(nowMs).toISOString().split('T')[0];
-        const next24hStr = new Date(next24hMs).toISOString().split('T')[0];
+        const next72hStr = new Date(next72hMs).toISOString().split('T')[0];
 
         const fixtureResults: Array<{ league: typeof footballLeagues[0]; fixtures: any[] }> = [];
         const BATCH_SIZE = 5;
@@ -2845,7 +2845,7 @@ export async function registerRoutes(
           const batch = footballLeagues.slice(i, i + BATCH_SIZE);
           const batchResults = await Promise.all(
             batch.map(league =>
-              fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next24hStr}`,
+              fetch(`${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${league.season}&from=${todayStr}&to=${next72hStr}`,
                 { headers: { "x-apisports-key": API_FOOTBALL_KEY } })
                 .then(r => r.ok ? r.json() : { response: [] })
                 .then(data => ({ league, fixtures: data.response || [] }))
@@ -2870,7 +2870,7 @@ export async function registerRoutes(
           const upcoming = fixtures.filter((f: any) => {
             const status = f.fixture?.status?.short;
             const gameDate = new Date(f.fixture?.date).getTime();
-            if (status !== "NS" || gameDate <= nowMs || gameDate > next24hMs) return false;
+            if (!["NS", "TBD"].includes(status) || gameDate <= nowMs || gameDate > next72hMs) return false;
             if (isFriendlies) {
               const home = f.teams?.home?.name || "";
               const away = f.teams?.away?.name || "";
