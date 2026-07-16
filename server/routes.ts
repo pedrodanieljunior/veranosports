@@ -5865,7 +5865,10 @@ export async function registerRoutes(
         homeLogo: f.teams.home.logo as string,
         away: f.teams.away.name as string,
         awayLogo: f.teams.away.logo as string,
-        league: f.league.name as string,
+        league: f.league.id === 71 ? "Campeonato Brasileiro Série A"
+               : f.league.id === 72 ? "Campeonato Brasileiro Série B"
+               : f.league.id === 75 ? "Campeonato Brasileiro Série C"
+               : f.league.name as string,
         leagueLogo: f.league.logo as string,
         goalsHome: f.goals.home as number | null,
         goalsAway: f.goals.away as number | null,
