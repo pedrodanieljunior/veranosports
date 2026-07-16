@@ -492,7 +492,7 @@ interface Props {
 export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
   const [refetchMs, setRefetchMs] = useState(5_000);
   const [showMap, setShowMap] = useState(false);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const { getGameBoostMultiplier } = useMarketSettings();
 
   // SSE: receive lock changes instantly — update cache immediately (no refetch to avoid race)
