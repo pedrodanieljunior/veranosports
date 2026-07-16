@@ -54,7 +54,7 @@ export default function LiveControl() {
       }
       return res.json();
     },
-    refetchInterval: 10_000,
+    refetchInterval: 3_000,
     enabled: !!token,
   });
 

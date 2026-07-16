@@ -208,8 +208,8 @@ export default function Home() {
 
   const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
     queryKey: ["/api/football/live-status"],
-    refetchInterval: 10_000,
-    staleTime: 8_000,
+    refetchInterval: 3_000,
+    staleTime: 2_000,
   });
 
   const sessionId = getSessionId();

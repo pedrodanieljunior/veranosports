@@ -510,7 +510,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     }),
     refetchInterval: refetchMs,
     refetchIntervalInBackground: false,
-    staleTime: refetchMs - 3_000,
+    staleTime: Math.max(refetchMs - 1_000, 500),
     retry: 2,
   });
 
@@ -518,7 +518,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     if (!data) return;
     const st = data.fixture.status.short;
     const live = ["1H", "HT", "2H", "ET", "BT", "P", "INT"].includes(st);
-    setRefetchMs(live ? 5_000 : 60_000);
+    setRefetchMs(live ? 2_500 : 60_000);
   }, [data?.fixture.status.short]);
 
   const prevOdds = useRef<Record<string, number>>({});
