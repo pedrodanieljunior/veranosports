@@ -3243,38 +3243,9 @@ export async function registerRoutes(
 
           if (fixtures.length === 0) continue;
 
-          // Buscar odds para todas as datas dentro da janela de 48h (hoje, amanhã, depois)
+          // Buscar odds individualmente por fixture ID (mais confiável que bulk por data)
           const oddsMap = new Map<number, any>();
-          const dateSet = new Set<string>();
-          for (let i = 0; i <= 2; i++) {
-            dateSet.add(new Date(nowMs + i * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
-          }
-          const datesToFetch = [...dateSet];
-          console.log(`[brazilian-games] ${league.key}: fetching bulk odds for dates: ${datesToFetch.join(", ")}`);
-          for (const dateStr of datesToFetch) {
-            try {
-              const r = await fetch(
-                `${API_FOOTBALL_BASE}/odds?league=${league.id}&season=${brazilianSeason}&date=${dateStr}`,
-                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
-              );
-              if (r.ok) {
-                const d = await r.json();
-                const entries = d.response || [];
-                console.log(`[brazilian-games] ${league.key} date=${dateStr}: ${entries.length} odds entries`);
-                for (const entry of entries) {
-                  const fid = entry.fixture?.id;
-                  if (!fid || oddsMap.has(fid)) continue;
-                  const bk = pickBestBookmaker(entry.bookmakers || []);
-                  if (bk) oddsMap.set(fid, bk);
-                }
-              }
-            } catch { /* silently ignore */ }
-          }
-
-          // Fallback individual para fixtures sem odds no bulk
-          const missedFixtures = fixtures.filter((f: any) => !oddsMap.has(f.fixture.id));
-          console.log(`[brazilian-games] ${league.key}: ${oddsMap.size} bulk odds, ${missedFixtures.length} fixtures missing — trying individual fallback`);
-          for (const fixture of missedFixtures) {
+          for (const fixture of fixtures) {
             const fid = fixture.fixture.id;
             try {
               const r = await fetch(
@@ -3285,15 +3256,10 @@ export async function registerRoutes(
                 const d = await r.json();
                 const allBks: any[] = d.response?.[0]?.bookmakers || [];
                 const bk = pickBestBookmaker(allBks);
-                if (bk) {
-                  oddsMap.set(fid, bk);
-                  console.log(`[brazilian-games] ${league.key} fid=${fid}: individual fallback found odds`);
-                } else {
-                  console.log(`[brazilian-games] ${league.key} fid=${fid}: no odds available`);
-                }
+                if (bk) oddsMap.set(fid, bk);
               }
             } catch { /* silently ignore */ }
-            await new Promise(resolve => setTimeout(resolve, 150));
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
 
           for (const fixture of fixtures) {
