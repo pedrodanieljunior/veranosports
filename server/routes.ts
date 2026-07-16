@@ -5780,6 +5780,12 @@ export async function registerRoutes(
         liveRes.json(), serieA_todayRes.json(), serieA_upRes.json(), serieB_todayRes.json(), serieB_upRes.json(), serieC_todayRes.json(), serieC_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
       ]);
 
+      console.log(`[admin/live-games] todayDate=${todayDate} tomorrowDate=${tomorrowDate}`);
+      console.log(`[admin/live-games] SerieA today=${serieA_todayData.response?.length ?? 0} (errors=${JSON.stringify(serieA_todayData.errors)}) quota=${serieA_todayData.results}`);
+      console.log(`[admin/live-games] SerieA tomorrow=${serieA_upData.response?.length ?? 0}`);
+      console.log(`[admin/live-games] SerieB today=${serieB_todayData.response?.length ?? 0} tomorrow=${serieB_upData.response?.length ?? 0}`);
+      console.log(`[admin/live-games] Live fixtures=${liveData.response?.length ?? 0}`);
+
       // Live: all live fixtures (will be filtered below)
       const liveFixtures = liveData.response ?? [];
       // Today + tomorrow + upcoming: covers live, ongoing and scheduled games
