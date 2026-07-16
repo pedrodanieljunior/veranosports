@@ -3243,10 +3243,13 @@ export async function registerRoutes(
 
           if (fixtures.length === 0) continue;
 
-          // Buscar odds por data (hoje e amanhã)
+          // Buscar odds para todas as datas dentro da janela de 48h (hoje, amanhã, depois)
           const oddsMap = new Map<number, any>();
-          const datesToFetch = [fromStr, toStr];
-          if (fromStr === toStr) datesToFetch.splice(1, 1);
+          const dateSet = new Set<string>();
+          for (let i = 0; i <= 2; i++) {
+            dateSet.add(new Date(nowMs + i * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+          }
+          const datesToFetch = [...dateSet];
           for (const dateStr of datesToFetch) {
             try {
               const r = await fetch(
