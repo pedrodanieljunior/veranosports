@@ -3204,6 +3204,114 @@ export async function registerRoutes(
     }
   });
 
+  // ── Ligas Brasileiras: Brasileirão, Libertadores, Copa do Brasil (48h) ─────────
+  app.get("/api/brazilian-games", async (req, res) => {
+    try {
+      const nowMs = Date.now();
+      const next48hMs = nowMs + 48 * 60 * 60 * 1000;
+      const fromStr = new Date(nowMs).toISOString().split("T")[0];
+      const toStr = new Date(next48hMs).toISOString().split("T")[0];
+      const cacheKey = `brazilian_games_${fromStr}_${toStr}`;
+      const cached = cache.get<any[]>(cacheKey);
+      if (cached) return res.json(cached);
+
+      if (!API_FOOTBALL_KEY) return res.json([]);
+
+      const brazilianSeason = new Date().getFullYear();
+      const leagues = [
+        { id: 71,  key: "soccer_brazil_campeonato",          name: "Brasileirão Série A" },
+        { id: 13,  key: "soccer_conmebol_copa_libertadores", name: "Copa Libertadores"   },
+        { id: 73,  key: "soccer_brazil_copa_do_brasil",      name: "Copa do Brasil"      },
+      ];
+
+      const allGames: any[] = [];
+
+      for (const league of leagues) {
+        try {
+          const fixturesRes = await fetch(
+            `${API_FOOTBALL_BASE}/fixtures?league=${league.id}&season=${brazilianSeason}&from=${fromStr}&to=${toStr}`,
+            { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+          );
+          if (!fixturesRes.ok) continue;
+          const fixturesData = await fixturesRes.json();
+
+          const fixtures = (fixturesData.response || []).filter((f: any) => {
+            const status = f.fixture?.status?.short;
+            const gameDate = new Date(f.fixture?.date).getTime();
+            return ["NS", "TBD"].includes(status) && gameDate > nowMs && gameDate <= next48hMs;
+          });
+
+          if (fixtures.length === 0) continue;
+
+          // Buscar odds por data (hoje e amanhã)
+          const oddsMap = new Map<number, any>();
+          const datesToFetch = [fromStr, toStr];
+          if (fromStr === toStr) datesToFetch.splice(1, 1);
+          for (const dateStr of datesToFetch) {
+            try {
+              const r = await fetch(
+                `${API_FOOTBALL_BASE}/odds?league=${league.id}&season=${brazilianSeason}&date=${dateStr}`,
+                { headers: { "x-apisports-key": API_FOOTBALL_KEY } }
+              );
+              if (r.ok) {
+                const d = await r.json();
+                for (const entry of d.response || []) {
+                  const fid = entry.fixture?.id;
+                  if (!fid || oddsMap.has(fid)) continue;
+                  const bk = pickBestBookmaker(entry.bookmakers || []);
+                  if (bk) oddsMap.set(fid, bk);
+                }
+              }
+            } catch { /* silently ignore */ }
+          }
+
+          for (const fixture of fixtures) {
+            const fid = fixture.fixture.id;
+            const homeTeam = formatTeamName(fixture.teams.home.name);
+            const awayTeam = formatTeamName(fixture.teams.away.name);
+            const bk = oddsMap.get(fid);
+            let bookmakers: any[] = [];
+            if (bk) {
+              const bets: any[] = bk.bets || [];
+              const h2h = bets.find((b: any) => b.name === "Match Winner");
+              if (h2h && h2h.values?.length >= 2) {
+                const markets: any[] = [{
+                  key: "h2h",
+                  outcomes: h2h.values.map((v: any) => ({
+                    name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                    price: parseFloat(v.odd),
+                  })),
+                }, ...extractExtraMarketsFromBets(bets)];
+                bookmakers = [{ key: "api-football", title: bk.name, markets }];
+              }
+            }
+            allGames.push({
+              id: `api-football-${fid}`,
+              sportKey: league.key,
+              sportTitle: league.name,
+              commenceTime: fixture.fixture.date,
+              homeTeam,
+              awayTeam,
+              homeLogo: fixture.teams.home.logo,
+              awayLogo: fixture.teams.away.logo,
+              bookmakers,
+            });
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch { /* skip league on error */ }
+      }
+
+      allGames.sort((a: any, b: any) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
+      console.log(`[brazilian-games] ${allGames.length} jogos encontrados (${fromStr}→${toStr})`);
+      cache.set(cacheKey, allGames, 10 * 60 * 1000);
+      res.json(allGames);
+    } catch (error) {
+      console.error("Error fetching Brazilian games:", error);
+      res.status(500).json({ error: "Failed to fetch Brazilian games" });
+    }
+  });
+
   // Endpoint dedicado para a Final da Champions League 2025/26 (PSG vs Arsenal, fixture 1544371)
   app.get("/api/ucl-final", async (req, res) => {
     try {

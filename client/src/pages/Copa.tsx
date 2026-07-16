@@ -40,7 +40,7 @@ const WC_QUALIFIER_KEYS = [
   "soccer_wc_intercontinental",
 ];
 
-type CopaTab = "aovivo" | "todos" | "copa";
+type CopaTab = "aovivo" | "todos" | "copa" | "brasileirao" | "libertadores" | "copa_brasil";
 type CopaSubTab = "todos" | "grupos" | "longo" | "especiais";
 
 
@@ -207,6 +207,13 @@ export default function Copa() {
     enabled: activeTab === "copa",
   });
 
+  const { data: brazilianGames = [], isLoading: brazilianLoading } = useQuery<Game[]>({
+    queryKey: ["/api/brazilian-games"],
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
+    enabled: activeTab === "brasileirao" || activeTab === "libertadores" || activeTab === "copa_brasil",
+  });
+
 
   const sessionId = getSessionId();
   const { data: betHistory = [], isLoading: historyLoading } = useQuery<BetSlipType[]>({
@@ -301,6 +308,9 @@ export default function Copa() {
       ),
     },
     { key: "todos", label: "TODOS", icon: "📅" },
+    { key: "brasileirao", label: "BRASILEIRÃO", icon: "🇧🇷" },
+    { key: "libertadores", label: "LIBERTADORES", icon: "🏆" },
+    { key: "copa_brasil", label: "COPA BR", icon: "🥇" },
     { key: "copa", label: "COPA DO MUNDO", icon: <img src={copaTrofeuTab} alt="Copa" className="w-5 h-5 object-contain" /> },
   ];
 
@@ -504,7 +514,50 @@ export default function Copa() {
               </div>
             )}
           </div>
-        ) : activeTab === "copa" && copaSubTab !== "todos" ? (
+        ) : (activeTab === "brasileirao" || activeTab === "libertadores" || activeTab === "copa_brasil") ? (() => {
+          const sportKeyMap: Record<string, string> = {
+            brasileirao: "soccer_brazil_campeonato",
+            libertadores: "soccer_conmebol_copa_libertadores",
+            copa_brasil: "soccer_brazil_copa_do_brasil",
+          };
+          const labelMap: Record<string, { emoji: string; name: string; empty: string }> = {
+            brasileirao:  { emoji: "🇧🇷", name: "Brasileirão Série A", empty: "Nenhum jogo do Brasileirão nas próximas 48 horas" },
+            libertadores: { emoji: "🏆", name: "Copa Libertadores",   empty: "Nenhum jogo da Libertadores nas próximas 48 horas" },
+            copa_brasil:  { emoji: "🥇", name: "Copa do Brasil",      empty: "Nenhum jogo da Copa do Brasil nas próximas 48 horas" },
+          };
+          const sportKey = sportKeyMap[activeTab];
+          const meta = labelMap[activeTab];
+          const tabGames = brazilianGames
+            .filter(g => g.sportKey === sportKey && new Date(g.commenceTime).getTime() > now)
+            .sort((a, b) => new Date(a.commenceTime).getTime() - new Date(b.commenceTime).getTime());
+
+          if (brazilianLoading) {
+            return (
+              <div className="px-3 pt-6 flex flex-col items-center gap-2 text-gray-400">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                <p className="text-xs">Carregando jogos...</p>
+              </div>
+            );
+          }
+          if (tabGames.length === 0) {
+            return (
+              <div className="mx-3 mt-2 rounded-xl p-8 text-center" style={{ background: "#f3f4f6", border: "1px solid #e5e7eb" }}>
+                <div className="text-4xl mb-3">{meta.emoji}</div>
+                <p className="text-gray-800 font-bold text-sm mb-1">{meta.name}</p>
+                <p className="text-gray-500 text-xs">{meta.empty}</p>
+              </div>
+            );
+          }
+          return (
+            <GamesList
+              games={tabGames}
+              selections={selections}
+              onToggleSelection={handleToggleSelection}
+              onGameClick={handleGameClick}
+              isDark={false}
+            />
+          );
+        })() : activeTab === "copa" && copaSubTab !== "todos" ? (
           (() => {
             const COPA_GRUPOS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
             const subCards = copaCards.filter((c: any) => c.subTab === copaSubTab);
