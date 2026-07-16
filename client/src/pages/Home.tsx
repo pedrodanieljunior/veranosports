@@ -62,12 +62,30 @@ export default function Home() {
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
+        // Update live-status instantly
         queryClient.setQueryData(["/api/football/live-status"], (old: any) => ({
           ...(old ?? {}),
           fixtureId: data.fixtureId,
           gameInfo: data.gameInfo,
           isLocked: data.isLocked,
         }));
+        // Also flip isLocked + suspended in live-test cache immediately
+        queryClient.setQueryData(["/api/football/live-test"], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            isLocked: data.isLocked,
+            markets: (old.markets ?? []).map((m: any) => ({
+              ...m,
+              values: (m.values ?? []).map((v: any) => ({
+                ...v,
+                suspended: data.isLocked,
+              })),
+            })),
+          };
+        });
+        // Trigger a background refetch to get fresh odds
+        queryClient.invalidateQueries({ queryKey: ["/api/football/live-test"] });
       } catch {}
     };
     return () => es.close();

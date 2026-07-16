@@ -4,6 +4,7 @@ import { Selection } from "@shared/schema";
 import { Zap, Clock, TrendingUp, TrendingDown, Lock, ChevronDown, ChevronUp } from "lucide-react";
 import { proxyLogoUrl } from "@/lib/imgProxy";
 import { useMarketSettings } from "@/hooks/use-market-settings";
+import { queryClient } from "@/lib/queryClient";
 
 
 const MARKET_LABELS: Record<number, string> = {
@@ -494,6 +495,32 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const [collapsed, setCollapsed] = useState(true);
   const { getGameBoostMultiplier } = useMarketSettings();
 
+  // SSE: receive lock changes instantly — update cache + force refetch immediately
+  useEffect(() => {
+    const es = new EventSource("/api/live-events");
+    es.onmessage = (e) => {
+      try {
+        const evt = JSON.parse(e.data);
+        queryClient.setQueryData(["/api/football/live-test"], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            isLocked: evt.isLocked,
+            markets: (old.markets ?? []).map((m: any) => ({
+              ...m,
+              values: (m.values ?? []).map((v: any) => ({
+                ...v,
+                suspended: evt.isLocked,
+              })),
+            })),
+          };
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/football/live-test"] });
+      } catch {}
+    };
+    return () => es.close();
+  }, []);
+
   const { data: mapData, isLoading: mapLoading } = useQuery<MapData>({
     queryKey: ["/api/football/live-map"],
     queryFn: () => fetch("/api/football/live-map").then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
@@ -518,7 +545,8 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     if (!data) return;
     const st = data.fixture.status.short;
     const live = ["1H", "HT", "2H", "ET", "BT", "P", "INT"].includes(st);
-    setRefetchMs(live ? 2_500 : 60_000);
+    // NS (not started): use 5s so lock/unlock reflects quickly even without SSE
+    setRefetchMs(live ? 2_500 : 5_000);
   }, [data?.fixture.status.short]);
 
   const prevOdds = useRef<Record<string, number>>({});
