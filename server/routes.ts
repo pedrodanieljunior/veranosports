@@ -5765,8 +5765,10 @@ export async function registerRoutes(
       // Using ?next=N because ?from/to requires season context and returns 0 without it
       const tomorrowDate = toBrazilDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
 
-      const [liveRes, serieB_todayRes, serieB_upRes, serieC_todayRes, serieC_upRes, wc_upRes, friendly_upRes] = await Promise.all([
+      const [liveRes, serieA_todayRes, serieA_upRes, serieB_todayRes, serieB_upRes, serieC_todayRes, serieC_upRes, wc_upRes, friendly_upRes] = await Promise.all([
         fetch(`${API_FOOTBALL_BASE}/fixtures?live=all`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=71&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=71&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=72&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=75&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
@@ -5774,14 +5776,16 @@ export async function registerRoutes(
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=1&season=2026&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=10&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
       ]);
-      const [liveData, serieB_todayData, serieB_upData, serieC_todayData, serieC_upData, wc_upData, friendly_upData] = await Promise.all([
-        liveRes.json(), serieB_todayRes.json(), serieB_upRes.json(), serieC_todayRes.json(), serieC_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
+      const [liveData, serieA_todayData, serieA_upData, serieB_todayData, serieB_upData, serieC_todayData, serieC_upData, wc_upData, friendly_upData] = await Promise.all([
+        liveRes.json(), serieA_todayRes.json(), serieA_upRes.json(), serieB_todayRes.json(), serieB_upRes.json(), serieC_todayRes.json(), serieC_upRes.json(), wc_upRes.json(), friendly_upRes.json(),
       ]);
 
       // Live: all live fixtures (will be filtered below)
       const liveFixtures = liveData.response ?? [];
       // Today + tomorrow + upcoming: covers live, ongoing and scheduled games
       const upcomingAll = [
+        ...(serieA_todayData.response ?? []),
+        ...(serieA_upData.response ?? []),
         ...(serieB_todayData.response ?? []),
         ...(serieB_upData.response ?? []),
         ...(serieC_todayData.response ?? []),
@@ -5815,12 +5819,12 @@ export async function registerRoutes(
         732, // Copa América Qualifiers (when applicable)
       ]);
 
-      // Filter: Brazil Série B (72), Série C (75) and approved senior national-team competitions
+      // Filter: Brazil Série A (71), Série B (72), Série C (75) and approved senior national-team competitions
       // Also exclude youth fixtures (U17 / U19 / U20 / U21 / U23 in team names)
       const YOUTH_RE = /\bU\d{2}\b/i;
       const isYouth = (f: any) =>
         YOUTH_RE.test(f.teams?.home?.name ?? "") || YOUTH_RE.test(f.teams?.away?.name ?? "");
-      const isBrazilClub = (f: any) => f.league?.id === 72 || f.league?.id === 75;
+      const isBrazilClub = (f: any) => f.league?.id === 71 || f.league?.id === 72 || f.league?.id === 75;
       const isSelecoes = (f: any) => SELECOES_LEAGUE_IDS.has(f.league?.id) && !isYouth(f);
 
       const fixtures = allFixtures.filter(f => {
