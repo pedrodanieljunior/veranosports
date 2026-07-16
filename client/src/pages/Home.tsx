@@ -84,8 +84,7 @@ export default function Home() {
             })),
           };
         });
-        // Trigger a background refetch to get fresh odds
-        queryClient.invalidateQueries({ queryKey: ["/api/football/live-test"] });
+        // No invalidateQueries — races with API-Football fetch returning empty markets.
       } catch {}
     };
     return () => es.close();

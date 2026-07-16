@@ -495,7 +495,7 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
   const [collapsed, setCollapsed] = useState(true);
   const { getGameBoostMultiplier } = useMarketSettings();
 
-  // SSE: receive lock changes instantly — update cache + force refetch immediately
+  // SSE: receive lock changes instantly — update cache immediately (no refetch to avoid race)
   useEffect(() => {
     const es = new EventSource("/api/live-events");
     es.onmessage = (e) => {
@@ -515,7 +515,8 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
             })),
           };
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/football/live-test"] });
+        // Do NOT call invalidateQueries here — it can race with the server and return
+        // empty markets during the API-Football fetch. The 5s poll handles fresh odds.
       } catch {}
     };
     return () => es.close();
