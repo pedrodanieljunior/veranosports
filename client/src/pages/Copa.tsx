@@ -212,8 +212,8 @@ export default function Copa() {
 
   const { data: brazilianGames = [], isLoading: brazilianLoading } = useQuery<Game[]>({
     queryKey: ["/api/brazilian-games"],
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
     enabled: activeTab === "brasileirao" || activeTab === "libertadores" || activeTab === "copa_brasil",
   });
 
