@@ -3860,6 +3860,15 @@ export async function registerRoutes(
         odds: Math.round(sel.odds * 100) / 100,
       }));
 
+      // Verificar se mercados ao vivo estão bloqueados pelo admin
+      const hasLiveSelections = validatedData.selections.some(sel => sel.marketKey?.startsWith("live_"));
+      if (hasLiveSelections && liveMarketsLocked) {
+        return res.status(400).json({
+          error: "Os mercados ao vivo estão temporariamente bloqueados. Tente novamente em instantes.",
+          isLiveMarketLocked: true,
+        });
+      }
+
       // Verificar se algum jogo já iniciou (seleções ao vivo são permitidas)
       const now = new Date();
       for (const sel of validatedData.selections) {
