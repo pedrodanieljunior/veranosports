@@ -498,6 +498,15 @@ export default function Admin() {
     enabled: !!adminMe?.isAdmin,
   });
 
+  const { data: adminSettings } = useQuery<{ aporteInicial: number }>({
+    queryKey: ["/api/admin/settings"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/settings");
+      return res.json();
+    },
+    enabled: !!adminMe?.isAdmin,
+  });
+
   const createWithdrawalMutation = useMutation({
     mutationFn: async ({ amount, description }: { amount: number; description: string }) => {
       return apiRequest("POST", "/api/admin/withdrawals", { amount, description });
@@ -1519,7 +1528,7 @@ export default function Admin() {
 
               {/* Painel central — Caixa */}
               {(() => {
-                const APORTE_INICIAL = 50000;
+                const APORTE_INICIAL = adminSettings?.aporteInicial ?? 50000;
                 // Entradas reais de PIX (sem o bônus que é artificial)
                 const confirmedDeposits = allDeposits.filter(d => d.status === "confirmed");
                 const entradasPix = confirmedDeposits.reduce((s, d) => s + d.amount, 0);
@@ -1612,7 +1621,7 @@ export default function Admin() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Zerar o Caixa?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Esta ação irá apagar <strong>todas as apostas, depósitos, saques, pagamentos e bônus</strong>, e zerar o saldo de todos os usuários. O caixa voltará ao aporte inicial de R$50.000. Essa operação <strong>não pode ser desfeita</strong>.
+                                  Esta ação irá apagar <strong>todas as apostas, depósitos, saques, pagamentos e bônus</strong>, e zerar o saldo de todos os usuários. O caixa voltará ao aporte inicial de R${(APORTE_INICIAL).toLocaleString('pt-BR')}. Essa operação <strong>não pode ser desfeita</strong>.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -1659,7 +1668,7 @@ export default function Admin() {
                           </div>
                           <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>R$0</span>
-                            <span>R$50.000 (aporte)</span>
+                            <span>R${(APORTE_INICIAL).toLocaleString('pt-BR')} (aporte)</span>
                           </div>
                         </div>
 
