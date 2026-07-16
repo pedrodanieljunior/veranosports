@@ -56,6 +56,23 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
+  // SSE: receive live-state changes instantly (no waiting for next poll)
+  useEffect(() => {
+    const es = new EventSource("/api/live-events");
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        queryClient.setQueryData(["/api/football/live-status"], (old: any) => ({
+          ...(old ?? {}),
+          fixtureId: data.fixtureId,
+          gameInfo: data.gameInfo,
+          isLocked: data.isLocked,
+        }));
+      } catch {}
+    };
+    return () => es.close();
+  }, []);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const newNow = Date.now();
@@ -208,8 +225,8 @@ export default function Home() {
 
   const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
     queryKey: ["/api/football/live-status"],
-    refetchInterval: 3_000,
-    staleTime: 2_000,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   });
 
   const sessionId = getSessionId();
