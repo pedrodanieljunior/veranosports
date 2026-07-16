@@ -1466,7 +1466,7 @@ export default function Admin() {
                                 <div className="space-y-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono font-bold text-xs">#{bet.id.slice(0,8).toUpperCase()}</span>
-                                    <span className="text-xs text-muted-foreground">{format(new Date(bet.createdAt),"dd/MM HH:mm",{locale:ptBR})}</span>
+                                    <span className="text-xs text-muted-foreground">{format(new Date(bet.createdAt),"dd/MM HH:mm:ss",{locale:ptBR})}</span>
                                   </div>
                                   <p className="text-xs text-muted-foreground truncate max-w-xs">
                                     {bet.selections.map(s=>s.awayTeam ? `${s.homeTeam} x ${s.awayTeam}` : s.homeTeam).join(" · ")}
@@ -2293,7 +2293,7 @@ export default function Admin() {
                               {getStatusBadge(bet.status)}
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                {format(new Date(bet.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
                               </span>
                               {bet.userId === "ADM_FW" ? (
                                 <span className="text-xs bg-purple-600/30 text-purple-300 px-2 py-0.5 rounded-full font-semibold border border-purple-500/40">
