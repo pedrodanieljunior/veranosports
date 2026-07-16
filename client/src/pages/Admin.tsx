@@ -2316,6 +2316,24 @@ export default function Admin() {
                                   AO VIVO
                                 </span>
                               )}
+                              {bet.selections.some((s: any) => s.marketKey?.startsWith("live_m")) && (bet as any).liveReactionSecs != null && (() => {
+                                const secs = (bet as any).liveReactionSecs as number;
+                                const color = secs <= 10
+                                  ? "bg-red-700/30 text-red-300 border-red-600/50"
+                                  : secs <= 30
+                                  ? "bg-orange-600/25 text-orange-300 border-orange-500/40"
+                                  : "bg-green-700/20 text-green-400 border-green-600/40";
+                                const label = secs <= 10 ? "⚡ Suspeito" : secs <= 30 ? "⏱ Rápido" : "✓ Normal";
+                                return (
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${color}`}
+                                    title={`Apostou ${secs}s após mercados abrirem`}
+                                    data-testid={`badge-reaction-${bet.id}`}
+                                  >
+                                    {label} · {secs}s
+                                  </span>
+                                );
+                              })()}
                             </div>
                             
                             {/* Bilhete visual — agrupado por jogo */}

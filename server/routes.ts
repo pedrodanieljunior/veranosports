@@ -4173,10 +4173,16 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Autenticação necessária para usar saldo da conta" });
       }
 
+      // Compute live reaction time: seconds since markets were last unlocked
+      const hasLiveSels = validatedData.selections.some((s: any) => s.marketKey?.startsWith("live_m"));
+      const liveReactionSecs = (hasLiveSels && lastLiveUnlockMs > 0)
+        ? Math.round((Date.now() - lastLiveUnlockMs) / 1000)
+        : null;
+
       let betSlip;
       try {
         const _bonusUsed = (validatedData as any)._usedBonusAmt ?? 0;
-        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin, _bonusUsed } as any);
+        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin, _bonusUsed, liveReactionSecs } as any);
       } catch (createErr) {
         // Rollback: reembolsar saldo caso a criação do bilhete falhe
         if (sessionUserId) {
@@ -5695,6 +5701,7 @@ export async function registerRoutes(
   let activeLiveFixtureId: number | null = null;
   let activeLiveGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null = null;
   let liveMarketsLocked = false;
+  let lastLiveUnlockMs = 0; // timestamp when markets were last opened/unlocked
 
   // Mobile control token (valid 24h)
   let mobileControlToken: string | null = null;
@@ -5892,6 +5899,7 @@ export async function registerRoutes(
     activeLiveFixtureId = Number(fixtureId);
     activeLiveGameInfo = { home, away, league, homeLogo, awayLogo };
     liveMarketsLocked = false;
+    lastLiveUnlockMs = Date.now();
     console.log(`[live-game] Activated fixture ${activeLiveFixtureId}: ${home} vs ${away}`);
     return res.json({ ok: true, fixtureId: activeLiveFixtureId, isLocked: liveMarketsLocked });
   });
@@ -5906,6 +5914,7 @@ export async function registerRoutes(
   // Admin: toggle global market lock
   app.post("/api/admin/live-game/toggle-lock", requireAdmin, (_req, res) => {
     liveMarketsLocked = !liveMarketsLocked;
+    if (!liveMarketsLocked) lastLiveUnlockMs = Date.now(); // track when admin opens the market
     // Clear live-test cache so next client poll gets fresh data immediately
     if (activeLiveFixtureId) {
       cache.delete(`live_test_${activeLiveFixtureId}`);
@@ -5980,6 +5989,7 @@ export async function registerRoutes(
     if (!validateMobileToken(token)) return res.status(401).json({ error: "Invalid or expired token" });
     if (!activeLiveFixtureId) return res.status(404).json({ error: "No active live game" });
     liveMarketsLocked = !liveMarketsLocked;
+    if (!liveMarketsLocked) lastLiveUnlockMs = Date.now();
     // Clear live-test cache so next client poll gets fresh data immediately
     cache.delete(`live_test_${activeLiveFixtureId}`);
     cache.delete(`live_map_${activeLiveFixtureId}`);

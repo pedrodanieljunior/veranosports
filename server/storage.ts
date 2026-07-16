@@ -197,6 +197,7 @@ export class DatabaseStorage implements IStorage {
       potentialWin,
       bonusUsed,
       status: "pending",
+      liveReactionSecs: (data as any).liveReactionSecs ?? null,
     }).returning();
     
     return this.mapBetSlip(result);

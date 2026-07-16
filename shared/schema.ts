@@ -59,6 +59,7 @@ export const betSlipsTable = pgTable("bet_slips", {
   pixKey: text("pix_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   cashOutValue: real("cash_out_value"),
+  liveReactionSecs: integer("live_reaction_secs"),
 });
 
 export const sportSchema = z.object({
