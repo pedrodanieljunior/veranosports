@@ -29,6 +29,9 @@ import { NotificationPanel, NotificationBanner } from "@/components/Notification
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import copaLogo from "@assets/copa_logo_transparent.png";
+import brasileiraoLogo from "@assets/Brasileiro_Série_A_1784212008632.png";
+import libertadoresLogo from "@assets/Libertadores_1784212008631.png";
+import copaBrasilLogo from "@assets/Copa_do_Brasil_1784212008632.png";
 
 
 const WC_QUALIFIER_KEYS = [
@@ -308,9 +311,9 @@ export default function Copa() {
       ),
     },
     { key: "todos", label: "TODOS", icon: "📅" },
-    { key: "brasileirao", label: "BRASILEIRÃO", icon: "🇧🇷" },
-    { key: "libertadores", label: "LIBERTADORES", icon: "🏆" },
-    { key: "copa_brasil", label: "COPA BR", icon: "🥇" },
+    { key: "brasileirao", label: "BRASILEIRÃO", icon: <img src={brasileiraoLogo} alt="Brasileirão" className="w-5 h-5 object-contain" /> },
+    { key: "libertadores", label: "LIBERTADORES", icon: <img src={libertadoresLogo} alt="Libertadores" className="w-5 h-5 object-contain" /> },
+    { key: "copa_brasil", label: "COPA BR", icon: <img src={copaBrasilLogo} alt="Copa do Brasil" className="w-5 h-5 object-contain" /> },
     { key: "copa", label: "COPA DO MUNDO", icon: <img src={copaTrofeuTab} alt="Copa" className="w-5 h-5 object-contain" /> },
   ];
 
