@@ -836,7 +836,14 @@ export class DatabaseStorage implements IStorage {
     await db.delete(depositsTable);
     await db.delete(userWithdrawalsTable);
     await db.delete(transactionsTable);
+    await db.delete(withdrawalsTable);
+    await db.delete(defensasTable);
     await db.update(usersTable).set({ balance: 0, bonusBalance: 0, firstDepositDone: false });
+    await this.setSetting("defensasProfits", "0");
+    await this.setSetting("caixaExtras", "0");
+    const savedInitial = await this.getSetting("defensasInitialBalance");
+    const initial = savedInitial ? String(parseFloat(savedInitial) || 1000) : "1000";
+    await this.setSetting("defensasBalance", initial);
   }
 
   private mapUserWithdrawal(row: any, userPhone?: string | null): UserWithdrawal {

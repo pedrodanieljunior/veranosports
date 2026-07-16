@@ -2670,6 +2670,9 @@ export async function registerRoutes(
   app.post("/api/admin/reset-caixa", async (_req, res) => {
     try {
       await storage.resetCaixa();
+      defensasProfits = 0;
+      caixaExtras = 0;
+      defensasBalance = defensasInitialBalance;
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ message: e.message ?? "Erro ao zerar caixa" });
