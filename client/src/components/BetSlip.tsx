@@ -8,7 +8,7 @@ import { X, Trash2, Receipt, CheckCircle2, Copy, QrCode, Share2, MessageCircle, 
 import { SiWhatsapp } from "react-icons/si";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -70,6 +70,20 @@ export function BetSlip({
     });
   };
   const [useBonus, setUseBonus] = useState(false);
+  const [liveDelay, setLiveDelay] = useState<number | null>(null);
+  const liveDelayCallback = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (liveDelay === null) return;
+    if (liveDelay === 0) {
+      setLiveDelay(null);
+      liveDelayCallback.current?.();
+      liveDelayCallback.current = null;
+      return;
+    }
+    const t = setTimeout(() => setLiveDelay(prev => (prev !== null ? prev - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [liveDelay]);
   const { toast } = useToast();
   const { fractionTable: comboBonusTable } = useComboBonus();
 
@@ -386,11 +400,23 @@ export function BetSlip({
     ? Math.floor(Math.min(caixaBalance / totalOdds, MAX_BET_PAYOUT / totalOdds) * 100) / 100
     : 0;
   
+  const hasLiveSelections = selections.some(s => s.marketKey?.startsWith("live_m"));
+
   const handlePlaceBet = () => {
     const stakeValue = parseFloat(stake);
     if (stakeValue > 0 && selections.length > 0) {
-      onPlaceBet(stakeValue, useBonus);
+      if (hasLiveSelections && liveDelay === null) {
+        liveDelayCallback.current = () => onPlaceBet(stakeValue, useBonus);
+        setLiveDelay(5);
+      } else if (!hasLiveSelections) {
+        onPlaceBet(stakeValue, useBonus);
+      }
     }
+  };
+
+  const handleCancelLiveDelay = () => {
+    setLiveDelay(null);
+    liveDelayCallback.current = null;
   };
 
   if (placedBet) {
@@ -909,15 +935,40 @@ export function BetSlip({
                   </span>
                 </div>
               )}
-              <Button 
-                className="w-full" 
-                size="lg"
-                onClick={handlePlaceBet}
-                disabled={isPlacing || selections.length === 0 || stakeNum < effectiveMinStake || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}
-                data-testid="button-place-bet"
-              >
-                {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}
-              </Button>
+              {liveDelay !== null ? (
+                <div className="w-full flex flex-col gap-2">
+                  <div className="relative w-full h-12 rounded-lg overflow-hidden bg-orange-500/20 border border-orange-500/40">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-orange-500/30 transition-none"
+                      style={{ width: `${((5 - liveDelay) / 5) * 100}%`, transition: "width 1s linear" }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                        <span className="text-sm font-semibold text-orange-200">Verificando ao vivo...</span>
+                      </div>
+                      <span className="text-2xl font-black text-orange-300 tabular-nums w-6 text-center">{liveDelay}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCancelLiveDelay}
+                    className="w-full text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors"
+                    data-testid="button-cancel-live-delay"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handlePlaceBet}
+                  disabled={isPlacing || selections.length === 0 || stakeNum < effectiveMinStake || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}
+                  data-testid="button-place-bet"
+                >
+                  {isPlacing ? "Gerando Bilhete..." : "Gerar Bilhete"}
+                </Button>
+              )}
             </div>
           </>
         )}
