@@ -703,7 +703,7 @@ export default function Admin() {
   });
 
   const { data: limitsData, refetch: refetchLimits } = useQuery<{
-    dailyTotal: number; dailyLimit: number; dailyRemaining: number; isDailyLimitReached: boolean;
+    dailyTotal: number; dailyLimit: number; dailyRemaining: number; isDailyLimitReached: boolean; caixaBalance: number;
   }>({
     queryKey: ["/api/limits"],
     refetchInterval: 30 * 1000,
@@ -8822,7 +8822,7 @@ function AnalisesTab() {
 function DecisaoTab() {
   const [aporte, setAporte] = useState("");
   const [odd, setOdd] = useState("");
-  const [caixa, setCaixa] = useState("50000");
+  const [caixa, setCaixa] = useState("");
   const [feCorrelacaoBilhetes, setFeCorrelacaoBilhetes] = useState(false);
   const [feAltaCorrelacao, setFeAltaCorrelacao] = useState(false);
   const [feExposicao6, setFeExposicao6] = useState(false);
@@ -8832,6 +8832,11 @@ function DecisaoTab() {
   const [selectedBetId, setSelectedBetId] = useState<string | null>(null);
   const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
   const [expandedDefensaId, setExpandedDefensaId] = useState<string | null>(null);
+
+  const { data: limitsDecisao } = useQuery<{ caixaBalance: number }>({
+    queryKey: ["/api/limits"],
+    staleTime: 30_000,
+  });
 
   const { data: pendingBets = [], refetch: refetchPendingBets, isFetching: isFetchingBets } = useQuery<BetSlipType[]>({
     queryKey: ["/api/admin/bets", "pending-decisao"],
@@ -8847,6 +8852,7 @@ function DecisaoTab() {
 
   const [autoAnalyzed, setAutoAnalyzed] = useState(false);
   const [caixaIsSnapshot, setCaixaIsSnapshot] = useState(false);
+  const [caixaIsCurrent, setCaixaIsCurrent] = useState(false);
 
   const handleSelectBet = (bet: BetSlipType) => {
     setSelectedBetId(bet.id);
@@ -8855,8 +8861,15 @@ function DecisaoTab() {
     if ((bet as any).caixaSnapshot != null) {
       setCaixa(String(Math.round((bet as any).caixaSnapshot * 100) / 100));
       setCaixaIsSnapshot(true);
-    } else {
+      setCaixaIsCurrent(false);
+    } else if (limitsDecisao?.caixaBalance != null) {
+      setCaixa(String(Math.round(limitsDecisao.caixaBalance * 100) / 100));
       setCaixaIsSnapshot(false);
+      setCaixaIsCurrent(true);
+    } else {
+      setCaixa("");
+      setCaixaIsSnapshot(false);
+      setCaixaIsCurrent(false);
     }
   };
 
@@ -9260,19 +9273,28 @@ function DecisaoTab() {
                     {caixaIsSnapshot && (
                       <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded px-1.5 py-0.5">
                         <History className="w-3 h-3" />
-                        snapshot
+                        snapshot do bilhete
+                      </span>
+                    )}
+                    {caixaIsCurrent && !caixaIsSnapshot && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5">
+                        <RefreshCw className="w-3 h-3" />
+                        caixa atual
                       </span>
                     )}
                   </div>
                   <Input
                     value={caixa}
-                    onChange={(e) => { setCaixa(e.target.value); setCaixaIsSnapshot(false); }}
+                    onChange={(e) => { setCaixa(e.target.value); setCaixaIsSnapshot(false); setCaixaIsCurrent(false); }}
                     placeholder="Ex: 50000"
                     data-testid="input-decisao-caixa"
-                    className={caixaIsSnapshot ? "border-emerald-500/40 bg-emerald-500/5" : ""}
+                    className={caixaIsSnapshot ? "border-emerald-500/40 bg-emerald-500/5" : caixaIsCurrent ? "border-amber-500/40 bg-amber-500/5" : ""}
                   />
                   {caixaIsSnapshot && (
                     <p className="text-[10px] text-emerald-400/70">Caixa líquido no momento da aposta</p>
+                  )}
+                  {caixaIsCurrent && !caixaIsSnapshot && (
+                    <p className="text-[10px] text-amber-400/70">Sem snapshot — usando caixa atual</p>
                   )}
                 </div>
               </div>
