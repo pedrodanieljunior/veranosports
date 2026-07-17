@@ -176,6 +176,7 @@ export class DatabaseStorage implements IStorage {
       verified: result.verified,
       createdAt: result.createdAt.toISOString(),
       cashOutValue: result.cashOutValue ?? null,
+      caixaSnapshot: result.caixaSnapshot ?? null,
     };
   }
 
@@ -198,6 +199,7 @@ export class DatabaseStorage implements IStorage {
       bonusUsed,
       status: "pending",
       liveReactionSecs: (data as any).liveReactionSecs ?? null,
+      caixaSnapshot: (data as any)._caixaSnapshot ?? null,
     }).returning();
     
     return this.mapBetSlip(result);

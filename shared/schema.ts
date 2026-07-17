@@ -60,6 +60,7 @@ export const betSlipsTable = pgTable("bet_slips", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   cashOutValue: real("cash_out_value"),
   liveReactionSecs: integer("live_reaction_secs"),
+  caixaSnapshot: real("caixa_snapshot"),
 });
 
 export const sportSchema = z.object({
@@ -144,6 +145,7 @@ export const betSlipSchema = z.object({
   pixKey: z.string().optional().nullable(),
   createdAt: z.string(),
   cashOutValue: z.number().nullable().optional(),
+  caixaSnapshot: z.number().nullable().optional(),
 });
 
 export type BetSlip = z.infer<typeof betSlipSchema>;

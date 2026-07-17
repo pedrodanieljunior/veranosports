@@ -4333,7 +4333,7 @@ export async function registerRoutes(
       let betSlip;
       try {
         const _bonusUsed = (validatedData as any)._usedBonusAmt ?? 0;
-        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin, _bonusUsed, liveReactionSecs } as any);
+        betSlip = await storage.createBetSlip({ ...validatedData, verified: true, _totalOdds: totalOdds, _potentialWin: potentialWin, _bonusUsed, liveReactionSecs, _caixaSnapshot: caixaAtual } as any);
       } catch (createErr) {
         // Rollback: reembolsar saldo caso a criação do bilhete falhe
         if (sessionUserId) {

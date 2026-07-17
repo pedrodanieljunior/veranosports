@@ -101,6 +101,7 @@ import {
   Info,
   AlertOctagon,
   Siren,
+  History,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -8845,11 +8846,18 @@ function DecisaoTab() {
   });
 
   const [autoAnalyzed, setAutoAnalyzed] = useState(false);
+  const [caixaIsSnapshot, setCaixaIsSnapshot] = useState(false);
 
   const handleSelectBet = (bet: BetSlipType) => {
     setSelectedBetId(bet.id);
     setAporte(String(bet.stake ?? ""));
     setOdd(String(bet.totalOdds ?? ""));
+    if ((bet as any).caixaSnapshot != null) {
+      setCaixa(String(Math.round((bet as any).caixaSnapshot * 100) / 100));
+      setCaixaIsSnapshot(true);
+    } else {
+      setCaixaIsSnapshot(false);
+    }
   };
 
   const toggleExpand = (betId: string, e: React.MouseEvent) => {
@@ -9247,13 +9255,25 @@ function DecisaoTab() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">Caixa atual (R$)</label>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium">Caixa atual (R$)</label>
+                    {caixaIsSnapshot && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded px-1.5 py-0.5">
+                        <History className="w-3 h-3" />
+                        snapshot
+                      </span>
+                    )}
+                  </div>
                   <Input
                     value={caixa}
-                    onChange={(e) => setCaixa(e.target.value)}
+                    onChange={(e) => { setCaixa(e.target.value); setCaixaIsSnapshot(false); }}
                     placeholder="Ex: 50000"
                     data-testid="input-decisao-caixa"
+                    className={caixaIsSnapshot ? "border-emerald-500/40 bg-emerald-500/5" : ""}
                   />
+                  {caixaIsSnapshot && (
+                    <p className="text-[10px] text-emerald-400/70">Caixa líquido no momento da aposta</p>
+                  )}
                 </div>
               </div>
 
