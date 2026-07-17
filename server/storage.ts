@@ -187,7 +187,6 @@ export class DatabaseStorage implements IStorage {
     const totalOdds = (data as any)._totalOdds ?? data.selections.reduce((acc, sel) => acc * sel.odds, 1);
     const potentialWin = (data as any)._potentialWin ?? data.stake * totalOdds;
     const bonusUsed = (data as any)._bonusUsed ?? 0;
-    
     const [result] = await db.insert(betSlipsTable).values({
       id,
       sessionId: data.sessionId ?? null,
