@@ -1321,6 +1321,10 @@ export default function Admin() {
               <Brain className="w-4 h-4 mr-2 text-purple-400" />
               Análises
             </TabsTrigger>
+            <TabsTrigger value="decisao" data-testid="tab-decisao">
+              <Brain className="w-4 h-4 mr-2 text-blue-400" />
+              Decisão
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="limites">
@@ -3121,6 +3125,10 @@ export default function Admin() {
 
           <TabsContent value="analises">
             <AnalisesTab />
+          </TabsContent>
+
+          <TabsContent value="decisao">
+            <DecisaoTab />
           </TabsContent>
 
         </Tabs>
@@ -8806,6 +8814,577 @@ function AnalisesTab() {
         </CardContent>
       </Card>
 
+    </div>
+  );
+}
+
+function DecisaoTab() {
+  const [aporte, setAporte] = useState("");
+  const [odd, setOdd] = useState("");
+  const [caixa, setCaixa] = useState("50000");
+  const [feCorrelacaoBilhetes, setFeCorrelacaoBilhetes] = useState(false);
+  const [feAltaCorrelacao, setFeAltaCorrelacao] = useState(false);
+  const [feExposicao6, setFeExposicao6] = useState(false);
+  const [feExposicao10, setFeExposicao10] = useState(false);
+  const [feConcentracaoCliente, setFeConcentracaoCliente] = useState(false);
+  const [feBaixaRecuperacao, setFeBaixaRecuperacao] = useState(false);
+  const [selectedBetId, setSelectedBetId] = useState<string | null>(null);
+  const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
+  const [expandedDefensaId, setExpandedDefensaId] = useState<string | null>(null);
+
+  const { data: pendingBets = [], refetch: refetchPendingBets, isFetching: isFetchingBets } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/admin/bets", "pending-decisao"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/bets", { credentials: "include" });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json.filter((b: BetSlipType) => b.status === "pending") : [];
+    },
+    staleTime: 0,
+    refetchInterval: 30_000,
+  });
+
+  const [autoAnalyzed, setAutoAnalyzed] = useState(false);
+
+  const handleSelectBet = (bet: BetSlipType) => {
+    setSelectedBetId(bet.id);
+    setAporte(String(bet.stake ?? ""));
+    setOdd(String(bet.totalOdds ?? ""));
+  };
+
+  const toggleExpand = (betId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedBetId(prev => prev === betId ? null : betId);
+  };
+
+  const clearFE = () => {
+    setFeCorrelacaoBilhetes(false);
+    setFeAltaCorrelacao(false);
+    setFeExposicao6(false);
+    setFeExposicao10(false);
+    setFeConcentracaoCliente(false);
+    setFeBaixaRecuperacao(false);
+    setAutoAnalyzed(false);
+  };
+
+  useEffect(() => {
+    if (!selectedBetId || pendingBets.length === 0) return;
+    const selectedBet = pendingBets.find(b => b.id === selectedBetId);
+    if (!selectedBet) return;
+
+    const sels: any[] = Array.isArray(selectedBet.selections) ? selectedBet.selections : [];
+    const selectedGameIds = new Set(sels.map((s: any) => s.gameId).filter(Boolean));
+
+    const correlatedBets = pendingBets.filter(b => {
+      if (b.id === selectedBetId) return false;
+      const otherSels: any[] = Array.isArray(b.selections) ? b.selections : [];
+      return otherSels.some((s: any) => selectedGameIds.size > 0 && selectedGameIds.has(s.gameId));
+    });
+
+    const cN = parseFloat(caixa.replace(",", ".")) || 0;
+
+    const totalEventExposure = pendingBets
+      .filter(b => {
+        const bSels: any[] = Array.isArray(b.selections) ? b.selections : [];
+        return bSels.some((s: any) => selectedGameIds.size > 0 && selectedGameIds.has(s.gameId));
+      })
+      .reduce((sum, b) => {
+        const ll = Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0));
+        return sum + ll;
+      }, 0);
+
+    const exposurePct = cN > 0 ? (totalEventExposure / cN) * 100 : 0;
+
+    const allActiveLucro = pendingBets.reduce((sum, b) => {
+      return sum + Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0));
+    }, 0);
+    const betLucro = Math.max(0, (selectedBet.stake ?? 0) * (selectedBet.totalOdds ?? 1) - (selectedBet.stake ?? 0));
+    const clientConcentration = allActiveLucro > 0 ? betLucro / allActiveLucro : 0;
+
+    const otherBetsCount = pendingBets.filter(b => b.id !== selectedBetId).length;
+
+    setFeCorrelacaoBilhetes(correlatedBets.length >= 1);
+    setFeAltaCorrelacao(correlatedBets.length >= 2);
+    setFeExposicao6(exposurePct > 6);
+    setFeExposicao10(exposurePct > 10);
+    setFeConcentracaoCliente(clientConcentration > 0.3);
+    setFeBaixaRecuperacao(otherBetsCount < 5);
+    setAutoAnalyzed(true);
+  }, [selectedBetId, pendingBets, caixa]);
+
+  const aporteNum = parseFloat(aporte.replace(",", ".")) || 0;
+  const oddNum = parseFloat(odd.replace(",", ".")) || 0;
+  const caixaNum = parseFloat(caixa.replace(",", ".")) || 0;
+
+  const probabilidade = oddNum > 0 ? (1 / oddNum) * 100 : 0;
+
+  const getIP = (p: number): number => {
+    if (p <= 5) return 1;
+    if (p <= 10) return 2;
+    if (p <= 20) return 3;
+    if (p <= 35) return 4;
+    return 5;
+  };
+  const getIC = (imp: number): number => {
+    if (imp <= 1) return 1;
+    if (imp <= 3) return 2;
+    if (imp <= 6) return 3;
+    if (imp <= 10) return 4;
+    return 5;
+  };
+
+  const lucroLiquido = aporteNum > 0 && oddNum > 0 ? aporteNum * oddNum - aporteNum : 0;
+  const impactoPct = caixaNum > 0 && lucroLiquido > 0 ? (lucroLiquido / caixaNum) * 100 : 0;
+  const ip = oddNum > 0 ? getIP(probabilidade) : 0;
+  const ic = lucroLiquido > 0 && caixaNum > 0 ? getIC(impactoPct) : 0;
+  const ifaBasico = ip * ic;
+
+  const feRaw =
+    (feCorrelacaoBilhetes ? 1 : 0) +
+    (feAltaCorrelacao ? 2 : 0) +
+    (feExposicao6 ? 1 : 0) +
+    (feExposicao10 ? 2 : 0) +
+    (feConcentracaoCliente ? 1 : 0) +
+    (feBaixaRecuperacao ? 1 : 0);
+  const fe = Math.min(feRaw, 5);
+  const ifaFinal = ip > 0 && ic > 0 ? Math.min(ifaBasico + fe, 25) : 0;
+
+  const ipLabels = ["", "IP1 — Muito baixa (≤5%)", "IP2 — Baixa (5–10%)", "IP3 — Média (10–20%)", "IP4 — Alta (20–35%)", "IP5 — Muito alta (>35%)"];
+  const icLabels = ["", "IC1 — Irrelevante (≤1%)", "IC2 — Baixo (1–3%)", "IC3 — Médio (3–6%)", "IC4 — Alto (6–10%)", "IC5 — Crítico (>10%)"];
+
+  const getAcao = (ifa: number) => {
+    if (ifa <= 4) return { label: "Não defender", color: "text-green-400", icon: <CheckCircle2 className="w-6 h-6" />, bg: "bg-green-500/10 border-green-500/30" };
+    if (ifa <= 8) return { label: "Deixar a variância atuar", color: "text-blue-400", icon: <Info className="w-6 h-6" />, bg: "bg-blue-500/10 border-blue-500/30" };
+    if (ifa <= 12) return { label: "Monitorar", color: "text-yellow-400", icon: <AlertCircle className="w-6 h-6" />, bg: "bg-yellow-500/10 border-yellow-500/30" };
+    if (ifa <= 16) return { label: "Avaliar hedge", color: "text-orange-400", icon: <AlertTriangle className="w-6 h-6" />, bg: "bg-orange-500/10 border-orange-500/30" };
+    if (ifa <= 20) return { label: "Defender parcialmente", color: "text-red-400", icon: <AlertOctagon className="w-6 h-6" />, bg: "bg-red-500/10 border-red-500/30" };
+    return { label: "Defender integralmente", color: "text-red-500", icon: <Siren className="w-6 h-6" />, bg: "bg-red-600/15 border-red-500/40" };
+  };
+
+  const acao = ifaFinal > 0 ? getAcao(ifaFinal) : null;
+  const hasResult = aporteNum > 0 && oddNum > 0 && caixaNum > 0;
+
+  const betsNeedingDefense = useMemo(() => {
+    if (!pendingBets.length || caixaNum <= 0) return [];
+    const allLucro = pendingBets.reduce((sum, b) => sum + Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0)), 0);
+    return pendingBets
+      .map(bet => {
+        const o = bet.totalOdds ?? 1;
+        const s = bet.stake ?? 0;
+        const prob = o > 0 ? (1 / o) * 100 : 0;
+        const lucro = Math.max(0, s * o - s);
+        const impact = caixaNum > 0 ? (lucro / caixaNum) * 100 : 0;
+        const ipB = getIP(prob);
+        const icB = getIC(impact);
+        const ifaB = ipB * icB;
+
+        const sels: any[] = Array.isArray(bet.selections) ? bet.selections : [];
+        const gameIds = new Set(sels.map((s: any) => s.gameId).filter(Boolean));
+        const correlatedCount = pendingBets.filter(b => {
+          if (b.id === bet.id) return false;
+          return (Array.isArray(b.selections) ? b.selections : []).some((s: any) => gameIds.has(s.gameId));
+        }).length;
+        const eventExposure = pendingBets
+          .filter(b => (Array.isArray(b.selections) ? b.selections : []).some((s: any) => gameIds.has(s.gameId)))
+          .reduce((sum, b) => sum + Math.max(0, (b.stake ?? 0) * (b.totalOdds ?? 1) - (b.stake ?? 0)), 0);
+        const expPct = caixaNum > 0 ? (eventExposure / caixaNum) * 100 : 0;
+        const clientConc = allLucro > 0 ? lucro / allLucro : 0;
+        const otherCount = pendingBets.filter(b => b.id !== bet.id).length;
+
+        const feRawB =
+          (correlatedCount >= 1 ? 1 : 0) +
+          (correlatedCount >= 2 ? 2 : 0) +
+          (expPct > 6 ? 1 : 0) +
+          (expPct > 10 ? 2 : 0) +
+          (clientConc > 0.3 ? 1 : 0) +
+          (otherCount < 5 ? 1 : 0);
+        const feB = Math.min(feRawB, 5);
+        const ifaTotal = Math.min(ifaB + feB, 25);
+
+        return { bet, ifa: ifaTotal, acao: getAcao(ifaTotal) };
+      })
+      .filter(({ ifa }) => ifa >= 17)
+      .sort((a, b) => b.ifa - a.ifa);
+  }, [pendingBets, caixaNum]);
+
+  const scaleRows = [
+    { range: "1–4", lo: 1, hi: 4, label: "Não defender", color: "bg-green-500" },
+    { range: "5–8", lo: 5, hi: 8, label: "Deixar a variância atuar", color: "bg-blue-500" },
+    { range: "9–12", lo: 9, hi: 12, label: "Monitorar", color: "bg-yellow-500" },
+    { range: "13–16", lo: 13, hi: 16, label: "Avaliar hedge", color: "bg-orange-500" },
+    { range: "17–20", lo: 17, hi: 20, label: "Defender parcialmente", color: "bg-red-400" },
+    { range: "21–25", lo: 21, hi: 25, label: "Defender integralmente", color: "bg-red-600" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Shield className="w-5 h-5 text-red-400" />
+              Bilhetes para Defender
+              {betsNeedingDefense.length > 0 && (
+                <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-xs">
+                  {betsNeedingDefense.length}
+                </Badge>
+              )}
+            </CardTitle>
+            <span className="text-[11px] text-muted-foreground">Caixa base: R$ {caixaNum.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Bilhetes pendentes com IFA ≥ 17 calculado automaticamente. Ajuste o caixa no motor de decisão abaixo.</p>
+        </CardHeader>
+        <CardContent>
+          {caixaNum <= 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground gap-2">
+              <Calculator className="w-10 h-10 opacity-20" />
+              <p className="text-sm">Informe o caixa atual no motor de decisão abaixo para calcular automaticamente.</p>
+            </div>
+          ) : betsNeedingDefense.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground gap-2">
+              <CheckCircle2 className="w-10 h-10 text-green-500 opacity-40" />
+              <p className="text-sm font-medium text-green-400">Nenhum bilhete requer defesa no momento</p>
+              <p className="text-xs">Todos os bilhetes pendentes têm IFA abaixo de 17.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {betsNeedingDefense.map(({ bet, ifa, acao: betAcao }) => {
+                const isExpanded = expandedDefensaId === bet.id;
+                const sels: any[] = Array.isArray(bet.selections) ? bet.selections : [];
+                const isIntegral = ifa > 20;
+                return (
+                  <div
+                    key={bet.id}
+                    className={`rounded-lg border transition-colors ${
+                      isIntegral
+                        ? "border-red-500/40 bg-red-600/10"
+                        : "border-red-400/30 bg-red-500/8"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 px-3 py-2.5">
+                      <div className={`shrink-0 w-10 h-10 rounded-lg flex flex-col items-center justify-center ${isIntegral ? "bg-red-600/30 border border-red-500/40" : "bg-red-400/20 border border-red-400/30"}`}>
+                        <span className={`text-[10px] font-medium opacity-70 leading-none ${isIntegral ? "text-red-300" : "text-red-400"}`}>IFA</span>
+                        <span className={`text-base font-black leading-tight ${isIntegral ? "text-red-300" : "text-red-400"}`}>{ifa}</span>
+                      </div>
+                      <button onClick={() => handleSelectBet(bet)} className="flex-1 text-left px-3 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-sm text-foreground">#{(bet.id ?? "").slice(0, 8).toUpperCase()}</span>
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isIntegral ? "bg-red-600/30 text-red-300" : "bg-red-400/20 text-red-400"}`}>{betAcao.label}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                          <span>R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                          <span>Odds {fmtOdds(bet.totalOdds)}x</span>
+                          <span>Retorno R$ {(bet.potentialWin ?? 0).toFixed(2).replace(".", ",")}</span>
+                          {sels.length > 0 && <span>{sels.length} seleç{sels.length === 1 ? "ão" : "ões"}</span>}
+                        </div>
+                      </button>
+                      {sels.length > 0 && (
+                        <button onClick={() => setExpandedDefensaId(prev => prev === bet.id ? null : bet.id)} className="px-2 py-2 text-muted-foreground hover:text-foreground transition-colors shrink-0" data-testid={`button-expand-defensa-decisao-${bet.id}`}>
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                    </div>
+                    {isExpanded && sels.length > 0 && (
+                      <div className="mx-3 mb-3 space-y-0">
+                        {sels.map((sel: any, idx: number) => (
+                          <div key={sel.id ?? idx} className="flex gap-2">
+                            <div className="flex flex-col items-center w-4 shrink-0 pt-1">
+                              <div className={`w-2 h-2 rounded-full shrink-0 ${isIntegral ? "bg-red-400" : "bg-red-400/70"}`} />
+                              {idx < sels.length - 1 && <div className="w-px flex-1 mt-0.5 bg-red-500/30" style={{ minHeight: "20px" }} />}
+                            </div>
+                            <div className="flex-1 mb-1.5 rounded px-2.5 py-2 text-[11px] bg-red-500/10 border border-red-500/20">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-semibold leading-tight text-red-200">{sel.outcomeName ?? sel.outcome ?? sel.market ?? "—"}</p>
+                                  <p className="text-muted-foreground text-[10px] mt-0.5 truncate">
+                                    {[sel.homeTeam ?? sel.team, sel.awayTeam].filter(Boolean).join(" x ")}
+                                    {sel.marketKey && <span className="ml-1 opacity-60">· {sel.marketKey}</span>}
+                                  </p>
+                                </div>
+                                <span className="font-bold text-xs shrink-0 text-red-300">{fmtOdds(sel.odds)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="ml-6 rounded px-2.5 py-1.5 text-[11px] flex justify-between items-center bg-red-500/15 border border-red-500/30">
+                          <span className="text-muted-foreground">{sels.length} seleç{sels.length === 1 ? "ão" : "ões"} · odd total</span>
+                          <span className="font-bold text-red-300">{fmtOdds(bet.totalOdds)}x</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Brain className="w-5 h-5 text-blue-400" />
+            Motor de Decisão
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Preencher a partir de bilhete pendente
+                    {pendingBets.length > 0 && <span className="ml-1.5 text-muted-foreground/60">({pendingBets.length})</span>}
+                  </label>
+                  <button
+                    onClick={() => refetchPendingBets()}
+                    disabled={isFetchingBets}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                    data-testid="button-refresh-pending-bets-decisao"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isFetchingBets ? "animate-spin" : ""}`} />
+                    Atualizar
+                  </button>
+                </div>
+              {pendingBets.length > 0 && (
+                  <ScrollArea className="h-56 rounded border border-border">
+                    <div className="p-1 space-y-1">
+                      {pendingBets.slice(0, 30).map(bet => {
+                        const isSelected = selectedBetId === bet.id;
+                        const isExpanded = expandedBetId === bet.id;
+                        const sels: any[] = Array.isArray(bet.selections) ? bet.selections : [];
+                        return (
+                          <div
+                            key={bet.id}
+                            className={`rounded border transition-colors ${
+                              isSelected
+                                ? "bg-blue-500/20 border-blue-500/40"
+                                : "border-transparent hover:border-border hover:bg-muted/40"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleSelectBet(bet)}
+                                className={`flex-1 text-left px-3 py-2 text-xs transition-colors ${isSelected ? "text-blue-300" : "text-muted-foreground hover:text-foreground"}`}
+                                data-testid={`button-select-bet-decisao-${bet.id}`}
+                              >
+                                <span className="font-mono font-semibold">#{(bet.id ?? "").slice(0, 8).toUpperCase()}</span>
+                                <span className="ml-2">R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                                <span className={`ml-2 ${isSelected ? "text-blue-400" : "text-muted-foreground"}`}>Odds {fmtOdds(bet.totalOdds)}x</span>
+                                {sels.length > 0 && (
+                                  <span className={`ml-2 text-[10px] ${isSelected ? "text-blue-400/70" : "text-muted-foreground/60"}`}>{sels.length} seleç{sels.length === 1 ? "ão" : "ões"}</span>
+                                )}
+                              </button>
+                              {sels.length > 0 && (
+                                <button
+                                  onClick={(e) => toggleExpand(bet.id, e)}
+                                  className={`px-2 py-2 transition-colors ${isSelected ? "text-blue-400 hover:text-blue-300" : "text-muted-foreground hover:text-foreground"}`}
+                                  data-testid={`button-expand-bet-decisao-${bet.id}`}
+                                >
+                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
+                            </div>
+                            {isExpanded && sels.length > 0 && (
+                              <div className="mx-2 mb-2 space-y-0">
+                                {sels.map((sel: any, idx: number) => (
+                                  <div key={sel.id ?? idx} className="flex gap-2">
+                                    <div className="flex flex-col items-center w-4 shrink-0 pt-1">
+                                      <div className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? "bg-blue-400" : "bg-muted-foreground/50"}`} />
+                                      {idx < sels.length - 1 && (
+                                        <div className={`w-px flex-1 mt-0.5 ${isSelected ? "bg-blue-500/40" : "bg-border"}`} style={{ minHeight: "20px" }} />
+                                      )}
+                                    </div>
+                                    <div className={`flex-1 mb-1.5 rounded px-2.5 py-2 text-[11px] ${isSelected ? "bg-blue-500/10 border border-blue-500/20" : "bg-muted/30 border border-border/60"}`}>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                          <p className={`font-semibold leading-tight ${isSelected ? "text-blue-200" : "text-foreground"}`}>
+                                            {sel.outcomeName ?? sel.outcome ?? sel.market ?? "—"}
+                                          </p>
+                                          <p className="text-muted-foreground text-[10px] mt-0.5 truncate">
+                                            {[sel.homeTeam ?? sel.team, sel.awayTeam].filter(Boolean).join(" x ")}
+                                            {sel.marketKey && <span className="ml-1 opacity-60">· {sel.marketKey}</span>}
+                                          </p>
+                                        </div>
+                                        <span className={`font-bold text-xs shrink-0 ${isSelected ? "text-blue-300" : "text-foreground"}`}>
+                                          {fmtOdds(sel.odds)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                <div className={`ml-6 rounded px-2.5 py-1.5 text-[11px] flex justify-between items-center ${isSelected ? "bg-blue-500/15 border border-blue-500/30" : "bg-muted/50 border border-border"}`}>
+                                  <span className="text-muted-foreground">{sels.length} seleç{sels.length === 1 ? "ão" : "ões"} · odd total</span>
+                                  <span className={`font-bold ${isSelected ? "text-blue-300" : "text-foreground"}`}>{fmtOdds(bet.totalOdds)}x</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+              )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Aporte (R$)</label>
+                  <Input
+                    value={aporte}
+                    onChange={(e) => { setAporte(e.target.value); setSelectedBetId(null); }}
+                    placeholder="Ex: 200"
+                    data-testid="input-decisao-aporte"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Odd Verano</label>
+                  <Input
+                    value={odd}
+                    onChange={(e) => { setOdd(e.target.value); setSelectedBetId(null); }}
+                    placeholder="Ex: 9.38"
+                    data-testid="input-decisao-odd"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Caixa atual (R$)</label>
+                  <Input
+                    value={caixa}
+                    onChange={(e) => setCaixa(e.target.value)}
+                    placeholder="Ex: 50000"
+                    data-testid="input-decisao-caixa"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
+                    Fator de Exposição (FE) — agravantes operacionais
+                  </label>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {autoAnalyzed && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 rounded px-1.5 py-0.5">
+                        <Brain className="w-3 h-3" />
+                        Auto
+                      </span>
+                    )}
+                    {(feCorrelacaoBilhetes || feAltaCorrelacao || feExposicao6 || feExposicao10 || feConcentracaoCliente || feBaixaRecuperacao) && (
+                      <button
+                        onClick={clearFE}
+                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-border divide-y divide-border/60">
+                  {[
+                    { state: feCorrelacaoBilhetes, setter: setFeCorrelacaoBilhetes, label: "Correlação de bilhetes", desc: "Há outro bilhete dependente do mesmo resultado", pts: "+1" },
+                    { state: feAltaCorrelacao, setter: setFeAltaCorrelacao, label: "Alta correlação", desc: "Dois ou mais bilhetes podem vencer juntos", pts: "+2" },
+                    { state: feExposicao6, setter: setFeExposicao6, label: "Exposição por evento >6%", desc: "Soma do lucro líquido do evento supera 6% do caixa", pts: "+1" },
+                    { state: feExposicao10, setter: setFeExposicao10, label: "Exposição crítica >10%", desc: "Soma do lucro líquido do evento supera 10% do caixa", pts: "+2" },
+                    { state: feConcentracaoCliente, setter: setFeConcentracaoCliente, label: "Concentração de cliente", desc: "Cliente representa parcela muito alta da exposição ativa", pts: "+1" },
+                    { state: feBaixaRecuperacao, setter: setFeBaixaRecuperacao, label: "Baixa recuperação", desc: "Pouco volume de outros clientes para repor eventual perda", pts: "+1" },
+                  ].map(({ state, setter, label, desc, pts }) => (
+                    <label
+                      key={label}
+                      className={`flex items-start gap-3 cursor-pointer px-3 py-2.5 transition-colors ${state ? "bg-cyan-500/8" : "hover:bg-muted/30"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={state}
+                        onChange={(e) => setter(e.target.checked)}
+                        className="mt-0.5 accent-cyan-400 w-4 h-4 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{label}</span>
+                          <span className="text-xs font-bold text-cyan-400">{pts}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <div className="flex justify-between items-center px-3 py-2 bg-muted/20">
+                    <span className="text-xs text-muted-foreground">FE total (máx. 5)</span>
+                    <Badge className={`${fe > 0 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-muted/60 text-muted-foreground border-border"}`}>
+                      FE = {feRaw > 5 ? `${feRaw} → limitado a 5` : fe}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {!hasResult ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-center py-16 text-muted-foreground">
+                  <Calculator className="w-14 h-14 opacity-15" />
+                  <p className="text-sm leading-relaxed">Preencha o aporte, a odd e o caixa<br />para ver a análise completa.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-lg border border-border divide-y divide-border text-sm overflow-hidden">
+                    {[
+                      { label: "1. Probabilidade implícita", value: `${probabilidade.toFixed(2)}%`, detail: `P = 1 ÷ ${oddNum.toFixed(2)} × 100`, hi: false, final: false },
+                      { label: "2. Peso de probabilidade", value: `IP = ${ip}`, detail: ipLabels[ip] ?? "", hi: true, final: false },
+                      { label: "3. Lucro líquido", value: `R$ ${lucroLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, detail: `${aporteNum.toFixed(2)} × ${oddNum.toFixed(2)} − ${aporteNum.toFixed(2)}`, hi: false, final: false },
+                      { label: "4. Impacto no caixa", value: `${impactoPct.toFixed(2)}%`, detail: `${lucroLiquido.toFixed(2)} ÷ ${caixaNum.toFixed(2)} × 100`, hi: false, final: false },
+                      { label: "5. Peso de impacto", value: `IC = ${ic}`, detail: icLabels[ic] ?? "", hi: true, final: false },
+                      { label: "6. IFA básico", value: `IFA = ${ifaBasico}`, detail: `IP ${ip} × IC ${ic}`, hi: true, final: false },
+                      ...(fe > 0 ? [{ label: "7. Fator de Exposição", value: `FE = ${fe}`, detail: feRaw > 5 ? `${feRaw} pts → limitado a 5` : "soma dos agravantes marcados", hi: true, final: false }] : []),
+                      { label: `${fe > 0 ? "8" : "7"}. IFA Final`, value: `${ifaFinal}`, detail: fe > 0 ? `min(${ifaBasico} + ${fe}, 25)` : "IFA básico (sem agravantes)", hi: true, final: true },
+                    ].map((row) => (
+                      <div key={row.label} className={`flex items-center justify-between px-3 py-2.5 gap-3 ${row.final ? "bg-muted/40" : ""}`}>
+                        <div className="min-w-0">
+                          <p className={row.hi ? "font-medium" : "text-muted-foreground"}>{row.label}</p>
+                          {row.detail && <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{row.detail}</p>}
+                        </div>
+                        <span className={`font-bold shrink-0 ${row.final ? "text-2xl" : ""}`}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {acao && (
+                    <div className={`rounded-xl border p-4 ${acao.bg}`}>
+                      <div className={`flex items-center gap-3 ${acao.color}`}>
+                        {acao.icon}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] uppercase tracking-wider opacity-60 font-medium">Ação recomendada</p>
+                          <p className="text-xl font-bold">{acao.label}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[11px] opacity-60">IFA_Final</p>
+                          <p className="text-4xl font-black">{ifaFinal}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <div className="px-3 py-2 bg-muted/20 border-b border-border">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tabela de referência</p>
+                    </div>
+                    {scaleRows.map(({ range, lo, hi, label, color }) => {
+                      const active = ifaFinal >= lo && ifaFinal <= hi;
+                      return (
+                        <div key={range} className={`flex items-center gap-3 px-3 py-2 border-b border-border/50 last:border-b-0 ${active ? "bg-muted/50" : ""}`}>
+                          <div className={`w-2.5 h-2.5 rounded-full ${color} shrink-0`} />
+                          <span className="text-xs text-muted-foreground w-10 shrink-0 font-mono">{range}</span>
+                          <span className={`text-xs flex-1 ${active ? "font-bold text-foreground" : "text-muted-foreground"}`}>{label}</span>
+                          {active && <Badge className="text-[10px] bg-white/10 border-white/20 text-white/70">← atual</Badge>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
