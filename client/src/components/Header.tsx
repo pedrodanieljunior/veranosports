@@ -2,7 +2,6 @@ import { History, Receipt, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { NotificationPanel } from "@/components/NotificationPanel";
-import veranoLogo from "@assets/verano-logo-transparent.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
 
 interface HeaderProps {
@@ -30,9 +29,12 @@ export function Header({
     <header className="sticky top-0 z-50 overflow-hidden" style={{ backgroundImage: `url(${headerBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <div className="flex items-center justify-between px-4 py-3" style={{ position: "relative", zIndex: 1 }}>
         <div className="flex items-center">
-          <img
-            src={veranoLogo}
-            alt="Verano Sports"
+          <video
+            src="/verano-logo.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
             className="h-14 w-auto object-contain drop-shadow-lg"
             data-testid="img-logo"
           />
