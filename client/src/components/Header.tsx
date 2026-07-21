@@ -29,17 +29,13 @@ export function Header({
     <header className="sticky top-0 z-50 overflow-hidden" style={{ backgroundImage: `url(${headerBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <div className="flex items-center justify-between px-4 py-3" style={{ position: "relative", zIndex: 1 }}>
         <div className="flex items-center">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="h-14 w-auto object-contain drop-shadow-lg"
+          <img
+            src="/verano-logo-animated.webp"
+            alt="Verano Sports"
+            className="h-20 w-auto object-contain"
+            style={{ mixBlendMode: "screen" }}
             data-testid="img-logo"
-          >
-            <source src="/verano-logo.mp4" type="video/mp4" />
-          </video>
+          />
         </div>
 
         <div className="flex items-center gap-2">
