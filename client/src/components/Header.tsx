@@ -2,6 +2,7 @@ import { History, Receipt, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { NotificationPanel } from "@/components/NotificationPanel";
+import veranoLogo from "@assets/verano-logo-transparent.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
 
 interface HeaderProps {
@@ -30,10 +31,9 @@ export function Header({
       <div className="flex items-center justify-between px-4 py-3" style={{ position: "relative", zIndex: 1 }}>
         <div className="flex items-center">
           <img
-            src="/verano-logo-animated.webp"
+            src={veranoLogo}
             alt="Verano Sports"
-            className="h-20 w-auto object-contain"
-            style={{ mixBlendMode: "screen" }}
+            className="h-14 w-auto object-contain drop-shadow-lg"
             data-testid="img-logo"
           />
         </div>
