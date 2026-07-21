@@ -30,14 +30,16 @@ export function Header({
       <div className="flex items-center justify-between px-4 py-3" style={{ position: "relative", zIndex: 1 }}>
         <div className="flex items-center">
           <video
-            src="/verano-logo.mp4"
             autoPlay
             loop
             muted
             playsInline
+            preload="auto"
             className="h-14 w-auto object-contain drop-shadow-lg"
             data-testid="img-logo"
-          />
+          >
+            <source src="/verano-logo.mp4" type="video/mp4" />
+          </video>
         </div>
 
         <div className="flex items-center gap-2">
