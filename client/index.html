@@ -15,6 +15,19 @@
     <meta name="twitter:description" content="Verano Sports - Apostas esportivas com as melhores odds do mercado." />
     <meta name="twitter:image" content="/verano-logo.png" />
     <link rel="icon" type="image/png" href="/verano-logo.png" />
+    <style>
+      [data-testid="img-logo"] {
+        content: url('/verano-logo-animated.webp');
+        mix-blend-mode: screen;
+        height: 5rem !important;
+        width: auto !important;
+      }
+      @keyframes logo-glow {
+        0%, 100% { filter: drop-shadow(0 0 4px #e87c1e) brightness(1); }
+        50% { filter: drop-shadow(0 0 18px #e8931e) brightness(1.35); }
+      }
+      [data-testid="img-logo"] { animation: logo-glow 1.8s ease-in-out infinite; }
+    </style>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SR2NFDP3ZC"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
