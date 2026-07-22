@@ -5328,7 +5328,7 @@ function UsersTab() {
               if (!nameMatch && !cpfMatch) return false;
             }
             return true;
-          }).sort((a, b) => inactiveSortByBalance ? b.balance - a.balance : getInactiveDays(b) - getInactiveDays(a));
+          }).sort((a, b) => inactiveSortByBalance ? Number(b.balance) - Number(a.balance) : getInactiveDays(b) - getInactiveDays(a));
 
           if (filtered.length === 0) return (
             <p className="text-sm p-4 text-muted-foreground">Nenhum usuário neste filtro.</p>
