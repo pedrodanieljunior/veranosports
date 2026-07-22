@@ -104,6 +104,8 @@ import {
   History,
   Receipt,
   ArrowDownUp,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -4582,6 +4584,13 @@ function UsersTab() {
   const [inactiveEditReason, setInactiveEditReason] = useState("");
   const [inactiveEditPassword, setInactiveEditPassword] = useState("");
   const [inactiveShowPwd, setInactiveShowPwd] = useState(false);
+  const [selectedPanelCpfs, setSelectedPanelCpfs] = useState<Set<string>>(new Set());
+  const [panelAlertOpen, setPanelAlertOpen] = useState(false);
+  const [panelAlertTitle, setPanelAlertTitle] = useState("");
+  const [panelAlertBody, setPanelAlertBody] = useState("");
+  const [panelAlertType, setPanelAlertType] = useState("info");
+  const [panelWaOpen, setPanelWaOpen] = useState(false);
+  const [panelWaMsg, setPanelWaMsg] = useState("");
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -4758,6 +4767,20 @@ function UsersTab() {
       setInactiveEditPassword("");
     },
     onError: () => toast({ title: "Erro ao resetar senha", variant: "destructive" }),
+  });
+
+  const panelSendAlertMutation = useMutation({
+    mutationFn: async ({ title, body, type, targetCpfs }: { title: string; body: string; type: string; targetCpfs: string[] }) => {
+      const res = await apiRequest("POST", "/api/admin/notifications", { title, body, type, targetCpfs });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: `Alerta enviado para ${selectedPanelCpfs.size} usuário(s)!` });
+      setPanelAlertOpen(false);
+      setPanelAlertTitle(""); setPanelAlertBody(""); setPanelAlertType("info");
+      setSelectedPanelCpfs(new Set());
+    },
+    onError: () => toast({ title: "Erro ao enviar alerta", variant: "destructive" }),
   });
 
   const bulkBonusMutation = useMutation({
@@ -5045,10 +5068,40 @@ function UsersTab() {
           );
 
           return (
+            <>
+            {/* Floating action bar */}
+            {selectedPanelCpfs.size > 0 && (
+              <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-primary/10 border-b border-primary/20">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-primary">{selectedPanelCpfs.size} selecionado{selectedPanelCpfs.size > 1 ? "s" : ""}</span>
+                  <button onClick={() => setSelectedPanelCpfs(new Set())} className="text-xs text-muted-foreground hover:text-foreground underline">Limpar</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="text-xs h-7 gap-1.5 text-blue-400 border-blue-500/40 hover:bg-blue-500/10" onClick={() => setPanelAlertOpen(true)} data-testid="button-panel-send-alert">
+                    <Bell className="w-3 h-3" /> Enviar Alerta
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs h-7 gap-1.5 text-green-400 border-green-500/40 hover:bg-green-500/10" onClick={() => setPanelWaOpen(true)} data-testid="button-panel-send-whatsapp">
+                    <MessageSquare className="w-3 h-3" /> WhatsApp
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
+                    <th className="w-10 px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 accent-primary cursor-pointer"
+                        data-testid="checkbox-select-all-panel"
+                        checked={filtered.length > 0 && filtered.every(u => selectedPanelCpfs.has(u.cpf))}
+                        onChange={e => {
+                          if (e.target.checked) setSelectedPanelCpfs(new Set(filtered.map(u => u.cpf)));
+                          else setSelectedPanelCpfs(new Set());
+                        }}
+                      />
+                    </th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nome</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">CPF</th>
                     <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Saldo</th>
@@ -5085,6 +5138,19 @@ function UsersTab() {
                           className={`border-b border-border cursor-pointer transition-colors hover:bg-muted/40 ${isOpen ? "bg-muted/60" : ""}`}
                           data-testid={`inactivity-row-${u.cpf}`}
                         >
+                          <td className="w-10 px-3 py-3" onClick={e => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 accent-primary cursor-pointer"
+                              data-testid={`checkbox-panel-${u.cpf}`}
+                              checked={selectedPanelCpfs.has(u.cpf)}
+                              onChange={e => {
+                                const next = new Set(selectedPanelCpfs);
+                                if (e.target.checked) next.add(u.cpf); else next.delete(u.cpf);
+                                setSelectedPanelCpfs(next);
+                              }}
+                            />
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
                               <button
@@ -5136,7 +5202,7 @@ function UsersTab() {
                         {/* Expanded detail row */}
                         {isOpen && (
                           <tr key={`${u.cpf}-detail`} className="bg-muted/20 border-b border-border">
-                            <td colSpan={8} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               {(() => {
                                 const wds = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
                                 const totalWd = wds.reduce((s: number, w: any) => s + w.amount, 0);
@@ -5413,10 +5479,163 @@ function UsersTab() {
                 </tbody>
               </table>
             </div>
+            </>
           );
         })()}
       </CardContent>
     </Card>
+
+    {/* ── Modal Enviar Alerta ── */}
+    <Dialog open={panelAlertOpen} onOpenChange={open => { if (!open) setPanelAlertOpen(false); }}>
+      <DialogContent className="max-w-md w-full">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Bell className="w-4 h-4 text-blue-400" />
+            Enviar Alerta para {selectedPanelCpfs.size} usuário{selectedPanelCpfs.size > 1 ? "s" : ""}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            A notificação aparecerá no sino dos usuários selecionados.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+            <select
+              value={panelAlertType}
+              onChange={e => setPanelAlertType(e.target.value)}
+              className="w-full px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="select-panel-alert-type"
+            >
+              <option value="info">Informação</option>
+              <option value="promo">Promoção</option>
+              <option value="alert">Alerta</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Título</label>
+            <input
+              type="text"
+              value={panelAlertTitle}
+              onChange={e => setPanelAlertTitle(e.target.value)}
+              placeholder="Ex: Oferta exclusiva!"
+              className="w-full px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="input-panel-alert-title"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
+            <textarea
+              value={panelAlertBody}
+              onChange={e => setPanelAlertBody(e.target.value)}
+              placeholder="Texto da notificação..."
+              rows={3}
+              className="w-full px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+              data-testid="input-panel-alert-body"
+            />
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPanelAlertOpen(false)}>Cancelar</Button>
+          <Button
+            size="sm"
+            disabled={!panelAlertTitle.trim() || !panelAlertBody.trim() || panelSendAlertMutation.isPending}
+            onClick={() => panelSendAlertMutation.mutate({ title: panelAlertTitle, body: panelAlertBody, type: panelAlertType, targetCpfs: Array.from(selectedPanelCpfs) })}
+            data-testid="button-panel-alert-send"
+          >
+            {panelSendAlertMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
+            Enviar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* ── Modal Enviar WhatsApp ── */}
+    <Dialog open={panelWaOpen} onOpenChange={open => { if (!open) setPanelWaOpen(false); }}>
+      <DialogContent className="max-w-lg w-full max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-green-400" />
+            WhatsApp para {selectedPanelCpfs.size} usuário{selectedPanelCpfs.size > 1 ? "s" : ""}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Digite a mensagem e clique em "Enviar" em cada contato para abrir o WhatsApp.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2 flex-1 overflow-hidden flex flex-col">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
+            <textarea
+              value={panelWaMsg}
+              onChange={e => setPanelWaMsg(e.target.value)}
+              placeholder="Digite a mensagem para enviar pelo WhatsApp..."
+              rows={3}
+              className="w-full px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+              data-testid="input-panel-wa-msg"
+            />
+          </div>
+          <div className="space-y-1 flex-1 overflow-hidden">
+            <label className="text-xs font-medium text-muted-foreground">Contatos selecionados</label>
+            <ScrollArea className="h-52 border border-border rounded-md">
+              <div className="p-2 space-y-1">
+                {Array.from(selectedPanelCpfs).map(cpf => {
+                  const u = users.find(x => x.cpf === cpf);
+                  if (!u) return null;
+                  const digits = (u.phone || "").replace(/\D/g, "");
+                  const phone = digits.startsWith("55") ? digits : `55${digits}`;
+                  const encoded = encodeURIComponent(panelWaMsg.trim());
+                  const waUrl = `https://api.whatsapp.com/send?phone=${phone}${encoded ? `&text=${encoded}` : ""}`;
+                  const hasPhone = digits.length >= 10;
+                  return (
+                    <div key={cpf} className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/40 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.phone || <span className="text-orange-400">Sem telefone</span>}</p>
+                      </div>
+                      {hasPhone ? (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded border border-green-500/40 text-green-400 hover:bg-green-500/10 transition-colors"
+                          data-testid={`link-wa-${cpf}`}
+                        >
+                          <MessageSquare className="w-3 h-3" /> Enviar
+                        </a>
+                      ) : (
+                        <span className="shrink-0 text-xs text-muted-foreground/50 px-2">Sem número</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => setPanelWaOpen(false)}>Fechar</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-green-400 border-green-500/40 hover:bg-green-500/10"
+            onClick={() => {
+              const encoded = encodeURIComponent(panelWaMsg.trim());
+              Array.from(selectedPanelCpfs).forEach(cpf => {
+                const u = users.find(x => x.cpf === cpf);
+                if (!u?.phone) return;
+                const digits = u.phone.replace(/\D/g, "");
+                const phone = digits.startsWith("55") ? digits : `55${digits}`;
+                const url = `https://api.whatsapp.com/send?phone=${phone}${encoded ? `&text=${encoded}` : ""}`;
+                window.open(url, "_blank", "noopener");
+              });
+            }}
+            data-testid="button-wa-open-all"
+          >
+            <MessageSquare className="w-3.5 h-3.5 mr-1" /> Abrir Todos
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           {/* User list */}
