@@ -4569,7 +4569,6 @@ function UsersTab() {
     enabled: !!historyUser,
   });
 
-  const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive7" | "inactive30" | "noDeposit">("all");
   const [inactiveFilter, setInactiveFilter] = useState<"all" | "active" | "inactive30" | "inactive60" | "noDeposit">("all");
   const [selectedInactiveUser, setSelectedInactiveUser] = useState<User | null>(null);
   const [inactiveBetsOpen, setInactiveBetsOpen] = useState(false);
@@ -4932,32 +4931,6 @@ function UsersTab() {
                   data-testid="input-search-users"
                 />
               </div>
-              {/* Filter chips */}
-              <div className="flex flex-wrap gap-1 mt-2">
-                {([
-                  { key: "all", label: "Todos", color: "bg-muted text-muted-foreground hover:bg-muted/80" },
-                  { key: "active", label: "Ativos", color: "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30" },
-                  { key: "inactive7", label: "Inativo +7d", color: "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/30" },
-                  { key: "inactive30", label: "Inativo +30d", color: "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30" },
-                  { key: "noDeposit", label: "Sem depósito", color: "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30" },
-                ] as const).map(f => {
-                  const count = f.key === "all" ? users.length
-                    : f.key === "active" ? users.filter(u => getInactiveDays(u) <= 7).length
-                    : f.key === "inactive7" ? users.filter(u => { const d = getInactiveDays(u); return d > 7 && d <= 30; }).length
-                    : f.key === "inactive30" ? users.filter(u => getInactiveDays(u) > 30).length
-                    : users.filter(u => hasNoDeposit(u)).length;
-                  return (
-                    <button
-                      key={f.key}
-                      onClick={() => setUserFilter(f.key)}
-                      data-testid={`filter-users-${f.key}`}
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${f.color} ${userFilter === f.key ? "ring-1 ring-white/30" : ""}`}
-                    >
-                      {f.label} <span className="opacity-70">({count})</span>
-                    </button>
-                  );
-                })}
-              </div>
             </CardHeader>
             <CardContent className="p-0">
               {usersLoading ? <p className="text-sm p-4 text-muted-foreground">Carregando...</p> : users.length === 0 ? (
@@ -4969,11 +4942,6 @@ function UsersTab() {
                     const filtered = users
                       .filter(u => {
                         if (q && !u.name.toLowerCase().includes(q) && !u.cpf.includes(q)) return false;
-                        const days = getInactiveDays(u);
-                        if (userFilter === "active") return days <= 7;
-                        if (userFilter === "inactive7") return days > 7 && days <= 30;
-                        if (userFilter === "inactive30") return days > 30;
-                        if (userFilter === "noDeposit") return hasNoDeposit(u);
                         return true;
                       })
                       .sort((a, b) => {
