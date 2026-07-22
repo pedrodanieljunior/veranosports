@@ -4574,6 +4574,12 @@ function UsersTab() {
   const [inactiveBetsOpen, setInactiveBetsOpen] = useState(false);
   const [inactiveBetsPage, setInactiveBetsPage] = useState(0);
   const [inactiveSearch, setInactiveSearch] = useState("");
+  const [inactiveEditOpen, setInactiveEditOpen] = useState(false);
+  const [inactiveEditBalance, setInactiveEditBalance] = useState("");
+  const [inactiveEditBonus, setInactiveEditBonus] = useState("");
+  const [inactiveEditReason, setInactiveEditReason] = useState("");
+  const [inactiveEditPassword, setInactiveEditPassword] = useState("");
+  const [inactiveShowPwd, setInactiveShowPwd] = useState(false);
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -4709,6 +4715,47 @@ function UsersTab() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
     },
     onError: () => toast({ title: "Erro ao deletar usuário", variant: "destructive" }),
+  });
+
+  const inactiveUpdateBalance = useMutation({
+    mutationFn: async ({ cpf, balance, reason }: { cpf: string; balance: number; reason?: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${encodeURIComponent(cpf)}`, { balance, reason });
+      return res.json();
+    },
+    onSuccess: (updated: User) => {
+      toast({ title: "Saldo atualizado!" });
+      setSelectedInactiveUser(updated);
+      setInactiveEditBalance(updated.balance.toFixed(2));
+      setInactiveEditReason("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: () => toast({ title: "Erro ao atualizar saldo", variant: "destructive" }),
+  });
+
+  const inactiveUpdateBonus = useMutation({
+    mutationFn: async ({ cpf, bonusBalance }: { cpf: string; bonusBalance: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${encodeURIComponent(cpf)}`, { bonusBalance });
+      return res.json();
+    },
+    onSuccess: (updated: User) => {
+      toast({ title: "Bônus atualizado!" });
+      setSelectedInactiveUser(updated);
+      setInactiveEditBonus(updated.bonusBalance.toFixed(2));
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: () => toast({ title: "Erro ao atualizar bônus", variant: "destructive" }),
+  });
+
+  const inactiveResetPassword = useMutation({
+    mutationFn: async ({ cpf, password }: { cpf: string; password: string }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${encodeURIComponent(cpf)}/reset-password`, { newPassword: password });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Senha resetada com sucesso!" });
+      setInactiveEditPassword("");
+    },
+    onError: () => toast({ title: "Erro ao resetar senha", variant: "destructive" }),
   });
 
   const bulkBonusMutation = useMutation({
@@ -5311,7 +5358,7 @@ function UsersTab() {
                       <>
                         <tr
                           key={u.cpf}
-                          onClick={() => { setSelectedInactiveUser(isOpen ? null : u); setInactiveBetsOpen(false); setInactiveBetsPage(0); }}
+                          onClick={() => { setSelectedInactiveUser(isOpen ? null : u); setInactiveBetsOpen(false); setInactiveBetsPage(0); setInactiveEditOpen(false); setInactiveEditBalance(isOpen ? "" : u.balance.toFixed(2)); setInactiveEditBonus(isOpen ? "" : (u.bonusBalance ?? 0).toFixed(2)); setInactiveEditReason(""); setInactiveEditPassword(""); }}
                           className={`border-b border-border cursor-pointer transition-colors hover:bg-muted/40 ${isOpen ? "bg-muted/60" : ""}`}
                           data-testid={`inactivity-row-${u.cpf}`}
                         >
@@ -5353,16 +5400,128 @@ function UsersTab() {
                                   <div className="space-y-4">
                                     {/* Action buttons */}
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                                      <p className="font-semibold">{u.name} <span className="text-xs text-muted-foreground font-normal">· {u.cpf} · Tel: {u.phone || "—"}</span></p>
+                                      <div>
+                                        <p className="font-semibold text-base">{u.name}</p>
+                                        <p className="text-xs text-muted-foreground">CPF: {u.cpf} · Tel: {u.phone || "—"} {u.referralCode && `· Código: ${u.referralCode}`}</p>
+                                      </div>
                                       <div className="flex gap-2">
                                         <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => setHistoryUser(u.cpf)} data-testid="button-inactivity-history">
                                           <FileText className="w-3 h-3" /> Histórico
                                         </Button>
-                                        <Button size="sm" className="text-xs gap-1" onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} data-testid="button-inactivity-edit">
-                                          <Edit className="w-3 h-3" /> Editar no painel
+                                        <Button
+                                          size="sm"
+                                          variant={inactiveEditOpen ? "secondary" : "default"}
+                                          className="text-xs gap-1"
+                                          onClick={(e) => { e.stopPropagation(); setInactiveEditOpen(o => !o); }}
+                                          data-testid="button-inactivity-edit"
+                                        >
+                                          <Edit className="w-3 h-3" /> {inactiveEditOpen ? "Fechar edição" : "Editar usuário"}
                                         </Button>
                                       </div>
                                     </div>
+
+                                    {/* Inline edit panel */}
+                                    {inactiveEditOpen && (
+                                      <div className="rounded-lg border border-border bg-background p-4 space-y-5">
+                                        {/* User info header */}
+                                        <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm border-b border-border pb-4">
+                                          <p><span className="text-muted-foreground">CPF:</span> <span className="font-mono font-semibold">{u.cpf}</span></p>
+                                          <p><span className="text-muted-foreground">Telefone:</span> <span className="font-semibold">{u.phone || "—"}</span></p>
+                                          <p><span className="text-muted-foreground">Saldo:</span> <span className="font-bold text-green-400">R$ {u.balance.toFixed(2).replace(".", ",")}</span></p>
+                                          <p><span className="text-muted-foreground">Bônus disponível:</span> <span className="font-bold text-yellow-400">R$ {(u.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></p>
+                                          <p><span className="text-muted-foreground">1º depósito:</span> <span className={u.firstDepositDone ? "text-green-400 font-semibold" : "text-orange-400 font-semibold"}>{u.firstDepositDone ? "Sim" : "Não"}</span></p>
+                                          <p><span className="text-muted-foreground">Cadastrado:</span> <span className="font-semibold">{new Date(u.createdAt).toLocaleDateString("pt-BR")}</span></p>
+                                          {u.referralCode && <p><span className="text-muted-foreground">Código:</span> <span className="font-mono font-semibold">{u.referralCode}</span></p>}
+                                        </div>
+
+                                        {/* Ajustar Saldo */}
+                                        <div>
+                                          <p className="text-sm font-semibold mb-2">Ajustar Saldo</p>
+                                          <div className="flex gap-2 items-center">
+                                            <input
+                                              type="number"
+                                              value={inactiveEditBalance}
+                                              onChange={e => setInactiveEditBalance(e.target.value)}
+                                              className="w-36 px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                                              data-testid="input-inactive-balance"
+                                              onClick={e => e.stopPropagation()}
+                                            />
+                                            <Button
+                                              size="sm"
+                                              className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+                                              disabled={inactiveUpdateBalance.isPending || isNaN(parseFloat(inactiveEditBalance))}
+                                              onClick={(e) => { e.stopPropagation(); inactiveUpdateBalance.mutate({ cpf: u.cpf, balance: parseFloat(inactiveEditBalance), reason: inactiveEditReason || undefined }); }}
+                                              data-testid="button-inactive-save-balance"
+                                            >
+                                              <Save className="w-3 h-3" /> Salvar
+                                            </Button>
+                                          </div>
+                                          <input
+                                            type="text"
+                                            placeholder="Motivo do ajuste (aparece no extrato do usuário)"
+                                            value={inactiveEditReason}
+                                            onChange={e => setInactiveEditReason(e.target.value)}
+                                            onClick={e => e.stopPropagation()}
+                                            className="mt-2 w-full px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                                            data-testid="input-inactive-balance-reason"
+                                          />
+                                        </div>
+
+                                        {/* Ajustar Bônus */}
+                                        <div>
+                                          <p className="text-sm font-semibold mb-2">Ajustar Bônus</p>
+                                          <div className="flex gap-2 items-center">
+                                            <input
+                                              type="number"
+                                              value={inactiveEditBonus}
+                                              onChange={e => setInactiveEditBonus(e.target.value)}
+                                              className="w-36 px-3 py-1.5 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                                              data-testid="input-inactive-bonus"
+                                              onClick={e => e.stopPropagation()}
+                                            />
+                                            <Button
+                                              size="sm"
+                                              className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+                                              disabled={inactiveUpdateBonus.isPending || isNaN(parseFloat(inactiveEditBonus)) || parseFloat(inactiveEditBonus) < 0}
+                                              onClick={(e) => { e.stopPropagation(); inactiveUpdateBonus.mutate({ cpf: u.cpf, bonusBalance: parseFloat(inactiveEditBonus) }); }}
+                                              data-testid="button-inactive-save-bonus"
+                                            >
+                                              <Save className="w-3 h-3" /> Salvar
+                                            </Button>
+                                          </div>
+                                        </div>
+
+                                        {/* Resetar Senha */}
+                                        <div>
+                                          <p className="text-sm font-semibold mb-2">Resetar Senha</p>
+                                          <div className="flex gap-2 items-center">
+                                            <div className="relative">
+                                              <input
+                                                type={inactiveShowPwd ? "text" : "password"}
+                                                placeholder="Nova senha"
+                                                value={inactiveEditPassword}
+                                                onChange={e => setInactiveEditPassword(e.target.value)}
+                                                onClick={e => e.stopPropagation()}
+                                                className="w-48 px-3 py-1.5 pr-8 text-sm rounded-md border border-border bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                                                data-testid="input-inactive-password"
+                                              />
+                                              <button type="button" onClick={e => { e.stopPropagation(); setInactiveShowPwd(v => !v); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                                                {inactiveShowPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                              </button>
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              disabled={inactiveResetPassword.isPending || inactiveEditPassword.length < 6}
+                                              onClick={(e) => { e.stopPropagation(); inactiveResetPassword.mutate({ cpf: u.cpf, password: inactiveEditPassword }); }}
+                                              data-testid="button-inactive-reset-password"
+                                            >
+                                              Resetar
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
 
                                     {/* Stats row */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
