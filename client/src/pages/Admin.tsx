@@ -5276,7 +5276,6 @@ function UsersTab() {
               </button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">Filtre por inatividade:</p>
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {([
