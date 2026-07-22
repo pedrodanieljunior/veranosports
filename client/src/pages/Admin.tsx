@@ -5255,8 +5255,8 @@ function UsersTab() {
     <Card className="mt-4">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="w-4 h-4 text-orange-400" />
-          Painel de Inatividade
+          <Users className="w-4 h-4 text-blue-400" />
+          Painel de Usuários
         </CardTitle>
         <div className="flex items-center gap-2 mt-2">
           <div className="relative flex-1 max-w-xs">
