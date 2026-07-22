@@ -5619,13 +5619,16 @@ function UsersTab() {
             className="text-green-400 border-green-500/40 hover:bg-green-500/10"
             onClick={() => {
               const encoded = encodeURIComponent(panelWaMsg.trim());
-              Array.from(selectedPanelCpfs).forEach(cpf => {
+              const cpfList = Array.from(selectedPanelCpfs);
+              let delay = 0;
+              cpfList.forEach(cpf => {
                 const u = users.find(x => x.cpf === cpf);
                 if (!u?.phone) return;
                 const digits = u.phone.replace(/\D/g, "");
                 const phone = digits.startsWith("55") ? digits : `55${digits}`;
                 const url = `https://api.whatsapp.com/send?phone=${phone}${encoded ? `&text=${encoded}` : ""}`;
-                window.open(url, "_blank", "noopener");
+                setTimeout(() => window.open(url, "_blank", "noopener"), delay);
+                delay += 600;
               });
             }}
             data-testid="button-wa-open-all"
