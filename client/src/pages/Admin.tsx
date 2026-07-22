@@ -5014,33 +5014,42 @@ function UsersTab() {
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {([
-            { key: "all", label: "Todos", color: "bg-muted text-muted-foreground hover:bg-muted/80" },
-            { key: "active", label: "Ativos", color: "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30" },
-            { key: "inactive30", label: "Inativos 30d", color: "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/30" },
-            { key: "inactive60", label: "Inativos 60d", color: "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30" },
-            { key: "noDeposit", label: "Sem depósito", color: "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30" },
+            { key: "all",       label: "Todos",       active: "bg-muted/80 text-foreground border border-border" },
+            { key: "active",    label: "Ativos",      active: "bg-green-500/20 text-green-400 border border-green-500/30" },
+            { key: "inactive30",label: "Inativos 30d",active: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" },
+            { key: "inactive60",label: "Inativos 60d",active: "bg-red-500/20 text-red-400 border border-red-500/30" },
+            { key: "noDeposit", label: "Sem depósito",active: "bg-orange-500/20 text-orange-400 border border-orange-500/30" },
           ] as const).map(f => {
             const count = f.key === "all" ? users.length
               : f.key === "active" ? users.filter(u => getInactiveDays(u) <= 14).length
               : f.key === "inactive30" ? users.filter(u => getInactiveDays(u) > 30).length
               : f.key === "inactive60" ? users.filter(u => getInactiveDays(u) > 60).length
               : users.filter(u => hasNoDeposit(u)).length;
+            const isSelected = inactiveFilter === f.key;
             return (
               <button
                 key={f.key}
                 onClick={() => { setInactiveFilter(f.key); setSelectedInactiveUser(null); }}
                 data-testid={`inactivity-filter-${f.key}`}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${f.color} ${inactiveFilter === f.key ? "ring-2 ring-white/20" : ""}`}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                  isSelected
+                    ? f.active
+                    : "bg-transparent text-muted-foreground border-border hover:bg-muted/40"
+                }`}
               >
                 {f.label} <span className="opacity-60">({count})</span>
               </button>
             );
           })}
-          {/* Sort by balance toggle — combinable with any filter */}
+          {/* Sort by balance toggle */}
           <button
             onClick={() => { setInactiveSortByBalance(v => !v); setSelectedInactiveUser(null); }}
             data-testid="inactivity-sort-balance"
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1 ${inactiveSortByBalance ? "bg-purple-500/30 text-purple-300 border-purple-500/40 ring-2 ring-white/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"}`}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1 ${
+              inactiveSortByBalance
+                ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                : "bg-transparent text-muted-foreground border-border hover:bg-muted/40"
+            }`}
           >
             <ArrowDownUp className="w-3 h-3" /> Saldos
           </button>
