@@ -29,6 +29,12 @@ const typeColor = (type: string) => {
   return "border-blue-500/30 bg-blue-500/10";
 };
 
+const typeSolidBg = (type: string) => {
+  if (type === "promo") return { bg: "#14532d", border: "#22c55e40", accent: "#4ade80" };
+  if (type === "alert") return { bg: "#713f12", border: "#eab30840", accent: "#fbbf24" };
+  return { bg: "#1e3a5f", border: "#3b82f640", accent: "#60a5fa" };
+};
+
 export function NotificationPanel() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -269,6 +275,10 @@ export function NotificationPanel() {
 export function NotificationBanner() {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const [visible, setVisible] = useState<Notif | null>(null);
+  const [exiting, setExiting] = useState(false);
+  const seenRef = useRef<Set<number>>(new Set());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: notifications = [] } = useQuery<Notif[]>({
     queryKey: ["/api/notifications"],
@@ -283,32 +293,75 @@ export function NotificationBanner() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
-  if (!user) return null;
+  const closeBanner = (id: number) => {
+    setExiting(true);
+    setTimeout(() => {
+      setVisible(null);
+      setExiting(false);
+      setDismissed(prev => new Set([...prev, id]));
+      markOneRead.mutate(id);
+    }, 280);
+  };
 
-  const visible = notifications.filter(n => !n.read && !dismissed.has(n.id));
-  if (visible.length === 0) return null;
+  useEffect(() => {
+    if (!user) return;
+    const unread = notifications.filter(n => !n.read && !dismissed.has(n.id) && !seenRef.current.has(n.id));
+    if (unread.length === 0) return;
 
-  const notif = visible[0];
+    const next = unread[0];
+    seenRef.current.add(next.id);
 
-  return (
+    setVisible(null);
+    setExiting(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    setTimeout(() => {
+      setVisible(next);
+      timerRef.current = setTimeout(() => closeBanner(next.id), 6000);
+    }, 100);
+
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [notifications.map(n => n.id).join(","), user?.cpf]);
+
+  if (!user || !visible) return null;
+
+  const colors = typeSolidBg(visible.type);
+
+  return createPortal(
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b ${typeColor(notif.type)}`}
-      style={{ borderColor: "rgba(255,255,255,0.08)" }}
+      style={{
+        position: "fixed",
+        top: 72,
+        left: "50%",
+        transform: `translateX(-50%) translateY(${exiting ? "-120%" : "0"})`,
+        transition: "transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.28s ease",
+        opacity: exiting ? 0 : 1,
+        zIndex: 9990,
+        width: "min(340px, calc(100vw - 32px))",
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 12,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 10,
+      }}
+      data-testid="notification-banner-popup"
     >
-      <span className="mt-0.5 flex-shrink-0">{typeIcon(notif.type)}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-white leading-tight">{notif.title}</p>
-        <p className="text-[11px] text-white/70 mt-0.5 leading-snug">{notif.body}</p>
+      <span style={{ flexShrink: 0, marginTop: 1 }}>{typeIcon(visible.type)}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "white", lineHeight: 1.3, marginBottom: 2 }}>{visible.title}</p>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", lineHeight: 1.4 }}>{visible.body}</p>
       </div>
       <button
-        onClick={() => {
-          markOneRead.mutate(notif.id);
-          setDismissed(prev => new Set([...prev, notif.id]));
-        }}
-        className="flex-shrink-0 text-white/40 hover:text-white/80 mt-0.5"
+        onClick={() => closeBanner(visible.id)}
+        style={{ flexShrink: 0, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", marginTop: 1, lineHeight: 1 }}
+        data-testid="button-close-banner"
       >
         <X className="w-3.5 h-3.5" />
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }
