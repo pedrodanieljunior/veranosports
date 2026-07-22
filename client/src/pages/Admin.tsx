@@ -4574,6 +4574,7 @@ function UsersTab() {
   const [selectedInactiveUser, setSelectedInactiveUser] = useState<User | null>(null);
   const [inactiveBetsOpen, setInactiveBetsOpen] = useState(false);
   const [inactiveBetsPage, setInactiveBetsPage] = useState(0);
+  const [inactiveSearch, setInactiveSearch] = useState("");
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -5242,7 +5243,25 @@ function UsersTab() {
           <Clock className="w-4 h-4 text-orange-400" />
           Painel de Inatividade
         </CardTitle>
-        <p className="text-xs text-muted-foreground">Filtre usuários por tempo de inatividade e visualize todos os dados.</p>
+        <div className="flex items-center gap-2 mt-2">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar por nome ou CPF..."
+              value={inactiveSearch}
+              onChange={e => { setInactiveSearch(e.target.value); setSelectedInactiveUser(null); }}
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md border border-border bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="input-inactivity-search"
+            />
+            {inactiveSearch && (
+              <button onClick={() => { setInactiveSearch(""); setSelectedInactiveUser(null); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">Filtre por inatividade:</p>
+        </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {([
             { key: "all", label: "Todos", color: "bg-muted text-muted-foreground hover:bg-muted/80" },
@@ -5271,12 +5290,18 @@ function UsersTab() {
       </CardHeader>
       <CardContent className="p-0">
         {(() => {
+          const searchLower = inactiveSearch.toLowerCase().replace(/\D/g, "");
           const filtered = users.filter(u => {
             const days = getInactiveDays(u);
-            if (inactiveFilter === "active") return days <= 14;
-            if (inactiveFilter === "inactive30") return days > 30;
-            if (inactiveFilter === "inactive60") return days > 60;
-            if (inactiveFilter === "noDeposit") return hasNoDeposit(u);
+            if (inactiveFilter === "active") { if (days > 14) return false; }
+            else if (inactiveFilter === "inactive30") { if (days <= 30) return false; }
+            else if (inactiveFilter === "inactive60") { if (days <= 60) return false; }
+            else if (inactiveFilter === "noDeposit") { if (!hasNoDeposit(u)) return false; }
+            if (inactiveSearch.trim()) {
+              const nameMatch = u.name.toLowerCase().includes(inactiveSearch.toLowerCase());
+              const cpfMatch = searchLower.length > 0 && u.cpf.replace(/\D/g, "").includes(searchLower);
+              if (!nameMatch && !cpfMatch) return false;
+            }
             return true;
           }).sort((a, b) => getInactiveDays(b) - getInactiveDays(a));
 
