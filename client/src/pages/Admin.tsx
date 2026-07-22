@@ -5267,188 +5267,185 @@ function UsersTab() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="grid grid-cols-1 md:grid-cols-3">
-          {/* Left: user list */}
-          <div className="md:col-span-1 border-r border-border">
-            <ScrollArea className="h-[520px]">
-              {(() => {
-                const filtered = users.filter(u => {
-                  const days = getInactiveDays(u);
-                  if (inactiveFilter === "active") return days <= 14;
-                  if (inactiveFilter === "inactive30") return days > 30;
-                  if (inactiveFilter === "inactive60") return days > 60;
-                  if (inactiveFilter === "noDeposit") return hasNoDeposit(u);
-                  return true;
-                }).sort((a, b) => getInactiveDays(b) - getInactiveDays(a));
-                if (filtered.length === 0) return (
-                  <p className="text-sm p-4 text-muted-foreground">Nenhum usuário neste filtro.</p>
-                );
-                return filtered.map(u => {
-                  const days = getInactiveDays(u);
-                  const act = activityMap[u.cpf];
-                  const lastDate = act?.lastBetAt || act?.lastDepositAt
-                    ? new Date(Math.max(...([act?.lastBetAt, act?.lastDepositAt].filter(Boolean) as Date[]).map(d => d.getTime()))).toLocaleDateString("pt-BR")
-                    : new Date(u.createdAt).toLocaleDateString("pt-BR");
-                  const badgeCls = days <= 14 ? "bg-green-500/20 text-green-400" : days <= 30 ? "bg-yellow-500/20 text-yellow-400" : "bg-red-500/20 text-red-400";
-                  return (
-                    <button
-                      key={u.cpf}
-                      onClick={() => setSelectedInactiveUser(u)}
-                      className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedInactiveUser?.cpf === u.cpf ? "bg-muted" : ""}`}
-                      data-testid={`inactivity-row-${u.cpf}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold text-sm truncate">{u.name}</p>
-                        <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badgeCls}`}>
-                          {days === 0 ? "hoje" : `${days}d`}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{u.cpf}</p>
-                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">Última atividade: {lastDate}</p>
-                      {hasNoDeposit(u) && <p className="text-[10px] text-orange-400 mt-0.5">Sem depósito</p>}
-                    </button>
-                  );
-                });
-              })()}
-            </ScrollArea>
-          </div>
+        {(() => {
+          const filtered = users.filter(u => {
+            const days = getInactiveDays(u);
+            if (inactiveFilter === "active") return days <= 14;
+            if (inactiveFilter === "inactive30") return days > 30;
+            if (inactiveFilter === "inactive60") return days > 60;
+            if (inactiveFilter === "noDeposit") return hasNoDeposit(u);
+            return true;
+          }).sort((a, b) => getInactiveDays(b) - getInactiveDays(a));
 
-          {/* Right: user detail */}
-          <div className="md:col-span-2 p-4">
-            {!selectedInactiveUser ? (
-              <div className="h-full flex flex-col items-center justify-center gap-2 text-center py-16">
-                <Users className="w-10 h-10 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">Selecione um usuário para ver os detalhes.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-bold text-lg">{selectedInactiveUser.name}</h3>
-                    <p className="text-xs text-muted-foreground">{selectedInactiveUser.cpf}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs gap-1"
-                      onClick={() => setHistoryUser(selectedInactiveUser.cpf)}
-                      data-testid="button-inactivity-history"
-                    >
-                      <FileText className="w-3 h-3" /> Histórico
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="text-xs gap-1"
-                      onClick={() => {
-                        setSelectedUser(selectedInactiveUser);
-                        setEditBalance(selectedInactiveUser.balance.toFixed(2));
-                        setEditBonus((selectedInactiveUser.bonusBalance ?? 0).toFixed(2));
-                        setNewPassword("");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      data-testid="button-inactivity-edit"
-                    >
-                      <Edit className="w-3 h-3" /> Abrir no painel de edição
-                    </Button>
-                  </div>
-                </div>
+          if (filtered.length === 0) return (
+            <p className="text-sm p-4 text-muted-foreground">Nenhum usuário neste filtro.</p>
+          );
 
-                {/* Data grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Saldo</p>
-                    <p className="text-base font-bold text-green-400">R$ {selectedInactiveUser.balance.toFixed(2).replace(".", ",")}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Bônus</p>
-                    <p className="text-base font-bold text-yellow-400">R$ {(selectedInactiveUser.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Inatividade</p>
-                    <p className="text-base font-bold">{getInactiveDays(selectedInactiveUser) === 0 ? "hoje" : `${getInactiveDays(selectedInactiveUser)} dias`}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Telefone</p>
-                    <p className="text-sm font-medium">{selectedInactiveUser.phone || "—"}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">1º Depósito</p>
-                    <p className="text-sm font-medium">{selectedInactiveUser.firstDepositDone ? "Sim ✓" : <span className="text-orange-400">Não</span>}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Cadastro</p>
-                    <p className="text-sm font-medium">{new Date(selectedInactiveUser.createdAt).toLocaleDateString("pt-BR")}</p>
-                  </div>
-                </div>
+          return (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nome</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">CPF</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Saldo</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Depósitos</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">1º Dep.</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Últ. atividade</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Inatividade</th>
+                    <th className="w-8 px-2 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(u => {
+                    const days = getInactiveDays(u);
+                    const act = activityMap[u.cpf];
+                    const lastActivityMs = Math.max(...([act?.lastBetAt, act?.lastDepositAt, new Date(u.createdAt)].filter(Boolean) as Date[]).map(d => d.getTime()));
+                    const lastDate = new Date(lastActivityMs).toLocaleDateString("pt-BR");
+                    const badgeCls = days <= 14
+                      ? "bg-green-500/20 text-green-400"
+                      : days <= 30
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-red-500/20 text-red-400";
+                    const deps = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
+                    const totalDep = deps.reduce((s, d) => s + d.amount, 0);
+                    const isOpen = selectedInactiveUser?.cpf === u.cpf;
 
-                {/* Deposits / withdrawals summary */}
-                {(() => {
-                  const deps = allDepositsForUsers.filter(d => d.userId === selectedInactiveUser.cpf && d.status === "confirmed");
-                  const wds = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === selectedInactiveUser.cpf && (w.status === "paid" || w.status === "approved"));
-                  const totalDep = deps.reduce((s, d) => s + d.amount, 0);
-                  const totalWd = wds.reduce((s: number, w: any) => s + w.amount, 0);
-                  const lastDepDate = deps.length > 0 ? new Date(Math.max(...deps.map(d => new Date(d.createdAt).getTime()))).toLocaleDateString("pt-BR") : null;
-                  const lastBetDate = activityMap[selectedInactiveUser.cpf]?.lastBetAt
-                    ? activityMap[selectedInactiveUser.cpf].lastBetAt!.toLocaleDateString("pt-BR") : null;
-                  return (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Depósitos confirmados</p>
-                        <p className="text-base font-bold text-blue-400">{deps.length} · R$ {totalDep.toFixed(2).replace(".", ",")}</p>
-                        {lastDepDate && <p className="text-[10px] text-muted-foreground mt-0.5">Último: {lastDepDate}</p>}
-                      </div>
-                      <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Saques pagos</p>
-                        <p className="text-base font-bold text-red-400">{wds.length} · R$ {totalWd.toFixed(2).replace(".", ",")}</p>
-                        {lastBetDate && <p className="text-[10px] text-muted-foreground mt-0.5">Últ. aposta: {lastBetDate}</p>}
-                      </div>
-                    </div>
-                  );
-                })()}
+                    return (
+                      <>
+                        <tr
+                          key={u.cpf}
+                          onClick={() => setSelectedInactiveUser(isOpen ? null : u)}
+                          className={`border-b border-border cursor-pointer transition-colors hover:bg-muted/40 ${isOpen ? "bg-muted/60" : ""}`}
+                          data-testid={`inactivity-row-${u.cpf}`}
+                        >
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-sm">{u.name}</p>
+                            {hasNoDeposit(u) && <span className="text-[10px] text-orange-400">Sem depósito</span>}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">{u.cpf}</td>
+                          <td className="px-4 py-3 text-right font-medium text-green-400 text-sm">R$ {u.balance.toFixed(2).replace(".", ",")}</td>
+                          <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden md:table-cell">
+                            {deps.length > 0 ? <span className="text-blue-400">{deps.length}x · R$ {totalDep.toFixed(2).replace(".", ",")}</span> : <span className="text-muted-foreground/50">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center hidden md:table-cell">
+                            {u.firstDepositDone
+                              ? <span className="text-green-400 text-xs">✓ Sim</span>
+                              : <span className="text-orange-400 text-xs">Não</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center text-xs text-muted-foreground">{lastDate}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>
+                              {days === 0 ? "hoje" : `${days}d`}
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 text-center text-muted-foreground">
+                            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                          </td>
+                        </tr>
 
-                {/* Bets list */}
-                <div>
-                  <p className="text-sm font-semibold mb-2">Apostas ({inactiveUserBets.length})</p>
-                  {inactiveUserBets.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Nenhuma aposta registrada.</p>
-                  ) : (
-                    <ScrollArea className="h-44">
-                      <div className="space-y-2">
-                        {inactiveUserBets.map(bet => {
-                          if (!bet?.id) return null;
-                          const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
-                          let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
-                          try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
-                          const statusLabel = bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente";
-                          const statusCls = bet.status === "won" ? "bg-blue-500/20 text-blue-400" : bet.status === "lost" ? "bg-red-500/20 text-red-400" : bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400" : bet.status === "anulado" ? "bg-gray-500/20 text-gray-400" : "bg-yellow-500/20 text-yellow-400";
-                          return (
-                            <div key={bet.id} className="p-2 border rounded text-xs">
-                              <div className="flex justify-between items-center">
-                                <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusCls}`}>{statusLabel}</span>
-                              </div>
-                              <div className="flex justify-between mt-1 text-muted-foreground">
-                                <span>{bet.selections?.length ?? 0} sel · odds {(bet.totalOdds ?? 0).toFixed(2)}</span>
-                                <span>R$ {(bet.stake ?? 0).toFixed(2)} → R$ {fmtBRL(payout.displayPotentialWin)}</span>
-                              </div>
-                              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{new Date(bet.createdAt ?? "").toLocaleDateString("pt-BR")}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </div>
+                        {/* Expanded detail row */}
+                        {isOpen && (
+                          <tr key={`${u.cpf}-detail`} className="bg-muted/20 border-b border-border">
+                            <td colSpan={8} className="px-4 py-4">
+                              {(() => {
+                                const wds = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
+                                const totalWd = wds.reduce((s: number, w: any) => s + w.amount, 0);
+                                const lastDepDate = deps.length > 0 ? new Date(Math.max(...deps.map(d => new Date(d.createdAt).getTime()))).toLocaleDateString("pt-BR") : null;
+                                const lastBetDate = act?.lastBetAt ? act.lastBetAt.toLocaleDateString("pt-BR") : null;
+                                return (
+                                  <div className="space-y-4">
+                                    {/* Action buttons */}
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <p className="font-semibold">{u.name} <span className="text-xs text-muted-foreground font-normal">· {u.cpf} · Tel: {u.phone || "—"}</span></p>
+                                      <div className="flex gap-2">
+                                        <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => setHistoryUser(u.cpf)} data-testid="button-inactivity-history">
+                                          <FileText className="w-3 h-3" /> Histórico
+                                        </Button>
+                                        <Button size="sm" className="text-xs gap-1" onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} data-testid="button-inactivity-edit">
+                                          <Edit className="w-3 h-3" /> Editar no painel
+                                        </Button>
+                                      </div>
+                                    </div>
 
-                {selectedInactiveUser.referralCode && (
-                  <p className="text-xs text-muted-foreground">Código de indicação: <span className="font-mono text-foreground">{selectedInactiveUser.referralCode}</span></p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+                                    {/* Stats row */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                                      <div className="rounded-lg bg-background border border-border p-3">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Saldo</p>
+                                        <p className="font-bold text-green-400">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                                      </div>
+                                      <div className="rounded-lg bg-background border border-border p-3">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Bônus</p>
+                                        <p className="font-bold text-yellow-400">R$ {(u.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
+                                      </div>
+                                      <div className="rounded-lg bg-background border border-border p-3">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Inatividade</p>
+                                        <p className={`font-bold ${days <= 14 ? "text-green-400" : days <= 30 ? "text-yellow-400" : "text-red-400"}`}>{days === 0 ? "hoje" : `${days} dias`}</p>
+                                      </div>
+                                      <div className="rounded-lg bg-background border border-blue-500/20 p-3">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Depósitos</p>
+                                        <p className="font-bold text-blue-400">{deps.length}x · R$ {totalDep.toFixed(2).replace(".", ",")}</p>
+                                        {lastDepDate && <p className="text-[10px] text-muted-foreground mt-0.5">Último: {lastDepDate}</p>}
+                                      </div>
+                                      <div className="rounded-lg bg-background border border-red-500/20 p-3">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Saques</p>
+                                        <p className="font-bold text-red-400">{wds.length}x · R$ {totalWd.toFixed(2).replace(".", ",")}</p>
+                                      </div>
+                                      <div className="rounded-lg bg-background border border-border p-3">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Cadastro</p>
+                                        <p className="font-bold text-xs">{new Date(u.createdAt).toLocaleDateString("pt-BR")}</p>
+                                        {lastBetDate && <p className="text-[10px] text-muted-foreground mt-0.5">Últ. aposta: {lastBetDate}</p>}
+                                      </div>
+                                    </div>
+
+                                    {/* Bets */}
+                                    <div>
+                                      <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Apostas ({inactiveUserBets.length})</p>
+                                      {inactiveUserBets.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground">Nenhuma aposta registrada.</p>
+                                      ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                          {inactiveUserBets.slice(0, 9).map(bet => {
+                                            if (!bet?.id) return null;
+                                            const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
+                                            let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
+                                            try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
+                                            const statusLabel = bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente";
+                                            const statusCls = bet.status === "won" ? "bg-blue-500/20 text-blue-400" : bet.status === "lost" ? "bg-red-500/20 text-red-400" : bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400" : bet.status === "anulado" ? "bg-gray-500/20 text-gray-400" : "bg-yellow-500/20 text-yellow-400";
+                                            return (
+                                              <div key={bet.id} className="p-2 rounded border border-border bg-background text-xs">
+                                                <div className="flex justify-between items-center mb-1">
+                                                  <span className="font-mono text-[10px]">#{bet.id.slice(0, 8).toUpperCase()}</span>
+                                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusCls}`}>{statusLabel}</span>
+                                                </div>
+                                                <div className="flex justify-between text-muted-foreground">
+                                                  <span>{bet.selections?.length ?? 0} sel · {(bet.totalOdds ?? 0).toFixed(2)}x</span>
+                                                  <span>R$ {(bet.stake ?? 0).toFixed(2)} → R$ {fmtBRL(payout.displayPotentialWin)}</span>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{new Date(bet.createdAt ?? "").toLocaleDateString("pt-BR")}</p>
+                                              </div>
+                                            );
+                                          })}
+                                          {inactiveUserBets.length > 9 && (
+                                            <p className="text-xs text-muted-foreground col-span-full">+{inactiveUserBets.length - 9} apostas — ver histórico completo</p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
 
