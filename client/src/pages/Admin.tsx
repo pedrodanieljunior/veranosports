@@ -4783,14 +4783,51 @@ function UsersTab() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Users className="w-5 h-5 text-primary" />
+          <CardContent className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{users.length}</p>
+                <p className="text-xs text-muted-foreground">Usuários cadastrados</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{users.length}</p>
-              <p className="text-xs text-muted-foreground">Usuários cadastrados</p>
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-7 gap-1 text-green-400 border-green-500/40 hover:bg-green-500/10 shrink-0"
+              data-testid="button-export-vcf"
+              onClick={() => {
+                const usersToExport = users.filter(u => u.name && u.phone);
+                const allCards = users.filter(u => u.name);
+                const toExport = usersToExport.length > 0 ? usersToExport : allCards;
+                if (toExport.length === 0) {
+                  toast({ title: "Nenhum usuário cadastrado", variant: "destructive" });
+                  return;
+                }
+                const cards = toExport.map(u => {
+                  const lines = ["BEGIN:VCARD", "VERSION:3.0", `FN:${u.name.trim()}`];
+                  if (u.phone) {
+                    const digits = u.phone.replace(/\D/g, "");
+                    const formatted = digits.startsWith("55") ? `+${digits}` : `+55${digits}`;
+                    lines.push(`TEL;TYPE=CELL:${formatted}`);
+                  }
+                  lines.push("END:VCARD");
+                  return lines.join("\r\n");
+                });
+                const blob = new Blob([cards.join("\r\n")], { type: "text/vcard;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `contatos-verano-${new Date().toISOString().slice(0, 10)}.vcf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast({ title: `${cards.length} contatos exportados!`, description: "Importe o arquivo .vcf no Google Contacts." });
+              }}
+            >
+              <Download className="w-3 h-3" /> Exportar .vcf
+            </Button>
           </CardContent>
         </Card>
         <Card>
@@ -4930,45 +4967,7 @@ function UsersTab() {
           {/* User list */}
           <Card className="md:col-span-1">
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">Lista de Usuários</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7 gap-1 text-green-400 border-green-500/40 hover:bg-green-500/10"
-                  data-testid="button-export-vcf"
-                  onClick={() => {
-                    const lines: string[] = ["BEGIN:VCARD", "VERSION:3.0"];
-                    const usersToExport = users.filter(u => u.name && u.phone);
-                    const allCards = users.filter(u => u.name);
-                    const toExport = usersToExport.length > 0 ? usersToExport : allCards;
-                    if (toExport.length === 0) {
-                      toast({ title: "Nenhum usuário cadastrado", variant: "destructive" });
-                      return;
-                    }
-                    const cards = toExport.map(u => {
-                      const lines = ["BEGIN:VCARD", "VERSION:3.0", `FN:${u.name.trim()}`];
-                      if (u.phone) {
-                        const digits = u.phone.replace(/\D/g, "");
-                        const formatted = digits.startsWith("55") ? `+${digits}` : `+55${digits}`;
-                        lines.push(`TEL;TYPE=CELL:${formatted}`);
-                      }
-                      lines.push("END:VCARD");
-                      return lines.join("\r\n");
-                    });
-                    const blob = new Blob([cards.join("\r\n")], { type: "text/vcard;charset=utf-8" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `contatos-verano-${new Date().toISOString().slice(0, 10)}.vcf`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    toast({ title: `${cards.length} contatos exportados!`, description: "Importe o arquivo .vcf no Google Contacts." });
-                  }}
-                >
-                  <Download className="w-3 h-3" /> Exportar .vcf
-                </Button>
-              </div>
+              <CardTitle className="text-base">Lista de Usuários</CardTitle>
               <div className="relative mt-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <input
