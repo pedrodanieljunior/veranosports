@@ -4963,294 +4963,6 @@ function UsersTab() {
         )}
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* User list */}
-          <Card className="md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Lista de Usuários</CardTitle>
-              <div className="relative mt-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nome ou CPF..."
-                  value={userSearch}
-                  onChange={e => setUserSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md bg-muted border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-                  data-testid="input-search-users"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {usersLoading ? <p className="text-sm p-4 text-muted-foreground">Carregando...</p> : users.length === 0 ? (
-                <p className="text-sm p-4 text-muted-foreground">Nenhum usuário cadastrado.</p>
-              ) : (
-                <ScrollArea className="h-[500px]">
-                  {(() => {
-                    const q = userSearch.toLowerCase().trim();
-                    const filtered = users
-                      .filter(u => {
-                        if (q && !u.name.toLowerCase().includes(q) && !u.cpf.includes(q)) return false;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        const af = favoritedUsers.has(a.cpf) ? 0 : 1;
-                        const bf = favoritedUsers.has(b.cpf) ? 0 : 1;
-                        return af - bf || getInactiveDays(a) - getInactiveDays(b);
-                      });
-                    if (filtered.length === 0) return (
-                      <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado{q ? ` para "${userSearch}"` : " neste filtro"}.</p>
-                    );
-                    return filtered.map(u => {
-                      const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
-                      const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
-                      const withdrawalsForUser = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
-                      const totalWithdrawn = withdrawalsForUser.reduce((s: number, w: any) => s + w.amount, 0);
-                      const profit = Math.round((totalWithdrawn - totalDeposited) * 100) / 100;
-                      const inactiveDays = getInactiveDays(u);
-                      const inactiveBadge = inactiveDays === 0
-                        ? { label: "hoje", cls: "bg-green-500/20 text-green-400" }
-                        : inactiveDays <= 7
-                        ? { label: `${inactiveDays}d`, cls: "bg-green-500/20 text-green-400" }
-                        : inactiveDays <= 30
-                        ? { label: `${inactiveDays}d`, cls: "bg-yellow-500/20 text-yellow-400" }
-                        : { label: `${inactiveDays}d`, cls: "bg-red-500/20 text-red-400" };
-                      return (
-                        <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
-                          className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
-                          data-testid={`row-user-${u.cpf}`}>
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <button
-                                onClick={e => toggleFavorite(u.cpf, e)}
-                                className="shrink-0 text-muted-foreground hover:text-yellow-400 transition-colors"
-                                data-testid={`btn-favorite-${u.cpf}`}
-                              >
-                                {favoritedUsers.has(u.cpf)
-                                  ? <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                  : <Star className="w-3.5 h-3.5" />}
-                              </button>
-                              <p className="font-semibold text-sm truncate">{u.name}</p>
-                            </div>
-                            <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${inactiveBadge.cls}`} title="Inatividade">
-                              {inactiveBadge.label}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{u.cpf}</p>
-                          <div className="flex items-start justify-between mt-0.5">
-                            <p className="text-xs text-green-500 font-medium">saldo: R$ {u.balance.toFixed(2).replace(".", ",")}</p>
-                            <div className="flex flex-col items-end gap-0.5">
-                              {userDeposits.length > 0 && (
-                                <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
-                              )}
-                              {withdrawalsForUser.length > 0 && (
-                                <p className="text-xs text-red-400">{withdrawalsForUser.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
-                              )}
-                              {withdrawalsForUser.length > 0 && profit !== 0 && (
-                                <p className={`text-xs font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
-                                  lucro: {profit > 0 ? "+" : "-"}R$ {Math.abs(profit).toFixed(2).replace(".", ",")}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {u.bonusBalance > 0 && (
-                            <p className="text-xs text-yellow-400 font-medium mt-0.5 flex items-center gap-1">
-                              <Gift className="w-3 h-3" /> Bônus: R$ {u.bonusBalance.toFixed(2).replace(".", ",")}
-                            </p>
-                          )}
-                          {hasNoDeposit(u) && (
-                            <p className="text-[10px] text-orange-400 mt-0.5">Sem depósito</p>
-                          )}
-                        </button>
-                      );
-                    });
-                  })()}
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* User detail */}
-          <Card className="md:col-span-2">
-            <CardHeader className="pb-2"><CardTitle className="text-base">{selectedUser ? selectedUser.name : "Selecione um usuário"}</CardTitle></CardHeader>
-            <CardContent>
-              {!selectedUser ? (
-                <p className="text-sm text-muted-foreground">Clique em um usuário para ver detalhes.</p>
-              ) : (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-muted-foreground">CPF:</span> {selectedUser.cpf}</div>
-                    <div><span className="text-muted-foreground">Telefone:</span> {selectedUser.phone}</div>
-                    <div><span className="text-muted-foreground">Saldo:</span> <span className="font-bold text-green-500">R$ {selectedUser.balance.toFixed(2).replace(".", ",")}</span></div>
-                    <div><span className="text-muted-foreground">Bônus disponível:</span> <span className="font-bold text-yellow-400">R$ {(selectedUser.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></div>
-                    <div><span className="text-muted-foreground">1º depósito:</span> {selectedUser.firstDepositDone ? "Sim" : "Não"}</div>
-                    <div><span className="text-muted-foreground">Cadastrado:</span> {new Date(selectedUser.createdAt).toLocaleDateString("pt-BR")}</div>
-                    {selectedUser.referralCode && <div><span className="text-muted-foreground">Código:</span> {selectedUser.referralCode}</div>}
-                  </div>
-
-                  {/* Edit balance */}
-                  <div className="space-y-2 border-t pt-4">
-                    <p className="text-sm font-semibold">Ajustar Saldo</p>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={editBalance}
-                        onChange={e => setEditBalance(e.target.value)}
-                        className="w-36"
-                        data-testid="input-edit-balance"
-                        placeholder="Novo saldo"
-                      />
-                      <Button size="sm" onClick={() => updateBalanceMutation.mutate({ cpf: selectedUser.cpf, balance: parseFloat(editBalance), reason: editBalanceReason })}
-                        disabled={updateBalanceMutation.isPending || isNaN(parseFloat(editBalance))}>
-                        <Save className="w-4 h-4 mr-1" /> Salvar
-                      </Button>
-                    </div>
-                    <Input
-                      type="text"
-                      value={editBalanceReason}
-                      onChange={e => setEditBalanceReason(e.target.value)}
-                      placeholder="Motivo do ajuste (aparece no extrato do usuário)"
-                      data-testid="input-edit-balance-reason"
-                      className="text-sm"
-                    />
-                  </div>
-
-                  {/* Edit bonus */}
-                  <div className="space-y-2 border-t pt-4">
-                    <p className="text-sm font-semibold">Ajustar Bônus</p>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={editBonus}
-                        onChange={e => setEditBonus(e.target.value)}
-                        className="w-36"
-                        data-testid="input-edit-bonus"
-                        placeholder="Novo bônus"
-                      />
-                      <Button size="sm" onClick={() => updateBonusMutation.mutate({ cpf: selectedUser.cpf, bonusBalance: parseFloat(editBonus) })}
-                        disabled={updateBonusMutation.isPending || isNaN(parseFloat(editBonus)) || parseFloat(editBonus) < 0}
-                        data-testid="button-save-bonus">
-                        <Save className="w-4 h-4 mr-1" /> Salvar
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Reset password */}
-                  <div className="space-y-2 border-t pt-4">
-                    <p className="text-sm font-semibold">Resetar Senha</p>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1 max-w-xs">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          value={newPassword}
-                          onChange={e => setNewPassword(e.target.value)}
-                          placeholder="Nova senha"
-                          data-testid="input-new-password"
-                        />
-                        <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <Button size="sm" onClick={() => resetPasswordMutation.mutate({ cpf: selectedUser.cpf, password: newPassword })}
-                        disabled={resetPasswordMutation.isPending || newPassword.length < 6}>
-                        Resetar
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* User bets */}
-                  <div className="space-y-2 border-t pt-4">
-                    <p className="text-sm font-semibold">Apostas do Usuário ({userBets.length})</p>
-                    {userBets.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Nenhuma aposta.</p>
-                    ) : (
-                      <ScrollArea className="h-48">
-                        <div className="space-y-2">
-                          {userBets.map(bet => {
-                            if (!bet || !bet.id) return null;
-                            const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
-                            let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
-                            try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
-                            return (
-                            <div key={bet.id} className="p-2 border rounded text-xs">
-                              <div className="flex justify-between">
-                                <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
-                                <Badge variant="secondary" className={`text-[10px] ${
-                                  bet.status === "won" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
-                                  bet.status === "lost" ? "bg-red-500/20 text-red-500 border-red-500/30" :
-                                  bet.status === "anulado" ? "bg-gray-500/20 text-gray-400 border-gray-500/30" :
-                                  bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
-                                  "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                                }`}>
-                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente"}
-                                </Badge>
-                              </div>
-                              <div className="flex justify-between mt-1 flex-wrap gap-1">
-                                <span>Stake: R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
-                                {bet.status === "cashed_out" && (bet as any).cashOutValue != null ? (
-                                  <span className="text-emerald-400">
-                                    Cash Out: R$ {fmtBRL((bet as any).cashOutValue)}
-                                    <span className="text-zinc-500 text-[10px] ml-1 line-through">R$&nbsp;{fmtBRL(payout.displayPotentialWin)}</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-green-600">
-                                    Retorno: R$ {fmtBRL(payout.displayPotentialWin)}
-                                    {payout.baseReturn !== null && payout.bonusReturn !== null && (
-                                      <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(payout.baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(payout.bonusReturn)}&nbsp;{payout.bonusLabel})</span>
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            );
-                          })}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </div>
-
-                  {/* Histórico completo */}
-                  <div className="border-t pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHistoryUser(selectedUser.cpf)}
-                      data-testid="button-user-history"
-                    >
-                      <FileText className="w-4 h-4 mr-1" /> Histórico Completo
-                    </Button>
-                  </div>
-
-                  {/* Delete user */}
-                  <div className="border-t pt-4">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" data-testid="button-delete-user">
-                          <Trash2 className="w-4 h-4 mr-1" /> Excluir Usuário
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir {selectedUser.name}?</AlertDialogTitle>
-                          <AlertDialogDescription>Esta ação não pode ser desfeita. O usuário e todos os seus dados serão removidos.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteUserMutation.mutate(selectedUser.cpf)} className="bg-red-600 hover:bg-red-700">
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-    </div>
 
     {/* ── Painel de Inatividade ── */}
     <Card className="mt-4">
@@ -5679,6 +5391,294 @@ function UsersTab() {
         })()}
       </CardContent>
     </Card>
+    </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {/* User list */}
+          <Card className="md:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Lista de Usuários</CardTitle>
+              <div className="relative mt-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome ou CPF..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md bg-muted border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                  data-testid="input-search-users"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {usersLoading ? <p className="text-sm p-4 text-muted-foreground">Carregando...</p> : users.length === 0 ? (
+                <p className="text-sm p-4 text-muted-foreground">Nenhum usuário cadastrado.</p>
+              ) : (
+                <ScrollArea className="h-[500px]">
+                  {(() => {
+                    const q = userSearch.toLowerCase().trim();
+                    const filtered = users
+                      .filter(u => {
+                        if (q && !u.name.toLowerCase().includes(q) && !u.cpf.includes(q)) return false;
+                        return true;
+                      })
+                      .sort((a, b) => {
+                        const af = favoritedUsers.has(a.cpf) ? 0 : 1;
+                        const bf = favoritedUsers.has(b.cpf) ? 0 : 1;
+                        return af - bf || getInactiveDays(a) - getInactiveDays(b);
+                      });
+                    if (filtered.length === 0) return (
+                      <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado{q ? ` para "${userSearch}"` : " neste filtro"}.</p>
+                    );
+                    return filtered.map(u => {
+                      const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
+                      const totalDeposited = userDeposits.reduce((s, d) => s + d.amount, 0);
+                      const withdrawalsForUser = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
+                      const totalWithdrawn = withdrawalsForUser.reduce((s: number, w: any) => s + w.amount, 0);
+                      const profit = Math.round((totalWithdrawn - totalDeposited) * 100) / 100;
+                      const inactiveDays = getInactiveDays(u);
+                      const inactiveBadge = inactiveDays === 0
+                        ? { label: "hoje", cls: "bg-green-500/20 text-green-400" }
+                        : inactiveDays <= 7
+                        ? { label: `${inactiveDays}d`, cls: "bg-green-500/20 text-green-400" }
+                        : inactiveDays <= 30
+                        ? { label: `${inactiveDays}d`, cls: "bg-yellow-500/20 text-yellow-400" }
+                        : { label: `${inactiveDays}d`, cls: "bg-red-500/20 text-red-400" };
+                      return (
+                        <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
+                          className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
+                          data-testid={`row-user-${u.cpf}`}>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <button
+                                onClick={e => toggleFavorite(u.cpf, e)}
+                                className="shrink-0 text-muted-foreground hover:text-yellow-400 transition-colors"
+                                data-testid={`btn-favorite-${u.cpf}`}
+                              >
+                                {favoritedUsers.has(u.cpf)
+                                  ? <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                                  : <Star className="w-3.5 h-3.5" />}
+                              </button>
+                              <p className="font-semibold text-sm truncate">{u.name}</p>
+                            </div>
+                            <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${inactiveBadge.cls}`} title="Inatividade">
+                              {inactiveBadge.label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{u.cpf}</p>
+                          <div className="flex items-start justify-between mt-0.5">
+                            <p className="text-xs text-green-500 font-medium">saldo: R$ {u.balance.toFixed(2).replace(".", ",")}</p>
+                            <div className="flex flex-col items-end gap-0.5">
+                              {userDeposits.length > 0 && (
+                                <p className="text-xs text-blue-400">{userDeposits.length} dep · R$ {totalDeposited.toFixed(2).replace(".", ",")}</p>
+                              )}
+                              {withdrawalsForUser.length > 0 && (
+                                <p className="text-xs text-red-400">{withdrawalsForUser.length} saq · R$ {totalWithdrawn.toFixed(2).replace(".", ",")}</p>
+                              )}
+                              {withdrawalsForUser.length > 0 && profit !== 0 && (
+                                <p className={`text-xs font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
+                                  lucro: {profit > 0 ? "+" : "-"}R$ {Math.abs(profit).toFixed(2).replace(".", ",")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {u.bonusBalance > 0 && (
+                            <p className="text-xs text-yellow-400 font-medium mt-0.5 flex items-center gap-1">
+                              <Gift className="w-3 h-3" /> Bônus: R$ {u.bonusBalance.toFixed(2).replace(".", ",")}
+                            </p>
+                          )}
+                          {hasNoDeposit(u) && (
+                            <p className="text-[10px] text-orange-400 mt-0.5">Sem depósito</p>
+                          )}
+                        </button>
+                      );
+                    });
+                  })()}
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* User detail */}
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-2"><CardTitle className="text-base">{selectedUser ? selectedUser.name : "Selecione um usuário"}</CardTitle></CardHeader>
+            <CardContent>
+              {!selectedUser ? (
+                <p className="text-sm text-muted-foreground">Clique em um usuário para ver detalhes.</p>
+              ) : (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-muted-foreground">CPF:</span> {selectedUser.cpf}</div>
+                    <div><span className="text-muted-foreground">Telefone:</span> {selectedUser.phone}</div>
+                    <div><span className="text-muted-foreground">Saldo:</span> <span className="font-bold text-green-500">R$ {selectedUser.balance.toFixed(2).replace(".", ",")}</span></div>
+                    <div><span className="text-muted-foreground">Bônus disponível:</span> <span className="font-bold text-yellow-400">R$ {(selectedUser.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</span></div>
+                    <div><span className="text-muted-foreground">1º depósito:</span> {selectedUser.firstDepositDone ? "Sim" : "Não"}</div>
+                    <div><span className="text-muted-foreground">Cadastrado:</span> {new Date(selectedUser.createdAt).toLocaleDateString("pt-BR")}</div>
+                    {selectedUser.referralCode && <div><span className="text-muted-foreground">Código:</span> {selectedUser.referralCode}</div>}
+                  </div>
+
+                  {/* Edit balance */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Ajustar Saldo</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={editBalance}
+                        onChange={e => setEditBalance(e.target.value)}
+                        className="w-36"
+                        data-testid="input-edit-balance"
+                        placeholder="Novo saldo"
+                      />
+                      <Button size="sm" onClick={() => updateBalanceMutation.mutate({ cpf: selectedUser.cpf, balance: parseFloat(editBalance), reason: editBalanceReason })}
+                        disabled={updateBalanceMutation.isPending || isNaN(parseFloat(editBalance))}>
+                        <Save className="w-4 h-4 mr-1" /> Salvar
+                      </Button>
+                    </div>
+                    <Input
+                      type="text"
+                      value={editBalanceReason}
+                      onChange={e => setEditBalanceReason(e.target.value)}
+                      placeholder="Motivo do ajuste (aparece no extrato do usuário)"
+                      data-testid="input-edit-balance-reason"
+                      className="text-sm"
+                    />
+                  </div>
+
+                  {/* Edit bonus */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Ajustar Bônus</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editBonus}
+                        onChange={e => setEditBonus(e.target.value)}
+                        className="w-36"
+                        data-testid="input-edit-bonus"
+                        placeholder="Novo bônus"
+                      />
+                      <Button size="sm" onClick={() => updateBonusMutation.mutate({ cpf: selectedUser.cpf, bonusBalance: parseFloat(editBonus) })}
+                        disabled={updateBonusMutation.isPending || isNaN(parseFloat(editBonus)) || parseFloat(editBonus) < 0}
+                        data-testid="button-save-bonus">
+                        <Save className="w-4 h-4 mr-1" /> Salvar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Reset password */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Resetar Senha</p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1 max-w-xs">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          placeholder="Nova senha"
+                          data-testid="input-new-password"
+                        />
+                        <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <Button size="sm" onClick={() => resetPasswordMutation.mutate({ cpf: selectedUser.cpf, password: newPassword })}
+                        disabled={resetPasswordMutation.isPending || newPassword.length < 6}>
+                        Resetar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* User bets */}
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-sm font-semibold">Apostas do Usuário ({userBets.length})</p>
+                    {userBets.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhuma aposta.</p>
+                    ) : (
+                      <ScrollArea className="h-48">
+                        <div className="space-y-2">
+                          {userBets.map(bet => {
+                            if (!bet || !bet.id) return null;
+                            const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
+                            let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
+                            try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
+                            return (
+                            <div key={bet.id} className="p-2 border rounded text-xs">
+                              <div className="flex justify-between">
+                                <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
+                                <Badge variant="secondary" className={`text-[10px] ${
+                                  bet.status === "won" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
+                                  bet.status === "lost" ? "bg-red-500/20 text-red-500 border-red-500/30" :
+                                  bet.status === "anulado" ? "bg-gray-500/20 text-gray-400 border-gray-500/30" :
+                                  bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                  "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                }`}>
+                                  {bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente"}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between mt-1 flex-wrap gap-1">
+                                <span>Stake: R$ {(bet.stake ?? 0).toFixed(2).replace(".", ",")}</span>
+                                {bet.status === "cashed_out" && (bet as any).cashOutValue != null ? (
+                                  <span className="text-emerald-400">
+                                    Cash Out: R$ {fmtBRL((bet as any).cashOutValue)}
+                                    <span className="text-zinc-500 text-[10px] ml-1 line-through">R$&nbsp;{fmtBRL(payout.displayPotentialWin)}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-green-600">
+                                    Retorno: R$ {fmtBRL(payout.displayPotentialWin)}
+                                    {payout.baseReturn !== null && payout.bonusReturn !== null && (
+                                      <span className="text-green-500 text-[10px] ml-1">(R$&nbsp;{fmtBRL(payout.baseReturn)}&nbsp;+&nbsp;R$&nbsp;{fmtBRL(payout.bonusReturn)}&nbsp;{payout.bonusLabel})</span>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+
+                  {/* Histórico completo */}
+                  <div className="border-t pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryUser(selectedUser.cpf)}
+                      data-testid="button-user-history"
+                    >
+                      <FileText className="w-4 h-4 mr-1" /> Histórico Completo
+                    </Button>
+                  </div>
+
+                  {/* Delete user */}
+                  <div className="border-t pt-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" data-testid="button-delete-user">
+                          <Trash2 className="w-4 h-4 mr-1" /> Excluir Usuário
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir {selectedUser.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>Esta ação não pode ser desfeita. O usuário e todos os seus dados serão removidos.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteUserMutation.mutate(selectedUser.cpf)} className="bg-red-600 hover:bg-red-700">
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
     {/* ── Modal Histórico do Usuário ── */}
     <Dialog open={!!historyUser} onOpenChange={open => { if (!open) setHistoryUser(null); }}>
