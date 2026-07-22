@@ -4569,6 +4569,8 @@ function UsersTab() {
   });
 
   const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive7" | "inactive30" | "noDeposit">("all");
+  const [inactiveFilter, setInactiveFilter] = useState<"all" | "active" | "inactive30" | "inactive60" | "noDeposit">("all");
+  const [selectedInactiveUser, setSelectedInactiveUser] = useState<User | null>(null);
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -4637,6 +4639,18 @@ function UsersTab() {
       return Array.isArray(json) ? json : [];
     },
     enabled: !!selectedUser,
+  });
+
+  const { data: inactiveUserBets = [] } = useQuery<BetSlipType[]>({
+    queryKey: ["/api/bets", selectedInactiveUser?.cpf, "inactive"],
+    queryFn: async () => {
+      if (!selectedInactiveUser) return [];
+      const res = await fetch(`/api/bets?userId=${encodeURIComponent(selectedInactiveUser.cpf)}`, { credentials: "include" });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    },
+    enabled: !!selectedInactiveUser,
   });
 
   const updateBalanceMutation = useMutation({
@@ -5217,6 +5231,226 @@ function UsersTab() {
           </Card>
         </div>
     </div>
+
+    {/* ── Painel de Inatividade ── */}
+    <Card className="mt-4">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Clock className="w-4 h-4 text-orange-400" />
+          Painel de Inatividade
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">Filtre usuários por tempo de inatividade e visualize todos os dados.</p>
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {([
+            { key: "all", label: "Todos", color: "bg-muted text-muted-foreground hover:bg-muted/80" },
+            { key: "active", label: "Ativos", color: "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30" },
+            { key: "inactive30", label: "Inativos 30d", color: "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/30" },
+            { key: "inactive60", label: "Inativos 60d", color: "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30" },
+            { key: "noDeposit", label: "Sem depósito", color: "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30" },
+          ] as const).map(f => {
+            const count = f.key === "all" ? users.length
+              : f.key === "active" ? users.filter(u => getInactiveDays(u) <= 14).length
+              : f.key === "inactive30" ? users.filter(u => getInactiveDays(u) > 30).length
+              : f.key === "inactive60" ? users.filter(u => getInactiveDays(u) > 60).length
+              : users.filter(u => hasNoDeposit(u)).length;
+            return (
+              <button
+                key={f.key}
+                onClick={() => { setInactiveFilter(f.key); setSelectedInactiveUser(null); }}
+                data-testid={`inactivity-filter-${f.key}`}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${f.color} ${inactiveFilter === f.key ? "ring-2 ring-white/20" : ""}`}
+              >
+                {f.label} <span className="opacity-60">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="grid grid-cols-1 md:grid-cols-3">
+          {/* Left: user list */}
+          <div className="md:col-span-1 border-r border-border">
+            <ScrollArea className="h-[520px]">
+              {(() => {
+                const filtered = users.filter(u => {
+                  const days = getInactiveDays(u);
+                  if (inactiveFilter === "active") return days <= 14;
+                  if (inactiveFilter === "inactive30") return days > 30;
+                  if (inactiveFilter === "inactive60") return days > 60;
+                  if (inactiveFilter === "noDeposit") return hasNoDeposit(u);
+                  return true;
+                }).sort((a, b) => getInactiveDays(b) - getInactiveDays(a));
+                if (filtered.length === 0) return (
+                  <p className="text-sm p-4 text-muted-foreground">Nenhum usuário neste filtro.</p>
+                );
+                return filtered.map(u => {
+                  const days = getInactiveDays(u);
+                  const act = activityMap[u.cpf];
+                  const lastDate = act?.lastBetAt || act?.lastDepositAt
+                    ? new Date(Math.max(...([act?.lastBetAt, act?.lastDepositAt].filter(Boolean) as Date[]).map(d => d.getTime()))).toLocaleDateString("pt-BR")
+                    : new Date(u.createdAt).toLocaleDateString("pt-BR");
+                  const badgeCls = days <= 14 ? "bg-green-500/20 text-green-400" : days <= 30 ? "bg-yellow-500/20 text-yellow-400" : "bg-red-500/20 text-red-400";
+                  return (
+                    <button
+                      key={u.cpf}
+                      onClick={() => setSelectedInactiveUser(u)}
+                      className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedInactiveUser?.cpf === u.cpf ? "bg-muted" : ""}`}
+                      data-testid={`inactivity-row-${u.cpf}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold text-sm truncate">{u.name}</p>
+                        <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badgeCls}`}>
+                          {days === 0 ? "hoje" : `${days}d`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{u.cpf}</p>
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">Última atividade: {lastDate}</p>
+                      {hasNoDeposit(u) && <p className="text-[10px] text-orange-400 mt-0.5">Sem depósito</p>}
+                    </button>
+                  );
+                });
+              })()}
+            </ScrollArea>
+          </div>
+
+          {/* Right: user detail */}
+          <div className="md:col-span-2 p-4">
+            {!selectedInactiveUser ? (
+              <div className="h-full flex flex-col items-center justify-center gap-2 text-center py-16">
+                <Users className="w-10 h-10 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">Selecione um usuário para ver os detalhes.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-lg">{selectedInactiveUser.name}</h3>
+                    <p className="text-xs text-muted-foreground">{selectedInactiveUser.cpf}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs gap-1"
+                      onClick={() => setHistoryUser(selectedInactiveUser.cpf)}
+                      data-testid="button-inactivity-history"
+                    >
+                      <FileText className="w-3 h-3" /> Histórico
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs gap-1"
+                      onClick={() => {
+                        setSelectedUser(selectedInactiveUser);
+                        setEditBalance(selectedInactiveUser.balance.toFixed(2));
+                        setEditBonus((selectedInactiveUser.bonusBalance ?? 0).toFixed(2));
+                        setNewPassword("");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      data-testid="button-inactivity-edit"
+                    >
+                      <Edit className="w-3 h-3" /> Abrir no painel de edição
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Data grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Saldo</p>
+                    <p className="text-base font-bold text-green-400">R$ {selectedInactiveUser.balance.toFixed(2).replace(".", ",")}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Bônus</p>
+                    <p className="text-base font-bold text-yellow-400">R$ {(selectedInactiveUser.bonusBalance ?? 0).toFixed(2).replace(".", ",")}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Inatividade</p>
+                    <p className="text-base font-bold">{getInactiveDays(selectedInactiveUser) === 0 ? "hoje" : `${getInactiveDays(selectedInactiveUser)} dias`}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Telefone</p>
+                    <p className="text-sm font-medium">{selectedInactiveUser.phone || "—"}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">1º Depósito</p>
+                    <p className="text-sm font-medium">{selectedInactiveUser.firstDepositDone ? "Sim ✓" : <span className="text-orange-400">Não</span>}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Cadastro</p>
+                    <p className="text-sm font-medium">{new Date(selectedInactiveUser.createdAt).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                </div>
+
+                {/* Deposits / withdrawals summary */}
+                {(() => {
+                  const deps = allDepositsForUsers.filter(d => d.userId === selectedInactiveUser.cpf && d.status === "confirmed");
+                  const wds = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === selectedInactiveUser.cpf && (w.status === "paid" || w.status === "approved"));
+                  const totalDep = deps.reduce((s, d) => s + d.amount, 0);
+                  const totalWd = wds.reduce((s: number, w: any) => s + w.amount, 0);
+                  const lastDepDate = deps.length > 0 ? new Date(Math.max(...deps.map(d => new Date(d.createdAt).getTime()))).toLocaleDateString("pt-BR") : null;
+                  const lastBetDate = activityMap[selectedInactiveUser.cpf]?.lastBetAt
+                    ? activityMap[selectedInactiveUser.cpf].lastBetAt!.toLocaleDateString("pt-BR") : null;
+                  return (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Depósitos confirmados</p>
+                        <p className="text-base font-bold text-blue-400">{deps.length} · R$ {totalDep.toFixed(2).replace(".", ",")}</p>
+                        {lastDepDate && <p className="text-[10px] text-muted-foreground mt-0.5">Último: {lastDepDate}</p>}
+                      </div>
+                      <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Saques pagos</p>
+                        <p className="text-base font-bold text-red-400">{wds.length} · R$ {totalWd.toFixed(2).replace(".", ",")}</p>
+                        {lastBetDate && <p className="text-[10px] text-muted-foreground mt-0.5">Últ. aposta: {lastBetDate}</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Bets list */}
+                <div>
+                  <p className="text-sm font-semibold mb-2">Apostas ({inactiveUserBets.length})</p>
+                  {inactiveUserBets.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhuma aposta registrada.</p>
+                  ) : (
+                    <ScrollArea className="h-44">
+                      <div className="space-y-2">
+                        {inactiveUserBets.map(bet => {
+                          if (!bet?.id) return null;
+                          const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
+                          let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
+                          try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
+                          const statusLabel = bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente";
+                          const statusCls = bet.status === "won" ? "bg-blue-500/20 text-blue-400" : bet.status === "lost" ? "bg-red-500/20 text-red-400" : bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400" : bet.status === "anulado" ? "bg-gray-500/20 text-gray-400" : "bg-yellow-500/20 text-yellow-400";
+                          return (
+                            <div key={bet.id} className="p-2 border rounded text-xs">
+                              <div className="flex justify-between items-center">
+                                <span className="font-mono">#{bet.id.slice(0, 8).toUpperCase()}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusCls}`}>{statusLabel}</span>
+                              </div>
+                              <div className="flex justify-between mt-1 text-muted-foreground">
+                                <span>{bet.selections?.length ?? 0} sel · odds {(bet.totalOdds ?? 0).toFixed(2)}</span>
+                                <span>R$ {(bet.stake ?? 0).toFixed(2)} → R$ {fmtBRL(payout.displayPotentialWin)}</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{new Date(bet.createdAt ?? "").toLocaleDateString("pt-BR")}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </div>
+
+                {selectedInactiveUser.referralCode && (
+                  <p className="text-xs text-muted-foreground">Código de indicação: <span className="font-mono text-foreground">{selectedInactiveUser.referralCode}</span></p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
     {/* ── Modal Histórico do Usuário ── */}
     <Dialog open={!!historyUser} onOpenChange={open => { if (!open) setHistoryUser(null); }}>
