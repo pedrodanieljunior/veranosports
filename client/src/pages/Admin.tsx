@@ -103,6 +103,7 @@ import {
   Siren,
   History,
   Receipt,
+  ArrowDownUp,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -4574,6 +4575,7 @@ function UsersTab() {
   const [inactiveBetsOpen, setInactiveBetsOpen] = useState(false);
   const [inactiveBetsPage, setInactiveBetsPage] = useState(0);
   const [inactiveSearch, setInactiveSearch] = useState("");
+  const [inactiveSortByBalance, setInactiveSortByBalance] = useState(false);
   const [inactiveEditOpen, setInactiveEditOpen] = useState(false);
   const [inactiveEditBalance, setInactiveEditBalance] = useState("");
   const [inactiveEditBonus, setInactiveEditBonus] = useState("");
@@ -5301,6 +5303,14 @@ function UsersTab() {
               </button>
             );
           })}
+          {/* Sort by balance toggle — combinable with any filter */}
+          <button
+            onClick={() => { setInactiveSortByBalance(v => !v); setSelectedInactiveUser(null); }}
+            data-testid="inactivity-sort-balance"
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1 ${inactiveSortByBalance ? "bg-purple-500/30 text-purple-300 border-purple-500/40 ring-2 ring-white/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"}`}
+          >
+            <ArrowDownUp className="w-3 h-3" /> Saldos
+          </button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -5318,7 +5328,7 @@ function UsersTab() {
               if (!nameMatch && !cpfMatch) return false;
             }
             return true;
-          }).sort((a, b) => getInactiveDays(b) - getInactiveDays(a));
+          }).sort((a, b) => inactiveSortByBalance ? b.balance - a.balance : getInactiveDays(b) - getInactiveDays(a));
 
           if (filtered.length === 0) return (
             <p className="text-sm p-4 text-muted-foreground">Nenhum usuário neste filtro.</p>
