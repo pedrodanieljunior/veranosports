@@ -2331,6 +2331,24 @@ export async function registerRoutes(
     res.json(users);
   });
 
+  app.get("/api/admin/users-activity", requireAdmin, async (_req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT
+          u.cpf AS user_id,
+          MAX(b.created_at) AS last_bet_at,
+          MAX(d.created_at) AS last_deposit_at
+        FROM users u
+        LEFT JOIN bet_slips b ON b.user_id = u.cpf
+        LEFT JOIN deposits d ON d.user_id = u.cpf AND d.status = 'confirmed'
+        GROUP BY u.cpf
+      `);
+      res.json(result.rows);
+    } catch (e) {
+      res.status(500).json({ message: "Erro ao buscar atividade" });
+    }
+  });
+
   app.get("/api/admin/users/:cpf", async (req, res) => {
     const user = await storage.getUserByCpf(req.params.cpf);
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });

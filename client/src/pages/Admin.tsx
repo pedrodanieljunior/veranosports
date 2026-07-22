@@ -4568,6 +4568,8 @@ function UsersTab() {
     enabled: !!historyUser,
   });
 
+  const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive7" | "inactive30" | "noDeposit">("all");
+
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
     queryFn: async () => {
@@ -4575,6 +4577,39 @@ function UsersTab() {
       return res.json();
     },
   });
+
+  const { data: usersActivity = [] } = useQuery<{ user_id: string; last_bet_at: string | null; last_deposit_at: string | null }[]>({
+    queryKey: ["/api/admin/users-activity"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users-activity");
+      return res.json();
+    },
+    refetchInterval: 60_000,
+  });
+
+  const activityMap = useMemo(() => {
+    const map: Record<string, { lastBetAt: Date | null; lastDepositAt: Date | null }> = {};
+    for (const a of usersActivity) {
+      map[a.user_id] = {
+        lastBetAt: a.last_bet_at ? new Date(a.last_bet_at) : null,
+        lastDepositAt: a.last_deposit_at ? new Date(a.last_deposit_at) : null,
+      };
+    }
+    return map;
+  }, [usersActivity]);
+
+  const getInactiveDays = (u: User): number => {
+    const act = activityMap[u.cpf];
+    const dates: Date[] = [new Date(u.createdAt)];
+    if (act?.lastBetAt) dates.push(act.lastBetAt);
+    if (act?.lastDepositAt) dates.push(act.lastDepositAt);
+    const last = new Date(Math.max(...dates.map(d => d.getTime())));
+    return Math.floor((Date.now() - last.getTime()) / 86_400_000);
+  };
+
+  const hasNoDeposit = (u: User): boolean => {
+    return !u.firstDepositDone && allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed").length === 0;
+  };
 
   const { data: allWithdrawalsForUsers = [] } = useQuery<UserWithdrawal[]>({
     queryKey: ["/api/admin/user-withdrawals"],
@@ -4879,6 +4914,32 @@ function UsersTab() {
                   data-testid="input-search-users"
                 />
               </div>
+              {/* Filter chips */}
+              <div className="flex flex-wrap gap-1 mt-2">
+                {([
+                  { key: "all", label: "Todos", color: "bg-muted text-muted-foreground hover:bg-muted/80" },
+                  { key: "active", label: "Ativos", color: "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30" },
+                  { key: "inactive7", label: "Inativo +7d", color: "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/30" },
+                  { key: "inactive30", label: "Inativo +30d", color: "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30" },
+                  { key: "noDeposit", label: "Sem depósito", color: "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30" },
+                ] as const).map(f => {
+                  const count = f.key === "all" ? users.length
+                    : f.key === "active" ? users.filter(u => getInactiveDays(u) <= 7).length
+                    : f.key === "inactive7" ? users.filter(u => { const d = getInactiveDays(u); return d > 7 && d <= 30; }).length
+                    : f.key === "inactive30" ? users.filter(u => getInactiveDays(u) > 30).length
+                    : users.filter(u => hasNoDeposit(u)).length;
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => setUserFilter(f.key)}
+                      data-testid={`filter-users-${f.key}`}
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${f.color} ${userFilter === f.key ? "ring-1 ring-white/30" : ""}`}
+                    >
+                      {f.label} <span className="opacity-70">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {usersLoading ? <p className="text-sm p-4 text-muted-foreground">Carregando...</p> : users.length === 0 ? (
@@ -4888,14 +4949,22 @@ function UsersTab() {
                   {(() => {
                     const q = userSearch.toLowerCase().trim();
                     const filtered = users
-                      .filter(u => !q || u.name.toLowerCase().includes(q) || u.cpf.includes(q))
+                      .filter(u => {
+                        if (q && !u.name.toLowerCase().includes(q) && !u.cpf.includes(q)) return false;
+                        const days = getInactiveDays(u);
+                        if (userFilter === "active") return days <= 7;
+                        if (userFilter === "inactive7") return days > 7 && days <= 30;
+                        if (userFilter === "inactive30") return days > 30;
+                        if (userFilter === "noDeposit") return hasNoDeposit(u);
+                        return true;
+                      })
                       .sort((a, b) => {
                         const af = favoritedUsers.has(a.cpf) ? 0 : 1;
                         const bf = favoritedUsers.has(b.cpf) ? 0 : 1;
-                        return af - bf;
+                        return af - bf || getInactiveDays(a) - getInactiveDays(b);
                       });
                     if (filtered.length === 0) return (
-                      <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado para "{userSearch}".</p>
+                      <p className="text-sm p-4 text-muted-foreground">Nenhum usuário encontrado{q ? ` para "${userSearch}"` : " neste filtro"}.</p>
                     );
                     return filtered.map(u => {
                       const userDeposits = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
@@ -4903,21 +4972,34 @@ function UsersTab() {
                       const withdrawalsForUser = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
                       const totalWithdrawn = withdrawalsForUser.reduce((s: number, w: any) => s + w.amount, 0);
                       const profit = Math.round((totalWithdrawn - totalDeposited) * 100) / 100;
+                      const inactiveDays = getInactiveDays(u);
+                      const inactiveBadge = inactiveDays === 0
+                        ? { label: "hoje", cls: "bg-green-500/20 text-green-400" }
+                        : inactiveDays <= 7
+                        ? { label: `${inactiveDays}d`, cls: "bg-green-500/20 text-green-400" }
+                        : inactiveDays <= 30
+                        ? { label: `${inactiveDays}d`, cls: "bg-yellow-500/20 text-yellow-400" }
+                        : { label: `${inactiveDays}d`, cls: "bg-red-500/20 text-red-400" };
                       return (
                         <button key={u.cpf} onClick={() => { setSelectedUser(u); setEditBalance(u.balance.toFixed(2)); setEditBonus((u.bonusBalance ?? 0).toFixed(2)); setNewPassword(""); }}
                           className={`w-full text-left px-4 py-3 border-b hover:bg-muted/50 transition-colors ${selectedUser?.cpf === u.cpf ? "bg-muted" : ""}`}
                           data-testid={`row-user-${u.cpf}`}>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={e => toggleFavorite(u.cpf, e)}
-                              className="shrink-0 text-muted-foreground hover:text-yellow-400 transition-colors"
-                              data-testid={`btn-favorite-${u.cpf}`}
-                            >
-                              {favoritedUsers.has(u.cpf)
-                                ? <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                : <Star className="w-3.5 h-3.5" />}
-                            </button>
-                            <p className="font-semibold text-sm">{u.name}</p>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <button
+                                onClick={e => toggleFavorite(u.cpf, e)}
+                                className="shrink-0 text-muted-foreground hover:text-yellow-400 transition-colors"
+                                data-testid={`btn-favorite-${u.cpf}`}
+                              >
+                                {favoritedUsers.has(u.cpf)
+                                  ? <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                                  : <Star className="w-3.5 h-3.5" />}
+                              </button>
+                              <p className="font-semibold text-sm truncate">{u.name}</p>
+                            </div>
+                            <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${inactiveBadge.cls}`} title="Inatividade">
+                              {inactiveBadge.label}
+                            </span>
                           </div>
                           <p className="text-xs text-muted-foreground">{u.cpf}</p>
                           <div className="flex items-start justify-between mt-0.5">
@@ -4940,6 +5022,9 @@ function UsersTab() {
                             <p className="text-xs text-yellow-400 font-medium mt-0.5 flex items-center gap-1">
                               <Gift className="w-3 h-3" /> Bônus: R$ {u.bonusBalance.toFixed(2).replace(".", ",")}
                             </p>
+                          )}
+                          {hasNoDeposit(u) && (
+                            <p className="text-[10px] text-orange-400 mt-0.5">Sem depósito</p>
                           )}
                         </button>
                       );
