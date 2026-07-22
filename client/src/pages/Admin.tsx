@@ -5093,7 +5093,7 @@ function UsersTab() {
                     <th className="w-10 px-3 py-2.5" onClick={e => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        className="w-4 h-4 accent-primary cursor-pointer"
+                        className="w-3 h-3 accent-primary cursor-pointer"
                         data-testid="checkbox-select-all-panel"
                         checked={filtered.length > 0 && filtered.every(u => selectedPanelCpfs.has(u.cpf))}
                         onChange={e => {
@@ -5141,7 +5141,7 @@ function UsersTab() {
                           <td className="w-10 px-3 py-3" onClick={e => e.stopPropagation()}>
                             <input
                               type="checkbox"
-                              className="w-4 h-4 accent-primary cursor-pointer"
+                              className="w-3 h-3 accent-primary cursor-pointer"
                               data-testid={`checkbox-panel-${u.cpf}`}
                               checked={selectedPanelCpfs.has(u.cpf)}
                               onChange={e => {
