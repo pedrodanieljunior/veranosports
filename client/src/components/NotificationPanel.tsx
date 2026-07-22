@@ -293,14 +293,18 @@ export function NotificationBanner() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
-  const closeBanner = (id: number) => {
+  const hideBanner = (id: number) => {
     setExiting(true);
     setTimeout(() => {
       setVisible(null);
       setExiting(false);
       setDismissed(prev => new Set([...prev, id]));
-      markOneRead.mutate(id);
     }, 280);
+  };
+
+  const dismissBanner = (id: number) => {
+    markOneRead.mutate(id);
+    hideBanner(id);
   };
 
   useEffect(() => {
@@ -317,7 +321,7 @@ export function NotificationBanner() {
 
     setTimeout(() => {
       setVisible(next);
-      timerRef.current = setTimeout(() => closeBanner(next.id), 6000);
+      timerRef.current = setTimeout(() => hideBanner(next.id), 6000);
     }, 100);
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
@@ -355,7 +359,7 @@ export function NotificationBanner() {
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", lineHeight: 1.4 }}>{visible.body}</p>
       </div>
       <button
-        onClick={() => closeBanner(visible.id)}
+        onClick={() => dismissBanner(visible.id)}
         style={{ flexShrink: 0, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", marginTop: 1, lineHeight: 1 }}
         data-testid="button-close-banner"
       >
