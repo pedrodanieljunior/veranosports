@@ -102,6 +102,7 @@ import {
   AlertOctagon,
   Siren,
   History,
+  Receipt,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -4571,6 +4572,8 @@ function UsersTab() {
   const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive7" | "inactive30" | "noDeposit">("all");
   const [inactiveFilter, setInactiveFilter] = useState<"all" | "active" | "inactive30" | "inactive60" | "noDeposit">("all");
   const [selectedInactiveUser, setSelectedInactiveUser] = useState<User | null>(null);
+  const [inactiveBetsOpen, setInactiveBetsOpen] = useState(false);
+  const [inactiveBetsPage, setInactiveBetsPage] = useState(0);
 
   const { data: allDepositsForUsers = [] } = useQuery<Deposit[]>({
     queryKey: ["/api/admin/deposits"],
@@ -5315,7 +5318,7 @@ function UsersTab() {
                       <>
                         <tr
                           key={u.cpf}
-                          onClick={() => setSelectedInactiveUser(isOpen ? null : u)}
+                          onClick={() => { setSelectedInactiveUser(isOpen ? null : u); setInactiveBetsOpen(false); setInactiveBetsPage(0); }}
                           className={`border-b border-border cursor-pointer transition-colors hover:bg-muted/40 ${isOpen ? "bg-muted/60" : ""}`}
                           data-testid={`inactivity-row-${u.cpf}`}
                         >
@@ -5398,37 +5401,105 @@ function UsersTab() {
                                       </div>
                                     </div>
 
-                                    {/* Bets */}
-                                    <div>
-                                      <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Apostas ({inactiveUserBets.length})</p>
-                                      {inactiveUserBets.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground">Nenhuma aposta registrada.</p>
-                                      ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                          {inactiveUserBets.slice(0, 9).map(bet => {
-                                            if (!bet?.id) return null;
-                                            const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
-                                            let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
-                                            try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
-                                            const statusLabel = bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente";
-                                            const statusCls = bet.status === "won" ? "bg-blue-500/20 text-blue-400" : bet.status === "lost" ? "bg-red-500/20 text-red-400" : bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400" : bet.status === "anulado" ? "bg-gray-500/20 text-gray-400" : "bg-yellow-500/20 text-yellow-400";
+                                    {/* Bets — collapsible + paginated */}
+                                    <div className="border border-border rounded-lg overflow-hidden">
+                                      {/* Header / toggle */}
+                                      <button
+                                        onClick={() => { setInactiveBetsOpen(o => !o); setInactiveBetsPage(0); }}
+                                        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+                                        data-testid="button-inactivity-bets-toggle"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Receipt className="w-4 h-4 text-muted-foreground" />
+                                          <span className="text-sm font-semibold">Apostas</span>
+                                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{inactiveUserBets.length}</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${inactiveBetsOpen ? "rotate-180" : ""}`} />
+                                      </button>
+
+                                      {/* Content */}
+                                      {inactiveBetsOpen && (
+                                        <div className="p-4 space-y-3">
+                                          {inactiveUserBets.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground">Nenhuma aposta registrada.</p>
+                                          ) : (() => {
+                                            const PAGE_SIZE = 6;
+                                            const totalPages = Math.ceil(inactiveUserBets.length / PAGE_SIZE);
+                                            const pageBets = inactiveUserBets.slice(inactiveBetsPage * PAGE_SIZE, (inactiveBetsPage + 1) * PAGE_SIZE);
                                             return (
-                                              <div key={bet.id} className="p-2 rounded border border-border bg-background text-xs">
-                                                <div className="flex justify-between items-center mb-1">
-                                                  <span className="font-mono text-[10px]">#{bet.id.slice(0, 8).toUpperCase()}</span>
-                                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusCls}`}>{statusLabel}</span>
+                                              <>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                  {pageBets.map(bet => {
+                                                    if (!bet?.id) return null;
+                                                    const safeBet = { ...bet, stake: bet.stake ?? 0, selections: Array.isArray(bet.selections) ? bet.selections : [] };
+                                                    let payout = { displayPotentialWin: 0, baseReturn: null as number | null, bonusReturn: null as number | null, bonusLabel: "" };
+                                                    try { payout = computeBetPayout(safeBet, undefined, liveCorrMatrix); } catch {}
+                                                    const statusLabel = bet.status === "won" ? "Ganhou" : bet.status === "lost" ? "Perdeu" : bet.status === "anulado" ? "Anulado" : bet.status === "cashed_out" ? "Cash Out" : "Pendente";
+                                                    const statusCls = bet.status === "won" ? "bg-blue-500/20 text-blue-400" : bet.status === "lost" ? "bg-red-500/20 text-red-400" : bet.status === "cashed_out" ? "bg-emerald-500/20 text-emerald-400" : bet.status === "anulado" ? "bg-gray-500/20 text-gray-400" : "bg-yellow-500/20 text-yellow-400";
+                                                    return (
+                                                      <div key={bet.id} className="p-3 rounded border border-border bg-background text-xs">
+                                                        <div className="flex justify-between items-center mb-1.5">
+                                                          <span className="font-mono font-semibold">#{bet.id.slice(0, 8).toUpperCase()}</span>
+                                                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusCls}`}>{statusLabel}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-muted-foreground mb-1">
+                                                          <span>{bet.selections?.length ?? 0} sel · {(bet.totalOdds ?? 0).toFixed(2)}x</span>
+                                                        </div>
+                                                        <div className="flex justify-between font-medium">
+                                                          <span>R$ {(bet.stake ?? 0).toFixed(2)}</span>
+                                                          <span className="text-green-400">→ R$ {fmtBRL(payout.displayPotentialWin)}</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-muted-foreground/60 mt-1">{new Date(bet.createdAt ?? "").toLocaleDateString("pt-BR")}</p>
+                                                      </div>
+                                                    );
+                                                  })}
                                                 </div>
-                                                <div className="flex justify-between text-muted-foreground">
-                                                  <span>{bet.selections?.length ?? 0} sel · {(bet.totalOdds ?? 0).toFixed(2)}x</span>
-                                                  <span>R$ {(bet.stake ?? 0).toFixed(2)} → R$ {fmtBRL(payout.displayPotentialWin)}</span>
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{new Date(bet.createdAt ?? "").toLocaleDateString("pt-BR")}</p>
-                                              </div>
+
+                                                {/* Pagination */}
+                                                {totalPages > 1 && (
+                                                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                                                    <p className="text-xs text-muted-foreground">
+                                                      Página {inactiveBetsPage + 1} de {totalPages} · {inactiveUserBets.length} apostas
+                                                    </p>
+                                                    <div className="flex items-center gap-1">
+                                                      <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-7 w-7 p-0"
+                                                        disabled={inactiveBetsPage === 0}
+                                                        onClick={() => setInactiveBetsPage(p => p - 1)}
+                                                        data-testid="button-bets-prev"
+                                                      >
+                                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                                      </Button>
+                                                      {Array.from({ length: totalPages }, (_, i) => (
+                                                        <Button
+                                                          key={i}
+                                                          size="sm"
+                                                          variant={inactiveBetsPage === i ? "default" : "outline"}
+                                                          className="h-7 w-7 p-0 text-xs"
+                                                          onClick={() => setInactiveBetsPage(i)}
+                                                          data-testid={`button-bets-page-${i}`}
+                                                        >
+                                                          {i + 1}
+                                                        </Button>
+                                                      ))}
+                                                      <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-7 w-7 p-0"
+                                                        disabled={inactiveBetsPage === totalPages - 1}
+                                                        onClick={() => setInactiveBetsPage(p => p + 1)}
+                                                        data-testid="button-bets-next"
+                                                      >
+                                                        <ChevronRight className="w-3.5 h-3.5" />
+                                                      </Button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </>
                                             );
-                                          })}
-                                          {inactiveUserBets.length > 9 && (
-                                            <p className="text-xs text-muted-foreground col-span-full">+{inactiveUserBets.length - 9} apostas — ver histórico completo</p>
-                                          )}
+                                          })()}
                                         </div>
                                       )}
                                     </div>
