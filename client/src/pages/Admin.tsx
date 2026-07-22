@@ -5083,8 +5083,21 @@ function UsersTab() {
                           data-testid={`inactivity-row-${u.cpf}`}
                         >
                           <td className="px-4 py-3">
-                            <p className="font-semibold text-sm">{u.name}</p>
-                            {hasNoDeposit(u) && <span className="text-[10px] text-orange-400">Sem depósito</span>}
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={e => toggleFavorite(u.cpf, e)}
+                                className="shrink-0 text-muted-foreground hover:text-yellow-400 transition-colors"
+                                data-testid={`btn-favorite-inactive-${u.cpf}`}
+                              >
+                                {favoritedUsers.has(u.cpf)
+                                  ? <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                                  : <Star className="w-3.5 h-3.5" />}
+                              </button>
+                              <div>
+                                <p className="font-semibold text-sm">{u.name}</p>
+                                {hasNoDeposit(u) && <span className="text-[10px] text-orange-400">Sem depósito</span>}
+                              </div>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">{u.cpf}</td>
                           <td className="px-4 py-3 text-right font-medium text-green-400 text-sm">R$ {u.balance.toFixed(2).replace(".", ",")}</td>
