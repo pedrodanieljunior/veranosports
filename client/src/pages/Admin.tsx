@@ -5052,7 +5052,7 @@ function UsersTab() {
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nome</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">CPF</th>
                     <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Saldo</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Depósitos</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Financeiro</th>
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">1º Dep.</th>
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Últ. atividade</th>
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Inatividade</th>
@@ -5072,6 +5072,9 @@ function UsersTab() {
                       : "bg-red-500/20 text-red-400";
                     const deps = allDepositsForUsers.filter(d => d.userId === u.cpf && d.status === "confirmed");
                     const totalDep = deps.reduce((s, d) => s + d.amount, 0);
+                    const wds = allWithdrawalsForUsers.filter((w: UserWithdrawal) => w.userId === u.cpf && (w.status === "paid" || w.status === "approved"));
+                    const totalWd = wds.reduce((s: number, w: any) => s + w.amount, 0);
+                    const profit = Math.round((totalWd - totalDep) * 100) / 100;
                     const isOpen = selectedInactiveUser?.cpf === u.cpf;
 
                     return (
@@ -5101,8 +5104,18 @@ function UsersTab() {
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">{u.cpf}</td>
                           <td className="px-4 py-3 text-right font-medium text-green-400 text-sm">R$ {u.balance.toFixed(2).replace(".", ",")}</td>
-                          <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden md:table-cell">
-                            {deps.length > 0 ? <span className="text-blue-400">{deps.length}x · R$ {totalDep.toFixed(2).replace(".", ",")}</span> : <span className="text-muted-foreground/50">—</span>}
+                          <td className="px-4 py-3 text-right text-xs hidden md:table-cell">
+                            <div className="flex flex-col gap-0.5 items-end">
+                              {deps.length > 0
+                                ? <span className="text-blue-400">{deps.length} dep · R$ {totalDep.toFixed(2).replace(".", ",")}</span>
+                                : <span className="text-muted-foreground/50">—</span>}
+                              {wds.length > 0 && <span className="text-red-400">{wds.length} saq · R$ {totalWd.toFixed(2).replace(".", ",")}</span>}
+                              {(deps.length > 0 || wds.length > 0) && profit !== 0 && (
+                                <span className={`font-medium ${profit > 0 ? "text-green-400" : "text-red-400"}`}>
+                                  lucro: {profit > 0 ? "+" : "-"}R$ {Math.abs(profit).toFixed(2).replace(".", ",")}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-center hidden md:table-cell">
                             {u.firstDepositDone
