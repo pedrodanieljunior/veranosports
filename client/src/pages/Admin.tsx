@@ -5033,9 +5033,10 @@ function UsersTab() {
                 data-testid={`inactivity-filter-${f.key}`}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
                   isSelected
-                    ? f.active
+                    ? f.key === "all" ? "text-white" : f.active
                     : "bg-transparent text-muted-foreground border-border hover:bg-muted/40"
                 }`}
+                style={isSelected && f.key === "all" ? { background: "rgba(255,255,255,0.18)", borderColor: "rgba(255,255,255,0.5)" } : undefined}
               >
                 {f.label} <span className="opacity-60">({count})</span>
               </button>
