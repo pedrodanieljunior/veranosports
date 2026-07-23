@@ -4549,15 +4549,25 @@ function UsersTab() {
   const [bulkBonusSelected, setBulkBonusSelected] = useState<Set<string>>(new Set());
   const [bulkBonusOpen, setBulkBonusOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<string | null>(null);
-  const [favoritedUsers, setFavoritedUsers] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("admin_fav_users") || "[]")); } catch { return new Set(); }
+  const { data: favUsersData = [] } = useQuery<string[]>({
+    queryKey: ["/api/admin/fav-users"],
+    staleTime: 60000,
   });
+  const [favoritedUsers, setFavoritedUsers] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (favUsersData.length > 0) setFavoritedUsers(new Set(favUsersData));
+  }, [favUsersData.join(",")]);
+
+  const saveFavMutation = useMutation({
+    mutationFn: (cpfs: string[]) => apiRequest("POST", "/api/admin/fav-users", { cpfs }),
+  });
+
   const toggleFavorite = (cpf: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setFavoritedUsers(prev => {
       const next = new Set(prev);
       if (next.has(cpf)) next.delete(cpf); else next.add(cpf);
-      localStorage.setItem("admin_fav_users", JSON.stringify([...next]));
+      saveFavMutation.mutate([...next]);
       return next;
     });
   };

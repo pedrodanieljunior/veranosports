@@ -2429,6 +2429,22 @@ export async function registerRoutes(
     res.json({ ok: true });
   });
 
+  app.get("/api/admin/fav-users", requireAdmin, async (req, res) => {
+    try {
+      const raw = await storage.getSetting("admin_fav_users");
+      res.json(JSON.parse(raw || "[]"));
+    } catch { res.json([]); }
+  });
+
+  app.post("/api/admin/fav-users", requireAdmin, async (req, res) => {
+    try {
+      const { cpfs } = req.body;
+      if (!Array.isArray(cpfs)) return res.status(400).json({ message: "cpfs must be array" });
+      await storage.setSetting("admin_fav_users", JSON.stringify(cpfs));
+      res.json({ ok: true });
+    } catch { res.status(500).json({ message: "Erro ao salvar favoritos" }); }
+  });
+
   app.get("/api/admin/users/:cpf/bets", async (req, res) => {
     const bets = await storage.getBetSlipsByUser(req.params.cpf);
     res.json(bets);
