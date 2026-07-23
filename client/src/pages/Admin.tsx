@@ -5014,7 +5014,7 @@ function UsersTab() {
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {([
-            { key: "all",       label: "Todos",       active: "bg-muted/80 text-foreground border border-border" },
+            { key: "all",       label: "Todos",       active: "bg-white/15 text-white border border-white/40" },
             { key: "active",    label: "Ativos",      active: "bg-green-500/20 text-green-400 border border-green-500/30" },
             { key: "inactive30",label: "Inativos 30d",active: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" },
             { key: "inactive60",label: "Inativos 60d",active: "bg-red-500/20 text-red-400 border border-red-500/30" },
