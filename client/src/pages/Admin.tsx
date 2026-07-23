@@ -5036,7 +5036,7 @@ function UsersTab() {
                     ? f.key === "all" ? "text-white" : f.active
                     : "bg-transparent text-muted-foreground border-border hover:bg-muted/40"
                 }`}
-                style={isSelected && f.key === "all" ? { background: "rgba(255,255,255,0.18)", borderColor: "rgba(255,255,255,0.5)" } : undefined}
+                style={isSelected && f.key === "all" ? { background: "#3b82f6", borderColor: "#3b82f6", color: "#fff" } : undefined}
               >
                 {f.label} <span className="opacity-60">({count})</span>
               </button>
