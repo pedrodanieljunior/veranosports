@@ -4806,7 +4806,7 @@ function UsersTab() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-4 flex items-center justify-between gap-3">
+          <CardContent className="p-4 flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Users className="w-5 h-5 text-primary" />
@@ -4819,7 +4819,7 @@ function UsersTab() {
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-7 gap-1 text-green-400 border-green-500/40 hover:bg-green-500/10 shrink-0"
+              className="text-xs h-7 gap-1 text-green-400 border-green-500/40 hover:bg-green-500/10 w-full"
               data-testid="button-export-vcf"
               onClick={() => {
                 const usersToExport = users.filter(u => u.name && u.phone);
