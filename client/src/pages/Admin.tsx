@@ -5070,7 +5070,13 @@ function UsersTab() {
               if (!nameMatch && !cpfMatch) return false;
             }
             return true;
-          }).sort((a, b) => inactiveSortByBalance ? Number(b.balance) - Number(a.balance) : getInactiveDays(b) - getInactiveDays(a));
+          }).sort((a, b) => {
+            if (inactiveSortByBalance) return Number(b.balance) - Number(a.balance);
+            const aFav = favoritedUsers.has(a.cpf) ? 0 : 1;
+            const bFav = favoritedUsers.has(b.cpf) ? 0 : 1;
+            if (inactiveFilter === "all" && aFav !== bFav) return aFav - bFav;
+            return getInactiveDays(b) - getInactiveDays(a);
+          });
 
           if (filtered.length === 0) return (
             <p className="text-sm p-4 text-muted-foreground">Nenhum usuário neste filtro.</p>
