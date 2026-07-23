@@ -5113,10 +5113,10 @@ function UsersTab() {
                     </th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nome</th>
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">CPF</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Saldo</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Saldo</th>
                     <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Financeiro</th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">1º Dep.</th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Últ. atividade</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">1º Dep.</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Últ. atividade</th>
                     <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Inatividade</th>
                     <th className="w-8 px-2 py-2.5"></th>
                   </tr>
@@ -5173,12 +5173,13 @@ function UsersTab() {
                               </button>
                               <div>
                                 <p className="font-semibold text-sm">{u.name}</p>
+                                <p className="text-xs font-medium text-green-400 sm:hidden">R$ {u.balance.toFixed(2).replace(".", ",")}</p>
                                 {hasNoDeposit(u) && <span className="text-[10px] text-orange-400">Sem depósito</span>}
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">{u.cpf}</td>
-                          <td className="px-4 py-3 text-right font-medium text-green-400 text-sm">R$ {u.balance.toFixed(2).replace(".", ",")}</td>
+                          <td className="px-4 py-3 text-right font-medium text-green-400 text-sm hidden sm:table-cell">R$ {u.balance.toFixed(2).replace(".", ",")}</td>
                           <td className="px-4 py-3 text-right text-xs hidden md:table-cell">
                             <div className="flex flex-col gap-0.5 items-end">
                               {deps.length > 0
@@ -5192,12 +5193,12 @@ function UsersTab() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center hidden md:table-cell">
+                          <td className="px-4 py-3 text-center hidden lg:table-cell">
                             {u.firstDepositDone
                               ? <span className="text-green-400 text-xs">✓ Sim</span>
                               : <span className="text-orange-400 text-xs">Não</span>}
                           </td>
-                          <td className="px-4 py-3 text-center text-xs text-muted-foreground">{lastDate}</td>
+                          <td className="px-4 py-3 text-center text-xs text-muted-foreground hidden sm:table-cell">{lastDate}</td>
                           <td className="px-4 py-3 text-center">
                             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>
                               {days === 0 ? "hoje" : `${days}d`}
@@ -5225,7 +5226,7 @@ function UsersTab() {
                                         <p className="font-semibold text-base">{u.name}</p>
                                         <p className="text-xs text-muted-foreground">CPF: {u.cpf} · Tel: {u.phone || "—"} {u.referralCode && `· Código: ${u.referralCode}`}</p>
                                       </div>
-                                      <div className="flex gap-2">
+                                      <div className="flex gap-2 flex-wrap">
                                         <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => setHistoryUser(u.cpf)} data-testid="button-inactivity-history">
                                           <FileText className="w-3 h-3" /> Histórico
                                         </Button>
@@ -5237,6 +5238,22 @@ function UsersTab() {
                                           data-testid="button-inactivity-edit"
                                         >
                                           <Edit className="w-3 h-3" /> {inactiveEditOpen ? "Fechar edição" : "Editar usuário"}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-xs gap-1 text-red-400 border-red-500/40 hover:bg-red-500/10"
+                                          disabled={deleteUserMutation.isPending}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm(`Excluir o usuário "${u.name}" permanentemente? Esta ação não pode ser desfeita.`)) {
+                                              deleteUserMutation.mutate(u.cpf);
+                                              setSelectedInactiveUser(null);
+                                            }
+                                          }}
+                                          data-testid={`button-panel-delete-user-${u.cpf}`}
+                                        >
+                                          <Trash2 className="w-3 h-3" /> Excluir
                                         </Button>
                                       </div>
                                     </div>
