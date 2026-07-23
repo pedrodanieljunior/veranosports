@@ -5385,9 +5385,9 @@ function UsersTab() {
                                         <p className="font-bold text-red-400">{wds.length}x · R$ {totalWd.toFixed(2).replace(".", ",")}</p>
                                       </div>
                                       <div className={`rounded-lg bg-background border p-3 ${profit > 0 ? "border-green-500/20" : profit < 0 ? "border-red-500/20" : "border-border"}`}>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Lucro (banca)</p>
-                                        <p className={`font-bold ${profit > 0 ? "text-red-400" : profit < 0 ? "text-green-400" : "text-muted-foreground"}`}>
-                                          {profit === 0 ? "—" : `${profit > 0 ? "-" : "+"}R$ ${Math.abs(profit).toFixed(2).replace(".", ",")}`}
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Lucro (usuário)</p>
+                                        <p className={`font-bold ${profit > 0 ? "text-green-400" : profit < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                                          {profit === 0 ? "—" : `${profit > 0 ? "+" : "-"}R$ ${Math.abs(profit).toFixed(2).replace(".", ",")}`}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-0.5">{deps.length} dep / {wds.length} saq</p>
                                       </div>
