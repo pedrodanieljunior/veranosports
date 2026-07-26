@@ -6269,8 +6269,43 @@ export async function registerRoutes(
               72: 12, // Double Chance
               19: 13, // 1x2 (1st Half)
             };
-            const liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
-            const addedFrontendIds = new Set<number>();
+            let liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
+
+            // If live odds are empty (provider not yet available), fall back to pre-match odds
+            if (liveOdds.length === 0) {
+              console.log(`[live-test] Live odds empty for fixture ${FIXTURE_ID} — falling back to pre-match odds`);
+              const prematchResp = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`, {
+                headers: { "x-apisports-key": API_FOOTBALL_KEY! },
+              });
+              if (prematchResp.ok) {
+                const prematchData = await prematchResp.json();
+                const PREMATCH_IDS = new Set([1, 3, 5, 6, 8, 12, 13]);
+                const bkList: any[] = prematchData.response?.[0]?.bookmakers ?? [];
+                const bk = bkList[0];
+                for (const bet of (bk?.bets ?? [])) {
+                  if (!PREMATCH_IDS.has(bet.id)) continue;
+                  let values: any[] = [];
+                  if (bet.id === 5) {
+                    values = (bet.values ?? [])
+                      .filter((v: any) => v.value === "Over 2.5" || v.value === "Under 2.5")
+                      .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
+                  } else if (bet.id === 6) {
+                    values = (bet.values ?? [])
+                      .filter((v: any) => v.value === "Over 0.5" || v.value === "Under 0.5")
+                      .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
+                  } else {
+                    values = (bet.values ?? []).map((v: any) => ({
+                      value: v.value, odd: parseFloat(v.odd), suspended: false,
+                    }));
+                  }
+                  if (values.length > 0) markets.push({ id: bet.id, name: bet.name, values });
+                }
+              }
+              // Skip the live-specific parsing below since we already populated markets
+              liveOdds = []; // keep empty so the loop below is a no-op
+            }
+
+            const addedFrontendIds = new Set<number>(markets.map(m => m.id));
             for (const [liveId, frontendId] of Object.entries(LIVE_TO_FRONTEND)) {
               if (addedFrontendIds.has(frontendId)) continue; // skip if already added via another live ID
               const market = liveOdds.find((o: any) => o.id === Number(liveId));
