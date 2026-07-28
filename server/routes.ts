@@ -6269,74 +6269,8 @@ export async function registerRoutes(
               72: 12, // Double Chance
               19: 13, // 1x2 (1st Half)
             };
-            let liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
-
-            // If live odds are empty (provider not yet available), fall back to pre-match odds
-            if (liveOdds.length === 0) {
-              console.log(`[live-test] Live odds empty for fixture ${FIXTURE_ID} — falling back to pre-match odds`);
-              const prematchResp = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}&bookmaker=8`, {
-                headers: { "x-apisports-key": API_FOOTBALL_KEY! },
-              });
-              if (prematchResp.ok) {
-                const prematchData = await prematchResp.json();
-                const bkList: any[] = prematchData.response?.[0]?.bookmakers ?? [];
-                // Prefer Bet365 (id=8), fallback to first available
-                const bk = bkList.find((b: any) => b.id === 8) ?? bkList[0];
-
-                // Map API Football pre-match bet IDs → frontend market IDs used by LiveTestCard
-                // Frontend IDs expected: 1 (Resultado Final), 8 (Ambas Marcam), 12 (Dupla Chance),
-                //   25 (Gols O/U — NOT 5, which is filtered out), 20 (Escanteios — API uses 45),
-                //   13 (1º Tempo), 6 (O/U 1º Tempo)
-                const PREMATCH_MAP: Record<number, { frontendId: number; name: string }> = {
-                  1:  { frontendId: 1,  name: "Fulltime Result" },
-                  8:  { frontendId: 8,  name: "Both Teams Score" },
-                  12: { frontendId: 12, name: "Double Chance" },
-                  5:  { frontendId: 25, name: "Goals Over/Under" },   // map to 25 so it renders (5 is filtered)
-                  45: { frontendId: 20, name: "Corners Over/Under" },  // map to 20 (live frontend ID)
-                  13: { frontendId: 13, name: "First Half Winner" },
-                  6:  { frontendId: 6,  name: "Goals Over/Under First Half" },
-                };
-
-                for (const bet of (bk?.bets ?? [])) {
-                  const mapping = PREMATCH_MAP[bet.id];
-                  if (!mapping) continue;
-                  let values: any[] = [];
-
-                  if (bet.id === 5) {
-                    // Goals O/U: keep only .5 lines (LiveTestCard filters to .5 anyway)
-                    values = (bet.values ?? [])
-                      .filter((v: any) => { const n = parseFloat(v.value.match(/[\d.]+/)?.[0] ?? "0"); return n % 1 === 0.5; })
-                      .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
-                  } else if (bet.id === 6) {
-                    // O/U 1st half: only 0.5 line
-                    values = (bet.values ?? [])
-                      .filter((v: any) => v.value === "Over 0.5" || v.value === "Under 0.5")
-                      .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
-                  } else if (bet.id === 45) {
-                    // Corners: prefer .5 lines, fallback to whole numbers
-                    const halfLines = (bet.values ?? []).filter((v: any) => {
-                      const n = parseFloat(v.value.match(/[\d.]+/)?.[0] ?? "0"); return n % 1 === 0.5;
-                    });
-                    const src = halfLines.length > 0 ? halfLines : (bet.values ?? []);
-                    // Pick the line closest to the midpoint (e.g. 9.5 or 10)
-                    const lines = [...new Set(src.map((v: any) => v.value.match(/[\d.]+/)?.[0]))];
-                    const mid = lines[Math.floor(lines.length / 2)];
-                    values = src
-                      .filter((v: any) => v.value.includes(mid ?? ""))
-                      .map((v: any) => ({ value: v.value, odd: parseFloat(v.odd), suspended: false }));
-                  } else {
-                    values = (bet.values ?? []).map((v: any) => ({
-                      value: v.value, odd: parseFloat(v.odd), suspended: false,
-                    }));
-                  }
-                  if (values.length > 0) markets.push({ id: mapping.frontendId, name: mapping.name, values });
-                }
-              }
-              // Skip the live-specific parsing below since we already populated markets
-              liveOdds = []; // keep empty so the loop below is a no-op
-            }
-
-            const addedFrontendIds = new Set<number>(markets.map(m => m.id));
+            const liveOdds: any[] = oddsData.response?.[0]?.odds ?? [];
+            const addedFrontendIds = new Set<number>();
             for (const [liveId, frontendId] of Object.entries(LIVE_TO_FRONTEND)) {
               if (addedFrontendIds.has(frontendId)) continue; // skip if already added via another live ID
               const market = liveOdds.find((o: any) => o.id === Number(liveId));
