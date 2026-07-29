@@ -216,6 +216,8 @@ export const boostCardsTable = pgTable("boost_cards", {
   minStake: real("min_stake"),
   imageData: text("image_data"),
   mimeType: text("mime_type").default("image/jpeg"),
+  fakeCounterTarget: integer("fake_counter_target").default(0),
+  fakeCounterStart: integer("fake_counter_start").default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -245,6 +247,8 @@ export const boostCardSchema = z.object({
   maxStake: z.number().nullable().optional(),
   minStake: z.number().nullable().optional(),
   hasImage: z.boolean().optional().default(false),
+  fakeCounterTarget: z.number().int().optional().default(0),
+  fakeCounterStart: z.number().int().optional().default(0),
   createdAt: z.string(),
 });
 
@@ -267,6 +271,8 @@ export const insertBoostCardSchema = z.object({
   gradientTo: z.string().optional().default("#1a0a0a"),
   maxStake: z.number().nullable().optional(),
   minStake: z.number().nullable().optional(),
+  fakeCounterTarget: z.number().int().optional().default(0),
+  fakeCounterStart: z.number().int().optional().default(0),
 });
 
 export type InsertBoostCard = z.infer<typeof insertBoostCardSchema>;

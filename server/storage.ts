@@ -587,6 +587,8 @@ export class DatabaseStorage implements IStorage {
       maxStake: (r as any).maxStake ?? null,
       minStake: (r as any).minStake ?? null,
       hasImage: !!((r as any).imageData),
+      fakeCounterTarget: (r as any).fakeCounterTarget ?? 0,
+      fakeCounterStart: (r as any).fakeCounterStart ?? 0,
       createdAt: r.createdAt.toISOString(),
     };
   }
@@ -621,6 +623,8 @@ export class DatabaseStorage implements IStorage {
       gradientTo: (data as any).gradientTo ?? "#1a0a0a",
       maxStake: (data as any).maxStake ?? null,
       minStake: (data as any).minStake ?? null,
+      fakeCounterTarget: (data as any).fakeCounterTarget ?? 0,
+      fakeCounterStart: (data as any).fakeCounterStart ?? 0,
     }).returning();
     return this.mapBoostCard(row);
   }
@@ -642,6 +646,8 @@ export class DatabaseStorage implements IStorage {
     if ((data as any).gradientTo !== undefined) update.gradientTo = (data as any).gradientTo;
     if ((data as any).maxStake !== undefined) update.maxStake = (data as any).maxStake;
     if ((data as any).minStake !== undefined) update.minStake = (data as any).minStake;
+    if ((data as any).fakeCounterTarget !== undefined) update.fakeCounterTarget = (data as any).fakeCounterTarget;
+    if ((data as any).fakeCounterStart !== undefined) update.fakeCounterStart = (data as any).fakeCounterStart;
     if ((data as any).imageData !== undefined) update.imageData = (data as any).imageData;
     if ((data as any).mimeType !== undefined) update.mimeType = (data as any).mimeType;
     const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();

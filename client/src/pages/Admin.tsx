@@ -3584,6 +3584,8 @@ function BoostTab() {
     gradientTo: "#1a0a0a",
     maxStake: "",
     minStake: "",
+    fakeCounterTarget: "",
+    fakeCounterStart: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3740,6 +3742,8 @@ function BoostTab() {
       gradientTo: (card as any).gradientTo || "#1a0a0a",
       maxStake: (card as any).maxStake != null ? String((card as any).maxStake) : "",
       minStake: (card as any).minStake != null ? String((card as any).minStake) : "",
+      fakeCounterTarget: (card as any).fakeCounterTarget ? String((card as any).fakeCounterTarget) : "",
+      fakeCounterStart: (card as any).fakeCounterStart ? String((card as any).fakeCounterStart) : "",
     });
     setShowForm(true);
   };
@@ -3773,6 +3777,8 @@ function BoostTab() {
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
         minStake: form.minStake ? parseFloat(form.minStake) : null,
+        fakeCounterTarget: form.fakeCounterTarget ? parseInt(form.fakeCounterTarget) : 0,
+        fakeCounterStart: form.fakeCounterStart ? parseInt(form.fakeCounterStart) : 0,
       };
       if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -3796,6 +3802,8 @@ function BoostTab() {
         gradientTo: form.gradientTo || "#1a0a0a",
         maxStake: form.maxStake ? parseFloat(form.maxStake) : null,
         minStake: form.minStake ? parseFloat(form.minStake) : null,
+        fakeCounterTarget: form.fakeCounterTarget ? parseInt(form.fakeCounterTarget) : 0,
+        fakeCounterStart: form.fakeCounterStart ? parseInt(form.fakeCounterStart) : 0,
       };
       if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -4324,6 +4332,41 @@ function BoostTab() {
                   value={form.endsAt}
                   onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))}
                 />
+              </div>
+            </div>
+
+            {/* Fake Counter */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Contador de apostas falso (opcional)</label>
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+                <p className="text-[11px] text-muted-foreground">Mostra um contador animado crescendo exponencialmente até o valor alvo ao longo da duração do boost.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Valor inicial</label>
+                    <input
+                      type="number" step="1" min="0"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="Ex: 0"
+                      value={form.fakeCounterStart}
+                      onChange={e => setForm(f => ({ ...f, fakeCounterStart: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Valor alvo (ao fim do boost)</label>
+                    <input
+                      type="number" step="1" min="0"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="Ex: 500"
+                      value={form.fakeCounterTarget}
+                      onChange={e => setForm(f => ({ ...f, fakeCounterTarget: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                {form.fakeCounterTarget && parseInt(form.fakeCounterTarget) > 0 ? (
+                  <p className="text-[11px] text-yellow-400">⚡ Contador ativo — irá de {form.fakeCounterStart || "0"} até {form.fakeCounterTarget} apostas</p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Deixe o valor alvo em 0 para não exibir o contador.</p>
+                )}
               </div>
             </div>
 

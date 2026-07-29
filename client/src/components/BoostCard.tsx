@@ -1,7 +1,70 @@
-import { Zap } from "lucide-react";
+import { Zap, TrendingUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
 import { fmtOdds } from "@/lib/formatOdds";
+
+/** Compute the current fake counter value based on exponential growth curve. */
+function computeFakeCounter(start: number, target: number, createdAt: string, endsAt: string): number {
+  if (!target || target <= 0) return 0;
+  const now = Date.now();
+  const from = new Date(createdAt).getTime();
+  const to = new Date(endsAt).getTime();
+  if (to <= from) return target;
+  const progress = Math.min(1, Math.max(0, (now - from) / (to - from)));
+  // Exponential growth: slow start → fast end, k=3
+  const k = 3;
+  const curve = (Math.exp(k * progress) - 1) / (Math.exp(k) - 1);
+  return Math.floor(start + (target - start) * curve);
+}
+
+function FakeCounter({ card }: { card: BoostCardType }) {
+  const target = (card as any).fakeCounterTarget as number ?? 0;
+  const start = (card as any).fakeCounterStart as number ?? 0;
+  const [displayed, setDisplayed] = useState(() => computeFakeCounter(start, target, card.createdAt, card.endsAt));
+  const prevRef = useRef(displayed);
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    if (!target || target <= 0) return;
+
+    const scheduleNext = () => {
+      // Random interval between 45s and 180s
+      const delay = 45000 + Math.random() * 135000;
+      return setTimeout(() => {
+        const next = computeFakeCounter(start, target, card.createdAt, card.endsAt);
+        if (next !== prevRef.current) {
+          prevRef.current = next;
+          setDisplayed(next);
+          setAnimate(true);
+          setTimeout(() => setAnimate(false), 600);
+        }
+        scheduleNext();
+      }, delay);
+    };
+
+    const t = scheduleNext();
+    return () => clearTimeout(t);
+  }, [target, start, card.createdAt, card.endsAt]);
+
+  if (!target || target <= 0) return null;
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-2">
+      <TrendingUp className="w-3 h-3 flex-shrink-0" style={{ color: "rgba(255,200,0,0.8)" }} />
+      <span
+        className="text-[11px] font-bold tabular-nums transition-all duration-500"
+        style={{
+          color: animate ? "#FFD700" : "rgba(255,255,255,0.65)",
+          transform: animate ? "scale(1.12)" : "scale(1)",
+          display: "inline-block",
+        }}
+      >
+        {displayed.toLocaleString("pt-BR")} apostas feitas
+      </span>
+    </div>
+  );
+}
 
 interface BoostCardProps {
   card: BoostCardType;
@@ -218,6 +281,9 @@ export function BoostCard({ card, selections, onToggleSelection, usedByUser = fa
               })}
             </div>
           )}
+
+          {/* Fake counter */}
+          <FakeCounter card={card} />
 
           {/* Max stake notice */}
           {card.maxStake != null && card.maxStake > 0 && (
