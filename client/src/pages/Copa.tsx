@@ -69,6 +69,7 @@ export default function Copa() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [boostIdx, setBoostIdx] = useState(0);
+  const boostTouchRef = useRef(0);
   const pendingGameRef = useRef<Game | null>(null);
   const pendingSelectionRef = useRef<Selection | null>(null);
 
@@ -441,25 +442,21 @@ export default function Copa() {
               usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${boostCards[0].id}`)) : false} />
           ) : (
             <div>
-              <div style={{ position: "relative" }}>
+              <div
+                style={{ position: "relative", touchAction: "pan-y" }}
+                onTouchStart={e => { boostTouchRef.current = e.touches[0].clientX; }}
+                onTouchEnd={e => {
+                  const diff = boostTouchRef.current - e.changedTouches[0].clientX;
+                  if (diff > 50) setBoostIdx(i => Math.min(boostCards.length - 1, i + 1));
+                  else if (diff < -50) setBoostIdx(i => Math.max(0, i - 1));
+                }}
+              >
                 {boostCards.map((card, i) => (
                   <div key={card.id} style={{ display: i === boostIdx ? "block" : "none" }}>
                     <BoostCard card={card} selections={selections} onToggleSelection={handleToggleSelection}
                       usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false} />
                   </div>
                 ))}
-                {boostIdx > 0 && (
-                  <button onClick={() => setBoostIdx(i => Math.max(0, i - 1))} aria-label="Anterior"
-                    style={{ position:"absolute", left:10, top:"40%", transform:"translateY(-50%)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-                  </button>
-                )}
-                {boostIdx < boostCards.length - 1 && (
-                  <button onClick={() => setBoostIdx(i => Math.min(boostCards.length - 1, i + 1))} aria-label="Próximo"
-                    style={{ position:"absolute", right:10, top:"40%", transform:"translateY(-50%)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                )}
               </div>
               <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:8, paddingBottom:4 }}>
                 {boostCards.map((_,i) => (
