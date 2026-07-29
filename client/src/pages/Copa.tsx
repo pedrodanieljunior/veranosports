@@ -134,6 +134,11 @@ export default function Copa() {
   const { data: boostCards = [] } = useQuery<BoostCardType[]>({
     queryKey: ["/api/boost-cards"], staleTime: 0, refetchInterval: 30_000,
   });
+  useEffect(() => {
+    if (boostCards.length <= 1) return;
+    const id = setInterval(() => setBoostIdx(i => (i + 1) % boostCards.length), 4000);
+    return () => clearInterval(id);
+  }, [boostCards.length]);
 
   // SSE: receive live-state changes instantly (no waiting for next poll)
   useEffect(() => {

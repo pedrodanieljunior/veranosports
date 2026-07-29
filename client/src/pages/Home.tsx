@@ -222,6 +222,11 @@ export default function Home() {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
+  useEffect(() => {
+    if (boostCards.length <= 1) return;
+    const id = setInterval(() => setBoostIdx(i => (i + 1) % boostCards.length), 4000);
+    return () => clearInterval(id);
+  }, [boostCards.length]);
 
   const { data: bolaoData } = useQuery<{
     bolao: { id: number; homeTeam: string; awayTeam: string; matchDate: string; entryFee: number; status: string };
