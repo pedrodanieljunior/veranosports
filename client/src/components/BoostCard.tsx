@@ -104,6 +104,7 @@ export function BoostCard({ card, selections, onToggleSelection, usedByUser = fa
         outcome: o.label,
         odds: o.boostedOdds,
         originalOdds: o.originalOdds,
+        result: "pending" as const,
       };
     }
     return {
@@ -118,6 +119,7 @@ export function BoostCard({ card, selections, onToggleSelection, usedByUser = fa
       outcome: "Super Boost",
       odds: card.boostedOdds,
       originalOdds: card.originalOdds,
+      result: "pending" as const,
     };
   };
 

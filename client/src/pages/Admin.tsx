@@ -4216,6 +4216,41 @@ function BoostTab() {
               )}
             </div>
 
+            {/* Fake Counter */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">🔢 Contador de apostas falso (opcional)</label>
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+                <p className="text-[11px] text-muted-foreground">Exibe um número crescendo exponencialmente no card, do valor inicial até o alvo ao longo da duração do boost.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Valor inicial</label>
+                    <input
+                      type="number" step="1" min="0"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="Ex: 0"
+                      value={form.fakeCounterStart}
+                      onChange={e => setForm(f => ({ ...f, fakeCounterStart: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Valor alvo (ao fim do boost)</label>
+                    <input
+                      type="number" step="1" min="0"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="Ex: 500"
+                      value={form.fakeCounterTarget}
+                      onChange={e => setForm(f => ({ ...f, fakeCounterTarget: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                {form.fakeCounterTarget && parseInt(form.fakeCounterTarget) > 0 ? (
+                  <p className="text-[11px] text-yellow-400">⚡ Contador ativo — irá de {form.fakeCounterStart || "0"} até {form.fakeCounterTarget} apostas</p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Deixe o valor alvo em 0 para não exibir o contador.</p>
+                )}
+              </div>
+            </div>
+
             {/* Image upload — disponível durante criação e edição */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Imagem de fundo (opcional)</label>
@@ -4332,41 +4367,6 @@ function BoostTab() {
                   value={form.endsAt}
                   onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))}
                 />
-              </div>
-            </div>
-
-            {/* Fake Counter */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Contador de apostas falso (opcional)</label>
-              <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
-                <p className="text-[11px] text-muted-foreground">Mostra um contador animado crescendo exponencialmente até o valor alvo ao longo da duração do boost.</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">Valor inicial</label>
-                    <input
-                      type="number" step="1" min="0"
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                      placeholder="Ex: 0"
-                      value={form.fakeCounterStart}
-                      onChange={e => setForm(f => ({ ...f, fakeCounterStart: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">Valor alvo (ao fim do boost)</label>
-                    <input
-                      type="number" step="1" min="0"
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                      placeholder="Ex: 500"
-                      value={form.fakeCounterTarget}
-                      onChange={e => setForm(f => ({ ...f, fakeCounterTarget: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                {form.fakeCounterTarget && parseInt(form.fakeCounterTarget) > 0 ? (
-                  <p className="text-[11px] text-yellow-400">⚡ Contador ativo — irá de {form.fakeCounterStart || "0"} até {form.fakeCounterTarget} apostas</p>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">Deixe o valor alvo em 0 para não exibir o contador.</p>
-                )}
               </div>
             </div>
 
