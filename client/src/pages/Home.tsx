@@ -224,7 +224,7 @@ export default function Home() {
   });
   useEffect(() => {
     if (boostCards.length <= 1) return;
-    const id = setInterval(() => setBoostIdx(i => (i + 1) % boostCards.length), 4000);
+    const id = setInterval(() => setBoostIdx(i => (i + 1) % boostCards.length), 5000);
     return () => clearInterval(id);
   }, [boostCards.length]);
 
