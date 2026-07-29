@@ -22,6 +22,7 @@ function isUsedByUser(card: BoostCardType, betHistory: BetSlipType[], user: any)
 
 export function BoostCarousel({ cards, selections, onToggleSelection, betHistory, user }: BoostCarouselProps) {
   const [idx, setIdx] = useState(0);
+  console.log("[BoostCarousel] cards recebidos:", cards.length, "idx:", idx);
 
   // Single card — plain render, no chrome
   if (cards.length <= 1) {
@@ -39,7 +40,10 @@ export function BoostCarousel({ cards, selections, onToggleSelection, betHistory
   const next = () => setIdx((i) => Math.min(cards.length - 1, i + 1));
 
   return (
-    <div>
+    <div style={{ outline: "3px solid red" }}>
+      <div style={{ background: "red", color: "white", fontSize: 12, padding: "2px 6px", textAlign: "center" }}>
+        CAROUSEL — {cards.length} cards — mostrando {idx + 1}
+      </div>
       {/* Card display — only the active card is rendered */}
       <div style={{ position: "relative" }}>
         <BoostCard

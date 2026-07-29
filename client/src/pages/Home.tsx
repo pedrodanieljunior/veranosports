@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { GamesList } from "@/components/GamesList";
@@ -9,7 +9,6 @@ import { GameDetailModal } from "@/components/GameDetailModal";
 import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
 import { RulesModal } from "@/components/RulesModal";
 import { BoostCard } from "@/components/BoostCard";
-import { BoostCarousel } from "@/components/BoostCarousel";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { BolaoCard } from "@/components/BolaoCard";
 import { AuthModals } from "@/components/AuthModals";
@@ -44,6 +43,7 @@ export default function Home() {
   const [placedBet, setPlacedBet] = useState<BetSlipType | null>(null);
   const [gameLimitRemaining, setGameLimitRemaining] = useState<number | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [boostIdx, setBoostIdx] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -469,7 +469,43 @@ export default function Home() {
         )}
         {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
           <div className="pt-2">
-            <BoostCarousel cards={boostCards} selections={selections} onToggleSelection={handleToggleSelection} betHistory={betHistory} user={user} />
+            {boostCards.length === 1 ? (
+              <BoostCard card={boostCards[0]} selections={selections} onToggleSelection={handleToggleSelection}
+                usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${boostCards[0].id}`)) : false} />
+            ) : (
+              <div>
+                {/* Carousel: show only the current card, hide others */}
+                <div style={{ position: "relative" }}>
+                  {boostCards.map((card, i) => (
+                    <div key={card.id} style={{ display: i === boostIdx ? "block" : "none" }}>
+                      <BoostCard
+                        card={card}
+                        selections={selections}
+                        onToggleSelection={handleToggleSelection}
+                        usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false}
+                      />
+                    </div>
+                  ))}
+                  {boostIdx > 0 && (
+                    <button onClick={() => setBoostIdx(i => Math.max(0, i - 1))} aria-label="Anterior"
+                      style={{ position:"absolute", left:10, top:"40%", transform:"translateY(-50%)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                  )}
+                  {boostIdx < boostCards.length - 1 && (
+                    <button onClick={() => setBoostIdx(i => Math.min(boostCards.length - 1, i + 1))} aria-label="Próximo"
+                      style={{ position:"absolute", right:10, top:"40%", transform:"translateY(-50%)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  )}
+                </div>
+                <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:8, paddingBottom:4 }}>
+                  {boostCards.map((_,i) => (
+                    <button key={i} onClick={() => setBoostIdx(i)} style={{ height:6, width: i===boostIdx?18:6, borderRadius:9999, background: i===boostIdx?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.35)", transition:"all 0.3s", border:"none", cursor:"pointer", padding:0 }} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div className="flex-1">
@@ -616,7 +652,43 @@ export default function Home() {
             {/* Boost cards */}
             {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
               <div className="pb-2" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-                <BoostCarousel cards={boostCards} selections={selections} onToggleSelection={handleToggleSelection} betHistory={betHistory} user={user} />
+                {boostCards.length === 1 ? (
+                  <BoostCard card={boostCards[0]} selections={selections} onToggleSelection={handleToggleSelection}
+                    usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${boostCards[0].id}`)) : false} />
+                ) : (
+                  <div>
+                    {/* Carousel: show only the current card, hide others */}
+                    <div style={{ position: "relative" }}>
+                      {boostCards.map((card, i) => (
+                        <div key={card.id} style={{ display: i === boostIdx ? "block" : "none" }}>
+                          <BoostCard
+                            card={card}
+                            selections={selections}
+                            onToggleSelection={handleToggleSelection}
+                            usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false}
+                          />
+                        </div>
+                      ))}
+                      {boostIdx > 0 && (
+                        <button onClick={() => setBoostIdx(i => Math.max(0, i - 1))} aria-label="Anterior"
+                          style={{ position:"absolute", left:10, top:"40%", transform:"translateY(-50%)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                      )}
+                      {boostIdx < boostCards.length - 1 && (
+                        <button onClick={() => setBoostIdx(i => Math.min(boostCards.length - 1, i + 1))} aria-label="Próximo"
+                          style={{ position:"absolute", right:10, top:"40%", transform:"translateY(-50%)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:8, paddingBottom:4 }}>
+                      {boostCards.map((_,i) => (
+                        <button key={i} onClick={() => setBoostIdx(i)} style={{ height:6, width: i===boostIdx?18:6, borderRadius:9999, background: i===boostIdx?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.35)", transition:"all 0.3s", border:"none", cursor:"pointer", padding:0 }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
