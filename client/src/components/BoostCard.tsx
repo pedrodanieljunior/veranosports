@@ -34,9 +34,8 @@ function FakeCounter({ card }: { card: BoostCardType }) {
       return setTimeout(() => {
         setDisplayed(prev => {
           if (prev >= target) return prev;
-          // Random jump: between 1 and ~2% of target, minimum 1
-          const maxJump = Math.max(1, Math.floor(target * 0.02));
-          const jump = 1 + Math.floor(Math.random() * maxJump);
+          // Random jump: between 1 and 3
+          const jump = 1 + Math.floor(Math.random() * 3);
           const next = Math.min(target, prev + jump);
           if (next !== prev) {
             prevRef.current = next;
