@@ -9,6 +9,7 @@ import { GameDetailModal } from "@/components/GameDetailModal";
 import { MobileBannerCarousel } from "@/components/MobileBannerCarousel";
 import { RulesModal } from "@/components/RulesModal";
 import { BoostCard } from "@/components/BoostCard";
+import { BoostCarousel } from "@/components/BoostCarousel";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { BolaoCard } from "@/components/BolaoCard";
 import { AuthModals } from "@/components/AuthModals";
@@ -468,10 +469,7 @@ export default function Home() {
         )}
         {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
           <div className="pt-2">
-            {boostCards.map(card => (
-              <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection}
-                usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false} />
-            ))}
+            <BoostCarousel cards={boostCards} selections={selections} onToggleSelection={handleToggleSelection} betHistory={betHistory} user={user} />
           </div>
         )}
         <div className="flex-1">
@@ -618,10 +616,7 @@ export default function Home() {
             {/* Boost cards */}
             {boostCards.length > 0 && !isSearching && !isTyping && !selectedSport && (
               <div className="pb-2" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-                {boostCards.map(card => (
-                  <BoostCard key={card.id} card={card} selections={selections} onToggleSelection={handleToggleSelection}
-                    usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false} />
-                ))}
+                <BoostCarousel cards={boostCards} selections={selections} onToggleSelection={handleToggleSelection} betHistory={betHistory} user={user} />
               </div>
             )}
 
