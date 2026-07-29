@@ -29,16 +29,22 @@ function FakeCounter({ card }: { card: BoostCardType }) {
     if (!target || target <= 0) return;
 
     const scheduleNext = () => {
-      // Random interval between 45s and 180s
-      const delay = 45000 + Math.random() * 135000;
+      // Random interval between 8s and 25s
+      const delay = 8000 + Math.random() * 17000;
       return setTimeout(() => {
-        const next = computeFakeCounter(start, target, card.createdAt, card.endsAt);
-        if (next !== prevRef.current) {
-          prevRef.current = next;
-          setDisplayed(next);
-          setAnimate(true);
-          setTimeout(() => setAnimate(false), 600);
-        }
+        setDisplayed(prev => {
+          if (prev >= target) return prev;
+          // Random jump: between 1 and ~2% of target, minimum 1
+          const maxJump = Math.max(1, Math.floor(target * 0.02));
+          const jump = 1 + Math.floor(Math.random() * maxJump);
+          const next = Math.min(target, prev + jump);
+          if (next !== prev) {
+            prevRef.current = next;
+            setAnimate(true);
+            setTimeout(() => setAnimate(false), 600);
+          }
+          return next;
+        });
         scheduleNext();
       }, delay);
     };
