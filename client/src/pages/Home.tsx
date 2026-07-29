@@ -324,6 +324,10 @@ export default function Home() {
       const hasBoost = prev.some((s) => s.marketKey === "boost");
       const hasOther = prev.some((s) => s.marketKey !== "boost");
 
+      if (isBoost && hasBoost) {
+        toast({ title: "Apenas 1 Super Boost por bilhete", description: "Remova o Super Boost atual antes de adicionar outro.", variant: "destructive" });
+        return prev;
+      }
       if (isBoost && hasOther) {
         toast({ title: "Super Boost é exclusivo", description: "Remova as outras seleções antes de adicionar o Super Boost.", variant: "destructive" });
         return prev;

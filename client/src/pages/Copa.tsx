@@ -289,6 +289,7 @@ export default function Copa() {
       const isBoost = selection.marketKey === "boost";
       const hasBoost = prev.some(s => s.marketKey === "boost");
       const hasOther = prev.some(s => s.marketKey !== "boost");
+      if (isBoost && hasBoost) { toast({ title: "Apenas 1 Super Boost por bilhete", description: "Remova o Super Boost atual antes de adicionar outro.", variant: "destructive" }); return prev; }
       if (isBoost && hasOther) { toast({ title: "Super Boost é exclusivo", description: "Remova as outras seleções antes.", variant: "destructive" }); return prev; }
       if (!isBoost && hasBoost) { toast({ title: "Bilhete com Super Boost", description: "Remova o Super Boost para adicionar outras seleções.", variant: "destructive" }); return prev; }
       const withoutSameMarket = prev.filter(s => !(s.gameId === selection.gameId && s.marketKey === selection.marketKey));
