@@ -29,8 +29,8 @@ function FakeCounter({ card }: { card: BoostCardType }) {
     if (!target || target <= 0) return;
 
     const scheduleNext = () => {
-      // Random interval between 8s and 25s
-      const delay = 8000 + Math.random() * 17000;
+      // Random interval between 30s and 90s
+      const delay = 30000 + Math.random() * 60000;
       return setTimeout(() => {
         setDisplayed(prev => {
           if (prev >= target) return prev;
