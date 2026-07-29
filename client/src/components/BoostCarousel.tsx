@@ -1,7 +1,6 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { BoostCard as BoostCardType } from "@shared/schema";
-import { Selection, BetSlip as BetSlipType } from "@shared/schema";
+import { BoostCard as BoostCardType, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { BoostCard } from "./BoostCard";
 
 interface BoostCarouselProps {
@@ -12,108 +11,115 @@ interface BoostCarouselProps {
   user: any;
 }
 
-export function BoostCarousel({ cards, selections, onToggleSelection, betHistory, user }: BoostCarouselProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [activeIdx, setActiveIdx] = useState(0);
+function isUsedByUser(card: BoostCardType, betHistory: BetSlipType[], user: any): boolean {
+  if (!user) return false;
+  return betHistory.some(
+    (b) =>
+      Array.isArray(b.selections) &&
+      b.selections.some((s: any) => s.gameId === `boost-${card.id}`)
+  );
+}
 
-  // Single card — render without carousel chrome
-  if (cards.length === 1) {
-    return (
+export function BoostCarousel({ cards, selections, onToggleSelection, betHistory, user }: BoostCarouselProps) {
+  const [idx, setIdx] = useState(0);
+
+  // Single card — plain render, no chrome
+  if (cards.length <= 1) {
+    return cards.length === 0 ? null : (
       <BoostCard
         card={cards[0]}
         selections={selections}
         onToggleSelection={onToggleSelection}
-        usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${cards[0].id}`)) : false}
+        usedByUser={isUsedByUser(cards[0], betHistory, user)}
       />
     );
   }
 
-  const scrollTo = useCallback((idx: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const child = track.children[idx] as HTMLElement | undefined;
-    if (!child) return;
-    track.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
-    setActiveIdx(idx);
-  }, []);
-
-  const prev = () => scrollTo(Math.max(0, activeIdx - 1));
-  const next = () => scrollTo(Math.min(cards.length - 1, activeIdx + 1));
-
-  // Sync active dot on manual scroll
-  const onScroll = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    const width = track.clientWidth;
-    if (width === 0) return;
-    const idx = Math.round(track.scrollLeft / width);
-    setActiveIdx(idx);
-  };
+  const prev = () => setIdx((i) => Math.max(0, i - 1));
+  const next = () => setIdx((i) => Math.min(cards.length - 1, i + 1));
 
   return (
-    <div className="relative">
-      {/* Scroll track */}
-      <div
-        ref={trackRef}
-        onScroll={onScroll}
-        className="flex overflow-x-auto"
-        style={{
-          scrollSnapType: "x mandatory",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {cards.map((card) => (
-          <div
-            key={card.id}
-            style={{ scrollSnapAlign: "start", flex: "0 0 100%", minWidth: 0 }}
+    <div>
+      {/* Card display — only the active card is rendered */}
+      <div style={{ position: "relative" }}>
+        <BoostCard
+          key={cards[idx].id}
+          card={cards[idx]}
+          selections={selections}
+          onToggleSelection={onToggleSelection}
+          usedByUser={isUsedByUser(cards[idx], betHistory, user)}
+        />
+
+        {/* Left arrow */}
+        {idx > 0 && (
+          <button
+            onClick={prev}
+            aria-label="Anterior"
+            style={{
+              position: "absolute",
+              left: 10,
+              top: "40%",
+              transform: "translateY(-50%)",
+              zIndex: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.6)",
+              border: "1px solid rgba(255,255,255,0.25)",
+              cursor: "pointer",
+            }}
           >
-            <BoostCard
-              card={card}
-              selections={selections}
-              onToggleSelection={onToggleSelection}
-              usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false}
-            />
-          </div>
-        ))}
+            <ChevronLeft style={{ width: 16, height: 16, color: "#fff" }} />
+          </button>
+        )}
+
+        {/* Right arrow */}
+        {idx < cards.length - 1 && (
+          <button
+            onClick={next}
+            aria-label="Próximo"
+            style={{
+              position: "absolute",
+              right: 10,
+              top: "40%",
+              transform: "translateY(-50%)",
+              zIndex: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.6)",
+              border: "1px solid rgba(255,255,255,0.25)",
+              cursor: "pointer",
+            }}
+          >
+            <ChevronRight style={{ width: 16, height: 16, color: "#fff" }} />
+          </button>
+        )}
       </div>
 
-      {/* Arrow buttons */}
-      {activeIdx > 0 && (
-        <button
-          onClick={prev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-7 h-7 rounded-full"
-          style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.2)" }}
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="w-4 h-4 text-white" />
-        </button>
-      )}
-      {activeIdx < cards.length - 1 && (
-        <button
-          onClick={next}
-          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-7 h-7 rounded-full"
-          style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.2)" }}
-          aria-label="Próximo"
-        >
-          <ChevronRight className="w-4 h-4 text-white" />
-        </button>
-      )}
-
       {/* Dot indicators */}
-      <div className="flex justify-center gap-1.5 mt-2 pb-1">
+      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 8, paddingBottom: 4 }}>
         {cards.map((_, i) => (
           <button
             key={i}
-            onClick={() => scrollTo(i)}
-            className="rounded-full transition-all duration-300"
-            style={{
-              width: i === activeIdx ? 18 : 6,
-              height: 6,
-              background: i === activeIdx ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)",
-            }}
+            onClick={() => setIdx(i)}
             aria-label={`Card ${i + 1}`}
+            style={{
+              height: 6,
+              width: i === idx ? 18 : 6,
+              borderRadius: 9999,
+              background: i === idx ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.35)",
+              transition: "all 0.3s",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
           />
         ))}
       </div>
