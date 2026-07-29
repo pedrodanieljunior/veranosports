@@ -1,4 +1,4 @@
-import { Zap, TrendingUp } from "lucide-react";
+import { Zap } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
@@ -50,17 +50,20 @@ function FakeCounter({ card }: { card: BoostCardType }) {
   if (!target || target <= 0) return null;
 
   return (
-    <div className="flex items-center justify-center gap-1.5 mt-2">
-      <TrendingUp className="w-3 h-3 flex-shrink-0" style={{ color: "rgba(255,200,0,0.8)" }} />
+    <div
+      className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.15)" }}
+    >
+      <span className="text-[11px]">🔥</span>
       <span
         className="text-[11px] font-bold tabular-nums transition-all duration-500"
         style={{
-          color: animate ? "#FFD700" : "rgba(255,255,255,0.65)",
-          transform: animate ? "scale(1.12)" : "scale(1)",
+          color: animate ? "#FFD700" : "rgba(255,255,255,0.85)",
+          transform: animate ? "scale(1.1)" : "scale(1)",
           display: "inline-block",
         }}
       >
-        {displayed.toLocaleString("pt-BR")} apostas feitas
+        {displayed.toLocaleString("pt-BR")} apostas
       </span>
     </div>
   );
@@ -141,6 +144,9 @@ export function BoostCard({ card, selections, onToggleSelection, usedByUser = fa
       onClick={!usedByUser && !hasOutcomes ? () => onToggleSelection(makeSelection()) : undefined}
       data-testid={`boost-card-${card.id}`}
     >
+      {/* ── Fake counter overlay — top-left ── */}
+      <FakeCounter card={card} />
+
       {/* ── Image section on top ── */}
       {imgSrc && (
         <div className="w-full overflow-hidden" style={{ maxHeight: 180 }}>
@@ -283,9 +289,6 @@ export function BoostCard({ card, selections, onToggleSelection, usedByUser = fa
               })}
             </div>
           )}
-
-          {/* Fake counter */}
-          <FakeCounter card={card} />
 
           {/* Max stake notice */}
           {card.maxStake != null && card.maxStake > 0 && (
