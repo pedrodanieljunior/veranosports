@@ -1,4 +1,4 @@
-import { Zap } from "lucide-react";
+import { Zap, Flame } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
@@ -54,7 +54,7 @@ function FakeCounter({ card }: { card: BoostCardType }) {
       className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full"
       style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.15)" }}
     >
-      <span className="text-[11px]">🔥</span>
+      <Flame className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#FF6B2B", fill: "#FF6B2B" }} />
       <span
         className="text-[11px] font-bold tabular-nums transition-all duration-500"
         style={{
