@@ -6239,36 +6239,15 @@ export async function registerRoutes(
           }
 
           // Step 2: fetch odds — live endpoint when in-play, pre-match otherwise
-          // If live odds return empty (not all fixtures are covered in-play), fall back to pre-match odds
-          let oddsData: any;
-          let usedLiveOdds = false;
-          if (isLiveStatus) {
-            const liveResp = await fetch(`${API_FOOTBALL_BASE}/odds/live?fixture=${FIXTURE_ID}`, {
-              headers: { "x-apisports-key": API_FOOTBALL_KEY! },
-            });
-            if (!liveResp.ok) throw new Error("Odds API unavailable");
-            const liveData = await liveResp.json();
-            const hasLiveOdds = (liveData.response?.[0]?.odds ?? []).length > 0;
-            if (hasLiveOdds) {
-              oddsData = liveData;
-              usedLiveOdds = true;
-              console.log(`[live-test] Using live odds for fixture ${FIXTURE_ID}`);
-            } else {
-              // Fallback: pre-match odds
-              console.log(`[live-test] Live odds empty for fixture ${FIXTURE_ID} — falling back to pre-match odds`);
-              const preResp = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`, {
-                headers: { "x-apisports-key": API_FOOTBALL_KEY! },
-              });
-              if (!preResp.ok) throw new Error("Odds API unavailable");
-              oddsData = await preResp.json();
-            }
-          } else {
-            const preResp = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`, {
-              headers: { "x-apisports-key": API_FOOTBALL_KEY! },
-            });
-            if (!preResp.ok) throw new Error("Odds API unavailable");
-            oddsData = await preResp.json();
-          }
+          const oddsUrl = isLiveStatus
+            ? `${API_FOOTBALL_BASE}/odds/live?fixture=${FIXTURE_ID}`
+            : `${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`;
+
+          const oddsResp = await fetch(oddsUrl, {
+            headers: { "x-apisports-key": API_FOOTBALL_KEY! },
+          });
+          if (!oddsResp.ok) throw new Error("Odds API unavailable");
+          const oddsData = await oddsResp.json();
 
           // Double Chance label normalisation (live API uses "Home or Draw" etc.)
           const DC_LABELS: Record<string, string> = {
