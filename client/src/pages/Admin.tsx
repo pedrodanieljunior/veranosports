@@ -7475,6 +7475,7 @@ type AdminGame = {
   id: number; date: string; dateLabel: string; status: string; statusLong: string; elapsed: number | null;
   home: string; homeLogo: string; away: string; awayLogo: string;
   league: string; leagueLogo: string; goalsHome: number | null; goalsAway: number | null; isLive: boolean;
+  hasLiveCoverage: boolean | null;
 };
 type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean; activeGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null };
 
@@ -7579,6 +7580,7 @@ function AdminLiveGameTab() {
 
   const [searchLive, setSearchLive] = useState("");
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmActivateGame, setConfirmActivateGame] = useState<AdminGame | null>(null);
 
   // Live game odds overrides — string state so user can type freely (e.g. "-", "1.", "")
   const [liveOddsEdits, setLiveOddsEdits] = useState<Record<string, string>>({});
@@ -8030,17 +8032,30 @@ function AdminLiveGameTab() {
                     {isActive ? (
                       <Badge variant="destructive" className="text-[10px] shrink-0">Ativo</Badge>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs gap-1 shrink-0 h-7"
-                        onClick={() => activateMut.mutate(g)}
-                        disabled={activateMut.isPending}
-                        data-testid={`button-activate-${g.id}`}
-                      >
-                        <PlayCircle className="w-3.5 h-3.5" />
-                        Ativar
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {g.isLive && g.hasLiveCoverage === false && (
+                          <span title="Sem cobertura de odds ao vivo" className="text-yellow-500">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs gap-1 h-7"
+                          onClick={() => {
+                            if (g.isLive && g.hasLiveCoverage === false) {
+                              setConfirmActivateGame(g);
+                            } else {
+                              activateMut.mutate(g);
+                            }
+                          }}
+                          disabled={activateMut.isPending}
+                          data-testid={`button-activate-${g.id}`}
+                        >
+                          <PlayCircle className="w-3.5 h-3.5" />
+                          Ativar
+                        </Button>
+                      </div>
                     )}
                   </div>
                   );
@@ -8051,6 +8066,44 @@ function AdminLiveGameTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Dialog: confirmar ativação sem cobertura ao vivo ── */}
+      {confirmActivateGame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-background border border-border rounded-xl shadow-xl w-full max-w-sm p-5 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm">Sem cobertura de odds ao vivo</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A API não está fornecendo odds in-play para{" "}
+                  <span className="font-medium text-foreground">
+                    {confirmActivateGame.home} x {confirmActivateGame.away}
+                  </span>
+                  . Os mercados aparecerão <strong>bloqueados (cadeados)</strong> para os usuários.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Deseja ativar mesmo assim?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { activateMut.mutate(confirmActivateGame); setConfirmActivateGame(null); }}
+                disabled={activateMut.isPending}
+                className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold text-white bg-orange-600 hover:bg-orange-700 transition-colors"
+              >
+                <PlayCircle className="w-4 h-4" />
+                Ativar mesmo assim
+              </button>
+              <button
+                onClick={() => setConfirmActivateGame(null)}
+                className="flex items-center justify-center py-2.5 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:bg-muted/40 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
