@@ -5988,9 +5988,13 @@ export async function registerRoutes(
         ucl_upRes.json(), uel_upRes.json(), pl_upRes.json(), laliga_upRes.json(),
       ]);
 
-      // Build set of fixture IDs that have live in-play odds coverage
+      // Build set of fixture IDs that have live in-play odds coverage.
+      // Only trust the result when the API returned at least 1 item — if it returned 0,
+      // the call likely hit a timing/rate issue and we cannot conclude no coverage exists.
+      const liveOddsItems: any[] = liveOddsData.response ?? [];
+      const liveOddsTrusted = liveOddsItems.length > 0;
       const liveOddsCoveredIds = new Set<number>(
-        (liveOddsData.response ?? []).map((r: any) => r.fixture?.id).filter(Boolean)
+        liveOddsItems.map((r: any) => r.fixture?.id).filter(Boolean)
       );
 
       console.log(`[admin/live-games] todayDate=${todayDate} tomorrowDate=${tomorrowDate}`);
@@ -6106,8 +6110,10 @@ export async function registerRoutes(
           goalsHome: f.goals.home as number | null,
           goalsAway: f.goals.away as number | null,
           isLive,
-          // Only meaningful for live games; upcoming games always show null (unknown until they start)
-          hasLiveCoverage: isLive ? liveOddsCoveredIds.has(f.fixture.id) : null,
+          // Only meaningful for live games when the /odds/live call returned data (trusted).
+          // null = unknown (API returned 0 results — could be timing issue, not absence of coverage)
+          // true = confirmed coverage | false = confirmed no coverage
+          hasLiveCoverage: isLive && liveOddsTrusted ? liveOddsCoveredIds.has(f.fixture.id) : null,
         };
       });
       // Auto-deactivate if the active fixture appears finished in this response
