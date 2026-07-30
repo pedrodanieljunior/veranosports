@@ -7498,7 +7498,9 @@ function AdminLiveGameTab() {
     queryKey: ["/api/admin/live-games"],
     queryFn: () => fetch("/api/admin/live-games", { credentials: "include" }).then(r => r.json()),
     refetchInterval: 30_000,
-    staleTime: 20_000,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Native interval polling for lock status — bypasses React Query throttling
