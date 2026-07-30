@@ -7477,7 +7477,7 @@ type AdminGame = {
   league: string; leagueLogo: string; goalsHome: number | null; goalsAway: number | null; isLive: boolean;
   hasLiveCoverage: boolean | null;
 };
-type LiveGamesResp = { games: AdminGame[]; activeFixtureId: number | null; isLocked: boolean; activeGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null };
+type LiveGamesResp = { games: AdminGame[]; activeFixtureIds: number[]; activeFixtureId: number | null; isLocked: boolean; activeGameInfo: { home: string; away: string; league: string; homeLogo?: string; awayLogo?: string } | null };
 
 const LIVE_MARKET_SETTINGS = [
   { marketKey: "live_m1",   marketName: "Resultado Final (1x2)" },
@@ -7503,14 +7503,19 @@ function AdminLiveGameTab() {
     refetchOnWindowFocus: true,
   });
 
-  // Native interval polling for lock status — bypasses React Query throttling
-  const [lockStatus, setLockStatus] = useState<{ isLocked: boolean } | null>(null);
+  // Native interval polling for lock status — per-game, bypasses React Query throttling
+  const [lockStatusMap, setLockStatusMap] = useState<Record<number, boolean>>({});
   useEffect(() => {
     let active = true;
     const poll = async () => {
       try {
         const r = await fetch("/api/admin/live-game/lock-status", { credentials: "include" });
-        if (r.ok && active) setLockStatus(await r.json());
+        if (r.ok && active) {
+          const d = await r.json();
+          const m: Record<number, boolean> = {};
+          for (const g of (d.games ?? [])) m[g.fixtureId] = g.isLocked;
+          setLockStatusMap(m);
+        }
       } catch { /* ignore */ }
     };
     poll();
@@ -7531,16 +7536,24 @@ function AdminLiveGameTab() {
   });
 
   const deactivateMut = useMutation({
-    mutationFn: () =>
-      fetch("/api/admin/live-game/deactivate", { method: "POST", credentials: "include" }).then(r => r.json()),
+    mutationFn: (fixtureId?: number) =>
+      fetch("/api/admin/live-game/deactivate", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fixtureId ? { fixtureId } : {}),
+      }).then(r => r.json()),
     onSuccess: () => refetch(),
   });
 
   const lockMut = useMutation({
-    mutationFn: () =>
-      fetch("/api/admin/live-game/toggle-lock", { method: "POST", credentials: "include" }).then(r => r.json()),
-    onSuccess: (data) => {
-      setLockStatus({ isLocked: data.isLocked });
+    mutationFn: (fixtureId: number) =>
+      fetch("/api/admin/live-game/toggle-lock", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fixtureId }),
+      }).then(r => r.json()),
+    onSuccess: (d) => {
+      if (d.fixtureId != null) setLockStatusMap(prev => ({ ...prev, [d.fixtureId]: d.isLocked }));
       refetch();
     },
   });
@@ -7581,31 +7594,40 @@ function AdminLiveGameTab() {
   };
 
   const [searchLive, setSearchLive] = useState("");
-  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  // confirmDeactivate: holds the fixtureId to deactivate (null = not confirming)
+  const [confirmDeactivate, setConfirmDeactivate] = useState<number | null>(null);
   const [confirmActivateGame, setConfirmActivateGame] = useState<AdminGame | null>(null);
 
   // Live game odds overrides — string state so user can type freely (e.g. "-", "1.", "")
+  // We track overrides for the first active game (for the Odds section)
   const [liveOddsEdits, setLiveOddsEdits] = useState<Record<string, string>>({});
+  const [liveOddsEditFixture, setLiveOddsEditFixture] = useState<number | null>(null);
   const [liveOddsSaved, setLiveOddsSaved] = useState(false);
   const liveOddsInitedRef = useRef<number | null>(null);
+
+  const activeFixtureIds = data?.activeFixtureIds ?? (data?.activeFixtureId ? [data.activeFixtureId] : []);
 
   const { data: allGameOverrides = [], isSuccess: overridesLoaded } = useQuery<{ gameId: string; marketKey: string; adjustPercent: number }[]>({
     queryKey: ["/api/admin/live-market-adj"],
     queryFn: () => fetch("/api/admin/live-market-adj", { credentials: "include" }).then(r => r.json()),
     staleTime: 60_000,
-    enabled: !!data?.activeFixtureId,
+    enabled: activeFixtureIds.length > 0,
   });
 
+  // Use the first active fixture for the odds-edit panel (most common case)
+  const oddsEditFixtureId = liveOddsEditFixture ?? activeFixtureIds[0] ?? null;
+
   useEffect(() => {
-    if (!data?.activeFixtureId || !overridesLoaded) return;
-    if (liveOddsInitedRef.current === data.activeFixtureId) return;
-    liveOddsInitedRef.current = data.activeFixtureId;
-    const liveGameId = `api-football-${data.activeFixtureId}`;
+    if (!oddsEditFixtureId || !overridesLoaded) return;
+    if (liveOddsInitedRef.current === oddsEditFixtureId) return;
+    liveOddsInitedRef.current = oddsEditFixtureId;
+    const liveGameId = `api-football-${oddsEditFixtureId}`;
     const relevant = allGameOverrides.filter(o => o.gameId === liveGameId);
     const init: Record<string, string> = {};
     for (const o of relevant) init[o.marketKey] = String(o.adjustPercent);
     setLiveOddsEdits(init);
-  }, [allGameOverrides, data?.activeFixtureId, overridesLoaded]);
+    setLiveOddsEditFixture(oddsEditFixtureId);
+  }, [allGameOverrides, oddsEditFixtureId, overridesLoaded]);
 
   const saveLiveOddsMut = useMutation({
     mutationFn: async (payload: { gameId: string; homeTeam: string; awayTeam: string; marketKey: string; adjustPercent: number }[]) => {
@@ -7635,10 +7657,16 @@ function AdminLiveGameTab() {
     },
   });
 
-  const activeGame = data?.games.find(g => g.id === data.activeFixtureId)
-    ?? (data?.activeGameInfo ? { ...data.activeGameInfo, id: data.activeFixtureId!, date: "", dateLabel: "", status: "NS", statusLong: "", elapsed: null, leagueLogo: "", goalsHome: null, goalsAway: null, isLive: false } as AdminGame : null);
-  // Prefer fast-polling lockStatus (5s) over the 30s live-games response
-  const isLocked = lockStatus?.isLocked ?? data?.isLocked ?? false;
+  // Build list of active game objects
+  const activeGamesList: AdminGame[] = activeFixtureIds
+    .map(fid => data?.games.find(g => g.id === fid) ?? null)
+    .filter(Boolean) as AdminGame[];
+
+  // Per-game isLocked: prefer fast-polling lockStatusMap (2s) over 30s response
+  const isLockedFor = (fid: number) => lockStatusMap[fid] ?? false;
+
+  // Game used for Odds panel (first active, or whichever admin selected)
+  const oddsGame = oddsEditFixtureId ? (activeGamesList.find(g => g.id === oddsEditFixtureId) ?? activeGamesList[0]) : activeGamesList[0];
 
   const filteredGames = (data?.games ?? []).filter(g => {
     if (!searchLive.trim()) return true;
@@ -7669,7 +7697,7 @@ function AdminLiveGameTab() {
         </CardHeader>
         <CardContent>
           {/* Mobile control link */}
-          {data?.activeFixtureId && (
+          {activeFixtureIds.length > 0 && (
             <div className="mb-4 rounded-xl border border-border bg-muted/20 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Smartphone className="w-4 h-4 text-muted-foreground" />
@@ -7724,112 +7752,109 @@ function AdminLiveGameTab() {
             </div>
           )}
 
-          {data?.activeFixtureId && activeGame ? (
-            <div className={`rounded-xl border-2 overflow-hidden ${isLocked ? "border-red-500/60" : "border-green-500/50"}`}>
-              {/* Status bar */}
-              <div className={`flex items-center justify-between px-4 py-2 text-xs font-bold ${isLocked ? "bg-red-500/20 text-red-400" : "bg-green-500/15 text-green-400"}`}>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
-                  AO VIVO NO SITE
-                </span>
-                <span className="flex items-center gap-1.5">
-                  {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                  {isLocked ? "MERCADOS BLOQUEADOS" : "MERCADOS ABERTOS"}
-                </span>
-              </div>
+          {activeGamesList.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {activeGamesList.map(activeGame => {
+                const isLocked = isLockedFor(activeGame.id);
+                return (
+                  <div key={activeGame.id} className={`rounded-xl border-2 overflow-hidden ${isLocked ? "border-red-500/60" : "border-green-500/50"}`}>
+                    {/* Status bar */}
+                    <div className={`flex items-center justify-between px-4 py-2 text-xs font-bold ${isLocked ? "bg-red-500/20 text-red-400" : "bg-green-500/15 text-green-400"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
+                        AO VIVO NO SITE
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                        {isLocked ? "MERCADOS BLOQUEADOS" : "MERCADOS ABERTOS"}
+                      </span>
+                    </div>
 
-              {/* Game info */}
-              <div className="px-4 py-4 bg-card">
-                {/* League */}
-                <div className="flex items-center gap-1.5 mb-3">
-                  <img src={proxyLogoUrl(activeGame.leagueLogo)} className="w-4 h-4 object-contain" alt="" />
-                  <span className="text-xs text-muted-foreground">{translateLeagueDisplay(activeGame.league)}</span>
-                  {activeGame.isLive && (
-                    <span className="ml-auto text-sm font-bold tabular-nums text-white">
-                      {activeGame.elapsed}′ &nbsp;
-                      <span className="text-green-400">{fmt(activeGame.goalsHome)}–{fmt(activeGame.goalsAway)}</span>
-                    </span>
-                  )}
-                  {!activeGame.isLive && (
-                    <span className="ml-auto text-xs text-muted-foreground">{statusLabel(activeGame)}</span>
-                  )}
-                </div>
-                {/* Fixture ID — visível para verificação */}
-                <div className="mb-3 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Fixture ID:</span>
-                  <span className="text-[11px] font-mono text-amber-400 font-semibold">{data.activeFixtureId}</span>
-                  <span className="text-[10px] text-amber-500/60 ml-auto">Verifique se corresponde ao jogo acima</span>
-                </div>
+                    {/* Game info */}
+                    <div className="px-4 py-4 bg-card">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <img src={proxyLogoUrl(activeGame.leagueLogo)} className="w-4 h-4 object-contain" alt="" />
+                        <span className="text-xs text-muted-foreground">{translateLeagueDisplay(activeGame.league)}</span>
+                        {activeGame.isLive && (
+                          <span className="ml-auto text-sm font-bold tabular-nums text-white">
+                            {activeGame.elapsed}′ &nbsp;
+                            <span className="text-green-400">{fmt(activeGame.goalsHome)}–{fmt(activeGame.goalsAway)}</span>
+                          </span>
+                        )}
+                        {!activeGame.isLive && (
+                          <span className="ml-auto text-xs text-muted-foreground">{statusLabel(activeGame)}</span>
+                        )}
+                      </div>
+                      <div className="mb-3 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                        <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Fixture ID:</span>
+                        <span className="text-[11px] font-mono text-amber-400 font-semibold">{activeGame.id}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                          <img src={proxyLogoUrl(activeGame.homeLogo)} className="w-12 h-12 object-contain" alt="" />
+                          <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.home}</span>
+                        </div>
+                        <div className="text-2xl font-black text-muted-foreground px-2">×</div>
+                        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                          <img src={proxyLogoUrl(activeGame.awayLogo)} className="w-12 h-12 object-contain" alt="" />
+                          <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.away}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Teams */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <img src={proxyLogoUrl(activeGame.homeLogo)} className="w-12 h-12 object-contain" alt="" />
-                    <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.home}</span>
-                  </div>
-                  <div className="text-2xl font-black text-muted-foreground px-2">×</div>
-                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <img src={proxyLogoUrl(activeGame.awayLogo)} className="w-12 h-12 object-contain" alt="" />
-                    <span className="text-sm font-semibold text-center leading-tight truncate w-full text-center">{activeGame.away}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="border-t border-border">
-                {confirmDeactivate ? (
-                  /* Confirmation state — full width */
-                  <div className="p-3 flex flex-col gap-2">
-                    <p className="text-xs text-center text-muted-foreground font-medium">
-                      Remover jogo ao vivo do site?
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => { deactivateMut.mutate(); setConfirmDeactivate(false); }}
-                        disabled={deactivateMut.isPending}
-                        data-testid="button-deactivate-confirm"
-                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
-                      >
-                        <StopCircle className="w-4 h-4" />
-                        Sim, desativar
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeactivate(false)}
-                        data-testid="button-deactivate-cancel"
-                        className="flex items-center justify-center py-2.5 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:bg-muted/40 transition-colors"
-                      >
-                        Cancelar
-                      </button>
+                    {/* Actions */}
+                    <div className="border-t border-border">
+                      {confirmDeactivate === activeGame.id ? (
+                        <div className="p-3 flex flex-col gap-2">
+                          <p className="text-xs text-center text-muted-foreground font-medium">
+                            Remover {activeGame.home} × {activeGame.away} do site?
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => { deactivateMut.mutate(activeGame.id); setConfirmDeactivate(null); }}
+                              disabled={deactivateMut.isPending}
+                              data-testid="button-deactivate-confirm"
+                              className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
+                            >
+                              <StopCircle className="w-4 h-4" />
+                              Sim, desativar
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeactivate(null)}
+                              data-testid="button-deactivate-cancel"
+                              className="flex items-center justify-center py-2.5 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:bg-muted/40 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 p-3">
+                          <button
+                            onClick={() => lockMut.mutate(activeGame.id)}
+                            disabled={lockMut.isPending}
+                            data-testid="button-toggle-lock"
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-white transition-colors
+                              ${isLocked ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
+                          >
+                            {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                            {isLocked ? "Liberar Mercados" : "Bloquear Mercados"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeactivate(activeGame.id)}
+                            disabled={deactivateMut.isPending}
+                            data-testid="button-deactivate-live"
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:bg-muted/40 transition-colors"
+                          >
+                            <StopCircle className="w-4 h-4" />
+                            Desativar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  /* Normal state — two side-by-side buttons */
-                  <div className="flex gap-2 p-3">
-                    <button
-                      onClick={() => lockMut.mutate()}
-                      disabled={lockMut.isPending}
-                      data-testid="button-toggle-lock"
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-white transition-colors
-                        ${isLocked
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "bg-red-600 hover:bg-red-700"
-                        }`}
-                    >
-                      {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                      {isLocked ? "Liberar Mercados" : "Bloquear Mercados"}
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeactivate(true)}
-                      disabled={deactivateMut.isPending}
-                      data-testid="button-deactivate-live"
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:bg-muted/40 transition-colors"
-                    >
-                      <StopCircle className="w-4 h-4" />
-                      Desativar
-                    </button>
-                  </div>
-                )}
-              </div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
@@ -7842,7 +7867,7 @@ function AdminLiveGameTab() {
       </Card>
 
       {/* ── Odds por Mercado (jogo ao vivo ativo) ── */}
-      {data?.activeFixtureId && activeGame && (
+      {oddsGame && oddsEditFixtureId && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -7850,13 +7875,27 @@ function AdminLiveGameTab() {
                 <TrendingUp className="w-4 h-4 text-cyan-400" />
                 Odds por Mercado
               </CardTitle>
+              {/* If multiple active games, let admin pick which to edit */}
+              {activeGamesList.length > 1 && (
+                <div className="flex gap-1 flex-wrap">
+                  {activeGamesList.map(g => (
+                    <button
+                      key={g.id}
+                      onClick={() => { setLiveOddsEditFixture(g.id); liveOddsInitedRef.current = null; }}
+                      className={`px-2 py-1 rounded text-[10px] font-semibold border transition-colors ${g.id === oddsEditFixtureId ? "border-cyan-500 text-cyan-400 bg-cyan-500/10" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
+                    >
+                      {g.home} × {g.away}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button
                 onClick={() => {
-                  const liveGameId = `api-football-${data.activeFixtureId}`;
+                  const liveGameId = `api-football-${oddsEditFixtureId}`;
                   const payload = LIVE_MARKET_SETTINGS.map(m => ({
                     gameId: liveGameId,
-                    homeTeam: activeGame.home,
-                    awayTeam: activeGame.away,
+                    homeTeam: oddsGame.home,
+                    awayTeam: oddsGame.away,
                     marketKey: m.marketKey,
                     adjustPercent: parseFloat(liveOddsEdits[m.marketKey] ?? "0") || 0,
                   }));
@@ -7881,7 +7920,7 @@ function AdminLiveGameTab() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Ajuste % adicional nas odds de cada mercado para <span className="font-medium text-foreground">{activeGame.home} × {activeGame.away}</span>.
+              Ajuste % adicional nas odds de cada mercado para <span className="font-medium text-foreground">{oddsGame.home} × {oddsGame.away}</span>.
             </p>
           </CardHeader>
           <CardContent>
@@ -7998,7 +8037,7 @@ function AdminLiveGameTab() {
                       </p>
                     );
                   }
-                  const isActive = g.id === data.activeFixtureId;
+                  const isActive = activeFixtureIds.includes(g.id);
                   items.push(
                   <div
                     key={g.id}

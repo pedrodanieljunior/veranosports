@@ -146,39 +146,20 @@ export default function Copa() {
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        // Update live-status instantly
-        queryClient.setQueryData(["/api/football/live-status"], (old: any) => ({
-          ...(old ?? {}),
-          fixtureId: data.fixtureId,
-          gameInfo: data.gameInfo,
-          isLocked: data.isLocked,
-        }));
-        // Also flip isLocked + suspended in live-test cache immediately
-        queryClient.setQueryData(["/api/football/live-test"], (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            isLocked: data.isLocked,
-            markets: (old.markets ?? []).map((m: any) => ({
-              ...m,
-              values: (m.values ?? []).map((v: any) => ({
-                ...v,
-                suspended: data.isLocked,
-              })),
-            })),
-          };
-        });
-        // No invalidateQueries — races with API-Football fetch returning empty markets.
+        // Update live-status instantly (new multi-game format)
+        queryClient.setQueryData(["/api/football/live-status"], data);
+        // No invalidateQueries — LiveTestCard handles per-fixture cache updates via its own SSE listener.
       } catch {}
     };
     return () => es.close();
   }, []);
 
-  const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
+  const { data: liveStatus } = useQuery<{ games: { fixtureId: number; gameInfo: any; isLocked: boolean }[] }>({
     queryKey: ["/api/football/live-status"],
     refetchInterval: 15_000,
     staleTime: 10_000,
   });
+  const activeGames = liveStatus?.games ?? [];
 
 
   const { data: copaCards = [] } = useQuery<any[]>({
@@ -306,7 +287,7 @@ export default function Copa() {
     setSelections(prev => prev.map(s => s.gameId === oldId ? { ...s, gameId: newId, id: s.id.replace(oldId, newId) } : s));
   };
 
-  const hasLiveGame = !!liveStatus?.fixtureId;
+  const hasLiveGame = activeGames.length > 0;
 
   const tabs: { key: CopaTab; label: string; icon: React.ReactNode }[] = [
     {
@@ -540,7 +521,11 @@ export default function Copa() {
         {activeTab === "aovivo" ? (
           <div className="px-3">
             {hasLiveGame ? (
-              <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+              <div className="flex flex-col gap-3">
+                {activeGames.map(g => (
+                  <LiveTestCard key={g.fixtureId} fixtureId={g.fixtureId} selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+                ))}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <span className="w-3 h-3 rounded-full bg-gray-300 mb-4" />

@@ -64,29 +64,9 @@ export default function Home() {
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        // Update live-status instantly
-        queryClient.setQueryData(["/api/football/live-status"], (old: any) => ({
-          ...(old ?? {}),
-          fixtureId: data.fixtureId,
-          gameInfo: data.gameInfo,
-          isLocked: data.isLocked,
-        }));
-        // Also flip isLocked + suspended in live-test cache immediately
-        queryClient.setQueryData(["/api/football/live-test"], (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            isLocked: data.isLocked,
-            markets: (old.markets ?? []).map((m: any) => ({
-              ...m,
-              values: (m.values ?? []).map((v: any) => ({
-                ...v,
-                suspended: data.isLocked,
-              })),
-            })),
-          };
-        });
-        // No invalidateQueries — races with API-Football fetch returning empty markets.
+        // Update live-status instantly (new multi-game format)
+        queryClient.setQueryData(["/api/football/live-status"], data);
+        // No invalidateQueries — LiveTestCard handles per-fixture cache updates via its own SSE listener.
       } catch {}
     };
     return () => es.close();
@@ -247,11 +227,12 @@ export default function Home() {
     retry: 1,
   });
 
-  const { data: liveStatus } = useQuery<{ fixtureId: number | null; isLocked: boolean }>({
+  const { data: liveStatus } = useQuery<{ games: { fixtureId: number; gameInfo: any; isLocked: boolean }[] }>({
     queryKey: ["/api/football/live-status"],
     refetchInterval: 15_000,
     staleTime: 10_000,
   });
+  const activeGames = liveStatus?.games ?? [];
 
   const sessionId = getSessionId();
 
@@ -467,9 +448,11 @@ export default function Home() {
         <div className="px-3 pt-2">
           <MobileBannerCarousel />
         </div>
-        {!isSearching && !isTyping && liveStatus?.fixtureId && (
-          <div className="px-3 pt-2">
-            <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+        {!isSearching && !isTyping && activeGames.length > 0 && (
+          <div className="px-3 pt-2 flex flex-col gap-3">
+            {activeGames.map(g => (
+              <LiveTestCard key={g.fixtureId} fixtureId={g.fixtureId} selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+            ))}
           </div>
         )}
         {bolaoData && !isSearching && !isTyping && !selectedSport && (
@@ -642,9 +625,11 @@ export default function Home() {
             </div>
 
             {/* Live test card */}
-            {!isSearching && !isTyping && liveStatus?.fixtureId && (
-              <div className="pb-3" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
-                <LiveTestCard selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+            {!isSearching && !isTyping && activeGames.length > 0 && (
+              <div className="pb-3 flex flex-col gap-3" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+                {activeGames.map(g => (
+                  <LiveTestCard key={g.fixtureId} fixtureId={g.fixtureId} selections={selections} onToggleSelection={handleToggleSelection} isDark={false} />
+                ))}
               </div>
             )}
 

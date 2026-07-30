@@ -484,12 +484,13 @@ function MatchMapSection({ data, isLoading, isDark }: { data: MapData | undefine
 }
 
 interface Props {
+  fixtureId: number;
   selections: Selection[];
   onToggleSelection: (sel: Selection) => void;
   isDark?: boolean;
 }
 
-export function LiveTestCard({ selections, onToggleSelection, isDark = true }: Props) {
+export function LiveTestCard({ fixtureId, selections, onToggleSelection, isDark = true }: Props) {
   const [refetchMs, setRefetchMs] = useState(5_000);
   const [showMap, setShowMap] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -501,16 +502,19 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
     es.onmessage = (e) => {
       try {
         const evt = JSON.parse(e.data);
-        queryClient.setQueryData(["/api/football/live-test"], (old: any) => {
+        // Find this fixture's lock state from the games array
+        const game = (evt.games ?? []).find((g: any) => g.fixtureId === fixtureId);
+        const isLocked = game?.isLocked ?? false;
+        queryClient.setQueryData(["/api/football/live-test", fixtureId], (old: any) => {
           if (!old) return old;
           return {
             ...old,
-            isLocked: evt.isLocked,
+            isLocked,
             markets: (old.markets ?? []).map((m: any) => ({
               ...m,
               values: (m.values ?? []).map((v: any) => ({
                 ...v,
-                suspended: evt.isLocked,
+                suspended: isLocked,
               })),
             })),
           };
@@ -520,19 +524,19 @@ export function LiveTestCard({ selections, onToggleSelection, isDark = true }: P
       } catch {}
     };
     return () => es.close();
-  }, []);
+  }, [fixtureId]);
 
   const { data: mapData, isLoading: mapLoading } = useQuery<MapData>({
-    queryKey: ["/api/football/live-map"],
-    queryFn: () => fetch("/api/football/live-map").then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
+    queryKey: ["/api/football/live-map", fixtureId],
+    queryFn: () => fetch(`/api/football/live-map?fixture=${fixtureId}`).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
     refetchInterval: 30_000,
     staleTime: 25_000,
     retry: 2,
   });
 
   const { data, isLoading, error } = useQuery<LiveData>({
-    queryKey: ["/api/football/live-test"],
-    queryFn: () => fetch("/api/football/live-test").then(r => {
+    queryKey: ["/api/football/live-test", fixtureId],
+    queryFn: () => fetch(`/api/football/live-test?fixture=${fixtureId}`).then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     }),
