@@ -6156,6 +6156,31 @@ export async function registerRoutes(
         g.isLive || g.status === "NS" || g.status === "TBD" || activeLiveGames.has(g.id)
       );
 
+      // Always include active games even if the API didn't return them in this call
+      // (API-Football fixture responses can be inconsistent between calls due to caching)
+      for (const [fid, info] of activeLiveGames) {
+        if (!visibleGames.some(g => g.id === fid)) {
+          visibleGames.push({
+            id: fid,
+            date: new Date().toISOString(),
+            dateLabel: "Hoje",
+            status: "1H",
+            statusLong: "Ao Vivo",
+            elapsed: null,
+            home: info.home,
+            homeLogo: info.homeLogo ?? "",
+            away: info.away,
+            awayLogo: info.awayLogo ?? "",
+            league: info.league,
+            leagueLogo: "",
+            goalsHome: null,
+            goalsAway: null,
+            isLive: true,
+            hasLiveCoverage: null,
+          });
+        }
+      }
+
       visibleGames.sort((a, b) => {
         if (a.isLive && !b.isLive) return -1;
         if (!a.isLive && b.isLive) return 1;
