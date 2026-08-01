@@ -5970,6 +5970,7 @@ export async function registerRoutes(
         serieC_todayRes, serieC_upRes,
         liberta_todayRes, liberta_upRes,
         sudamer_todayRes, sudamer_upRes,
+        copaBr_todayRes, copaBr_upRes,
         wc_upRes, friendly_upRes,
         ucl_upRes, uel_upRes, pl_upRes, laliga_upRes,
       ] = await Promise.all([
@@ -5985,6 +5986,8 @@ export async function registerRoutes(
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=13&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=11&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=11&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=73&season=2026&date=${todayDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/fixtures?league=73&season=2026&date=${tomorrowDate}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=1&season=2026&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=10&next=10`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
         fetch(`${API_FOOTBALL_BASE}/fixtures?league=2&next=8`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
@@ -5999,6 +6002,7 @@ export async function registerRoutes(
         serieC_todayData, serieC_upData,
         liberta_todayData, liberta_upData,
         sudamer_todayData, sudamer_upData,
+        copaBr_todayData, copaBr_upData,
         wc_upData, friendly_upData,
         ucl_upData, uel_upData, pl_upData, laliga_upData,
       ] = await Promise.all([
@@ -6008,6 +6012,7 @@ export async function registerRoutes(
         serieC_todayRes.json(), serieC_upRes.json(),
         liberta_todayRes.json(), liberta_upRes.json(),
         sudamer_todayRes.json(), sudamer_upRes.json(),
+        copaBr_todayRes.json(), copaBr_upRes.json(),
         wc_upRes.json(), friendly_upRes.json(),
         ucl_upRes.json(), uel_upRes.json(), pl_upRes.json(), laliga_upRes.json(),
       ]);
@@ -6041,6 +6046,8 @@ export async function registerRoutes(
         ...(liberta_upData.response ?? []),
         ...(sudamer_todayData.response ?? []),
         ...(sudamer_upData.response ?? []),
+        ...(copaBr_todayData.response ?? []),
+        ...(copaBr_upData.response ?? []),
         ...(wc_upData.response ?? []),
         ...(friendly_upData.response ?? []),
         ...(ucl_upData.response ?? []),
@@ -6128,6 +6135,7 @@ export async function registerRoutes(
           awayLogo: f.teams.away.logo as string,
           league: f.league.id === 71 ? "Campeonato Brasileiro Série A"
                  : f.league.id === 72 ? "Campeonato Brasileiro Série B"
+                 : f.league.id === 73 ? "Copa do Brasil"
                  : f.league.id === 75 ? "Campeonato Brasileiro Série C"
                  : f.league.name as string,
           leagueLogo: f.league.logo as string,
