@@ -1821,8 +1821,7 @@ export async function registerRoutes(
   const isAnyLocked = () => lockedFixtures.size > 0;
   const getLastUnlockMs = (fixtureId?: number | null) =>
     fixtureId ? (lastLiveUnlockMap.get(fixtureId) ?? 0) : Math.max(0, ...Array.from(lastLiveUnlockMap.values()));
-  let mobileControlToken: string | null = null;
-  let mobileTokenExpiry = 0;
+  // Mobile control token — persisted in DB so survives server restarts/deploys
   const FINISHED_STATUSES = new Set(["FT","AET","PEN","CANC","ABD","AWD","WO"]);
 
   // SSE: push live-state changes to all connected clients instantly
@@ -6343,25 +6342,29 @@ export async function registerRoutes(
   });
 
   // Admin: generate a mobile control token (24h)
-  app.post("/api/admin/live-control/generate-token", requireAdmin, (_req, res) => {
-    mobileControlToken = randomBytes(20).toString("hex");
-    mobileTokenExpiry = Date.now() + 24 * 60 * 60 * 1000;
-    console.log(`[live-control] Mobile token generated, expires in 24h`);
-    return res.json({ token: mobileControlToken });
+  app.post("/api/admin/live-control/generate-token", requireAdmin, async (_req, res) => {
+    const token = randomBytes(20).toString("hex");
+    const expiry = Date.now() + 24 * 60 * 60 * 1000;
+    await storage.setSetting("mobile_control_token", token);
+    await storage.setSetting("mobile_control_expiry", String(expiry));
+    console.log(`[live-control] Mobile token generated (DB), expires in 24h`);
+    return res.json({ token });
   });
 
-  // Helper: validate mobile token
-  const validateMobileToken = (token: string | undefined) => {
-    if (!token || !mobileControlToken) return false;
-    if (token !== mobileControlToken) return false;
-    if (Date.now() > mobileTokenExpiry) { mobileControlToken = null; return false; }
+  // Helper: validate mobile token (reads from DB — survives restarts/deploys)
+  const validateMobileToken = async (token: string | undefined): Promise<boolean> => {
+    if (!token) return false;
+    const stored = await storage.getSetting("mobile_control_token");
+    if (!stored || token !== stored) return false;
+    const expiry = Number(await storage.getSetting("mobile_control_expiry") ?? "0");
+    if (Date.now() > expiry) return false;
     return true;
   };
 
   // Mobile: get live game status (token-protected, no session required)
-  app.get("/api/live-control/status", (req, res) => {
+  app.get("/api/live-control/status", async (req, res) => {
     const token = req.query.t as string;
-    if (!validateMobileToken(token)) return res.status(401).json({ error: "Invalid or expired token" });
+    if (!(await validateMobileToken(token))) return res.status(401).json({ error: "Invalid or expired token" });
     if (activeLiveGames.size === 0) {
       return res.json({ active: false, games: [] });
     }
@@ -6374,9 +6377,9 @@ export async function registerRoutes(
   });
 
   // Mobile: toggle lock (token-protected) — toggles the first active game or fixtureId in body
-  app.post("/api/live-control/toggle-lock", (req, res) => {
+  app.post("/api/live-control/toggle-lock", async (req, res) => {
     const token = req.query.t as string;
-    if (!validateMobileToken(token)) return res.status(401).json({ error: "Invalid or expired token" });
+    if (!(await validateMobileToken(token))) return res.status(401).json({ error: "Invalid or expired token" });
     if (activeLiveGames.size === 0) return res.status(404).json({ error: "No active live game" });
     const { fixtureId } = req.body as any;
     const fid = fixtureId ? Number(fixtureId) : Array.from(activeLiveGames.keys())[0];
