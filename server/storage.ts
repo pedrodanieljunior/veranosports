@@ -70,7 +70,7 @@ export interface IStorage {
   getActiveBoostCards(): Promise<BoostCard[]>;
   createBoostCard(data: InsertBoostCard): Promise<BoostCard>;
   updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined>;
-  resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }>;
+  resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number; affectedBetIds: string[] }>;
   deleteBoostCard(id: number): Promise<boolean>;
   // Copa do Mundo Cards
   getCopaCards(subTab?: string): Promise<CopaWorldCupCard[]>;
@@ -654,7 +654,7 @@ export class DatabaseStorage implements IStorage {
     return row ? this.mapBoostCard(row) : undefined;
   }
 
-  async resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number }> {
+  async resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number; affectedBetIds: string[] }> {
     let updatedRow: typeof boostCardsTable.$inferSelect;
     let selectionId: string;
 
@@ -686,8 +686,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     const card = this.mapBoostCard(updatedRow);
+    // Process all pending bets that contain this boost selection
     const allBets = await db.select().from(betSlipsTable).where(eq(betSlipsTable.status, "pending"));
     let affectedBets = 0;
+    const affectedBetIds: string[] = [];
 
     for (const bet of allBets) {
       const sels = bet.selections as any[];
@@ -695,9 +697,10 @@ export class DatabaseStorage implements IStorage {
       if (!boostSel) continue;
       await this.updateSelectionResult(bet.id, selectionId, result);
       affectedBets++;
+      affectedBetIds.push(bet.id);
     }
 
-    return { card, affectedBets };
+    return { card, affectedBets, affectedBetIds };
   }
 
   async deleteBoostCard(id: number): Promise<boolean> {

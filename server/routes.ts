@@ -1800,6 +1800,35 @@ async function runCheckResults() {
     }
   }
 
+  // Safety net: find "won" bets that were never paid (no win transaction).
+  // This catches boost-only bets whose status was set to "won" by resolveBoostCard
+  // but whose payout was skipped because runCheckResults only iterates pending bets.
+  const wonBets = allBets.filter(b => b.status === "won");
+  let unpaidFixed = 0;
+  for (const bet of wonBets) {
+    const existingWinTx = await storage.getWinTransactionForBet(bet.id);
+    if (existingWinTx) continue; // already paid — skip
+    const winUser = await storage.getUserByCpf(bet.userId!);
+    if (!winUser) continue;
+    const bonusUsed = (bet as any).bonusUsed ?? 0;
+    const netPayout = Math.max(0, Math.round((bet.potentialWin - bonusUsed) * 100) / 100);
+    if (netPayout <= 0) continue;
+    const credited = Math.round((winUser.balance + netPayout) * 100) / 100;
+    await storage.updateUserBalance(bet.userId!, credited);
+    await storage.createTransaction({
+      userId: bet.userId!,
+      type: "win",
+      amount: netPayout,
+      balanceAfter: credited,
+      description: `Aposta ganha${bonusUsed > 0 ? ` (R$${bet.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
+      referenceId: bet.id,
+    });
+    console.log(`[CheckResults] Safety-net: bilhete ${bet.id} ganho sem pagamento → creditado R$${netPayout} ao usuário ${bet.userId}`);
+    results.push({ betId: bet.id, oldStatus: "won", newStatus: "won (pago retroativamente)", stake: bet.stake, potentialWin: bet.potentialWin });
+    unpaidFixed++;
+  }
+  if (unpaidFixed > 0) console.log(`[CheckResults] Safety-net: ${unpaidFixed} bilhete(s) corrigido(s)`);
+
   return { message: "Verificação concluída", totalPending: pendingBets.length, updated: updatedCount, fixturesChecked: allFinishedFixtures.length, results };
 }
 
@@ -5295,7 +5324,40 @@ export async function registerRoutes(
       }
       const idx = outcomeIdx !== undefined && outcomeIdx !== null ? Number(outcomeIdx) : undefined;
       const data = await storage.resolveBoostCard(id, result as "pending" | "won" | "lost", idx);
-      res.json({ card: data.card, affectedBets: data.affectedBets });
+
+      // Process payouts for any bets that just became "won" as a result of this boost resolution.
+      // BUG FIX: resolveBoostCard only updates bet status; the win transaction/balance credit
+      // was previously never done for boost-only bets because runCheckResults skips non-pending bets.
+      const payoutResults: { betId: string; paid: number }[] = [];
+      if (result === "won" && data.affectedBetIds.length > 0) {
+        for (const betId of data.affectedBetIds) {
+          const bet = await storage.getBetSlip(betId);
+          if (!bet || bet.status !== "won") continue;
+          const existingWinTx = await storage.getWinTransactionForBet(betId);
+          if (existingWinTx) {
+            console.log(`[boost-resolve] Bilhete ${betId} já creditado — ignorando`);
+            continue;
+          }
+          const winUser = await storage.getUserByCpf(bet.userId!);
+          if (!winUser) continue;
+          const bonusUsed = (bet as any).bonusUsed ?? 0;
+          const netPayout = Math.max(0, Math.round((bet.potentialWin - bonusUsed) * 100) / 100);
+          const credited = Math.round((winUser.balance + netPayout) * 100) / 100;
+          await storage.updateUserBalance(bet.userId!, credited);
+          await storage.createTransaction({
+            userId: bet.userId!,
+            type: "win",
+            amount: netPayout,
+            balanceAfter: credited,
+            description: `Aposta ganha${bonusUsed > 0 ? ` (R$${bet.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
+            referenceId: betId,
+          });
+          payoutResults.push({ betId, paid: netPayout });
+          console.log(`[boost-resolve] Bilhete ${betId} creditado: R$${netPayout} → saldo ${credited}`);
+        }
+      }
+
+      res.json({ card: data.card, affectedBets: data.affectedBets, payouts: payoutResults });
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Erro ao resolver boost card" });
     }
