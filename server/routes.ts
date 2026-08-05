@@ -6381,7 +6381,7 @@ export async function registerRoutes(
     const token = req.query.t as string;
     if (!(await validateMobileToken(token))) return res.status(401).json({ error: "Invalid or expired token" });
     if (activeLiveGames.size === 0) return res.status(404).json({ error: "No active live game" });
-    const { fixtureId } = req.body as any;
+    const fixtureId = (req.body as any)?.fixtureId;
     const fid = fixtureId ? Number(fixtureId) : Array.from(activeLiveGames.keys())[0];
     if (!activeLiveGames.has(fid)) return res.status(404).json({ error: "No active live game" });
     const wasLocked = lockedFixtures.has(fid);

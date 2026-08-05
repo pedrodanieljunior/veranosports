@@ -58,10 +58,26 @@ export default function LiveControl() {
     enabled: !!token,
   });
 
+  const [toggleError, setToggleError] = useState<string | null>(null);
+
   const toggleMut = useMutation({
-    mutationFn: () =>
-      apiRequest("POST", `/api/live-control/toggle-lock?t=${token}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/live-control/status", token] }),
+    mutationFn: async () => {
+      const res = await fetch(`/api/live-control/toggle-lock?t=${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Erro ${res.status}`);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setToggleError(null);
+      qc.invalidateQueries({ queryKey: ["/api/live-control/status", token] });
+    },
+    onError: (err: Error) => setToggleError(err.message),
   });
 
   const isLocked = data?.isLocked ?? false;
