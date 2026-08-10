@@ -594,6 +594,8 @@ export class DatabaseStorage implements IStorage {
       hasImage: !!((r as any).imageData),
       fakeCounterTarget: (r as any).fakeCounterTarget ?? 0,
       fakeCounterStart: (r as any).fakeCounterStart ?? 0,
+      cardType: ((r as any).cardType ?? "boost") as "boost" | "banner",
+      showLuckyCount: (r as any).showLuckyCount ?? false,
       createdAt: r.createdAt.toISOString(),
     };
   }
@@ -630,6 +632,8 @@ export class DatabaseStorage implements IStorage {
       minStake: (data as any).minStake ?? null,
       fakeCounterTarget: (data as any).fakeCounterTarget ?? 0,
       fakeCounterStart: (data as any).fakeCounterStart ?? 0,
+      cardType: (data as any).cardType ?? "boost",
+      showLuckyCount: (data as any).showLuckyCount ?? false,
     }).returning();
     return this.mapBoostCard(row);
   }
@@ -653,6 +657,8 @@ export class DatabaseStorage implements IStorage {
     if ((data as any).minStake !== undefined) update.minStake = (data as any).minStake;
     if ((data as any).fakeCounterTarget !== undefined) update.fakeCounterTarget = (data as any).fakeCounterTarget;
     if ((data as any).fakeCounterStart !== undefined) update.fakeCounterStart = (data as any).fakeCounterStart;
+    if ((data as any).cardType !== undefined) update.cardType = (data as any).cardType;
+    if ((data as any).showLuckyCount !== undefined) update.showLuckyCount = (data as any).showLuckyCount;
     if ((data as any).imageData !== undefined) update.imageData = (data as any).imageData;
     if ((data as any).mimeType !== undefined) update.mimeType = (data as any).mimeType;
     const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();
@@ -1398,6 +1404,15 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`[SorteVerano Retro] Concluído — ${usersProcessed} usuário(s), ${totalGenerated} número(s) gerado(s)`);
     return { generated: totalGenerated, usersProcessed };
+  }
+
+  async getSorteVeranoNumbersCount(): Promise<number> {
+    try {
+      const result = await db.select({ count: sql<number>`count(*)::int` }).from(sorteVeranoNumbersTable);
+      return result[0]?.count ?? 0;
+    } catch {
+      return 0;
+    }
   }
 
   private mapCopaCard(r: typeof copaWorldCupCardsTable.$inferSelect): CopaWorldCupCard {

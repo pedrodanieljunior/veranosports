@@ -3594,6 +3594,8 @@ function BoostTab() {
     minStake: "",
     fakeCounterTarget: "",
     fakeCounterStart: "",
+    cardType: "boost" as "boost" | "banner",
+    showLuckyCount: false,
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3731,6 +3733,7 @@ function BoostTab() {
   const openEdit = (card: BoostCard) => {
     setEditingCard(card);
     const hasOutcomes = card.outcomes && card.outcomes.length > 0;
+    const ct = (card as any).cardType ?? "boost";
     setForm({
       eventName: card.eventName,
       matchTitle: card.matchTitle,
@@ -3752,6 +3755,8 @@ function BoostTab() {
       minStake: (card as any).minStake != null ? String((card as any).minStake) : "",
       fakeCounterTarget: (card as any).fakeCounterTarget ? String((card as any).fakeCounterTarget) : "",
       fakeCounterStart: (card as any).fakeCounterStart ? String((card as any).fakeCounterStart) : "",
+      cardType: ct,
+      showLuckyCount: (card as any).showLuckyCount ?? false,
     });
     setShowForm(true);
   };
@@ -3763,6 +3768,35 @@ function BoostTab() {
   };
 
   const handleSubmit = () => {
+    if (form.cardType === "banner") {
+      if (!form.startsAt || !form.endsAt) {
+        toast({ title: "Preencha data/hora de início e fim", variant: "destructive" });
+        return;
+      }
+      const payload = {
+        eventName: form.eventName,
+        matchTitle: form.matchTitle,
+        description: form.description,
+        selections: [],
+        originalOdds: 1,
+        boostedOdds: 1,
+        outcomes: [],
+        subtitle: form.subtitle,
+        startsAt: new Date(form.startsAt).toISOString(),
+        endsAt: new Date(form.endsAt).toISOString(),
+        active: form.active,
+        gradientFrom: form.gradientFrom || "#0f2d6b",
+        gradientTo: form.gradientTo || "#1a0a0a",
+        maxStake: null,
+        minStake: null,
+        fakeCounterTarget: 0,
+        fakeCounterStart: 0,
+        cardType: "banner",
+        showLuckyCount: form.showLuckyCount,
+      };
+      editingCard ? updateMutation.mutate({ id: editingCard.id, data: payload }) : createMutation.mutate(payload);
+      return;
+    }
     if (form.outcomeMode) {
       const validOutcomes = form.outcomes.filter(o => o.label.trim() && parseFloat(o.originalOdds) >= 1 && parseFloat(o.boostedOdds) >= 1);
       if (validOutcomes.length < 2) {
@@ -3884,12 +3918,13 @@ function BoostTab() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm">{card.matchTitle}</span>
+                          <span className="font-bold text-sm">{card.matchTitle || card.eventName}</span>
+                          {(card as any).cardType === "banner" && <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs">🖼️ Banner</Badge>}
                           {isLive && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">● Visível</Badge>}
                           {isPast && !isLive && <Badge variant="outline" className="text-xs text-muted-foreground">Encerrado</Badge>}
                           {!card.active && <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>}
-                          {cardResult === "won" && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">✓ Ganhou</Badge>}
-                          {cardResult === "lost" && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">✗ Perdeu</Badge>}
+                          {(card as any).cardType !== "banner" && cardResult === "won" && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">✓ Ganhou</Badge>}
+                          {(card as any).cardType !== "banner" && cardResult === "lost" && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">✗ Perdeu</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground">{card.eventName}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -3955,7 +3990,12 @@ function BoostTab() {
                       </div>
                     </div>
 
-                    {/* Manual result control */}
+                    {/* Manual result control — oculto para banners */}
+                    {(card as any).cardType === "banner" ? (
+                      <div className="border-t pt-2.5">
+                        <p className="text-[11px] text-muted-foreground italic">Banner informativo — sem resultado a registrar.</p>
+                      </div>
+                    ) : (
                     <div className="border-t pt-2.5">
                       <p className="text-[11px] text-muted-foreground mb-2 font-medium">RESULTADO DO BOOST</p>
 
@@ -4035,6 +4075,7 @@ function BoostTab() {
                         </div>
                       )}
                     </div>
+                    )}
                   </div>
                 );
               })}
@@ -4092,6 +4133,7 @@ function BoostTab() {
               />
             </div>
 
+            {form.cardType !== "banner" && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-muted-foreground">Mercados / Seleções (até 3, opcional)</label>
@@ -4118,32 +4160,40 @@ function BoostTab() {
                 <p className="text-xs text-muted-foreground italic">Nenhuma seleção adicionada. O card mostrará apenas as odds.</p>
               )}
             </div>
+            )}
 
-            {/* Odds mode toggle */}
+            {/* Card type / Odds mode toggle */}
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                <div className="flex gap-2">
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 flex-wrap">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setForm(f => ({ ...f, outcomeMode: false, outcomes: [] }))}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${!form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                    onClick={() => setForm(f => ({ ...f, cardType: "boost", outcomeMode: false, outcomes: [] }))}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "boost" && !form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
                   >
                     ⚡ Odd simples
                   </button>
                   <button
                     type="button"
-                    onClick={() => setForm(f => ({ ...f, outcomeMode: true, outcomes: f.outcomes.length >= 2 ? f.outcomes : [{ label: "Sim", originalOdds: "", boostedOdds: "" }, { label: "Não", originalOdds: "", boostedOdds: "" }] }))}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                    onClick={() => setForm(f => ({ ...f, cardType: "boost", outcomeMode: true, outcomes: f.outcomes.length >= 2 ? f.outcomes : [{ label: "Sim", originalOdds: "", boostedOdds: "" }, { label: "Não", originalOdds: "", boostedOdds: "" }] }))}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "boost" && form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
                   >
                     ⚡ Múltiplas opções
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, cardType: "banner", outcomeMode: false, outcomes: [] }))}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "banner" ? "bg-purple-400/20 text-purple-300 border border-purple-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                  >
+                    🖼️ Banner
+                  </button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  {form.outcomeMode ? "Ex: Ambos marcam: Sim / Não" : "Ex: Over 2.5 — uma única seleção"}
+                  {form.cardType === "banner" ? "Banner informativo — sem odds, apenas imagem e texto" : form.outcomeMode ? "Ex: Ambos marcam: Sim / Não" : "Ex: Over 2.5 — uma única seleção"}
                 </p>
               </div>
 
-              {!form.outcomeMode && (
+              {form.cardType !== "banner" && !form.outcomeMode && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Odd original (riscada) *</label>
@@ -4168,7 +4218,7 @@ function BoostTab() {
                 </div>
               )}
 
-              {form.outcomeMode && (
+              {form.cardType !== "banner" && form.outcomeMode && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium text-muted-foreground">Opções de escolha (mín. 2) *</label>
@@ -4224,7 +4274,7 @@ function BoostTab() {
               )}
             </div>
 
-            {/* Fake Counter */}
+            {form.cardType !== "banner" && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">🔢 Contador de apostas falso (opcional)</label>
               <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
@@ -4258,6 +4308,7 @@ function BoostTab() {
                 )}
               </div>
             </div>
+            )}
 
             {/* Image upload — disponível durante criação e edição */}
             <div className="space-y-1">
@@ -4301,6 +4352,23 @@ function BoostTab() {
               )}
             </div>
 
+            {/* Banner: opção de mostrar contagem de números da sorte */}
+            {form.cardType === "banner" && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-purple-400/30 bg-purple-400/5">
+                <input
+                  type="checkbox"
+                  id="show-lucky-count"
+                  checked={form.showLuckyCount}
+                  onChange={e => setForm(f => ({ ...f, showLuckyCount: e.target.checked }))}
+                  className="w-4 h-4 accent-purple-500"
+                />
+                <div>
+                  <label htmlFor="show-lucky-count" className="text-sm cursor-pointer font-medium">🍀 Mostrar total de números da sorte gerados</label>
+                  <p className="text-[11px] text-muted-foreground">Exibe no banner a quantidade atual de números do Sorte Verano.</p>
+                </div>
+              </div>
+            )}
+
             {/* Gradient colors */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Cores do card (degradê)</label>
@@ -4333,7 +4401,7 @@ function BoostTab() {
               </div>
             </div>
 
-            {/* Min/Max stake */}
+            {form.cardType !== "banner" && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Aposta mínima (opcional)</label>
@@ -4356,6 +4424,7 @@ function BoostTab() {
                 />
               </div>
             </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -4392,7 +4461,7 @@ function BoostTab() {
             <div className="flex gap-2 pt-2 border-t">
               <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending} className="gap-1">
                 <Save className="w-4 h-4" />
-                {editingCard ? "Salvar alterações" : "Criar Super Boost"}
+                {editingCard ? "Salvar alterações" : form.cardType === "banner" ? "Criar Banner" : "Criar Super Boost"}
               </Button>
               <Button variant="outline" onClick={() => { setShowForm(false); setEditingCard(null); setForm(emptyForm); }}>
                 Cancelar

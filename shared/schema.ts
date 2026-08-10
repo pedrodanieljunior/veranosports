@@ -218,6 +218,8 @@ export const boostCardsTable = pgTable("boost_cards", {
   mimeType: text("mime_type").default("image/jpeg"),
   fakeCounterTarget: integer("fake_counter_target").default(0),
   fakeCounterStart: integer("fake_counter_start").default(0),
+  cardType: text("card_type").default("boost"),
+  showLuckyCount: boolean("show_lucky_count").default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -249,6 +251,8 @@ export const boostCardSchema = z.object({
   hasImage: z.boolean().optional().default(false),
   fakeCounterTarget: z.number().int().optional().default(0),
   fakeCounterStart: z.number().int().optional().default(0),
+  cardType: z.enum(["boost", "banner"]).default("boost"),
+  showLuckyCount: z.boolean().optional().default(false),
   createdAt: z.string(),
 });
 

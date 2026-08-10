@@ -5182,6 +5182,16 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // Sorte Verano public count
+  app.get("/api/sorte-verano/numbers/count", async (_req, res) => {
+    try {
+      const total = await storage.getSorteVeranoNumbersCount();
+      res.json({ total });
+    } catch {
+      res.json({ total: 0 });
+    }
+  });
+
   // Boost card routes
   app.get("/api/boost-cards", async (_req, res) => {
     try {
