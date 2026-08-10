@@ -1,4 +1,4 @@
-import { Zap, Flame, Clover } from "lucide-react";
+import { Zap, Flame, Clover, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
@@ -89,6 +89,8 @@ function BannerCard({ card }: { card: BoostCardType }) {
   const imgSrc = hasImage ? `/api/boost-cards/${card.id}/image` : null;
   const showLuckyCount = !!(card as any).showLuckyCount;
   const [luckyCount, setLuckyCount] = useState<number | null>(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [rulesHtml, setRulesHtml] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showLuckyCount) return;
@@ -98,55 +100,101 @@ function BannerCard({ card }: { card: BoostCardType }) {
       .catch(() => {});
   }, [showLuckyCount]);
 
+  function handleBannerClick() {
+    setRulesOpen(true);
+    if (rulesHtml === null) {
+      fetch("/api/banner-rules")
+        .then(r => r.json())
+        .then(d => setRulesHtml(d.content ?? ""))
+        .catch(() => setRulesHtml(""));
+    }
+  }
+
   return (
-    <div
-      className="relative rounded-xl overflow-hidden mx-3 mb-2.5"
-      style={{ border: "2px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.07)" }}
-    >
-      {/* Image */}
-      {imgSrc ? (
-        <div className="relative w-full" style={{ minHeight: 140 }}>
-          <img src={imgSrc} alt={card.matchTitle || card.eventName} className="w-full object-cover block" style={{ maxHeight: 220 }} />
-          {/* Gradient overlay at bottom for text legibility */}
-          {!noOverlay && (
-            <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorFrom}ee 0%, transparent 60%)` }} />
-          )}
-          {/* Text overlay */}
-          {(card.matchTitle || card.eventName || card.description || card.subtitle) && (
-            <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-6">
-              {card.eventName && <p className="text-center text-[11px] font-semibold mb-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>{card.eventName}</p>}
-              {card.matchTitle && <h3 className="text-center text-sm font-black text-white leading-tight">{card.matchTitle}</h3>}
-              {card.description && <p className="text-center text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{card.description}</p>}
-              {card.subtitle && <p className="text-center text-xs font-semibold italic mt-0.5 text-white">{card.subtitle}</p>}
-            </div>
-          )}
-          {/* Lucky count badge */}
-          {showLuckyCount && luckyCount !== null && (
-            <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.2)" }}>
-              <Clover className="w-3.5 h-3.5 text-green-400 fill-green-400 flex-shrink-0" />
-              <span className="text-[11px] font-bold text-white tabular-nums">{luckyCount.toLocaleString("pt-BR")} números gerados</span>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* No image — gradient only */
-        <div className="relative px-4 py-5" style={{ background: `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 60%, ${colorFrom} 100%)` }}>
-          <div className="absolute left-0 top-0 right-0 h-[2px] rounded-t-xl" style={{ background: `linear-gradient(90deg, ${colorTo}, rgba(255,255,255,0.5), ${colorFrom})` }} />
-          {card.eventName && <p className="text-center text-[11px] font-semibold mb-1" style={{ color: "rgba(255,255,255,0.65)" }}>{card.eventName}</p>}
-          {card.matchTitle && <h3 className="text-center text-sm font-black text-white leading-tight mb-1">{card.matchTitle}</h3>}
-          {card.description && <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>{card.description}</p>}
-          {card.subtitle && <p className="text-center text-xs font-semibold italic mt-1 text-white">{card.subtitle}</p>}
-          {showLuckyCount && luckyCount !== null && (
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              <div className="flex items-center gap-1 px-3 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.2)" }}>
+    <>
+      {/* Clickable banner card */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleBannerClick}
+        onKeyDown={e => e.key === "Enter" && handleBannerClick()}
+        className="relative rounded-xl overflow-hidden mx-3 mb-2.5 cursor-pointer"
+        style={{ border: "2px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.07)" }}
+      >
+        {/* Image */}
+        {imgSrc ? (
+          <div className="relative w-full" style={{ minHeight: 140 }}>
+            <img src={imgSrc} alt={card.matchTitle || card.eventName} className="w-full object-cover block" style={{ maxHeight: 220 }} />
+            {!noOverlay && (
+              <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorFrom}ee 0%, transparent 60%)` }} />
+            )}
+            {(card.matchTitle || card.eventName || card.description || card.subtitle) && (
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-6">
+                {card.eventName && <p className="text-center text-[11px] font-semibold mb-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>{card.eventName}</p>}
+                {card.matchTitle && <h3 className="text-center text-sm font-black text-white leading-tight">{card.matchTitle}</h3>}
+                {card.description && <p className="text-center text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{card.description}</p>}
+                {card.subtitle && <p className="text-center text-xs font-semibold italic mt-0.5 text-white">{card.subtitle}</p>}
+              </div>
+            )}
+            {showLuckyCount && luckyCount !== null && (
+              <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.2)" }}>
                 <Clover className="w-3.5 h-3.5 text-green-400 fill-green-400 flex-shrink-0" />
                 <span className="text-[11px] font-bold text-white tabular-nums">{luckyCount.toLocaleString("pt-BR")} números gerados</span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        ) : (
+          <div className="relative px-4 py-5" style={{ background: `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 60%, ${colorFrom} 100%)` }}>
+            <div className="absolute left-0 top-0 right-0 h-[2px] rounded-t-xl" style={{ background: `linear-gradient(90deg, ${colorTo}, rgba(255,255,255,0.5), ${colorFrom})` }} />
+            {card.eventName && <p className="text-center text-[11px] font-semibold mb-1" style={{ color: "rgba(255,255,255,0.65)" }}>{card.eventName}</p>}
+            {card.matchTitle && <h3 className="text-center text-sm font-black text-white leading-tight mb-1">{card.matchTitle}</h3>}
+            {card.description && <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>{card.description}</p>}
+            {card.subtitle && <p className="text-center text-xs font-semibold italic mt-1 text-white">{card.subtitle}</p>}
+            {showLuckyCount && luckyCount !== null && (
+              <div className="flex items-center justify-center gap-1.5 mt-3">
+                <div className="flex items-center gap-1 px-3 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                  <Clover className="w-3.5 h-3.5 text-green-400 fill-green-400 flex-shrink-0" />
+                  <span className="text-[11px] font-bold text-white tabular-nums">{luckyCount.toLocaleString("pt-BR")} números gerados</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Rules modal */}
+      {rulesOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={() => setRulesOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl p-5"
+            style={{ background: "#13112a", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setRulesOpen(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X className="w-4 h-4 text-white/60" />
+            </button>
+            <h2 className="text-base font-bold text-white mb-4 pr-8">📋 Regulamento</h2>
+            {rulesHtml === null ? (
+              <p className="text-sm text-white/50 text-center py-6">Carregando...</p>
+            ) : rulesHtml.trim() === "" ? (
+              <p className="text-sm text-white/50 text-center py-6">Nenhum regulamento cadastrado.</p>
+            ) : (
+              <div
+                className="prose prose-sm prose-invert max-w-none text-white/80"
+                dangerouslySetInnerHTML={{ __html: rulesHtml }}
+              />
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

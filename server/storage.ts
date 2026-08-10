@@ -61,6 +61,8 @@ export interface IStorage {
   deleteBanner(slotNumber: number): Promise<boolean>;
   getRules(): Promise<string>;
   saveRules(content: string): Promise<void>;
+  getBannerRules(): Promise<string>;
+  saveBannerRules(content: string): Promise<void>;
   getWithdrawals(): Promise<Withdrawal[]>;
   createWithdrawal(amount: number, description: string): Promise<Withdrawal>;
   deleteWithdrawal(id: number): Promise<boolean>;
@@ -538,6 +540,20 @@ export class DatabaseStorage implements IStorage {
       await db.update(siteContentTable).set({ content, updatedAt: new Date() }).where(eq(siteContentTable.key, "rules"));
     } else {
       await db.insert(siteContentTable).values({ key: "rules", content });
+    }
+  }
+
+  async getBannerRules(): Promise<string> {
+    const rows = await db.select().from(siteContentTable).where(eq(siteContentTable.key, "banner_rules"));
+    return rows[0]?.content ?? "";
+  }
+
+  async saveBannerRules(content: string): Promise<void> {
+    const existing = await db.select().from(siteContentTable).where(eq(siteContentTable.key, "banner_rules"));
+    if (existing.length > 0) {
+      await db.update(siteContentTable).set({ content, updatedAt: new Date() }).where(eq(siteContentTable.key, "banner_rules"));
+    } else {
+      await db.insert(siteContentTable).values({ key: "banner_rules", content });
     }
   }
 

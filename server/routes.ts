@@ -5465,6 +5465,26 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/banner-rules", async (_req, res) => {
+    try {
+      const content = await storage.getBannerRules();
+      res.json({ content });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch banner rules" });
+    }
+  });
+
+  app.post("/api/admin/banner-rules", async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ error: "content must be a string" });
+      await storage.saveBannerRules(content);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save banner rules" });
+    }
+  });
+
   // Saques
   app.get("/api/admin/withdrawals", async (req, res) => {
     try {

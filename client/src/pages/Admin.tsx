@@ -10096,7 +10096,86 @@ function SorteVeranoTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Banner rules editor */}
+      <BannerRulesEditor />
     </div>
+  );
+}
+
+function BannerRulesEditor() {
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery<{ content: string }>({
+    queryKey: ["/api/banner-rules"],
+    queryFn: async () => {
+      const res = await fetch("/api/banner-rules");
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+  });
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    if (data?.content !== undefined) setText(data.content);
+  }, [data?.content]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch("/api/admin/banner-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Falha ao salvar");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banner-rules"] });
+      toast({ title: "Regulamento do banner salvo!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao salvar regulamento", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          📋 Regulamento do Banner
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Texto exibido quando o usuário clica em qualquer banner ativo no carousel. Suporta HTML básico ({"<b>"}, {"<ul>"}, {"<li>"}, {"<p>"} etc.).
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-24"><RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <>
+            <textarea
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-primary min-h-[200px] resize-y"
+              placeholder={"<h3>Promoção Número da Sorte</h3>\n<p>Aposte e concorra a prêmios incríveis!</p>\n<ul><li>Bônus</li><li>Camisas Oficiais</li></ul>"}
+              value={text}
+              onChange={e => setText(e.target.value)}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] text-muted-foreground">Pré-visualização aparece quando o usuário toca no banner.</p>
+              <Button
+                size="sm"
+                onClick={() => saveMutation.mutate(text)}
+                disabled={saveMutation.isPending}
+                className="gap-1"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {saveMutation.isPending ? "Salvando..." : "Salvar regulamento"}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
