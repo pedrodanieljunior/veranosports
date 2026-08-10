@@ -1,2 +1,3 @@
 - [Cash Out system](cashout-system.md) — full cash-out/EA system live; uses shared/cashOutUtils.ts for both FE/BE logic; DB column cash_out_value (real) on bet_slips.
+- [Sorte Verano](sorte-verano.md) — lucky numbers system tied to Clube Verano bonus; auto-generated on weekly payout; 5 draw periods; admin tab + user profile view.
 - [Live bet fixture mismatch fix](live-fixture-mismatch.md) — auto-resolve now cross-references stored team names vs API fixture to find the correct fixture if admin activated wrong ID.

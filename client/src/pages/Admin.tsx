@@ -3,7 +3,7 @@ import { fmtOdds } from "@/lib/formatOdds";
 import { translateLeagueDisplay } from "@/lib/leagueTranslations";
 import { translateTeam } from "@/lib/teamTranslations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { BetSlip as BetSlipType, MarketSetting, GameMarketOverride, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa, Game } from "@shared/schema";
+import { BetSlip as BetSlipType, MarketSetting, GameMarketOverride, Banner, Withdrawal, BoostCard, User, Deposit, UserWithdrawal, Defesa, Game, SORTE_VERANO_PERIODS, type SorteVeranoNumber } from "@shared/schema";
 import { computeTotalOdds, checkIsComboBonus, getComboBonus } from "@shared/oddsUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1329,6 +1329,10 @@ export default function Admin() {
             <TabsTrigger value="decisao" data-testid="tab-decisao">
               <Brain className="w-4 h-4 mr-2 text-blue-400" />
               Decisão
+            </TabsTrigger>
+            <TabsTrigger value="sorte" data-testid="tab-sorte">
+              <Star className="w-4 h-4 mr-2 text-yellow-400" />
+              Sorte
             </TabsTrigger>
           </TabsList>
 
@@ -3134,6 +3138,10 @@ export default function Admin() {
 
           <TabsContent value="decisao">
             <DecisaoTab />
+          </TabsContent>
+
+          <TabsContent value="sorte">
+            <SorteVeranoTab />
           </TabsContent>
 
         </Tabs>
@@ -9797,6 +9805,157 @@ function AnalisesTab() {
         </CardContent>
       </Card>
 
+    </div>
+  );
+}
+
+const SORTE_LEVEL_NAMES: Record<number, string> = { 1: "Bronze", 2: "Prata", 3: "Ouro", 4: "Diamante" };
+const SORTE_LEVEL_COLORS: Record<number, string> = {
+  1: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+  2: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+  3: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
+  4: "bg-cyan-500/20 text-cyan-400 border-cyan-500/40",
+};
+
+function SorteVeranoTab() {
+  const [periodFilter, setPeriodFilter] = useState<number | "all">("all");
+  const [search, setSearch] = useState("");
+
+  const { data: numbers = [], isLoading, refetch } = useQuery<(SorteVeranoNumber & { userName: string | null; userPhone: string | null })[]>({
+    queryKey: ["/api/admin/sorte-verano"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/sorte-verano", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+  });
+
+  const filtered = numbers.filter(n => {
+    if (periodFilter !== "all" && n.periodId !== periodFilter) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      return n.number.includes(s) || (n.userName ?? "").toLowerCase().includes(s) || n.userId.includes(s);
+    }
+    return true;
+  });
+
+  // Stats per period
+  const statsByPeriod = SORTE_VERANO_PERIODS.map(p => ({
+    ...p,
+    count: numbers.filter(n => n.periodId === p.id).length,
+    users: new Set(numbers.filter(n => n.periodId === p.id).map(n => n.userId)).size,
+  }));
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-400" />
+              Sorte Verano — Números da Sorte
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Period summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            {statsByPeriod.map(p => {
+              const today = new Date().toISOString().slice(0, 10);
+              const isActive = today >= p.collectionStart && today <= p.collectionEnd;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPeriodFilter(periodFilter === p.id ? "all" : p.id)}
+                  className={`rounded-xl border p-3 text-left transition-all ${periodFilter === p.id ? "border-yellow-500 bg-yellow-500/10" : "border-border bg-card hover:bg-accent"}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-foreground">{p.label}</span>
+                    {isActive && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/40">Ativo</span>}
+                  </div>
+                  <p className="text-2xl font-black text-yellow-400">{p.count}</p>
+                  <p className="text-[10px] text-muted-foreground">{p.users} participante(s)</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Sorteio: {p.drawDate.split("-").reverse().join("/")}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
+                placeholder="Buscar número, nome ou CPF..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              value={String(periodFilter)}
+              onChange={e => setPeriodFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+            >
+              <option value="all">Todas as apurações</option>
+              {SORTE_VERANO_PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-2">{[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-muted rounded animate-pulse" />)}</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Star className="w-10 h-10 mx-auto mb-3 opacity-20" />
+              <p className="text-sm">Nenhum número encontrado</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">Número</th>
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">Usuário</th>
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">CPF</th>
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">Nível Clube</th>
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">Apuração</th>
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">Gerado em</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(n => (
+                    <tr key={n.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td className="py-2 px-3">
+                        <span className="font-black text-lg text-yellow-400 tracking-widest font-mono">{n.number}</span>
+                      </td>
+                      <td className="py-2 px-3 font-medium">{n.userName ?? "—"}</td>
+                      <td className="py-2 px-3 text-muted-foreground font-mono text-xs">
+                        {n.userId.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                      </td>
+                      <td className="py-2 px-3">
+                        <Badge variant="outline" className={`text-[10px] ${SORTE_LEVEL_COLORS[n.clubLevel]}`}>
+                          {SORTE_LEVEL_NAMES[n.clubLevel]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-3 text-muted-foreground text-xs">
+                        {SORTE_VERANO_PERIODS.find(p => p.id === n.periodId)?.label ?? `#${n.periodId}`}
+                      </td>
+                      <td className="py-2 px-3 text-muted-foreground text-xs">
+                        {format(new Date(n.createdAt), "dd/MM/yy HH:mm", { locale: ptBR })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-xs text-muted-foreground mt-3 text-right">{filtered.length} número(s) · {new Set(filtered.map(n => n.userId)).size} participante(s)</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

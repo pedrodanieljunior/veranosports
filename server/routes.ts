@@ -2678,6 +2678,26 @@ export async function registerRoutes(
     }
   });
 
+  // ─── Sorte Verano ──────────────────────────────────────────────────────────
+  app.get("/api/sorte-verano", async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const numbers = await storage.getUserLuckyNumbers(req.session.userId);
+      res.json(numbers);
+    } catch (e) {
+      res.status(500).json({ error: "Erro ao buscar números da sorte" });
+    }
+  });
+
+  app.get("/api/admin/sorte-verano", requireAdmin, async (_req, res) => {
+    try {
+      const numbers = await storage.getAllLuckyNumbers();
+      res.json(numbers);
+    } catch (e) {
+      res.status(500).json({ error: "Erro ao buscar números da sorte" });
+    }
+  });
+
   // ─── Admin: Deposits Management ────────────────────────────────────────────
   app.get("/api/admin/deposits", async (_req, res) => {
     const deposits = await storage.getAllDeposits();

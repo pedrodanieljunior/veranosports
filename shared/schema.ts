@@ -606,6 +606,28 @@ export type NotificationRead = typeof notificationReadsTable.$inferSelect;
 export const insertNotificationSchema = createInsertSchema(notificationsTable).omit({ id: true, createdAt: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
+// ─── Sorte Verano – Números da Sorte ────────────────────────────────────────
+export const sorteVeranoNumbersTable = pgTable("sorte_verano_numbers", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  number: text("number").notNull(),       // 5-dígitos zero-padded, ex: "04721"
+  periodId: integer("period_id").notNull(), // 1-5
+  clubLevel: integer("club_level").notNull(), // 1-4
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const SORTE_VERANO_PERIODS = [
+  { id: 1, collectionStart: "2026-08-10", collectionEnd: "2026-08-31", drawDate: "2026-09-01", label: "1ª Apuração" },
+  { id: 2, collectionStart: "2026-09-07", collectionEnd: "2026-09-28", drawDate: "2026-09-29", label: "2ª Apuração" },
+  { id: 3, collectionStart: "2026-10-05", collectionEnd: "2026-10-26", drawDate: "2026-10-27", label: "3ª Apuração" },
+  { id: 4, collectionStart: "2026-11-02", collectionEnd: "2026-11-30", drawDate: "2026-12-01", label: "4ª Apuração" },
+  { id: 5, collectionStart: "2026-08-10", collectionEnd: "2026-12-21", drawDate: "2026-12-23", label: "5ª Apuração" },
+] as const;
+
+export const SORTE_VERANO_NUMBERS_PER_LEVEL: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4 };
+
+export type SorteVeranoNumber = typeof sorteVeranoNumbersTable.$inferSelect;
+
 // ─── Escanteios 1º Tempo (capturados ao vivo no intervalo) ───────────────────
 export const fixtureHalftimeStatsTable = pgTable("fixture_halftime_stats", {
   fixtureId: integer("fixture_id").primaryKey(),

@@ -1,4 +1,4 @@
-import { type BetSlip, type InsertBetSlip, type MarketSetting, type GameMarketOverride, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, betSlipsTable, marketSettingsTable, gameMarketOverridesTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable, notificationsTable, notificationReadsTable } from "@shared/schema";
+import { type BetSlip, type InsertBetSlip, type MarketSetting, type GameMarketOverride, type Banner, type Withdrawal, type BoostCard, type InsertBoostCard, type User, type Deposit, type UserWithdrawal, type Transaction, type Defesa, type InsertDefesa, type CopaWorldCupCard, type InsertCopaWorldCupCard, type Bolao, type BolaoEntry, type InsertBolao, type Duelo, type DueloEntry, type SorteVeranoNumber, betSlipsTable, marketSettingsTable, gameMarketOverridesTable, bannersTable, siteContentTable, withdrawalsTable, boostCardsTable, usersTable, depositsTable, userWithdrawalsTable, transactionsTable, fixtureHalftimeStatsTable, defensasTable, clubFwClaimsTable, CLUB_FW_LEVELS, copaWorldCupCardsTable, baloesTable, bolaoEntriesTable, duelosTable, dueloEntriesTable, notificationsTable, notificationReadsTable, sorteVeranoNumbersTable, SORTE_VERANO_PERIODS, SORTE_VERANO_NUMBERS_PER_LEVEL } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -123,6 +123,10 @@ export interface IStorage {
   processAllUsersClubFwPayout(weekStart: string): Promise<{ processed: number; totalBonus: number }>;
   fixOvercreditedClubFw(): Promise<{ fixed: number; totalDeducted: number; details: string[] }>;
   getAllClubFwClaims(fromDate?: string, toDate?: string): Promise<{ id: number; userId: string; userName: string; weekStart: string; level: number; bonusAmount: number; createdAt: Date }[]>;
+  // Sorte Verano
+  generateLuckyNumbers(userId: string, clubLevel: number): Promise<SorteVeranoNumber[]>;
+  getUserLuckyNumbers(userId: string): Promise<SorteVeranoNumber[]>;
+  getAllLuckyNumbers(): Promise<(SorteVeranoNumber & { userName: string | null; userPhone: string | null })[]>;
   // Duelo
   getDuelos(): Promise<Duelo[]>;
   getActiveDuelos(): Promise<Duelo[]>;
@@ -1115,6 +1119,13 @@ export class DatabaseStorage implements IStorage {
       description: `Clube FW — Nível ${highestLevel.level} (semana ${weekStart}) +R$${highestLevel.bonus.toFixed(2)} bônus`,
     });
 
+    // Gera números da sorte para os períodos ativos
+    try {
+      await this.generateLuckyNumbers(userId, highestLevel.level);
+    } catch (e) {
+      console.error(`[SorteVerano] Erro ao gerar números para ${userId}:`, e);
+    }
+
     return { newLevels: [highestLevel.level], totalBonus: highestLevel.bonus };
   }
 
@@ -1228,6 +1239,70 @@ export class DatabaseStorage implements IStorage {
       level: r.level,
       bonusAmount: r.bonusAmount,
       createdAt: r.createdAt,
+    }));
+  }
+
+  // ─── Sorte Verano ──────────────────────────────────────────────────────────
+
+  /** Returns which period IDs are currently in their collection window */
+  private getActivePeriodIds(): number[] {
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    return SORTE_VERANO_PERIODS.filter(p => today >= p.collectionStart && today <= p.collectionEnd).map(p => p.id);
+  }
+
+  async generateLuckyNumbers(userId: string, clubLevel: number): Promise<SorteVeranoNumber[]> {
+    const count = SORTE_VERANO_NUMBERS_PER_LEVEL[clubLevel] ?? 1;
+    const activePeriods = this.getActivePeriodIds();
+    if (activePeriods.length === 0) return [];
+
+    // Get all existing numbers to ensure global uniqueness
+    const existingRows = await db.select({ number: sorteVeranoNumbersTable.number }).from(sorteVeranoNumbersTable);
+    const usedNumbers = new Set(existingRows.map(r => r.number));
+
+    const generated: SorteVeranoNumber[] = [];
+
+    for (const periodId of activePeriods) {
+      for (let i = 0; i < count; i++) {
+        let attempts = 0;
+        let candidate: string;
+        do {
+          const n = Math.floor(Math.random() * 99999) + 1;
+          candidate = String(n).padStart(5, "0");
+          attempts++;
+          if (attempts > 10000) throw new Error("Sorte Verano: esgotou tentativas de número único");
+        } while (usedNumbers.has(candidate));
+
+        usedNumbers.add(candidate);
+        const [row] = await db.insert(sorteVeranoNumbersTable).values({
+          userId,
+          number: candidate,
+          periodId,
+          clubLevel,
+        }).returning();
+        generated.push(row);
+      }
+    }
+
+    console.log(`[SorteVerano] ${count} número(s) gerado(s) para ${userId} (nível ${clubLevel}, períodos ${activePeriods.join(",")})`);
+    return generated;
+  }
+
+  async getUserLuckyNumbers(userId: string): Promise<SorteVeranoNumber[]> {
+    return db.select().from(sorteVeranoNumbersTable)
+      .where(eq(sorteVeranoNumbersTable.userId, userId))
+      .orderBy(sorteVeranoNumbersTable.periodId, sorteVeranoNumbersTable.createdAt);
+  }
+
+  async getAllLuckyNumbers(): Promise<(SorteVeranoNumber & { userName: string | null; userPhone: string | null })[]> {
+    const [numbers, users] = await Promise.all([
+      db.select().from(sorteVeranoNumbersTable).orderBy(sorteVeranoNumbersTable.periodId, sorteVeranoNumbersTable.number),
+      this.getAllUsers(),
+    ]);
+    const userMap = new Map(users.map(u => [u.cpf, u]));
+    return numbers.map(n => ({
+      ...n,
+      userName: userMap.get(n.userId)?.name ?? null,
+      userPhone: userMap.get(n.userId)?.phone ?? null,
     }));
   }
 

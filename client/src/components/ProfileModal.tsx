@@ -7,9 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Deposit, UserWithdrawal, Transaction, CLUB_FW_LEVELS } from "@shared/schema";
+import { Deposit, UserWithdrawal, Transaction, CLUB_FW_LEVELS, SORTE_VERANO_PERIODS, type SorteVeranoNumber } from "@shared/schema";
 import { SiWhatsapp, SiPix } from "react-icons/si";
-import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen, MessageCircle, Trophy, Star } from "lucide-react";
+import { User, Wallet, CreditCard, LogOut, ChevronLeft, AlertCircle, CheckCircle2, Clock, XCircle, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, Copy, Share2, Gift, BookOpen, MessageCircle, Trophy, Star, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,7 +50,7 @@ function buildPixCode(amount?: number): string {
   return payload + crc16(payload);
 }
 
-type View = "menu" | "deposit" | "withdraw" | "account" | "history" | "invite" | "rules";
+type View = "menu" | "deposit" | "withdraw" | "account" | "history" | "invite" | "rules" | "sorte";
 
 interface Props {
   open: boolean;
@@ -640,6 +640,114 @@ function InviteView({ onBack }: { onBack: () => void }) {
   );
 }
 
+const LEVEL_NAMES: Record<number, string> = { 1: "Bronze", 2: "Prata", 3: "Ouro", 4: "Diamante" };
+const LEVEL_COLORS: Record<number, string> = {
+  1: "text-amber-700 bg-amber-100 border-amber-300",
+  2: "text-gray-500 bg-gray-100 border-gray-300",
+  3: "text-yellow-600 bg-yellow-50 border-yellow-300",
+  4: "text-cyan-600 bg-cyan-50 border-cyan-300",
+};
+
+function SorteVeranoView({ onBack }: { onBack: () => void }) {
+  const { data: numbers = [], isLoading } = useQuery<SorteVeranoNumber[]>({
+    queryKey: ["/api/sorte-verano"],
+    queryFn: async () => {
+      const res = await fetch("/api/sorte-verano", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+  });
+
+  // Group by period
+  const byPeriod = SORTE_VERANO_PERIODS.reduce<Record<number, SorteVeranoNumber[]>>((acc, p) => {
+    acc[p.id] = numbers.filter(n => n.periodId === p.id);
+    return acc;
+  }, {});
+
+  const today = new Date().toISOString().slice(0, 10);
+  const activePeriods = SORTE_VERANO_PERIODS.filter(p => today >= p.collectionStart && today <= p.collectionEnd);
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
+        <ChevronLeft className="w-4 h-4" /> Voltar
+      </button>
+
+      <div className="rounded-xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 p-4 flex items-start gap-3">
+        <Sparkles className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-amber-800">Como funciona</p>
+          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+            Ao atingir uma recompensa no Clube Verano, você recebe números da sorte:
+            Bronze 1 número · Prata 2 · Ouro 3 · Diamante 4.<br />
+            Sorteios mensais com prêmios exclusivos!
+          </p>
+        </div>
+      </div>
+
+      <ScrollArea className="h-[50vh] pr-1">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-blue-100 rounded-xl animate-pulse" />)}
+          </div>
+        ) : numbers.length === 0 ? (
+          <div className="text-center py-10 text-gray-400">
+            <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p className="text-sm font-medium">Nenhum número gerado ainda</p>
+            <p className="text-xs mt-1">Acumule apostas no Clube Verano para ganhar números da sorte!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {SORTE_VERANO_PERIODS.map(period => {
+              const periodNums = byPeriod[period.id] ?? [];
+              if (periodNums.length === 0) return null;
+              const isActive = today >= period.collectionStart && today <= period.collectionEnd;
+              return (
+                <div key={period.id} className="rounded-xl border border-blue-100 bg-white/80 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">{period.label}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        Apuração: {period.collectionStart.split("-").reverse().join("/")} – {period.collectionEnd.split("-").reverse().join("/")}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        Sorteio: {period.drawDate.split("-").reverse().join("/")}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {periodNums.map(n => (
+                      <div key={n.id} className="flex flex-col items-center gap-1">
+                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-sm">
+                          <span className="text-white font-black text-lg tracking-widest">{n.number}</span>
+                        </div>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${LEVEL_COLORS[n.clubLevel]}`}>
+                          {LEVEL_NAMES[n.clubLevel]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
+
+      {activePeriods.length > 0 && (
+        <p className="text-[10px] text-gray-400 text-center">
+          {activePeriods.length} apuração(ões) ativa(s) · números gerados automaticamente ao receber bônus Clube Verano
+        </p>
+      )}
+    </div>
+  );
+}
+
 function RulesView({ onBack }: { onBack: () => void }) {
   const { data, isLoading } = useQuery<{ content: string }>({
     queryKey: ["/api/rules"],
@@ -710,6 +818,7 @@ export function ProfileModal({ open, onClose }: Props) {
     { id: "history" as View, icon: <History className="w-5 h-5" />, label: "Extrato", desc: "Histórico de movimentações" },
     { id: "account" as View, icon: <User className="w-5 h-5" />, label: "Minha Conta", desc: "Dados e senha" },
     { id: "invite" as View, icon: <Gift className="w-5 h-5" />, label: "Convite", desc: "Seu código de indicação" },
+    { id: "sorte" as View, icon: <Sparkles className="w-5 h-5" />, label: "Sorte Verano", desc: "Seus números da sorte" },
     { id: "rules" as View, icon: <BookOpen className="w-5 h-5" />, label: "Regras do Site", desc: "Termos e condições" },
   ];
 
@@ -724,6 +833,7 @@ export function ProfileModal({ open, onClose }: Props) {
             {view === "history" && "Extrato"}
             {view === "account" && "Minha Conta"}
             {view === "invite" && "Convite"}
+            {view === "sorte" && "Sorte Verano"}
             {view === "rules" && "Regras do Site"}
           </DialogTitle>
         </DialogHeader>
@@ -954,6 +1064,7 @@ export function ProfileModal({ open, onClose }: Props) {
         {view === "history" && <HistoryView onBack={() => setView("menu")} />}
         {view === "account" && <AccountView onBack={() => setView("menu")} />}
         {view === "invite" && <InviteView onBack={() => setView("menu")} />}
+        {view === "sorte" && <SorteVeranoView onBack={() => setView("menu")} />}
         {view === "rules" && <RulesView onBack={() => setView("menu")} />}
       </DialogContent>
     </Dialog>
