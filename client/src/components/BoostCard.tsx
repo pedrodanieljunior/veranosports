@@ -4,6 +4,18 @@ import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
 import { fmtOdds } from "@/lib/formatOdds";
 
+/** Convert plain text with newlines to HTML paragraphs if no HTML tags detected. */
+function normalizeRulesHtml(content: string): string {
+  if (!content.trim()) return "";
+  // If it already contains HTML tags, return as-is
+  if (/<[a-z][\s\S]*?>/i.test(content)) return content;
+  // Plain text: split on double newlines → paragraphs, single newlines → <br>
+  return content
+    .split(/\n{2,}/)
+    .map(para => `<p>${para.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
 /** Compute the current fake counter value based on exponential growth curve. */
 function computeFakeCounter(start: number, target: number, createdAt: string, endsAt: string): number {
   if (!target || target <= 0) return 0;
@@ -188,7 +200,7 @@ function BannerCard({ card }: { card: BoostCardType }) {
             ) : (
               <div
                 className="prose prose-sm prose-invert max-w-none text-white/80"
-                dangerouslySetInnerHTML={{ __html: rulesHtml }}
+                dangerouslySetInnerHTML={{ __html: normalizeRulesHtml(rulesHtml) }}
               />
             )}
           </div>
