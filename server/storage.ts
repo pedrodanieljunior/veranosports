@@ -127,6 +127,7 @@ export interface IStorage {
   generateLuckyNumbers(userId: string, clubLevel: number): Promise<SorteVeranoNumber[]>;
   getUserLuckyNumbers(userId: string): Promise<SorteVeranoNumber[]>;
   getAllLuckyNumbers(): Promise<(SorteVeranoNumber & { userName: string | null; userPhone: string | null })[]>;
+  generateMissingLuckyNumbers(): Promise<{ generated: number; usersProcessed: number }>;
   // Duelo
   getDuelos(): Promise<Duelo[]>;
   getActiveDuelos(): Promise<Duelo[]>;
@@ -1304,6 +1305,58 @@ export class DatabaseStorage implements IStorage {
       userName: userMap.get(n.userId)?.name ?? null,
       userPhone: userMap.get(n.userId)?.phone ?? null,
     }));
+  }
+
+  // Gera números retroativamente para usuários que já têm claims Clube FW
+  // mas não têm números para os períodos ativos (pagamentos anteriores ao sistema)
+  async generateMissingLuckyNumbers(): Promise<{ generated: number; usersProcessed: number }> {
+    const activePeriods = this.getActivePeriodIds();
+    if (activePeriods.length === 0) {
+      console.log("[SorteVerano Retro] Nenhum período ativo — nada a fazer");
+      return { generated: 0, usersProcessed: 0 };
+    }
+
+    // Pega todos os claims agrupados por usuário → nível mais alto por usuário
+    const allClaims = await db.select({
+      userId: clubFwClaimsTable.userId,
+      level: clubFwClaimsTable.level,
+    }).from(clubFwClaimsTable);
+
+    // Nível mais alto por usuário
+    const highestLevelByUser = new Map<string, number>();
+    for (const claim of allClaims) {
+      const current = highestLevelByUser.get(claim.userId) ?? 0;
+      if (claim.level > current) highestLevelByUser.set(claim.userId, claim.level);
+    }
+
+    // Pega todos os números já existentes por (userId, periodId)
+    const existingNumbers = await db.select({
+      userId: sorteVeranoNumbersTable.userId,
+      periodId: sorteVeranoNumbersTable.periodId,
+    }).from(sorteVeranoNumbersTable);
+
+    const alreadyHas = new Set(existingNumbers.map(n => `${n.userId}:${n.periodId}`));
+
+    let totalGenerated = 0;
+    let usersProcessed = 0;
+
+    for (const [userId, highestLevel] of highestLevelByUser.entries()) {
+      // Verifica se faltam números em algum período ativo
+      const missingPeriods = activePeriods.filter(pid => !alreadyHas.has(`${userId}:${pid}`));
+      if (missingPeriods.length === 0) continue;
+
+      try {
+        const nums = await this.generateLuckyNumbers(userId, highestLevel);
+        totalGenerated += nums.length;
+        usersProcessed++;
+        console.log(`[SorteVerano Retro] ${nums.length} número(s) gerado(s) para ${userId} (nível ${highestLevel})`);
+      } catch (e) {
+        console.error(`[SorteVerano Retro] Erro ao gerar para ${userId}:`, e);
+      }
+    }
+
+    console.log(`[SorteVerano Retro] Concluído — ${usersProcessed} usuário(s), ${totalGenerated} número(s) gerado(s)`);
+    return { generated: totalGenerated, usersProcessed };
   }
 
   private mapCopaCard(r: typeof copaWorldCupCardsTable.$inferSelect): CopaWorldCupCard {

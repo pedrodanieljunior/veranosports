@@ -2698,6 +2698,16 @@ export async function registerRoutes(
     }
   });
 
+  // Gera retroativamente números para quem já tem claims mas não tem números
+  app.post("/api/admin/sorte-verano/generate-missing", requireAdmin, async (_req, res) => {
+    try {
+      const result = await storage.generateMissingLuckyNumbers();
+      res.json({ ok: true, ...result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ─── Admin: Deposits Management ────────────────────────────────────────────
   app.get("/api/admin/deposits", async (_req, res) => {
     const deposits = await storage.getAllDeposits();
@@ -7944,8 +7954,18 @@ export async function registerRoutes(
     }
   }
 
-  // Executa no startup (pega semanas atrasadas caso o servidor tenha caído)
-  setTimeout(runClubFwPayoutIfDue, 5000);
+  // Executa payout semanal e, ao terminar, gera números retroativos para quem não tem
+  setTimeout(async () => {
+    await runClubFwPayoutIfDue();
+    try {
+      const result = await storage.generateMissingLuckyNumbers();
+      if (result.usersProcessed > 0) {
+        console.log(`[SorteVerano] Startup: ${result.usersProcessed} usuário(s) com números gerados retroativamente`);
+      }
+    } catch (e) {
+      console.error("[SorteVerano] Erro no startup retroativo:", e);
+    }
+  }, 5000);
 
   // Verifica a cada 30 minutos
   setInterval(runClubFwPayoutIfDue, 30 * 60 * 1000);

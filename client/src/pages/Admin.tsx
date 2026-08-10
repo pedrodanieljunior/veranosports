@@ -9820,6 +9820,8 @@ const SORTE_LEVEL_COLORS: Record<number, string> = {
 function SorteVeranoTab() {
   const [periodFilter, setPeriodFilter] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<{ generated: number; usersProcessed: number } | null>(null);
 
   const { data: numbers = [], isLoading, refetch } = useQuery<(SorteVeranoNumber & { userName: string | null; userPhone: string | null })[]>({
     queryKey: ["/api/admin/sorte-verano"],
@@ -9829,6 +9831,21 @@ function SorteVeranoTab() {
       return res.json();
     },
   });
+
+  async function handleGenerateMissing() {
+    setGenerating(true);
+    setGenerateResult(null);
+    try {
+      const res = await fetch("/api/admin/sorte-verano/generate-missing", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      setGenerateResult(data);
+      refetch();
+    } catch (e) {
+      alert("Erro ao gerar números");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   const filtered = numbers.filter(n => {
     if (periodFilter !== "all" && n.periodId !== periodFilter) return false;
@@ -9855,11 +9872,28 @@ function SorteVeranoTab() {
               <Star className="w-5 h-5 text-yellow-400" />
               Sorte Verano — Números da Sorte
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Atualizar
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateMissing}
+                disabled={generating}
+                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                {generating ? "Gerando..." : "Gerar Retroativo"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
           </div>
+          {generateResult && (
+            <div className="mt-2 text-sm text-green-400 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
+              ✓ {generateResult.usersProcessed} usuário(s) processado(s) — {generateResult.generated} número(s) gerado(s)
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {/* Period summary cards */}
