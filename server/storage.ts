@@ -1339,7 +1339,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Gera números retroativamente para usuários que já têm claims Clube FW
-  // mas não têm números para os períodos ativos (pagamentos anteriores ao sistema)
+  // mas não têm números para os períodos ativos.
+  // Só considera claims criados a partir do início do programa Sorte Verano
+  // (data de início do período de coleta mais antigo dos períodos 1–4).
   async generateMissingLuckyNumbers(): Promise<{ generated: number; usersProcessed: number }> {
     const activePeriods = this.getActivePeriodIds();
     if (activePeriods.length === 0) {
@@ -1347,11 +1349,19 @@ export class DatabaseStorage implements IStorage {
       return { generated: 0, usersProcessed: 0 };
     }
 
-    // Pega todos os claims agrupados por usuário → nível mais alto por usuário
+    // Início do programa: data de início do período de coleta mais antigo (excluindo período 5)
+    const programStart = SORTE_VERANO_PERIODS
+      .filter(p => p.id !== 5)
+      .map(p => p.collectionStart)
+      .sort()
+      .at(0)!; // "2026-08-10"
+
+    // Só considera claims criados a partir do início do programa
     const allClaims = await db.select({
       userId: clubFwClaimsTable.userId,
       level: clubFwClaimsTable.level,
-    }).from(clubFwClaimsTable);
+    }).from(clubFwClaimsTable)
+      .where(gte(clubFwClaimsTable.createdAt, new Date(programStart)));
 
     // Nível mais alto por usuário
     const highestLevelByUser = new Map<string, number>();
