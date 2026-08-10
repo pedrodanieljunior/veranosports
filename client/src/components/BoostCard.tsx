@@ -82,8 +82,9 @@ interface BoostCardProps {
 }
 
 function BannerCard({ card }: { card: BoostCardType }) {
-  const colorFrom = card.gradientFrom || "#1a0a3d";
-  const colorTo = card.gradientTo || "#0f2d6b";
+  const noOverlay = card.gradientFrom === "none" || card.gradientTo === "none";
+  const colorFrom = (!card.gradientFrom || card.gradientFrom === "none") ? "#1a0a3d" : card.gradientFrom;
+  const colorTo = (!card.gradientTo || card.gradientTo === "none") ? "#0f2d6b" : card.gradientTo;
   const hasImage = !!(card as any).hasImage;
   const imgSrc = hasImage ? `/api/boost-cards/${card.id}/image` : null;
   const showLuckyCount = !!(card as any).showLuckyCount;
@@ -107,7 +108,9 @@ function BannerCard({ card }: { card: BoostCardType }) {
         <div className="relative w-full" style={{ minHeight: 140 }}>
           <img src={imgSrc} alt={card.matchTitle || card.eventName} className="w-full object-cover block" style={{ maxHeight: 220 }} />
           {/* Gradient overlay at bottom for text legibility */}
-          <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorFrom}ee 0%, transparent 60%)` }} />
+          {!noOverlay && (
+            <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorFrom}ee 0%, transparent 60%)` }} />
+          )}
           {/* Text overlay */}
           {(card.matchTitle || card.eventName || card.description || card.subtitle) && (
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-6">

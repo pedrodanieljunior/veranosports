@@ -4378,33 +4378,50 @@ function BoostTab() {
             {/* Gradient colors */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Cores do card (degradê)</label>
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                <div className="flex items-center gap-2 flex-1">
-                  <label className="text-[11px] text-muted-foreground whitespace-nowrap">Cor 1</label>
+              {form.cardType === "banner" && (
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
-                    type="color"
-                    className="w-10 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
-                    value={form.gradientFrom}
-                    onChange={e => setForm(f => ({ ...f, gradientFrom: e.target.value }))}
+                    type="checkbox"
+                    checked={form.gradientFrom === "none"}
+                    onChange={e => setForm(f => ({
+                      ...f,
+                      gradientFrom: e.target.checked ? "none" : "#0f2d6b",
+                      gradientTo: e.target.checked ? "none" : "#1a0a0a",
+                    }))}
+                    className="w-4 h-4 accent-purple-500"
                   />
-                  <span className="text-[11px] text-muted-foreground font-mono">{form.gradientFrom}</span>
-                </div>
-                <div className="flex items-center gap-2 flex-1">
-                  <label className="text-[11px] text-muted-foreground whitespace-nowrap">Cor 2</label>
-                  <input
-                    type="color"
-                    className="w-10 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
-                    value={form.gradientTo}
-                    onChange={e => setForm(f => ({ ...f, gradientTo: e.target.value }))}
+                  <span className="text-xs text-muted-foreground">Sem sobreposição de cor <span className="text-[10px] opacity-60">(mostra só a imagem)</span></span>
+                </label>
+              )}
+              {form.gradientFrom !== "none" && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                  <div className="flex items-center gap-2 flex-1">
+                    <label className="text-[11px] text-muted-foreground whitespace-nowrap">Cor 1</label>
+                    <input
+                      type="color"
+                      className="w-10 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
+                      value={form.gradientFrom}
+                      onChange={e => setForm(f => ({ ...f, gradientFrom: e.target.value }))}
+                    />
+                    <span className="text-[11px] text-muted-foreground font-mono">{form.gradientFrom}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1">
+                    <label className="text-[11px] text-muted-foreground whitespace-nowrap">Cor 2</label>
+                    <input
+                      type="color"
+                      className="w-10 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
+                      value={form.gradientTo}
+                      onChange={e => setForm(f => ({ ...f, gradientTo: e.target.value }))}
+                    />
+                    <span className="text-[11px] text-muted-foreground font-mono">{form.gradientTo}</span>
+                  </div>
+                  {/* Preview */}
+                  <div
+                    className="w-12 h-8 rounded-md flex-shrink-0 border border-border"
+                    style={{ background: `linear-gradient(135deg, ${form.gradientFrom}, ${form.gradientTo})` }}
                   />
-                  <span className="text-[11px] text-muted-foreground font-mono">{form.gradientTo}</span>
                 </div>
-                {/* Preview */}
-                <div
-                  className="w-12 h-8 rounded-md flex-shrink-0 border border-border"
-                  style={{ background: `linear-gradient(135deg, ${form.gradientFrom}, ${form.gradientTo})` }}
-                />
-              </div>
+              )}
             </div>
 
             {form.cardType !== "banner" && (
