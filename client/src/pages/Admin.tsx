@@ -9848,7 +9848,8 @@ function SorteVeranoTab() {
   }
 
   const filtered = numbers.filter(n => {
-    if (periodFilter !== "all" && n.periodId !== periodFilter) return false;
+    // Period 5 = grande apuração: includes ALL numbers from all periods
+    if (periodFilter !== "all" && periodFilter !== 5 && n.periodId !== periodFilter) return false;
     if (search) {
       const s = search.toLowerCase();
       return n.number.includes(s) || (n.userName ?? "").toLowerCase().includes(s) || n.userId.includes(s);
@@ -9856,12 +9857,25 @@ function SorteVeranoTab() {
     return true;
   });
 
-  // Stats per period
-  const statsByPeriod = SORTE_VERANO_PERIODS.map(p => ({
-    ...p,
-    count: numbers.filter(n => n.periodId === p.id).length,
-    users: new Set(numbers.filter(n => n.periodId === p.id).map(n => n.userId)).size,
-  }));
+  // Stats per period.
+  // Period 5 is the "grande apuração de dezembro": it includes ALL numbers from
+  // periods 1-4 (they automatically participate) plus any numbers generated
+  // specifically during the December window (periodId = 5). So its count/users
+  // is the global total, not just rows where periodId = 5.
+  const statsByPeriod = SORTE_VERANO_PERIODS.map(p => {
+    if (p.id === 5) {
+      return {
+        ...p,
+        count: numbers.length,
+        users: new Set(numbers.map(n => n.userId)).size,
+      };
+    }
+    return {
+      ...p,
+      count: numbers.filter(n => n.periodId === p.id).length,
+      users: new Set(numbers.filter(n => n.periodId === p.id).map(n => n.userId)).size,
+    };
+  });
 
   return (
     <div className="space-y-6">

@@ -1245,10 +1245,41 @@ export class DatabaseStorage implements IStorage {
 
   // ─── Sorte Verano ──────────────────────────────────────────────────────────
 
-  /** Returns which period IDs are currently in their collection window */
+  /**
+   * Returns which period IDs are currently open for number generation.
+   *
+   * Rules:
+   * - Periods 1–4 each have their own exclusive collection window; generate
+   *   a number for whichever one is active right now (at most one at a time).
+   * - Period 5 is the "grande apuração de dezembro": it does NOT generate
+   *   separate numbers during the same window as periods 1–4.  It only opens
+   *   for new number generation after ALL other periods have ended (i.e. after
+   *   the last period 1–4 collectionEnd date, which is 2026-11-30).  During
+   *   the December window it generates one extra set of numbers on top of all
+   *   the accumulated numbers from periods 1–4.
+   * - The period 5 draw includes every number ever generated (periods 1–4 +
+   *   any December-specific numbers with periodId = 5).
+   */
   private getActivePeriodIds(): number[] {
     const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-    return SORTE_VERANO_PERIODS.filter(p => today >= p.collectionStart && today <= p.collectionEnd).map(p => p.id);
+
+    // Primary periods (1-4): each has its own exclusive window
+    const primaryPeriods = SORTE_VERANO_PERIODS
+      .filter(p => p.id !== 5 && today >= p.collectionStart && today <= p.collectionEnd)
+      .map(p => p.id);
+
+    // Period 5 (December-only window): only active after all primary periods close
+    const lastPrimaryEnd = SORTE_VERANO_PERIODS
+      .filter(p => p.id !== 5)
+      .map(p => p.collectionEnd)
+      .sort()
+      .at(-1) ?? "9999-12-31"; // "2026-11-30"
+    const period5 = SORTE_VERANO_PERIODS.find(p => p.id === 5)!;
+    if (today > lastPrimaryEnd && today <= period5.collectionEnd) {
+      primaryPeriods.push(5);
+    }
+
+    return primaryPeriods;
   }
 
   async generateLuckyNumbers(userId: string, clubLevel: number): Promise<SorteVeranoNumber[]> {
