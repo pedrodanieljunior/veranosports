@@ -5474,7 +5474,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/banner-rules", async (req, res) => {
+  app.post("/api/admin/banner-rules", requireAdmin, async (req, res) => {
     try {
       const { content } = req.body;
       if (typeof content !== "string") return res.status(400).json({ error: "content must be a string" });
