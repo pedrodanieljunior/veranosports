@@ -260,12 +260,14 @@ export type BoostCard = z.infer<typeof boostCardSchema>;
 export type BoostOutcome = z.infer<typeof boostOutcomeSchema>;
 
 export const insertBoostCardSchema = z.object({
-  eventName: z.string().min(1, "Nome do evento obrigatório"),
-  matchTitle: z.string().min(1, "Título do confronto obrigatório"),
+  cardType: z.enum(["boost", "banner"]).optional().default("boost"),
+  showLuckyCount: z.boolean().optional().default(false),
+  eventName: z.string().optional().default(""),
+  matchTitle: z.string().optional().default(""),
   description: z.string().optional().default(""),
   selections: z.array(z.object({ description: z.string() })).max(3).optional().default([]),
-  originalOdds: z.number().min(1, "Odd mínima é 1.00"),
-  boostedOdds: z.number().min(1, "Odd mínima é 1.00"),
+  originalOdds: z.number().optional().default(1),
+  boostedOdds: z.number().optional().default(1),
   outcomes: z.array(boostOutcomeSchema).optional().default([]),
   subtitle: z.string().optional().default(""),
   startsAt: z.string(),
@@ -277,6 +279,21 @@ export const insertBoostCardSchema = z.object({
   minStake: z.number().nullable().optional(),
   fakeCounterTarget: z.number().int().optional().default(0),
   fakeCounterStart: z.number().int().optional().default(0),
+}).superRefine((data, ctx) => {
+  if (data.cardType !== "banner") {
+    if (!data.eventName || data.eventName.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "string", inclusive: true, message: "Nome do evento obrigatório", path: ["eventName"] });
+    }
+    if (!data.matchTitle || data.matchTitle.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "string", inclusive: true, message: "Título do confronto obrigatório", path: ["matchTitle"] });
+    }
+    if (!data.originalOdds || data.originalOdds < 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "number", inclusive: true, message: "Odd mínima é 1.00", path: ["originalOdds"] });
+    }
+    if (!data.boostedOdds || data.boostedOdds < 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "number", inclusive: true, message: "Odd mínima é 1.00", path: ["boostedOdds"] });
+    }
+  }
 });
 
 export type InsertBoostCard = z.infer<typeof insertBoostCardSchema>;
