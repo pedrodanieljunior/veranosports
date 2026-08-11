@@ -4102,6 +4102,36 @@ function BoostTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Card type / Odds mode toggle */}
+            <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, cardType: "boost", outcomeMode: false, outcomes: [] }))}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "boost" && !form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                >
+                  ⚡ Odd simples
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, cardType: "boost", outcomeMode: true, outcomes: f.outcomes.length >= 2 ? f.outcomes : [{ label: "Sim", originalOdds: "", boostedOdds: "" }, { label: "Não", originalOdds: "", boostedOdds: "" }] }))}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "boost" && form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                >
+                  ⚡ Múltiplas opções
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, cardType: "banner", outcomeMode: false, outcomes: [] }))}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "banner" ? "bg-purple-400/20 text-purple-300 border border-purple-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
+                >
+                  🖼️ Banner
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {form.cardType === "banner" ? "Banner informativo — sem odds, apenas imagem e texto" : form.outcomeMode ? "Ex: Ambos marcam: Sim / Não" : "Ex: Over 2.5 — uma única seleção"}
+              </p>
+            </div>
+
             {form.cardType !== "banner" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -4178,37 +4208,7 @@ function BoostTab() {
             </div>
             )}
 
-            {/* Card type / Odds mode toggle */}
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 flex-wrap">
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, cardType: "boost", outcomeMode: false, outcomes: [] }))}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "boost" && !form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
-                  >
-                    ⚡ Odd simples
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, cardType: "boost", outcomeMode: true, outcomes: f.outcomes.length >= 2 ? f.outcomes : [{ label: "Sim", originalOdds: "", boostedOdds: "" }, { label: "Não", originalOdds: "", boostedOdds: "" }] }))}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "boost" && form.outcomeMode ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
-                  >
-                    ⚡ Múltiplas opções
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, cardType: "banner", outcomeMode: false, outcomes: [] }))}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${form.cardType === "banner" ? "bg-purple-400/20 text-purple-300 border border-purple-400/50" : "text-muted-foreground border border-transparent hover:border-border"}`}
-                  >
-                    🖼️ Banner
-                  </button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  {form.cardType === "banner" ? "Banner informativo — sem odds, apenas imagem e texto" : form.outcomeMode ? "Ex: Ambos marcam: Sim / Não" : "Ex: Over 2.5 — uma única seleção"}
-                </p>
-              </div>
-
               {form.cardType !== "banner" && !form.outcomeMode && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
