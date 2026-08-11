@@ -1,5 +1,6 @@
 import { Zap, Flame, Clover, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { BoostCard as BoostCardType } from "@shared/schema";
 import { Selection } from "@shared/schema";
 import { fmtOdds } from "@/lib/formatOdds";
@@ -91,9 +92,11 @@ interface BoostCardProps {
   selections: Selection[];
   onToggleSelection: (selection: Selection) => void;
   usedByUser?: boolean;
+  onModalOpen?: () => void;
+  onModalClose?: () => void;
 }
 
-function BannerCard({ card }: { card: BoostCardType }) {
+function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; onModalOpen?: () => void; onModalClose?: () => void }) {
   const noOverlay = card.gradientFrom === "none" || card.gradientTo === "none";
   const colorFrom = (!card.gradientFrom || card.gradientFrom === "none") ? "#1a0a3d" : card.gradientFrom;
   const colorTo = (!card.gradientTo || card.gradientTo === "none") ? "#0f2d6b" : card.gradientTo;
@@ -114,12 +117,18 @@ function BannerCard({ card }: { card: BoostCardType }) {
 
   function handleBannerClick() {
     setRulesOpen(true);
+    onModalOpen?.();
     if (rulesHtml === null) {
       fetch("/api/banner-rules")
         .then(r => r.json())
         .then(d => setRulesHtml(d.content ?? ""))
         .catch(() => setRulesHtml(""));
     }
+  }
+
+  function handleCloseModal() {
+    setRulesOpen(false);
+    onModalClose?.();
   }
 
   return (
@@ -174,12 +183,12 @@ function BannerCard({ card }: { card: BoostCardType }) {
         )}
       </div>
 
-      {/* Rules modal */}
-      {rulesOpen && (
+      {/* Rules modal — rendered via portal so display:none on carousel parent can't hide it */}
+      {rulesOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={() => setRulesOpen(false)}
+          onClick={handleCloseModal}
         >
           <div
             className="relative w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl p-5"
@@ -187,7 +196,7 @@ function BannerCard({ card }: { card: BoostCardType }) {
             onClick={e => e.stopPropagation()}
           >
             <button
-              onClick={() => setRulesOpen(false)}
+              onClick={handleCloseModal}
               className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/10 transition-colors"
             >
               <X className="w-4 h-4 text-white/60" />
@@ -204,15 +213,16 @@ function BannerCard({ card }: { card: BoostCardType }) {
               />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
 }
 
-export function BoostCard({ card, selections, onToggleSelection, usedByUser = false }: BoostCardProps) {
+export function BoostCard({ card, selections, onToggleSelection, usedByUser = false, onModalOpen, onModalClose }: BoostCardProps) {
   if ((card as any).cardType === "banner") {
-    return <BannerCard card={card} />;
+    return <BannerCard card={card} onModalOpen={onModalOpen} onModalClose={onModalClose} />;
   }
 
   const hasOutcomes = card.outcomes && card.outcomes.length > 0;

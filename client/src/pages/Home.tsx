@@ -202,9 +202,12 @@ export default function Home() {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
+  const boostPausedRef = useRef(false);
   useEffect(() => {
     if (boostCards.length <= 1) return;
-    const id = setInterval(() => setBoostIdx(i => (i + 1) % boostCards.length), 5000);
+    const id = setInterval(() => {
+      if (!boostPausedRef.current) setBoostIdx(i => (i + 1) % boostCards.length);
+    }, 5000);
     return () => clearInterval(id);
   }, [boostCards.length]);
 
@@ -484,6 +487,8 @@ export default function Home() {
                         selections={selections}
                         onToggleSelection={handleToggleSelection}
                         usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false}
+                        onModalOpen={() => { boostPausedRef.current = true; }}
+                        onModalClose={() => { boostPausedRef.current = false; }}
                       />
                     </div>
                   ))}
@@ -665,6 +670,8 @@ export default function Home() {
                             selections={selections}
                             onToggleSelection={handleToggleSelection}
                             usedByUser={user ? betHistory.some((b: BetSlipType) => Array.isArray(b.selections) && b.selections.some((s: any) => s.gameId === `boost-${card.id}`)) : false}
+                            onModalOpen={() => { boostPausedRef.current = true; }}
+                            onModalClose={() => { boostPausedRef.current = false; }}
                           />
                         </div>
                       ))}
