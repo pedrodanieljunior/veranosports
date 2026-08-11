@@ -4099,7 +4099,7 @@ function BoostTab() {
             {form.cardType !== "banner" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Evento / Liga *</label>
+                  <label className="text-xs font-medium text-muted-foreground">Evento / Liga</label>
                   <input
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
                     placeholder="Ex: Copa Libertadores - Gr.F"
@@ -4108,7 +4108,7 @@ function BoostTab() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Confronto *</label>
+                  <label className="text-xs font-medium text-muted-foreground">Confronto</label>
                   <input
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
                     placeholder="Ex: Palmeiras — Sporting Cristal"
