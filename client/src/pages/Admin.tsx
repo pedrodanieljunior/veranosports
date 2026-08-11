@@ -1332,7 +1332,7 @@ export default function Admin() {
               Decisão
             </TabsTrigger>
             <TabsTrigger value="sorte" data-testid="tab-sorte">
-              <Clover className="w-4 h-4 mr-2 text-green-400" />
+              <span className="mr-1.5">🍀</span>
               Sorte
             </TabsTrigger>
           </TabsList>
