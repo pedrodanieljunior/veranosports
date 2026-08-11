@@ -104,9 +104,9 @@ function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; 
   const imgSrc = hasImage ? `/api/boost-cards/${card.id}/image` : null;
   const showLuckyCount = !!(card as any).showLuckyCount;
   const showRules = !!(card as any).showRules;
+  const rulesContent: string = (card as any).rulesContent ?? "";
   const [luckyCount, setLuckyCount] = useState<number | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [rulesHtml, setRulesHtml] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showLuckyCount) return;
@@ -120,12 +120,6 @@ function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; 
     if (!showRules) return;
     setRulesOpen(true);
     onModalOpen?.();
-    if (rulesHtml === null) {
-      fetch("/api/banner-rules")
-        .then(r => r.json())
-        .then(d => setRulesHtml(d.content ?? ""))
-        .catch(() => setRulesHtml(""));
-    }
   }
 
   function handleCloseModal() {
@@ -204,14 +198,12 @@ function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; 
               <X className="w-4 h-4 text-white/60" />
             </button>
             <h2 className="text-base font-bold text-white mb-4 pr-8">📋 Regulamento</h2>
-            {rulesHtml === null ? (
-              <p className="text-sm text-white/50 text-center py-6">Carregando...</p>
-            ) : rulesHtml.trim() === "" ? (
+            {rulesContent.trim() === "" ? (
               <p className="text-sm text-white/50 text-center py-6">Nenhum regulamento cadastrado.</p>
             ) : (
               <div
                 className="prose prose-sm prose-invert max-w-none text-white/80"
-                dangerouslySetInnerHTML={{ __html: normalizeRulesHtml(rulesHtml) }}
+                dangerouslySetInnerHTML={{ __html: normalizeRulesHtml(rulesContent) }}
               />
             )}
           </div>

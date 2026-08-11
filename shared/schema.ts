@@ -221,6 +221,7 @@ export const boostCardsTable = pgTable("boost_cards", {
   cardType: text("card_type").default("boost"),
   showLuckyCount: boolean("show_lucky_count").default(false),
   showRules: boolean("show_rules").default(false),
+  rulesContent: text("rules_content").default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -255,6 +256,7 @@ export const boostCardSchema = z.object({
   cardType: z.enum(["boost", "banner"]).default("boost"),
   showLuckyCount: z.boolean().optional().default(false),
   showRules: z.boolean().optional().default(false),
+  rulesContent: z.string().optional().default(""),
   createdAt: z.string(),
 });
 
@@ -265,6 +267,7 @@ export const insertBoostCardSchema = z.object({
   cardType: z.enum(["boost", "banner"]).optional().default("boost"),
   showLuckyCount: z.boolean().optional().default(false),
   showRules: z.boolean().optional().default(false),
+  rulesContent: z.string().optional().default(""),
   eventName: z.string().optional().default(""),
   matchTitle: z.string().optional().default(""),
   description: z.string().optional().default(""),

@@ -3597,6 +3597,7 @@ function BoostTab() {
     cardType: "boost" as "boost" | "banner",
     showLuckyCount: false,
     showRules: false,
+    rulesContent: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3759,6 +3760,7 @@ function BoostTab() {
       cardType: ct,
       showLuckyCount: (card as any).showLuckyCount ?? false,
       showRules: (card as any).showRules ?? false,
+      rulesContent: (card as any).rulesContent ?? "",
     });
     setShowForm(true);
   };
@@ -3796,6 +3798,7 @@ function BoostTab() {
         cardType: "banner",
         showLuckyCount: form.showLuckyCount,
         showRules: form.showRules,
+        rulesContent: form.rulesContent,
       };
       editingCard ? updateMutation.mutate({ id: editingCard.id, data: payload }) : createMutation.mutate(payload);
       return;
@@ -4391,9 +4394,21 @@ function BoostTab() {
                   />
                   <div>
                     <label htmlFor="show-rules" className="text-sm cursor-pointer font-medium">📋 Abrir regulamento ao clicar</label>
-                    <p className="text-[11px] text-muted-foreground">O banner ficará clicável e exibirá o regulamento cadastrado na aba Sorte.</p>
+                    <p className="text-[11px] text-muted-foreground">O banner ficará clicável e exibirá o regulamento abaixo.</p>
                   </div>
                 </div>
+                {form.showRules && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Texto do regulamento</label>
+                    <textarea
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-primary min-h-[160px] resize-y"
+                      placeholder={"<h3>Promoção</h3>\n<p>Aposte e concorra a prêmios!</p>\n<ul><li>Item 1</li></ul>"}
+                      value={form.rulesContent}
+                      onChange={e => setForm(f => ({ ...f, rulesContent: e.target.value }))}
+                    />
+                    <p className="text-[10px] text-muted-foreground">Suporta HTML básico ({"<b>"}, {"<ul>"}, {"<li>"}, {"<p>"} etc.).</p>
+                  </div>
+                )}
               </>
             )}
 
@@ -10119,8 +10134,6 @@ function SorteVeranoTab() {
         </CardContent>
       </Card>
 
-      {/* Banner rules editor */}
-      <BannerRulesEditor />
     </div>
   );
 }
