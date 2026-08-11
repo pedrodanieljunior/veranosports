@@ -660,7 +660,7 @@ export class DatabaseStorage implements IStorage {
       "UPDATE boost_cards SET show_rules = $2, rules_content = $3 WHERE id = $1",
       [row.id, showRulesVal, rulesContentVal]
     );
-    const freshRow = (await pool.query("SELECT * FROM boost_cards WHERE id = $1", [row.id])).rows[0] as any;
+    const [freshRow] = await db.select().from(boostCardsTable).where(eq(boostCardsTable.id, row.id));
     return this.mapBoostCard(freshRow);
   }
 
@@ -699,8 +699,8 @@ export class DatabaseStorage implements IStorage {
       if (rulesContentVal !== undefined) { setClauses.push(`rules_content = $${params.length + 1}`); params.push(rulesContentVal); }
       await pool.query(`UPDATE boost_cards SET ${setClauses.join(", ")} WHERE id = $1`, params);
     }
-    // Re-fetch updated row so mapBoostCard sees all columns
-    const freshRow = (await pool.query<typeof boostCardsTable.$inferSelect>("SELECT * FROM boost_cards WHERE id = $1", [id])).rows[0] as any;
+    // Re-fetch updated row via Drizzle so mapBoostCard gets camelCase keys
+    const [freshRow] = await db.select().from(boostCardsTable).where(eq(boostCardsTable.id, id));
     return freshRow ? this.mapBoostCard(freshRow) : undefined;
   }
 
