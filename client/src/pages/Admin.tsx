@@ -3947,7 +3947,7 @@ function BoostTab() {
                         {card.subtitle && (
                           <p className="text-xs font-medium italic mt-0.5" style={{ color: "#eee" }}>{card.subtitle}</p>
                         )}
-                        {card.outcomes && card.outcomes.length > 0 ? (
+                        {(card as any).cardType !== "banner" && (card.outcomes && card.outcomes.length > 0 ? (
                           <div className="flex flex-wrap gap-2 mt-1">
                             {card.outcomes.map((o, oi) => (
                               <span key={oi} className="text-xs flex items-center gap-1 px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-400/10">
@@ -3964,7 +3964,7 @@ function BoostTab() {
                             <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                             <span className="text-sm font-bold text-yellow-400">{fmtOdds(card.boostedOdds)}</span>
                           </div>
-                        )}
+                        ))}
                         {card.selections.length > 0 && (
                           <div className="relative pl-4 mt-2">
                             {card.selections.length > 1 && (
