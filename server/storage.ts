@@ -612,8 +612,8 @@ export class DatabaseStorage implements IStorage {
       fakeCounterStart: (r as any).fakeCounterStart ?? 0,
       cardType: ((r as any).cardType ?? "boost") as "boost" | "banner",
       showLuckyCount: (r as any).showLuckyCount ?? false,
-      showRules: (r as any).showRules ?? false,
-      rulesContent: (r as any).rulesContent ?? "",
+      showRules: (r as any).showRules ?? (r as any).show_rules ?? false,
+      rulesContent: (r as any).rulesContent ?? (r as any).rules_content ?? "",
       createdAt: r.createdAt.toISOString(),
     };
   }
@@ -652,10 +652,16 @@ export class DatabaseStorage implements IStorage {
       fakeCounterStart: (data as any).fakeCounterStart ?? 0,
       cardType: (data as any).cardType ?? "boost",
       showLuckyCount: (data as any).showLuckyCount ?? false,
-      showRules: (data as any).showRules ?? false,
-      rulesContent: (data as any).rulesContent ?? "",
     }).returning();
-    return this.mapBoostCard(row);
+    // Patch show_rules and rules_content via raw SQL (columns added via ALTER TABLE)
+    const showRulesVal = (data as any).showRules ?? false;
+    const rulesContentVal = (data as any).rulesContent ?? "";
+    await pool.query(
+      "UPDATE boost_cards SET show_rules = $2, rules_content = $3 WHERE id = $1",
+      [row.id, showRulesVal, rulesContentVal]
+    );
+    const freshRow = (await pool.query("SELECT * FROM boost_cards WHERE id = $1", [row.id])).rows[0] as any;
+    return this.mapBoostCard(freshRow);
   }
 
   async updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined> {
@@ -679,12 +685,23 @@ export class DatabaseStorage implements IStorage {
     if ((data as any).fakeCounterStart !== undefined) update.fakeCounterStart = (data as any).fakeCounterStart;
     if ((data as any).cardType !== undefined) update.cardType = (data as any).cardType;
     if ((data as any).showLuckyCount !== undefined) update.showLuckyCount = (data as any).showLuckyCount;
-    if ((data as any).showRules !== undefined) update.showRules = (data as any).showRules;
-    if ((data as any).rulesContent !== undefined) update.rulesContent = (data as any).rulesContent;
     if ((data as any).imageData !== undefined) update.imageData = (data as any).imageData;
     if ((data as any).mimeType !== undefined) update.mimeType = (data as any).mimeType;
     const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();
-    return row ? this.mapBoostCard(row) : undefined;
+    // showRules and rulesContent use snake_case columns added via ALTER TABLE —
+    // patch them with raw SQL to bypass Drizzle camelCase mapping issues
+    const showRulesVal = (data as any).showRules;
+    const rulesContentVal = (data as any).rulesContent;
+    if (showRulesVal !== undefined || rulesContentVal !== undefined) {
+      const setClauses: string[] = [];
+      const params: unknown[] = [id];
+      if (showRulesVal !== undefined) { setClauses.push(`show_rules = $${params.length + 1}`); params.push(showRulesVal); }
+      if (rulesContentVal !== undefined) { setClauses.push(`rules_content = $${params.length + 1}`); params.push(rulesContentVal); }
+      await pool.query(`UPDATE boost_cards SET ${setClauses.join(", ")} WHERE id = $1`, params);
+    }
+    // Re-fetch updated row so mapBoostCard sees all columns
+    const freshRow = (await pool.query<typeof boostCardsTable.$inferSelect>("SELECT * FROM boost_cards WHERE id = $1", [id])).rows[0] as any;
+    return freshRow ? this.mapBoostCard(freshRow) : undefined;
   }
 
   async resolveBoostCard(id: number, result: "pending" | "won" | "lost", outcomeIdx?: number): Promise<{ card: BoostCard; affectedBets: number; affectedBetIds: string[] }> {
