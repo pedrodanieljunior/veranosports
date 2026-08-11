@@ -3804,6 +3804,8 @@ function BoostTab() {
         return;
       }
       const payload = {
+        cardType: "boost" as const,
+        showLuckyCount: false,
         eventName: form.eventName,
         matchTitle: form.matchTitle,
         description: form.description,
@@ -3829,6 +3831,8 @@ function BoostTab() {
       editingCard ? updateMutation.mutate({ id: editingCard.id, data: payload }) : createMutation.mutate(payload);
     } else {
       const payload = {
+        cardType: "boost" as const,
+        showLuckyCount: false,
         eventName: form.eventName,
         matchTitle: form.matchTitle,
         description: form.description,
