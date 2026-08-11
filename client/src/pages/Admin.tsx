@@ -3824,7 +3824,7 @@ function BoostTab() {
         fakeCounterTarget: form.fakeCounterTarget ? parseInt(form.fakeCounterTarget) : 0,
         fakeCounterStart: form.fakeCounterStart ? parseInt(form.fakeCounterStart) : 0,
       };
-      if (!payload.eventName || !payload.matchTitle || !form.startsAt || !form.endsAt) {
+      if (!form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
         return;
       }
@@ -3851,7 +3851,7 @@ function BoostTab() {
         fakeCounterTarget: form.fakeCounterTarget ? parseInt(form.fakeCounterTarget) : 0,
         fakeCounterStart: form.fakeCounterStart ? parseInt(form.fakeCounterStart) : 0,
       };
-      if (!payload.eventName || !payload.matchTitle || isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
+      if (isNaN(payload.originalOdds) || isNaN(payload.boostedOdds) || !form.startsAt || !form.endsAt) {
         toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
         return;
       }
