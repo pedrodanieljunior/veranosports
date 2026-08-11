@@ -588,6 +588,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   private mapBoostCard(r: typeof boostCardsTable.$inferSelect): BoostCard {
+    const safeISO = (v: any): string => {
+      if (!v) return new Date().toISOString();
+      if (v instanceof Date) return v.toISOString();
+      return new Date(v).toISOString();
+    };
     return {
       id: r.id,
       eventName: r.eventName,
@@ -599,8 +604,8 @@ export class DatabaseStorage implements IStorage {
       outcomes: (r.outcomes as { label: string; originalOdds: number; boostedOdds: number }[]) ?? [],
       outcomeResults: (r.outcomeResults as ("pending" | "won" | "lost")[]) ?? [],
       subtitle: r.subtitle ?? "",
-      startsAt: r.startsAt.toISOString(),
-      endsAt: r.endsAt.toISOString(),
+      startsAt: safeISO(r.startsAt),
+      endsAt: safeISO(r.endsAt),
       active: r.active,
       result: (r.result as "pending" | "won" | "lost") ?? "pending",
       gradientFrom: (r as any).gradientFrom ?? "#0f2d6b",
@@ -614,12 +619,17 @@ export class DatabaseStorage implements IStorage {
       showLuckyCount: (r as any).showLuckyCount ?? false,
       showRules: (r as any).showRules ?? (r as any).show_rules ?? false,
       rulesContent: (r as any).rulesContent ?? (r as any).rules_content ?? "",
-      createdAt: r.createdAt.toISOString(),
+      createdAt: safeISO(r.createdAt),
     };
   }
 
   // Maps a raw pool.query() row (snake_case keys) to BoostCard
   private mapRawBoostCard(r: any): BoostCard {
+    const safeISO = (v: any): string => {
+      if (!v) return new Date().toISOString();
+      if (v instanceof Date) return v.toISOString();
+      return new Date(String(v)).toISOString();
+    };
     return {
       id: r.id,
       eventName: r.event_name ?? "",
@@ -631,8 +641,8 @@ export class DatabaseStorage implements IStorage {
       outcomes: (typeof r.outcomes === "string" ? JSON.parse(r.outcomes) : r.outcomes) ?? [],
       outcomeResults: (typeof r.outcome_results === "string" ? JSON.parse(r.outcome_results) : r.outcome_results) ?? [],
       subtitle: r.subtitle ?? "",
-      startsAt: new Date(r.starts_at).toISOString(),
-      endsAt: new Date(r.ends_at).toISOString(),
+      startsAt: safeISO(r.starts_at),
+      endsAt: safeISO(r.ends_at),
       active: r.active,
       result: (r.result ?? "pending") as "pending" | "won" | "lost",
       gradientFrom: r.gradient_from ?? "#0f2d6b",
@@ -646,7 +656,7 @@ export class DatabaseStorage implements IStorage {
       showLuckyCount: r.show_lucky_count ?? false,
       showRules: r.show_rules ?? false,
       rulesContent: r.rules_content ?? "",
-      createdAt: new Date(r.created_at).toISOString(),
+      createdAt: safeISO(r.created_at),
     };
   }
 
@@ -705,41 +715,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBoostCard(id: number, data: Partial<InsertBoostCard>): Promise<BoostCard | undefined> {
-    const update: any = {};
-    if (data.eventName !== undefined) update.eventName = data.eventName;
-    if (data.matchTitle !== undefined) update.matchTitle = data.matchTitle;
-    if (data.description !== undefined) update.description = data.description;
-    if (data.selections !== undefined) update.selections = data.selections;
-    if (data.originalOdds !== undefined) update.originalOdds = data.originalOdds;
-    if (data.boostedOdds !== undefined) update.boostedOdds = data.boostedOdds;
-    if (data.outcomes !== undefined) update.outcomes = data.outcomes;
-    if (data.subtitle !== undefined) update.subtitle = data.subtitle;
-    if (data.startsAt !== undefined) update.startsAt = new Date(data.startsAt);
-    if (data.endsAt !== undefined) update.endsAt = new Date(data.endsAt);
-    if (data.active !== undefined) update.active = data.active;
-    if ((data as any).gradientFrom !== undefined) update.gradientFrom = (data as any).gradientFrom;
-    if ((data as any).gradientTo !== undefined) update.gradientTo = (data as any).gradientTo;
-    if ((data as any).maxStake !== undefined) update.maxStake = (data as any).maxStake;
-    if ((data as any).minStake !== undefined) update.minStake = (data as any).minStake;
-    if ((data as any).fakeCounterTarget !== undefined) update.fakeCounterTarget = (data as any).fakeCounterTarget;
-    if ((data as any).fakeCounterStart !== undefined) update.fakeCounterStart = (data as any).fakeCounterStart;
-    if ((data as any).cardType !== undefined) update.cardType = (data as any).cardType;
-    if ((data as any).showLuckyCount !== undefined) update.showLuckyCount = (data as any).showLuckyCount;
-    if ((data as any).imageData !== undefined) update.imageData = (data as any).imageData;
-    if ((data as any).mimeType !== undefined) update.mimeType = (data as any).mimeType;
-    await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id));
-    // Always patch show_rules and rules_content via raw SQL
-    const showRulesVal = (data as any).showRules;
-    const rulesContentVal = (data as any).rulesContent;
-    if (showRulesVal !== undefined || rulesContentVal !== undefined) {
-      const setClauses: string[] = [];
-      const params: unknown[] = [id];
-      if (showRulesVal !== undefined) { setClauses.push(`show_rules = $${params.length + 1}`); params.push(showRulesVal); }
-      if (rulesContentVal !== undefined) { setClauses.push(`rules_content = $${params.length + 1}`); params.push(rulesContentVal); }
-      await pool.query(`UPDATE boost_cards SET ${setClauses.join(", ")} WHERE id = $1`, params);
+    const d = data as any;
+    const setClauses: string[] = [];
+    const params: unknown[] = [id];
+    const add = (col: string, val: unknown) => {
+      setClauses.push(`${col} = $${params.length + 1}`);
+      params.push(val);
+    };
+    if (d.eventName !== undefined) add("event_name", d.eventName);
+    if (d.matchTitle !== undefined) add("match_title", d.matchTitle);
+    if (d.description !== undefined) add("description", d.description);
+    if (d.selections !== undefined) add("selections", JSON.stringify(d.selections));
+    if (d.originalOdds !== undefined) add("original_odds", d.originalOdds);
+    if (d.boostedOdds !== undefined) add("boosted_odds", d.boostedOdds);
+    if (d.outcomes !== undefined) add("outcomes", JSON.stringify(d.outcomes));
+    if (d.subtitle !== undefined) add("subtitle", d.subtitle);
+    if (d.startsAt !== undefined) add("starts_at", new Date(d.startsAt));
+    if (d.endsAt !== undefined) add("ends_at", new Date(d.endsAt));
+    if (d.active !== undefined) add("active", d.active);
+    if (d.gradientFrom !== undefined) add("gradient_from", d.gradientFrom);
+    if (d.gradientTo !== undefined) add("gradient_to", d.gradientTo);
+    if (d.maxStake !== undefined) add("max_stake", d.maxStake);
+    if (d.minStake !== undefined) add("min_stake", d.minStake);
+    if (d.fakeCounterTarget !== undefined) add("fake_counter_target", d.fakeCounterTarget);
+    if (d.fakeCounterStart !== undefined) add("fake_counter_start", d.fakeCounterStart);
+    if (d.cardType !== undefined) add("card_type", d.cardType);
+    if (d.showLuckyCount !== undefined) add("show_lucky_count", d.showLuckyCount);
+    if (d.showRules !== undefined) add("show_rules", d.showRules);
+    if (d.rulesContent !== undefined) add("rules_content", d.rulesContent);
+    if (d.imageData !== undefined) add("image_data", d.imageData);
+    if (d.mimeType !== undefined) add("mime_type", d.mimeType);
+    if (setClauses.length === 0) {
+      const existing = await pool.query<any>("SELECT * FROM boost_cards WHERE id = $1", [id]);
+      return existing.rows[0] ? this.mapRawBoostCard(existing.rows[0]) : undefined;
     }
-    // Re-fetch with raw SQL so mapRawBoostCard gets all columns correctly
-    const result = await pool.query<any>("SELECT * FROM boost_cards WHERE id = $1", [id]);
+    const result = await pool.query<any>(
+      `UPDATE boost_cards SET ${setClauses.join(", ")} WHERE id = $1 RETURNING *`,
+      params
+    );
     return result.rows[0] ? this.mapRawBoostCard(result.rows[0]) : undefined;
   }
 

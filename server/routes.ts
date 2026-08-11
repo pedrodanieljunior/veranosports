@@ -5246,6 +5246,7 @@ export async function registerRoutes(
       const card = await storage.createBoostCard(data);
       res.json(card);
     } catch (error: any) {
+      console.error("[POST boost-cards] error:", error?.stack || error?.message || error);
       res.status(400).json({ error: error.message || "Invalid data" });
     }
   });
@@ -5257,6 +5258,7 @@ export async function registerRoutes(
       if (!card) return res.status(404).json({ error: "Not found" });
       res.json(card);
     } catch (error: any) {
+      console.error("[PUT boost-cards] error:", error?.stack || error?.message || error);
       res.status(400).json({ error: error.message || "Invalid data" });
     }
   });
