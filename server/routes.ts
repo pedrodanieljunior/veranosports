@@ -5210,7 +5210,7 @@ export async function registerRoutes(
       if (!req.file) return res.status(400).json({ error: "Nenhuma imagem enviada" });
       const imageData = req.file.buffer.toString("base64");
       const mimeType = req.file.mimetype || "image/jpeg";
-      await storage.updateBoostCard(id, { imageData, mimeType } as any);
+      await pool.query("UPDATE boost_cards SET image_data = $2, mime_type = $3 WHERE id = $1", [id, imageData, mimeType]);
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
