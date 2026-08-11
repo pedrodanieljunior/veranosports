@@ -3575,6 +3575,7 @@ function BoostTab() {
   const [boostUploadFile, setBoostUploadFile] = useState<File | null>(null);
   const [boostUploadPreview, setBoostUploadPreview] = useState<string | null>(null);
   const boostFileInputRef = useRef<HTMLInputElement | null>(null);
+  const boostFormRef = useRef<HTMLDivElement | null>(null);
 
   const emptyForm = {
     eventName: "",
@@ -3770,6 +3771,7 @@ function BoostTab() {
     setEditingCard(null);
     setForm(emptyForm);
     setShowForm(true);
+    setTimeout(() => boostFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const handleSubmit = () => {
@@ -4096,7 +4098,7 @@ function BoostTab() {
       </Card>
 
       {showForm && (
-        <Card>
+        <Card ref={boostFormRef}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
               {editingCard ? "✏️ Editar Super Boost" : "✨ Novo Super Boost"}
