@@ -5210,9 +5210,14 @@ export async function registerRoutes(
       if (!req.file) return res.status(400).json({ error: "Nenhuma imagem enviada" });
       const imageData = req.file.buffer.toString("base64");
       const mimeType = req.file.mimetype || "image/jpeg";
+      console.log("[boost-img] uploading image for card id:", id, "mime:", mimeType);
       await pool.query("UPDATE boost_cards SET image_data = $2, mime_type = $3 WHERE id = $1", [id, imageData, mimeType]);
+      console.log("[boost-img] done, ok");
       res.json({ ok: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) {
+      console.error("[boost-img] ERROR:", e?.stack || e?.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get("/api/boost-cards/:id/image", async (req, res) => {
