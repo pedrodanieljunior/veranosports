@@ -66,6 +66,7 @@ import {
   EyeOff,
   Gift,
   Star,
+  Clover,
   UserCheck,
   Search,
   Settings,
@@ -1331,7 +1332,7 @@ export default function Admin() {
               Decisão
             </TabsTrigger>
             <TabsTrigger value="sorte" data-testid="tab-sorte">
-              <Star className="w-4 h-4 mr-2 text-yellow-400" />
+              <Clover className="w-4 h-4 mr-2 text-green-400" />
               Sorte
             </TabsTrigger>
           </TabsList>
