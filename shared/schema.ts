@@ -281,12 +281,6 @@ export const insertBoostCardSchema = z.object({
   fakeCounterStart: z.number().int().optional().default(0),
 }).superRefine((data, ctx) => {
   if (data.cardType !== "banner") {
-    if (!data.eventName || data.eventName.trim().length === 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "string", inclusive: true, message: "Nome do evento obrigatório", path: ["eventName"] });
-    }
-    if (!data.matchTitle || data.matchTitle.trim().length === 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "string", inclusive: true, message: "Título do confronto obrigatório", path: ["matchTitle"] });
-    }
     if (!data.originalOdds || data.originalOdds < 1) {
       ctx.addIssue({ code: z.ZodIssueCode.too_small, minimum: 1, type: "number", inclusive: true, message: "Odd mínima é 1.00", path: ["originalOdds"] });
     }
