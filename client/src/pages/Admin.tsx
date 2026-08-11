@@ -3596,6 +3596,7 @@ function BoostTab() {
     fakeCounterStart: "",
     cardType: "boost" as "boost" | "banner",
     showLuckyCount: false,
+    showRules: false,
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -3757,6 +3758,7 @@ function BoostTab() {
       fakeCounterStart: (card as any).fakeCounterStart ? String((card as any).fakeCounterStart) : "",
       cardType: ct,
       showLuckyCount: (card as any).showLuckyCount ?? false,
+      showRules: (card as any).showRules ?? false,
     });
     setShowForm(true);
   };
@@ -3793,6 +3795,7 @@ function BoostTab() {
         fakeCounterStart: 0,
         cardType: "banner",
         showLuckyCount: form.showLuckyCount,
+        showRules: form.showRules,
       };
       editingCard ? updateMutation.mutate({ id: editingCard.id, data: payload }) : createMutation.mutate(payload);
       return;
@@ -4364,19 +4367,34 @@ function BoostTab() {
 
             {/* Banner: opção de mostrar contagem de números da sorte */}
             {form.cardType === "banner" && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-purple-400/30 bg-purple-400/5">
-                <input
-                  type="checkbox"
-                  id="show-lucky-count"
-                  checked={form.showLuckyCount}
-                  onChange={e => setForm(f => ({ ...f, showLuckyCount: e.target.checked }))}
-                  className="w-4 h-4 accent-purple-500"
-                />
-                <div>
-                  <label htmlFor="show-lucky-count" className="text-sm cursor-pointer font-medium">🍀 Mostrar total de números da sorte gerados</label>
-                  <p className="text-[11px] text-muted-foreground">Exibe no banner a quantidade atual de números do Sorte Verano.</p>
+              <>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-purple-400/30 bg-purple-400/5">
+                  <input
+                    type="checkbox"
+                    id="show-lucky-count"
+                    checked={form.showLuckyCount}
+                    onChange={e => setForm(f => ({ ...f, showLuckyCount: e.target.checked }))}
+                    className="w-4 h-4 accent-purple-500"
+                  />
+                  <div>
+                    <label htmlFor="show-lucky-count" className="text-sm cursor-pointer font-medium">🍀 Mostrar total de números da sorte gerados</label>
+                    <p className="text-[11px] text-muted-foreground">Exibe no banner a quantidade atual de números do Sorte Verano.</p>
+                  </div>
                 </div>
-              </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-purple-400/30 bg-purple-400/5">
+                  <input
+                    type="checkbox"
+                    id="show-rules"
+                    checked={form.showRules}
+                    onChange={e => setForm(f => ({ ...f, showRules: e.target.checked }))}
+                    className="w-4 h-4 accent-purple-500"
+                  />
+                  <div>
+                    <label htmlFor="show-rules" className="text-sm cursor-pointer font-medium">📋 Abrir regulamento ao clicar</label>
+                    <p className="text-[11px] text-muted-foreground">O banner ficará clicável e exibirá o regulamento cadastrado na aba Sorte.</p>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Gradient colors */}

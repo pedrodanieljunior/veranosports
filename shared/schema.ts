@@ -220,6 +220,7 @@ export const boostCardsTable = pgTable("boost_cards", {
   fakeCounterStart: integer("fake_counter_start").default(0),
   cardType: text("card_type").default("boost"),
   showLuckyCount: boolean("show_lucky_count").default(false),
+  showRules: boolean("show_rules").default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -253,6 +254,7 @@ export const boostCardSchema = z.object({
   fakeCounterStart: z.number().int().optional().default(0),
   cardType: z.enum(["boost", "banner"]).default("boost"),
   showLuckyCount: z.boolean().optional().default(false),
+  showRules: z.boolean().optional().default(false),
   createdAt: z.string(),
 });
 
@@ -262,6 +264,7 @@ export type BoostOutcome = z.infer<typeof boostOutcomeSchema>;
 export const insertBoostCardSchema = z.object({
   cardType: z.enum(["boost", "banner"]).optional().default("boost"),
   showLuckyCount: z.boolean().optional().default(false),
+  showRules: z.boolean().optional().default(false),
   eventName: z.string().optional().default(""),
   matchTitle: z.string().optional().default(""),
   description: z.string().optional().default(""),

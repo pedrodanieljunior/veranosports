@@ -103,6 +103,7 @@ function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; 
   const hasImage = !!(card as any).hasImage;
   const imgSrc = hasImage ? `/api/boost-cards/${card.id}/image` : null;
   const showLuckyCount = !!(card as any).showLuckyCount;
+  const showRules = !!(card as any).showRules;
   const [luckyCount, setLuckyCount] = useState<number | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesHtml, setRulesHtml] = useState<string | null>(null);
@@ -116,6 +117,7 @@ function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; 
   }, [showLuckyCount]);
 
   function handleBannerClick() {
+    if (!showRules) return;
     setRulesOpen(true);
     onModalOpen?.();
     if (rulesHtml === null) {
@@ -135,11 +137,11 @@ function BannerCard({ card, onModalOpen, onModalClose }: { card: BoostCardType; 
     <>
       {/* Clickable banner card */}
       <div
-        role="button"
-        tabIndex={0}
+        role={showRules ? "button" : undefined}
+        tabIndex={showRules ? 0 : undefined}
         onClick={handleBannerClick}
         onKeyDown={e => e.key === "Enter" && handleBannerClick()}
-        className="relative rounded-xl overflow-hidden mx-3 mb-2.5 cursor-pointer"
+        className={`relative rounded-xl overflow-hidden mx-3 mb-2.5${showRules ? " cursor-pointer" : ""}`}
         style={{ border: "2px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.07)" }}
       >
         {/* Image */}

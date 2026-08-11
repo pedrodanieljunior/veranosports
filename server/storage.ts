@@ -612,6 +612,7 @@ export class DatabaseStorage implements IStorage {
       fakeCounterStart: (r as any).fakeCounterStart ?? 0,
       cardType: ((r as any).cardType ?? "boost") as "boost" | "banner",
       showLuckyCount: (r as any).showLuckyCount ?? false,
+      showRules: (r as any).showRules ?? false,
       createdAt: r.createdAt.toISOString(),
     };
   }
@@ -650,6 +651,7 @@ export class DatabaseStorage implements IStorage {
       fakeCounterStart: (data as any).fakeCounterStart ?? 0,
       cardType: (data as any).cardType ?? "boost",
       showLuckyCount: (data as any).showLuckyCount ?? false,
+      showRules: (data as any).showRules ?? false,
     }).returning();
     return this.mapBoostCard(row);
   }
@@ -675,6 +677,7 @@ export class DatabaseStorage implements IStorage {
     if ((data as any).fakeCounterStart !== undefined) update.fakeCounterStart = (data as any).fakeCounterStart;
     if ((data as any).cardType !== undefined) update.cardType = (data as any).cardType;
     if ((data as any).showLuckyCount !== undefined) update.showLuckyCount = (data as any).showLuckyCount;
+    if ((data as any).showRules !== undefined) update.showRules = (data as any).showRules;
     if ((data as any).imageData !== undefined) update.imageData = (data as any).imageData;
     if ((data as any).mimeType !== undefined) update.mimeType = (data as any).mimeType;
     const [row] = await db.update(boostCardsTable).set(update).where(eq(boostCardsTable.id, id)).returning();
