@@ -138,7 +138,7 @@ export default function Home() {
     const todayCopa = todayGames.filter(g => g.sportKey === "soccer_fifa_world_cup" && !seen.has(g.id)).map(add);
     const extraCopa = copaMundoGames.filter(g => !seen.has(g.id) && new Date(g.commenceTime).getTime() <= next48hMs).map(add);
 
-    // 3) Resto das ligas de hoje
+    // 3) Resto das ligas de hoje (inclui Super Cup via games/today)
     const rest = todayGames.filter(g => !seen.has(g.id)).map(add);
 
     return [...br, ...todayBr, ...todayCopa, ...extraCopa, ...rest];

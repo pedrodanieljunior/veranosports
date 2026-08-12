@@ -3135,6 +3135,68 @@ export async function registerRoutes(
       }
       }
 
+      // ── UEFA Super Cup 2026: PSG x Aston Villa (fixture 1583664) ─────────────────
+      // Não pertence às ligas acima — injetado diretamente por fixture ID.
+      if (API_FOOTBALL_KEY) {
+        try {
+          const nowMs2 = Date.now();
+          const next24hMs2 = nowMs2 + 24 * 60 * 60 * 1000;
+          const SUPER_CUP_ID = 1583664;
+          const [scFixRes, scOddsRes] = await Promise.all([
+            fetch(`${API_FOOTBALL_BASE}/fixtures?id=${SUPER_CUP_ID}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+            fetch(`${API_FOOTBALL_BASE}/odds?fixture=${SUPER_CUP_ID}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+          ]);
+          if (scFixRes.ok) {
+            const scFixData = await scFixRes.json();
+            const scFix = scFixData.response?.[0];
+            if (scFix) {
+              const scStatus = scFix.fixture?.status?.short;
+              const scDate = new Date(scFix.fixture.date).getTime();
+              // Incluir se NS e dentro das próximas 24h, ou se ao vivo
+              const LIVE_STS = new Set(["1H","HT","2H","ET","BT","P","INT"]);
+              if ((scStatus === "NS" && scDate > nowMs2 && scDate <= next24hMs2) || LIVE_STS.has(scStatus)) {
+                const homeTeam = formatTeamName(scFix.teams.home.name);
+                const awayTeam = formatTeamName(scFix.teams.away.name);
+                let scBookmakers: any[] = [];
+                if (scOddsRes.ok) {
+                  const scOddsData = await scOddsRes.json();
+                  const bk = pickBestBookmaker(scOddsData.response?.[0]?.bookmakers || []);
+                  if (bk) {
+                    const bets: any[] = bk.bets || [];
+                    const h2h = bets.find((b: any) => b.name === "Match Winner");
+                    if (h2h && h2h.values?.length >= 2) {
+                      scBookmakers = [{ key: "api-football", title: bk.name, markets: [
+                        { key: "h2h", outcomes: h2h.values.map((v: any) => ({
+                          name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                          price: parseFloat(v.odd),
+                        }))},
+                        ...extractExtraMarketsFromBets(bets),
+                      ]}];
+                    }
+                  }
+                }
+                // Só adicionar se não estiver já na lista
+                if (!allGames.some(g => g.id === `api-football-${SUPER_CUP_ID}`)) {
+                  allGames.push({
+                    id: `api-football-${SUPER_CUP_ID}`,
+                    sportKey: "soccer_uefa_champs_league",
+                    sportTitle: "UEFA Super Cup",
+                    commenceTime: scFix.fixture.date,
+                    homeTeam,
+                    awayTeam,
+                    homeLogo: scFix.teams.home.logo,
+                    awayLogo: scFix.teams.away.logo,
+                    bookmakers: scBookmakers,
+                    _priority: 10, // alta prioridade — mesmo nível que UCL
+                  });
+                  console.log(`[games/today] UEFA Super Cup injetado: ${homeTeam} vs ${awayTeam}`);
+                }
+              }
+            }
+          }
+        } catch (e) { /* silently ignore */ }
+      }
+
       // Ordenar: por prioridade de liga (desc) depois por horário (asc)
       allGames.sort((a, b) => {
         if (b._priority !== a._priority) return b._priority - a._priority;
@@ -3381,6 +3443,73 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching Brazilian games:", error);
       res.status(500).json({ error: "Failed to fetch Brazilian games" });
+    }
+  });
+
+  // Endpoint dedicado para a UEFA Super Cup 2026 (PSG vs Aston Villa, fixture 1583664)
+  app.get("/api/super-cup", async (req, res) => {
+    try {
+      const FIXTURE_ID = 1583664;
+      const cacheKey = "super_cup_2026";
+      const cached = cache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
+
+      if (!API_FOOTBALL_KEY) return res.json(null);
+
+      const [fixtureRes, oddsRes] = await Promise.all([
+        fetch(`${API_FOOTBALL_BASE}/fixtures?id=${FIXTURE_ID}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+        fetch(`${API_FOOTBALL_BASE}/odds?fixture=${FIXTURE_ID}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } }),
+      ]);
+
+      if (!fixtureRes.ok) return res.json(null);
+      const fixtureData = await fixtureRes.json();
+      const fixture = fixtureData.response?.[0];
+      if (!fixture) return res.json(null);
+
+      const homeTeam = formatTeamName(fixture.teams.home.name);
+      const awayTeam = formatTeamName(fixture.teams.away.name);
+
+      let bookmakers: any[] = [];
+      if (oddsRes.ok) {
+        const oddsData = await oddsRes.json();
+        const bk = pickBestBookmaker(oddsData.response?.[0]?.bookmakers || []);
+        if (bk) {
+          const bets: any[] = bk.bets || [];
+          const h2h = bets.find((b: any) => b.name === "Match Winner");
+          if (h2h && h2h.values?.length >= 2) {
+            const markets: any[] = [{
+              key: "h2h",
+              outcomes: h2h.values.map((v: any) => ({
+                name: v.value === "Home" ? homeTeam : v.value === "Away" ? awayTeam : "Empate",
+                price: parseFloat(v.odd),
+              })),
+            }, ...extractExtraMarketsFromBets(bets)];
+            bookmakers = [{ key: "api-football", title: bk.name, markets }];
+          }
+        }
+      }
+
+      const fixtureStatus = fixture.fixture?.status?.short;
+      const game = {
+        id: `api-football-${FIXTURE_ID}`,
+        sportKey: "soccer_uefa_champs_league",
+        sportTitle: "UEFA Super Cup",
+        commenceTime: fixture.fixture.date,
+        homeTeam,
+        awayTeam,
+        homeLogo: fixture.teams.home.logo,
+        awayLogo: fixture.teams.away.logo,
+        bookmakers,
+        status: fixtureStatus,
+      };
+
+      // Cache por 5 min se o jogo ainda não começou, 1 min se em andamento
+      const ttl = (fixtureStatus === "NS") ? 5 * 60 * 1000 : 60 * 1000;
+      cache.set(cacheKey, game, ttl);
+      res.json(game);
+    } catch (error) {
+      console.error("Error fetching Super Cup:", error);
+      res.json(null);
     }
   });
 
@@ -6144,7 +6273,17 @@ export async function registerRoutes(
       ...(laliga_upData.response ?? []),
     ].filter((f: any) => new Date(f.fixture.date).getTime() <= cutoffMs);
 
-    const allFixtures = [...liveFixtures, ...upcomingAll];
+    // Fixture dedicado: UEFA Super Cup 2026 (PSG vs Aston Villa, id=1583664)
+    let superCupFixtures: any[] = [];
+    try {
+      const scRes = await fetch(`${API_FOOTBALL_BASE}/fixtures?id=1583664`, { headers: hdr });
+      if (scRes.ok) {
+        const scData = await scRes.json();
+        superCupFixtures = scData.response ?? [];
+      }
+    } catch { /* silently ignore */ }
+
+    const allFixtures = [...liveFixtures, ...upcomingAll, ...superCupFixtures];
     return { fixtures: allFixtures, liveOddsCoveredIds, liveOddsTrusted, fetchedAt: Date.now() };
   }
 
@@ -6207,6 +6346,7 @@ export async function registerRoutes(
         3,   // UEFA Europa League
         39,  // Premier League
         140, // La Liga
+        531, // UEFA Super Cup
       ]);
 
       // Filter: Brazil club leagues, top international clubs, approved senior national-team competitions
