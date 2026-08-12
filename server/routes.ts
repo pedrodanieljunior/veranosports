@@ -3179,7 +3179,7 @@ export async function registerRoutes(
                 if (!allGames.some(g => g.id === `api-football-${SUPER_CUP_ID}`)) {
                   allGames.push({
                     id: `api-football-${SUPER_CUP_ID}`,
-                    sportKey: "soccer_uefa_champs_league",
+                    sportKey: "soccer_super_cup",
                     sportTitle: "UEFA Super Cup",
                     commenceTime: scFix.fixture.date,
                     homeTeam,
