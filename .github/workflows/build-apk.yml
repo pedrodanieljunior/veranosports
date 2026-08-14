@@ -20,11 +20,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      # ── 3. Instalar dependências (inclui node_modules/@capacitor/android etc) ─
-      - name: Instalar dependências npm
-        run: npm ci
+      # ── 3. Instalar apenas os pacotes @capacitor/* que o Gradle precisa ──────
+      # (evita npm ci no projeto inteiro que causa crash por tamanho/memória)
+      - name: Instalar pacotes Capacitor
+        run: |
+          npm install --no-save \
+            @capacitor/android@8.5.0 \
+            @capacitor/app@8.1.1 \
+            @capacitor/browser@8.0.4 \
+            @capacitor/haptics@8.0.2 \
+            @capacitor/push-notifications@8.1.2 \
+            @capacitor/splash-screen@8.0.2 \
+            @capacitor/status-bar@8.0.3
 
       # ── 4. Java 21 (exigido pelo capacitor.build.gradle) ─────────────────────
       - name: Configurar Java 21
