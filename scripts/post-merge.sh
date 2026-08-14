@@ -1,4 +1,8 @@
 #!/bin/bash
 set -e
+
 npm install
-npm run db:push
+
+# drizzle-kit push com --force para pular confirmações interativas
+# (stdin é fechado no ambiente de pós-merge, então prompts travam)
+npm run db:push -- --force
