@@ -21,11 +21,15 @@ jobs:
         with:
           node-version: 22
 
-      # ── 3. Instalar apenas os pacotes @capacitor/* que o Gradle precisa ──────
-      # (evita npm ci no projeto inteiro que causa crash por tamanho/memória)
-      - name: Instalar pacotes Capacitor
+      # ── 3. Instalar @capacitor/* em diretório limpo e copiar para o projeto ──
+      # Instalar no projeto inteiro crashava o npm ("Exit handler never called").
+      # Solução: instalar em /tmp sem lock file e copiar só a pasta @capacitor/.
+      - name: Instalar pacotes Capacitor (diretório isolado)
         run: |
-          npm install --no-save \
+          mkdir -p /tmp/cap-deps
+          cd /tmp/cap-deps
+          echo '{"name":"cap-deps","version":"1.0.0"}' > package.json
+          npm install --no-package-lock \
             @capacitor/android@8.5.0 \
             @capacitor/app@8.1.1 \
             @capacitor/browser@8.0.4 \
@@ -33,6 +37,9 @@ jobs:
             @capacitor/push-notifications@8.1.2 \
             @capacitor/splash-screen@8.0.2 \
             @capacitor/status-bar@8.0.3
+          mkdir -p $GITHUB_WORKSPACE/node_modules
+          cp -r /tmp/cap-deps/node_modules/@capacitor $GITHUB_WORKSPACE/node_modules/
+          echo "✅ @capacitor copiado: $(ls $GITHUB_WORKSPACE/node_modules/@capacitor)"
 
       # ── 4. Java 21 (exigido pelo capacitor.build.gradle) ─────────────────────
       - name: Configurar Java 21
