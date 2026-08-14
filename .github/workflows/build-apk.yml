@@ -15,14 +15,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Java 17 ───────────────────────────────────────────────────────────
-      - name: Configurar Java 17
+      # ── 2. Java 21 (exigido pelo capacitor.build.gradle) ─────────────────────
+      - name: Configurar Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
-      # ── 3. Cache do Gradle ───────────────────────────────────────────────────
+      # ── 3. Android SDK 35 ────────────────────────────────────────────────────
+      - name: Instalar Android SDK 35
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" 2>/dev/null || true
+
+      # ── 4. Cache do Gradle ───────────────────────────────────────────────────
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -32,19 +39,16 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      # ── 4. Permissão de execução no gradlew ──────────────────────────────────
+      # ── 5. Permissão de execução no gradlew ──────────────────────────────────
       - name: Permissão gradlew
         run: chmod +x android/gradlew
 
-      # ── 5. Build APK debug ───────────────────────────────────────────────────
-      # Os assets web já estão em android/app/src/main/assets/public/
-      # (gerados pelo cap sync no Replit e commitados no repositório).
-      # Não é necessário rebuildar Node/Vite no CI.
+      # ── 6. Build APK debug ───────────────────────────────────────────────────
       - name: Build APK (debug)
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      # ── 6. Upload do artefato ────────────────────────────────────────────────
+      # ── 7. Upload do artefato ────────────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
