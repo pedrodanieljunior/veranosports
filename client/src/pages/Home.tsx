@@ -27,7 +27,7 @@ import { getSessionId } from "@/lib/session";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
-import { hapticLight } from "@/lib/platform";
+import { hapticLight, hapticSuccess } from "@/lib/platform";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
@@ -259,6 +259,7 @@ export default function Home() {
       return response.json();
     },
     onSuccess: (data: BetSlipType) => {
+      hapticSuccess();
       setPlacedBet(data);
       setSelections([]);
       setGameLimitRemaining(null);

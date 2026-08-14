@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
 import { useComboBonus } from "@/hooks/use-combo-bonus";
+import { hapticMedium } from "@/lib/platform";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
@@ -405,6 +406,7 @@ export function BetSlip({
   const handlePlaceBet = () => {
     const stakeValue = parseFloat(stake);
     if (stakeValue > 0 && selections.length > 0) {
+      hapticMedium();
       if (hasLiveSelections && liveDelay === null) {
         liveDelayCallback.current = () => onPlaceBet(stakeValue, useBonus);
         setLiveDelay(5);

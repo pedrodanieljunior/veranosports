@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { hapticMedium } from "@/lib/platform";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -802,6 +803,7 @@ export function ProfileModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (clubFwProgress && clubFwProgress.newBonus > 0) {
+      hapticMedium();
       toast({
         title: "🏆 Clube Verano — Bônus creditado!",
         description: `+R$ ${clubFwProgress.newBonus.toFixed(2).replace(".", ",")} adicionados ao seu saldo bônus.`,
