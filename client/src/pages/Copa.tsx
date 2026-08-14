@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { isNative, NATIVE_EVENTS } from "@/lib/platform";
+import { NativeBottomNav } from "@/components/NativeBottomNav";
 import copaTrofeuTab from "@assets/copa_trofeu_tab.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
 import { proxyLogoUrl } from "@/lib/imgProxy";
@@ -102,6 +104,43 @@ export default function Copa() {
       setSelections(prev => prev.find(s => s.id === sel.id) ? prev : [...prev, sel]);
       setShowBetSlip(true); setIsBetSlipMinimized(true);
     }
+  }, [user]);
+
+  // ── Integração com NativeBottomNav (app Android/iOS) ──────────────────────
+  useEffect(() => {
+    if (!isNative()) return;
+
+    const onTabChange = (e: Event) => {
+      const { tab } = (e as CustomEvent<{ tab: string }>).detail;
+      if (tab === "aovivo") setActiveTab("aovivo");
+      if (tab === "jogos") setActiveTab("todos");
+    };
+    const onOpenBetSlip = () => {
+      if (!user) { setAuthMode("login"); return; }
+      setShowBetSlip(true);
+      setShowHistory(false);
+      setIsBetSlipMinimized(false);
+    };
+    const onOpenProfile = () => {
+      if (!user) { setAuthMode("login"); return; }
+      setShowProfile(true);
+    };
+    const onOpenHistory = () => {
+      if (!user) { setAuthMode("login"); return; }
+      setShowHistory(true);
+      setShowBetSlip(false);
+    };
+
+    window.addEventListener(NATIVE_EVENTS.TAB_CHANGE, onTabChange);
+    window.addEventListener(NATIVE_EVENTS.OPEN_BETSLIP, onOpenBetSlip);
+    window.addEventListener(NATIVE_EVENTS.OPEN_PROFILE, onOpenProfile);
+    window.addEventListener(NATIVE_EVENTS.OPEN_HISTORY, onOpenHistory);
+    return () => {
+      window.removeEventListener(NATIVE_EVENTS.TAB_CHANGE, onTabChange);
+      window.removeEventListener(NATIVE_EVENTS.OPEN_BETSLIP, onOpenBetSlip);
+      window.removeEventListener(NATIVE_EVENTS.OPEN_PROFILE, onOpenProfile);
+      window.removeEventListener(NATIVE_EVENTS.OPEN_HISTORY, onOpenHistory);
+    };
   }, [user]);
 
 
@@ -880,6 +919,9 @@ export default function Copa() {
       <RulesModal open={showRules} onClose={() => setShowRules(false)} />
       <AuthModals mode={authMode} onClose={() => setAuthMode(null)} onSwitch={m => setAuthMode(m)} />
       <ProfileModal open={showProfile} onClose={() => { setShowProfile(false); refreshUser(); }} />
+
+      {/* Barra de navegação inferior — exclusiva do app Android/iOS */}
+      <NativeBottomNav selectionsCount={selections.length} />
     </div>
   );
 }

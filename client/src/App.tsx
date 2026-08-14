@@ -4,10 +4,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import NotFound from "@/pages/not-found";
+import { setupNativeStatusBar, hideSplashScreen } from "@/lib/platform";
 
 // Lazy load páginas pesadas — só compilam quando o usuário navega até elas
 const Admin = lazy(() => import("@/pages/Admin"));
@@ -29,6 +30,12 @@ function Router() {
 }
 
 function App() {
+  // Inicialização nativa (status bar, splash screen) — silencioso no web
+  useEffect(() => {
+    setupNativeStatusBar();
+    hideSplashScreen();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
