@@ -26,7 +26,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock } from "lucide-react";
+import { History, Search, X, BookOpen, UserCircle, Calendar, CalendarDays, Users, Globe, BarChart2, Lock, Smartphone } from "lucide-react";
 import { NotificationPanel, NotificationBanner } from "@/components/NotificationPanel";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
@@ -919,10 +919,19 @@ export default function Copa() {
       </div>
 
       {/* Footer */}
-      <div className="py-4 px-4 text-center" style={{ borderTop: "1px solid rgba(201,162,39,0.15)" }}>
+      <div className="py-4 px-4 flex items-center justify-center gap-6" style={{ borderTop: "1px solid rgba(201,162,39,0.15)" }}>
         <button onClick={() => setShowRules(true)} className="inline-flex items-center gap-2 text-sm font-semibold transition-colors" style={{ color: "#c9a227" }} data-testid="button-rules-copa">
           <BookOpen className="w-4 h-4" /> Regras do Site
         </button>
+        <a
+          href="/downloads/verano-sports.apk"
+          download
+          className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+          style={{ color: "#4ade80" }}
+          data-testid="button-download-apk-copa"
+        >
+          <Smartphone className="w-4 h-4" /> Baixar App
+        </a>
       </div>
 
       {/* Modals */}

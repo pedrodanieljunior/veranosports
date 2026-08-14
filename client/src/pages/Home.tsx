@@ -16,7 +16,7 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { History, Receipt, Search, X, BookOpen, UserCircle } from "lucide-react";
+import { History, Receipt, Search, X, BookOpen, UserCircle, Smartphone } from "lucide-react";
 import { NotificationPanel, NotificationBanner } from "@/components/NotificationPanel";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -505,8 +505,8 @@ export default function Home() {
         <div className="flex-1">
           <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} onToggleSelection={handleToggleSelection} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={false} />
         </div>
-        {/* Mobile footer — Regras */}
-        <div className="flex-shrink-0 py-4 px-4 text-center border-t border-gray-100">
+        {/* Mobile footer — Regras + Baixar App */}
+        <div className="flex-shrink-0 py-4 px-4 border-t border-gray-100 flex items-center justify-center gap-6">
           <button
             onClick={() => setShowRules(true)}
             className="inline-flex items-center gap-2 text-yellow-400 hover:text-yellow-300 text-sm font-semibold transition-colors"
@@ -515,6 +515,15 @@ export default function Home() {
             <BookOpen className="w-4 h-4" />
             Regras do Site
           </button>
+          <a
+            href="/downloads/verano-sports.apk"
+            download
+            className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
+            data-testid="button-download-apk-mobile"
+          >
+            <Smartphone className="w-4 h-4" />
+            Baixar App
+          </a>
         </div>
       </div>
 
@@ -691,8 +700,8 @@ export default function Home() {
               <GamesList games={filteredGames} selections={selections} onGameClick={handleGameClick} onToggleSelection={handleToggleSelection} isLoading={isLoadingGames} error={(isSearching || isTyping) ? null : gamesError as Error | null} selectedSport={(isSearching || isTyping) ? null : selectedSport} isTodayGames={!selectedSport && !isSearching && !isTyping} isDark={true} />
             </div>
 
-            {/* Desktop footer — Regras */}
-            <div className="pb-6 text-center" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
+            {/* Desktop footer — Regras + Baixar App */}
+            <div className="pb-6 flex items-center justify-center gap-8" style={{ paddingLeft: "18vw", paddingRight: "1vw" }}>
               <button
                 onClick={() => setShowRules(true)}
                 className="inline-flex items-center gap-2 text-yellow-500 hover:text-yellow-400 text-sm font-semibold transition-colors"
@@ -701,6 +710,15 @@ export default function Home() {
                 <BookOpen className="w-4 h-4" />
                 Regras do Site
               </button>
+              <a
+                href="/downloads/verano-sports.apk"
+                download
+                className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
+                data-testid="button-download-apk-desktop"
+              >
+                <Smartphone className="w-4 h-4" />
+                Baixar App
+              </a>
             </div>
           </div>
         </div>
