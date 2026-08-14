@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { isNative, NATIVE_EVENTS } from "@/lib/platform";
+import { isNative, NATIVE_EVENTS, hapticLight, hapticMedium, hapticSuccess } from "@/lib/platform";
 import { NativeBottomNav } from "@/components/NativeBottomNav";
 import copaTrofeuTab from "@assets/copa_trofeu_tab.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
@@ -280,6 +280,7 @@ export default function Copa() {
       return res.json();
     },
     onSuccess: (data: BetSlipType) => {
+      hapticSuccess();
       setPlacedBet(data); setSelections([]); setGameLimitRemaining(null);
       queryClient.invalidateQueries({ queryKey: ["/api/bets", user?.cpf ?? sessionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
@@ -303,25 +304,38 @@ export default function Copa() {
     if (!user) { pendingSelectionRef.current = selection; pendingGameRef.current = null; setAuthMode("login"); return; }
     if (placedBet) setPlacedBet(null);
     setGameLimitRemaining(null);
+    // Use snapshot only to decide which haptic to fire (once, outside the pure updater)
+    const isRemoving = selections.some(s => s.id === selection.id);
+    if (isRemoving) {
+      hapticMedium();
+      setSelections(prev => prev.filter(s => s.id !== selection.id));
+      return;
+    }
+    // Validate against snapshot before committing; guard cases return early with no state change
+    const isBoost = selection.marketKey === "boost";
+    const hasBoost = selections.some(s => s.marketKey === "boost");
+    const hasOther = selections.some(s => s.marketKey !== "boost");
+    if (isBoost && hasBoost) { toast({ title: "Apenas 1 Super Boost por bilhete", description: "Remova o Super Boost atual antes de adicionar outro.", variant: "destructive" }); return; }
+    if (isBoost && hasOther) { toast({ title: "Super Boost é exclusivo", description: "Remova as outras seleções antes.", variant: "destructive" }); return; }
+    if (!isBoost && hasBoost) { toast({ title: "Bilhete com Super Boost", description: "Remova o Super Boost para adicionar outras seleções.", variant: "destructive" }); return; }
+    const withoutSameMarketSnap = selections.filter(s => !(s.gameId === selection.gameId && s.marketKey === selection.marketKey));
+    const distinctMarkets = new Set(withoutSameMarketSnap.filter(s => s.gameId === selection.gameId).map(s => s.marketKey)).size;
+    if (distinctMarkets >= 3) { toast({ title: "Máximo de 3 mercados por jogo", variant: "destructive" }); return; }
+    hapticLight();
+    // Use functional updater for the actual mutation so concurrent updates don't discard each other
     setSelections(prev => {
-      const exists = prev.find(s => s.id === selection.id);
-      if (exists) return prev.filter(s => s.id !== selection.id);
-      const isBoost = selection.marketKey === "boost";
-      const hasBoost = prev.some(s => s.marketKey === "boost");
-      const hasOther = prev.some(s => s.marketKey !== "boost");
-      if (isBoost && hasBoost) { toast({ title: "Apenas 1 Super Boost por bilhete", description: "Remova o Super Boost atual antes de adicionar outro.", variant: "destructive" }); return prev; }
-      if (isBoost && hasOther) { toast({ title: "Super Boost é exclusivo", description: "Remova as outras seleções antes.", variant: "destructive" }); return prev; }
-      if (!isBoost && hasBoost) { toast({ title: "Bilhete com Super Boost", description: "Remova o Super Boost para adicionar outras seleções.", variant: "destructive" }); return prev; }
       const withoutSameMarket = prev.filter(s => !(s.gameId === selection.gameId && s.marketKey === selection.marketKey));
-      const distinctMarkets = new Set(withoutSameMarket.filter(s => s.gameId === selection.gameId).map(s => s.marketKey)).size;
-      if (distinctMarkets >= 3) { toast({ title: "Máximo de 3 mercados por jogo", variant: "destructive" }); return prev; }
       return [...withoutSameMarket, selection];
     });
-    if (!selections.find(s => s.id === selection.id)) { setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(true); }
+    setShowBetSlip(true); setShowHistory(false); setIsBetSlipMinimized(true);
   };
 
-  const handleRemoveSelection = (id: string) => setSelections(prev => prev.filter(s => s.id !== id));
-  const handleClearAll = () => { setSelections([]); setPlacedBet(null); };
+  const handleRemoveSelection = (id: string) => { hapticMedium(); setSelections(prev => prev.filter(s => s.id !== id)); };
+  const handleClearAll = () => {
+    // Fire medium haptic only when there are selections to clear (not on the post-bet "new bet" path)
+    if (selections.length > 0) hapticMedium();
+    setSelections([]); setPlacedBet(null);
+  };
   const handleMigrateGameId = (oldId: string, newId: string) => {
     setSelections(prev => prev.map(s => s.gameId === oldId ? { ...s, gameId: newId, id: s.id.replace(oldId, newId) } : s));
   };
