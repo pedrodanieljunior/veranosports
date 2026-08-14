@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect, useState } from "react";
 import { Selection } from "@shared/schema";
+import { hapticLight } from "@/lib/platform";
 import { Zap, Clock, TrendingUp, TrendingDown, Lock, ChevronDown, ChevronUp } from "lucide-react";
 import { proxyLogoUrl } from "@/lib/imgProxy";
 import { useMarketSettings } from "@/hooks/use-market-settings";
 import { queryClient } from "@/lib/queryClient";
+
 
 
 const MARKET_LABELS: Record<number, string> = {
@@ -577,6 +579,7 @@ export function LiveTestCard({ fixtureId, selections, onToggleSelection, isDark 
     }
     if (Object.keys(changes).length > 0) {
       setOddMovements(prev => ({ ...prev, ...changes }));
+      hapticLight();
     }
   }, [data?.fetchedAt]);
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { hapticMedium, hapticSuccess } from "@/lib/platform";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BetSlip as BetSlipType, Selection } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +92,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
       return res.json();
     },
     onSuccess: (data: any) => {
+      hapticSuccess();
       // Update cache directly for instant UI feedback
       const updateBet = (old: BetSlipType[] | undefined) => {
         if (!old) return old;
@@ -208,7 +210,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
             </div>
           ) : (
             <button
-              onClick={e => { e.stopPropagation(); setConfirming(effectiveCashState.type as "ea" | "cashout"); }}
+              onClick={e => { e.stopPropagation(); hapticMedium(); setConfirming(effectiveCashState.type as "ea" | "cashout"); }}
               data-testid={`button-preview-cashout-${bet.id}`}
               className="w-full inline-flex items-center justify-center gap-3 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 hover:bg-emerald-500/25 transition-colors"
             >
@@ -330,13 +332,13 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
             if (effectiveCashState.type === "ea") {
               return confirming === "ea" ? (
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => cashOutMutation.mutate("ea")} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => { cashOutMutation.mutate("ea"); }} disabled={cashOutMutation.isPending} data-testid={`button-ea-confirm-${bet.id}`}>
                     {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span></>}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-ea-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("ea")} data-testid={`button-ea-${bet.id}`}>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => { hapticMedium(); setConfirming("ea"); }} data-testid={`button-ea-${bet.id}`}>
                   <span>Encerrar Aposta</span>
                   <span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>
@@ -358,13 +360,13 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
             if (effectiveCashState.type === "cashout") {
               return confirming === "cashout" ? (
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => cashOutMutation.mutate("cashout")} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => { cashOutMutation.mutate("cashout"); }} disabled={cashOutMutation.isPending} data-testid={`button-cashout-confirm-${bet.id}`}>
                     {cashOutMutation.isPending ? "Processando..." : <><span>Confirmar</span><span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span></>}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirming(null)} data-testid={`button-cashout-cancel-${bet.id}`}>Cancelar</Button>
                 </div>
               ) : (
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => setConfirming("cashout")} data-testid={`button-cashout-${bet.id}`}>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex justify-center gap-3" onClick={() => { hapticMedium(); setConfirming("cashout"); }} data-testid={`button-cashout-${bet.id}`}>
                   <span>Cashout</span>
                   <span>R$ {effectiveCashState.offer.toFixed(2).replace(".", ",")}</span>
                 </Button>

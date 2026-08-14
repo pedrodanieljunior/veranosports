@@ -27,6 +27,7 @@ import { getSessionId } from "@/lib/session";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
+import { hapticLight } from "@/lib/platform";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
@@ -300,6 +301,20 @@ export default function Home() {
     }
     if (placedBet) setPlacedBet(null);
     setGameLimitRemaining(null);
+
+    // Snapshot check for haptic only — actual validation remains atomic inside the updater
+    const isRemoving = selections.some(s => s.id === selection.id);
+    if (!isRemoving) {
+      const isBoostSnap = selection.marketKey === "boost";
+      const hasBoostSnap = selections.some(s => s.marketKey === "boost");
+      const hasOtherSnap = selections.some(s => s.marketKey !== "boost");
+      const withoutSameSnap = selections.filter(s => !(s.gameId === selection.gameId && s.marketKey === selection.marketKey));
+      const distinctMarketsSnap = new Set(withoutSameSnap.filter(s => s.gameId === selection.gameId).map(s => s.marketKey)).size;
+      if (!(isBoostSnap && hasBoostSnap) && !(isBoostSnap && hasOtherSnap) && !(!isBoostSnap && hasBoostSnap) && distinctMarketsSnap < 3) {
+        hapticLight();
+      }
+    }
+
     setSelections((prev) => {
       const exists = prev.find((s) => s.id === selection.id);
       if (exists) return prev.filter((s) => s.id !== selection.id);
