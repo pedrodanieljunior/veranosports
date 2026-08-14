@@ -56,11 +56,16 @@ jobs:
         working-directory: android
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -100
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Localizar APK gerado
+        run: |
+          echo "=== APKs gerados ==="
+          find android -name "*.apk" 2>/dev/null || echo "Nenhum APK encontrado"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: verano-sports-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 30
