@@ -14,6 +14,85 @@ import fs from "fs";
 import { randomBytes } from "crypto";
 import nodemailer from "nodemailer";
 
+// ─── Firebase Admin — Push Notifications ─────────────────────────────────────
+let _firebaseApp: any = null;
+
+async function getFirebaseApp() {
+  if (_firebaseApp) return _firebaseApp;
+  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!serviceAccountEnv) return null;
+  try {
+    const admin = await import("firebase-admin");
+    if (admin.default.apps.length > 0) {
+      _firebaseApp = admin.default.apps[0];
+      return _firebaseApp;
+    }
+    const serviceAccount = JSON.parse(
+      Buffer.from(serviceAccountEnv, "base64").toString("utf-8")
+    );
+    _firebaseApp = admin.default.initializeApp({
+      credential: admin.default.credential.cert(serviceAccount),
+    });
+    return _firebaseApp;
+  } catch (err) {
+    console.error("[FCM] Erro ao inicializar Firebase Admin:", err);
+    return null;
+  }
+}
+
+/**
+ * Envia notificação push para um token FCM/APNs.
+ * Silencioso se o Firebase Admin não estiver configurado.
+ */
+async function sendPushNotification(
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<void> {
+  const app = await getFirebaseApp();
+  if (!app) return; // Firebase não configurado — ignora silenciosamente
+  try {
+    const admin = await import("firebase-admin");
+    await admin.default.messaging(app).send({
+      token,
+      notification: { title, body },
+      data,
+      android: { priority: "high" },
+      apns: { payload: { aps: { sound: "default" } } },
+    });
+  } catch (err: any) {
+    // Token inválido/expirado — limpar do banco silenciosamente
+    console.error(`[FCM] Erro ao enviar push (token: ${token.slice(0, 20)}...):`, err?.message ?? err);
+  }
+}
+
+/**
+ * Envia push para todos os usuários que têm apostas pendentes em um determinado jogo.
+ */
+async function sendPushToGameBettors(fixtureId: number, title: string, body: string): Promise<void> {
+  // Live bets store gameId as "api-football-<fixtureId>"
+  const canonicalGameId = `api-football-${fixtureId}`;
+  try {
+    const allBets = await storage.getAllBetSlips();
+    const relevantBets = allBets.filter(
+      b => b.status === "pending" && b.userId &&
+        b.selections.some(s => s.gameId === canonicalGameId)
+    );
+    const cpfs = Array.from(new Set(relevantBets.map(b => b.userId!)));
+    await Promise.all(
+      cpfs.map(async (cpf) => {
+        const token = await storage.getUserPushToken(cpf);
+        if (token) {
+          await sendPushNotification(token, title, body, { type: "live_game", fixtureId: String(fixtureId) });
+        }
+      })
+    );
+  } catch (err) {
+    console.error("[FCM] Erro ao enviar push para apostadores do jogo:", err);
+  }
+}
+
 // ─── Image Proxy (contorna bloqueio de hotlink do api-sports.io) ──────────────
 async function setupImageProxy(app: Express) {
   app.get("/api/img-proxy", async (req: Request, res: Response) => {
@@ -1788,6 +1867,16 @@ async function runCheckResults() {
               description: `Aposta ganha${bonusUsed > 0 ? ` (R$${updatedBetAuto.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
               referenceId: bet.id,
             });
+            // Notificação push para o ganhador
+            const winToken = await storage.getUserPushToken(bet.userId);
+            if (winToken) {
+              await sendPushNotification(
+                winToken,
+                "🏆 Aposta Ganha!",
+                `Parabéns! Você ganhou R$${netPayout.toFixed(2)}. O saldo já foi creditado na sua conta.`,
+                { type: "bet_won", betId: bet.id }
+              );
+            }
           }
         } else {
           console.log(`[CheckResults] Bilhete ${bet.id} já creditado anteriormente — ignorando duplo crédito`);
@@ -1952,6 +2041,19 @@ export async function registerRoutes(
     }
   });
 
+  // ─── Push Token ────────────────────────────────────────────────────────────
+  app.post("/api/user/push-token", requireAuth, async (req: any, res: any) => {
+    try {
+      const { token } = req.body as { token?: string };
+      if (!token || typeof token !== "string") return res.status(400).json({ message: "token obrigatório" });
+      await storage.updateUserPushToken(req.session.userId!, token);
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error("[push-token]", err);
+      return res.status(500).json({ message: "Erro ao salvar token" });
+    }
+  });
+
   app.patch("/api/auth/referral-code", requireAuth, async (req, res) => {
     try {
       const { referralCode } = req.body as { referralCode: string };
@@ -1999,6 +2101,17 @@ export async function registerRoutes(
       description,
       referenceId: String(depositId),
     });
+    // Notificação push para o usuário que depositou
+    const depositToken = await storage.getUserPushToken(deposit.userId);
+    if (depositToken) {
+      const bonusText = deposit.bonusAmount > 0 ? ` + R$${deposit.bonusAmount.toFixed(2)} bônus` : "";
+      await sendPushNotification(
+        depositToken,
+        "✅ Depósito Confirmado!",
+        `R$${deposit.amount.toFixed(2)}${bonusText} creditado na sua conta Verano Sports.`,
+        { type: "deposit_confirmed", depositId: String(depositId) }
+      );
+    }
     return true;
   }
 
@@ -5500,6 +5613,16 @@ export async function registerRoutes(
           });
           payoutResults.push({ betId, paid: netPayout });
           console.log(`[boost-resolve] Bilhete ${betId} creditado: R$${netPayout} → saldo ${credited}`);
+          // Notificação push para o ganhador (boost card)
+          const boostWinToken = await storage.getUserPushToken(bet.userId!);
+          if (boostWinToken) {
+            await sendPushNotification(
+              boostWinToken,
+              "🏆 Aposta Ganha!",
+              `Parabéns! Você ganhou R$${netPayout.toFixed(2)}. O saldo já foi creditado na sua conta.`,
+              { type: "bet_won", betId }
+            );
+          }
         }
       }
 
@@ -6474,6 +6597,12 @@ export async function registerRoutes(
     lastLiveUnlockMap.set(fid, Date.now());
     broadcastLiveState();
     console.log(`[live-game] Activated fixture ${fid}: ${home} vs ${away} (total active: ${activeLiveGames.size})`);
+    // Notificação push para apostadores com apostas pendentes neste jogo
+    sendPushToGameBettors(
+      fid,
+      "⚽ Jogo Ao Vivo!",
+      `${home} x ${away} entrou ao vivo. Acompanhe e aposte agora!`
+    ).catch(err => console.error("[FCM] sendPushToGameBettors error:", err));
     return res.json({ ok: true, fixtureId: fid, isLocked: false });
   });
 
@@ -7221,6 +7350,16 @@ export async function registerRoutes(
               description: `Aposta ganha${bonusUsed > 0 ? ` (R$${updated.potentialWin.toFixed(2)} − R$${bonusUsed.toFixed(2)} bônus)` : ""}`,
               referenceId: id,
             });
+            // Notificação push para o ganhador (liquidação manual pelo admin)
+            const adminWinToken = await storage.getUserPushToken(existing.userId);
+            if (adminWinToken) {
+              await sendPushNotification(
+                adminWinToken,
+                "🏆 Aposta Ganha!",
+                `Parabéns! Você ganhou R$${netPayout.toFixed(2)}. O saldo já foi creditado na sua conta.`,
+                { type: "bet_won", betId: id }
+              );
+            }
           }
         }
       }

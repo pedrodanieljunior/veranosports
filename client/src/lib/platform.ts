@@ -92,6 +92,66 @@ export async function hideSplashScreen(): Promise<void> {
   }
 }
 
+// ── Push Notifications ────────────────────────────────────────────────────────
+
+/**
+ * Solicita permissão de notificações push, obtém o token FCM/APNs e
+ * envia ao backend para salvar vinculado ao usuário logado.
+ * Silencioso no web (não lança erro).
+ */
+export async function registerPushToken(): Promise<void> {
+  if (!isNative()) return;
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+
+    // Solicita permissão
+    const permission = await PushNotifications.requestPermissions();
+    if (permission.receive !== "granted") return;
+
+    // Escuta o token ANTES de chamar register() para não perder o evento
+    await new Promise<void>((resolve) => {
+      let resolved = false;
+      const done = () => { if (!resolved) { resolved = true; resolve(); } };
+
+      // Timeout de segurança — evita que a promise fique presa para sempre
+      const timeout = setTimeout(done, 10_000);
+
+      const successHandlerP = PushNotifications.addListener("registration", async (token) => {
+        clearTimeout(timeout);
+        try {
+          await fetch("/api/user/push-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ token: token.value }),
+          });
+        } catch {
+          // silently ignore
+        } finally {
+          successHandlerP.then((h) => h.remove()).catch(() => {});
+          errorHandlerP.then((h) => h.remove()).catch(() => {});
+          done();
+        }
+      });
+
+      const errorHandlerP = PushNotifications.addListener("registrationError", () => {
+        clearTimeout(timeout);
+        successHandlerP.then((h) => h.remove()).catch(() => {});
+        errorHandlerP.then((h) => h.remove()).catch(() => {});
+        done();
+      });
+
+      // Inicia o registro somente após os listeners estarem prontos
+      PushNotifications.register().catch(() => {
+        clearTimeout(timeout);
+        done();
+      });
+    });
+  } catch {
+    // ignore — não quebra o app
+  }
+}
+
 // ── Eventos de comunicação com a NativeBottomNav ─────────────────────────────
 
 export const NATIVE_EVENTS = {

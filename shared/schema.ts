@@ -309,6 +309,7 @@ export const usersTable = pgTable("users", {
   balance: real("balance").notNull().default(0),
   bonusBalance: real("bonus_balance").notNull().default(0),
   firstDepositDone: boolean("first_deposit_done").notNull().default(false),
+  pushToken: text("push_token"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -87,6 +87,8 @@ export interface IStorage {
   updateUserBonusBalance(cpf: string, newBonusBalance: number): Promise<User | undefined>;
   updateUserPassword(cpf: string, passwordHash: string): Promise<boolean>;
   updateUserData(cpf: string, data: { name?: string; phone?: string; referralCode?: string }): Promise<User | undefined>;
+  updateUserPushToken(cpf: string, pushToken: string): Promise<void>;
+  getUserPushToken(cpf: string): Promise<string | null>;
   deleteUser(cpf: string): Promise<boolean>;
   markFirstDeposit(cpf: string): Promise<void>;
   getBetSlipsByUser(userId: string): Promise<BetSlip[]>;
@@ -821,6 +823,8 @@ export class DatabaseStorage implements IStorage {
       bonusBalance: row.bonusBalance ?? 0,
       firstDepositDone: row.firstDepositDone,
       createdAt: row.createdAt.toISOString(),
+      // NOTE: pushToken is intentionally excluded from the public User DTO
+      // to prevent token leakage through API endpoints. Use getUserPushToken().
     };
   }
 
@@ -869,6 +873,15 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db.update(usersTable).set(data).where(eq(usersTable.cpf, cpf)).returning();
     if (!row) return undefined;
     return this.mapUser(row);
+  }
+
+  async updateUserPushToken(cpf: string, pushToken: string): Promise<void> {
+    await db.update(usersTable).set({ pushToken }).where(eq(usersTable.cpf, cpf));
+  }
+
+  async getUserPushToken(cpf: string): Promise<string | null> {
+    const [row] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.cpf, cpf));
+    return row?.pushToken ?? null;
   }
 
   async deleteUser(cpf: string): Promise<boolean> {

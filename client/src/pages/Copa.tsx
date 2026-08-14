@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { isNative, NATIVE_EVENTS, hapticLight, hapticMedium, hapticSuccess } from "@/lib/platform";
 import { NativeBottomNav } from "@/components/NativeBottomNav";
 import copaTrofeuTab from "@assets/copa_trofeu_tab.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
@@ -34,6 +33,7 @@ import copaLogo from "@assets/copa_logo_transparent.png";
 import brasileiraoLogo from "@assets/Brasileiro_Série_A_1784212008632.png";
 import libertadoresLogo from "@assets/Libertadores_1784212008631.png";
 import copaBrasilLogo from "@assets/Copa_do_Brasil_1784212008632.png";
+import { isNative, NATIVE_EVENTS, hapticLight, hapticMedium, hapticSuccess, registerPushToken } from "@/lib/platform";
 
 
 const WC_QUALIFIER_KEYS = [
@@ -98,6 +98,8 @@ export default function Copa() {
 
   useEffect(() => {
     if (!user) return;
+    // Registra token push para notificações nativas (silencioso em web)
+    registerPushToken();
     if (pendingGameRef.current) { setSelectedGame(pendingGameRef.current); pendingGameRef.current = null; }
     if (pendingSelectionRef.current) {
       const sel = pendingSelectionRef.current; pendingSelectionRef.current = null;
