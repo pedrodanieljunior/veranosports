@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "yMJ3rzOOhqFiu45i0mbqQ"
+uri = "file://resources/store-preview.png"
+type = "image"
+title = "Verano Sports — Store Preview"
+description = "App icon and splash screen for Play Store and App Store"
