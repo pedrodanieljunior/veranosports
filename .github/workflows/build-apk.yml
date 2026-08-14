@@ -15,32 +15,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Node.js + cache ───────────────────────────────────────────────────
+      # ── 2. Node.js 22 + cache ────────────────────────────────────────────────
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      # ── 3. Dependências e build web ──────────────────────────────────────────
+      # ── 3. Dependências ──────────────────────────────────────────────────────
       - name: Instalar dependências
         run: npm ci
 
-      - name: Build do web app
-        run: npm run build
+      # ── 4. Build do cliente (Vite) ───────────────────────────────────────────
+      # NODE_ENV=production desativa plugins exclusivos do Replit (cartographer,
+      # dev-banner) que não existem no ambiente GitHub Actions.
+      - name: Build do web app (Vite)
+        run: NODE_ENV=production npx vite build
+        env:
+          NODE_ENV: production
 
-      # ── 4. Sincronizar com Android ───────────────────────────────────────────
+      # ── 5. Sincronizar com Android ───────────────────────────────────────────
       - name: Capacitor sync
         run: npx cap sync android
 
-      # ── 5. Java 17 ───────────────────────────────────────────────────────────
+      # ── 6. Java 17 ───────────────────────────────────────────────────────────
       - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # ── 6. Cache do Gradle ───────────────────────────────────────────────────
+      # ── 7. Cache do Gradle ───────────────────────────────────────────────────
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -50,12 +55,16 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      # ── 7. Build APK debug ───────────────────────────────────────────────────
+      # ── 8. Permissão de execução no gradlew ──────────────────────────────────
+      - name: Permissão gradlew
+        run: chmod +x android/gradlew
+
+      # ── 9. Build APK debug ───────────────────────────────────────────────────
       - name: Build APK (debug)
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      # ── 8. Upload do artefato ────────────────────────────────────────────────
+      # ── 10. Upload do artefato ───────────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
