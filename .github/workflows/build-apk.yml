@@ -11,35 +11,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ── 1. Código ────────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ── 2. Node.js (necessário para instalar pacotes @capacitor/*) ───────────
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # ── 3. Instalar dependências (inclui node_modules/@capacitor/android etc) ─
+      - name: Instalar dependências npm
+        run: npm ci
+
+      # ── 4. Java 21 (exigido pelo capacitor.build.gradle) ─────────────────────
       - name: Configurar Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Diagnóstico do ambiente Android
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-          ls $ANDROID_HOME/cmdline-tools/ || echo "cmdline-tools não encontrado"
-          ls $ANDROID_HOME/platforms/ || echo "platforms não encontrado"
-          ls $ANDROID_HOME/build-tools/ || echo "build-tools não encontrado"
-
+      # ── 5. Android SDK 35 ────────────────────────────────────────────────────
       - name: Instalar Android SDK 35
         run: |
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          if [ -f "$SDKMANAGER" ]; then
-            echo "y" | "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
-          else
-            echo "sdkmanager não encontrado em $SDKMANAGER"
-            find $ANDROID_HOME -name "sdkmanager" 2>/dev/null
-          fi
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
 
+      # ── 6. Cache do Gradle ───────────────────────────────────────────────────
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -49,20 +49,18 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
+      # ── 7. Permissão gradlew ─────────────────────────────────────────────────
       - name: Permissão gradlew
         run: chmod +x android/gradlew
 
+      # ── 8. Build APK debug ───────────────────────────────────────────────────
+      # Os web assets já estão em android/app/src/main/assets/public/ (commitados).
+      # O npm ci instala os @capacitor/* libs que o Gradle precisa como subprojetos.
       - name: Build APK (debug)
         working-directory: android
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Localizar APK gerado
-        run: |
-          echo "=== APKs gerados ==="
-          find android -name "*.apk" 2>/dev/null || echo "Nenhum APK encontrado"
-
+      # ── 9. Upload do artefato ────────────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
