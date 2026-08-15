@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "382141102962",
+    "project_id": "verano-sports",
+    "storage_bucket": "verano-sports.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:382141102962:android:0db3e160ebcbf49685bbeb",
+        "android_client_info": {
+          "package_name": "com.veranosports.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAp4ltCyshMSK1Buxafs2FR6UhJ4ze-bWs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
