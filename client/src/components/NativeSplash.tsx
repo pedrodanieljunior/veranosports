@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { isNative, hideSplashScreen } from "@/lib/platform";
+import { hideSplashScreen } from "@/lib/platform";
 
 /**
  * Splash animado para o app nativo Android.
@@ -15,23 +15,17 @@ export default function NativeSplash({ onDone }: { onDone: () => void }) {
     const video = videoRef.current;
     if (!video) return;
 
-    // Tenta tocar automaticamente
-    video.play().catch(() => {
-      // Fallback: se autoplay bloqueado, encerra logo
-      finish();
-    });
-
     function finish() {
       setFading(true);
       hideSplashScreen();
       setTimeout(() => {
         setVisible(false);
         onDone();
-      }, 600); // duração do fade-out
+      }, 600);
     }
 
+    video.play().catch(() => finish());
     video.addEventListener("ended", finish);
-    // Segurança: se algo travar, fecha após 12 segundos
     const safeTimeout = setTimeout(finish, 12_000);
 
     return () => {
@@ -44,12 +38,19 @@ export default function NativeSplash({ onDone }: { onDone: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
       style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: "#111214", // combina com o fundo escuro do vídeo
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         opacity: fading ? 0 : 1,
         transition: "opacity 0.6s ease-out",
       }}
     >
+      {/* Vídeo em largura total — barra superior/inferior some no fundo escuro */}
       <video
         ref={videoRef}
         src="/splash.mp4"
@@ -59,8 +60,8 @@ export default function NativeSplash({ onDone }: { onDone: () => void }) {
         preload="auto"
         style={{
           width: "100%",
-          height: "100%",
-          objectFit: "cover",
+          height: "auto",
+          display: "block",
         }}
       />
     </div>
