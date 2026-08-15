@@ -5,10 +5,10 @@ const config: CapacitorConfig = {
   appName: "Verano Sports",
   webDir: "dist/public",
   server: {
-    // Em desenvolvimento, apontar para o servidor local para hot-reload.
-    // Comentar estas linhas para produção (build offline).
-    // url: "http://SEU_IP_LOCAL:5000",
-    // cleartext: true,
+    // URL do servidor live — o APK carrega o site direto do servidor,
+    // garantindo assets atualizados e conexão com a API.
+    url: "https://c0a88dbc-e110-4d58-a504-c0b93756fa27-00-3cl5a4bsvf0dt.picard.replit.dev",
+    cleartext: false,
   },
   plugins: {
     SplashScreen: {
