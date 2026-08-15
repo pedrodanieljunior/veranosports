@@ -22,11 +22,7 @@
 "backgroundColor": "#0f1523"
 },
 "PushNotifications": {
-"presentationOptions": [
-"badge",
-"sound",
-"alert"
-]
+"presentationOptions": ["badge", "sound", "alert"]
 }
 },
 "android": {
