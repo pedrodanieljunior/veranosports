@@ -4,15 +4,24 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import NotFound from "@/pages/not-found";
-import { setupNativeStatusBar, hideSplashScreen } from "@/lib/platform";
+import { setupNativeStatusBar, hideSplashScreen, isNative } from "@/lib/platform";
+import NativeSplash from "@/components/NativeSplash";
 
 // Lazy load páginas pesadas — só compilam quando o usuário navega até elas
 const Admin = lazy(() => import("@/pages/Admin"));
 const LiveControl = lazy(() => import("@/pages/LiveControl"));
+
+// Mostra splash animado só uma vez por sessão no app nativo
+const SPLASH_DONE_KEY = "verano_splash_done";
+function shouldShowSplash() {
+  if (!isNative()) return false;
+  if (sessionStorage.getItem(SPLASH_DONE_KEY)) return false;
+  return true;
+}
 
 function Router() {
   return (
@@ -30,10 +39,18 @@ function Router() {
 }
 
 function App() {
-  // Inicialização nativa (status bar, splash screen) — silencioso no web
+  const [showSplash, setShowSplash] = useState(shouldShowSplash);
+
+  // Inicialização nativa (status bar) — hideSplashScreen é chamado pelo NativeSplash
   useEffect(() => {
     setupNativeStatusBar();
-    hideSplashScreen();
+    // No web ou quando splash já foi exibido, esconde a splash nativa imediatamente
+    if (!showSplash) hideSplashScreen();
+  }, [showSplash]);
+
+  const handleSplashDone = useCallback(() => {
+    sessionStorage.setItem(SPLASH_DONE_KEY, "1");
+    setShowSplash(false);
   }, []);
 
   return (
@@ -41,6 +58,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
+          {showSplash && <NativeSplash onDone={handleSplashDone} />}
           <Router />
         </TooltipProvider>
       </AuthProvider>
