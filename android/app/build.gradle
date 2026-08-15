@@ -30,6 +30,13 @@ repositories {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        // androidx.browser:1.9.0 exige SDK 36 — forçamos 1.8.0 compatível com SDK 35
+        force 'androidx.browser:browser:1.8.0'
+    }
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
