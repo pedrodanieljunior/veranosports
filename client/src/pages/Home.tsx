@@ -27,7 +27,8 @@ import { getSessionId } from "@/lib/session";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
-import { hapticLight, hapticSuccess } from "@/lib/platform";
+import { hapticLight, hapticSuccess, NATIVE_EVENTS } from "@/lib/platform";
+import { NativeBottomNav } from "@/components/NativeBottomNav";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
 export default function Home() {
@@ -118,6 +119,28 @@ export default function Home() {
     }, 5 * 60 * 1000);
     return () => clearInterval(resetInterval);
   }, []);
+
+  // Eventos nativos do Capacitor (Android/iOS) — integração com NativeBottomNav
+  useEffect(() => {
+    const onOpenBetSlip = () => { setShowBetSlip(true); setShowHistory(false); };
+    const onOpenProfile = () => { if (user) setShowProfile(true); else setAuthMode("login"); };
+    const onOpenHistory = () => { setShowHistory(true); setShowBetSlip(false); };
+    const onTabChange = (e: Event) => {
+      const { tab } = (e as CustomEvent<{ tab: string }>).detail;
+      if (tab === "aovivo") { setSelectedSport(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
+      if (tab === "jogos") { setSelectedSport(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    };
+    window.addEventListener(NATIVE_EVENTS.OPEN_BETSLIP, onOpenBetSlip);
+    window.addEventListener(NATIVE_EVENTS.OPEN_PROFILE, onOpenProfile);
+    window.addEventListener(NATIVE_EVENTS.OPEN_HISTORY, onOpenHistory);
+    window.addEventListener(NATIVE_EVENTS.TAB_CHANGE, onTabChange);
+    return () => {
+      window.removeEventListener(NATIVE_EVENTS.OPEN_BETSLIP, onOpenBetSlip);
+      window.removeEventListener(NATIVE_EVENTS.OPEN_PROFILE, onOpenProfile);
+      window.removeEventListener(NATIVE_EVENTS.OPEN_HISTORY, onOpenHistory);
+      window.removeEventListener(NATIVE_EVENTS.TAB_CHANGE, onTabChange);
+    };
+  }, [user]);
 
   const { data: sports = [], isLoading: sportsLoading } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
   const { data: todayGames = [], isLoading: todayGamesLoading, error: todayGamesError } = useQuery<Game[]>({ queryKey: ["/api/games/today"], enabled: !selectedSport, staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, refetchIntervalInBackground: true, refetchOnWindowFocus: false });
@@ -754,6 +777,7 @@ export default function Home() {
         open={showProfile}
         onClose={() => { setShowProfile(false); refreshUser(); }}
       />
+      <NativeBottomNav selectionsCount={selections.length} />
     </div>
   );
 }
