@@ -20,8 +20,10 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Instalar Android SDK 35
+      - name: Instalar Android SDK 36
         run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-36" "build-tools;36.0.0" 2>/dev/null || \
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
 
@@ -39,7 +41,7 @@ jobs:
 
       - name: Build APK (debug)
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
