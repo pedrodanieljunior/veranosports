@@ -7451,6 +7451,7 @@ export async function registerRoutes(
               amount: netPayout,
               balanceAfter: newBalance,
               description: `Ganhou bilhete #${betId.slice(0, 8).toUpperCase()}`,
+              referenceId: betId, // necessário para getWinTransactionForBet detectar crédito duplo
             });
           }
         }
