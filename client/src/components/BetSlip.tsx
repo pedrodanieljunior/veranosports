@@ -962,7 +962,7 @@ export function BetSlip({
                 </div>
               ) : (
                 <Button
-                  className="w-full"
+                  className="w-full btn-gradient-green"
                   size="lg"
                   onClick={handlePlaceBet}
                   disabled={isPlacing || selections.length === 0 || stakeNum < effectiveMinStake || isDailyLimitReached || isCappedAtMax || isInsufficientBalance || isNearCaixaLimit}

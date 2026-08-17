@@ -40,6 +40,14 @@
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+.btn-gradient-green {
+  background: linear-gradient(270deg, #ffffff, #86efac, #22c55e, #bbf7d0, #ffffff);
+  background-size: 300% 300%;
+  animation: gradient-slide 3s ease infinite;
+  color: #14532d !important;
+  border: none !important;
+}
+
 .btn-gradient-animated {
   background: linear-gradient(270deg, #ffffff, #93c5fd, #3b82f6, #bfdbfe, #ffffff);
   background-size: 300% 300%;
