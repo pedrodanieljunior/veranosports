@@ -27,7 +27,7 @@ import { getSessionId } from "@/lib/session";
 import fwSportsLogo from "@assets/verano-logo-transparent.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
-import { hapticLight, hapticSuccess, NATIVE_EVENTS } from "@/lib/platform";
+import { hapticLight, hapticSuccess, NATIVE_EVENTS, isNative } from "@/lib/platform";
 import { NativeBottomNav } from "@/components/NativeBottomNav";
 import frameImage from "@assets/WhatsApp_Image_2026-02-27_at_13.39.09_1772213985065.jpeg";
 
@@ -526,15 +526,17 @@ export default function Home() {
             <BookOpen className="w-4 h-4" />
             Regras do Site
           </button>
-          <a
-            href="/downloads/verano-sports.apk"
-            download
-            className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
-            data-testid="button-download-apk-mobile"
-          >
-            <Smartphone className="w-4 h-4" />
-            Baixar App
-          </a>
+          {!isNative() && (
+            <a
+              href="/downloads/verano-sports.apk"
+              download
+              className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
+              data-testid="button-download-apk-mobile"
+            >
+              <Smartphone className="w-4 h-4" />
+              Baixar App
+            </a>
+          )}
         </div>
       </div>
 
@@ -721,15 +723,17 @@ export default function Home() {
                 <BookOpen className="w-4 h-4" />
                 Regras do Site
               </button>
-              <a
-                href="/downloads/verano-sports.apk"
-                download
-                className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
-                data-testid="button-download-apk-desktop"
-              >
-                <Smartphone className="w-4 h-4" />
-                Baixar App
-              </a>
+              {!isNative() && (
+                <a
+                  href="/downloads/verano-sports.apk"
+                  download
+                  className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
+                  data-testid="button-download-apk-desktop"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Baixar App
+                </a>
+              )}
             </div>
           </div>
         </div>

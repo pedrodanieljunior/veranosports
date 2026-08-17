@@ -900,15 +900,17 @@ export default function Copa() {
         <button onClick={() => setShowRules(true)} className="inline-flex items-center gap-2 text-sm font-semibold transition-colors" style={{ color: "#c9a227" }} data-testid="button-rules-copa">
           <BookOpen className="w-4 h-4" /> Regras do Site
         </button>
-        <a
-          href="/downloads/verano-sports.apk"
-          download
-          className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
-          style={{ color: "#4ade80" }}
-          data-testid="button-download-apk-copa"
-        >
-          <Smartphone className="w-4 h-4" /> Baixar App
-        </a>
+        {!isNative() && (
+          <a
+            href="/downloads/verano-sports.apk"
+            download
+            className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+            style={{ color: "#4ade80" }}
+            data-testid="button-download-apk-copa"
+          >
+            <Smartphone className="w-4 h-4" /> Baixar App
+          </a>
+        )}
       </div>
 
       {/* Modals */}
