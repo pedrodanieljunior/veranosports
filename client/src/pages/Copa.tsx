@@ -3,6 +3,7 @@ import { NativeBottomNav } from "@/components/NativeBottomNav";
 import copaTrofeuTab from "@assets/copa_trofeu_tab.png";
 import headerBg from "@assets/IMG_0004_1780870047227.jpeg";
 import { proxyLogoUrl } from "@/lib/imgProxy";
+import { LEAGUE_IDS } from "@/lib/leagueIds";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { Sport, Game, Selection, BetSlip as BetSlipType } from "@shared/schema";
 import { BetSlip } from "@/components/BetSlip";
@@ -598,14 +599,33 @@ export default function Copa() {
               </div>
             );
           }
+          const leagueId = LEAGUE_IDS[sportKey];
           return (
-            <GamesList
-              games={tabGames}
-              selections={selections}
-              onToggleSelection={handleToggleSelection}
-              onGameClick={handleGameClick}
-              isDark={false}
-            />
+            <>
+              {/* Legenda da liga com logo */}
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                {leagueId && (
+                  <img
+                    src={proxyLogoUrl(`https://media.api-sports.io/football/leagues/${leagueId}.png`)}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="w-[18px] h-[18px] object-contain flex-shrink-0"
+                  />
+                )}
+                <h3 className="text-sm font-bold text-gray-800">{meta.name}</h3>
+                <span className="text-xs ml-1 text-gray-400">
+                  {tabGames.length} {tabGames.length === 1 ? "jogo" : "jogos"}
+                </span>
+              </div>
+              <GamesList
+                games={tabGames}
+                selections={selections}
+                onToggleSelection={handleToggleSelection}
+                onGameClick={handleGameClick}
+                isDark={false}
+              />
+            </>
           );
         })() : activeTab === "copa" && copaSubTab !== "todos" ? (
           (() => {
