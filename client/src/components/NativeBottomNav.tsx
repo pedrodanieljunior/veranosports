@@ -61,16 +61,23 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
       id: "jogos",
       label: "Jogos",
       icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
+        <svg width="22" height="22" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+          {/* Bola */}
+          <circle cx="50" cy="50" r="46" />
           {/* Pentágono central */}
-          <polygon points="12,7 15.5,9.5 14.2,13.5 9.8,13.5 8.5,9.5" fill="currentColor" stroke="none" opacity="0.85" />
-          {/* Linhas da bola de futebol */}
-          <line x1="12" y1="7" x2="12" y2="2" />
-          <line x1="15.5" y1="9.5" x2="19.5" y2="7.5" />
-          <line x1="14.2" y1="13.5" x2="17.5" y2="16.5" />
-          <line x1="9.8" y1="13.5" x2="6.5" y2="16.5" />
-          <line x1="8.5" y1="9.5" x2="4.5" y2="7.5" />
+          <polygon points="50,28 64,38 59,54 41,54 36,38" fill="currentColor" opacity="0.9" stroke="none"/>
+          {/* Costuras — do pentágono até a borda */}
+          <line x1="50" y1="28" x2="50" y2="4" />
+          <line x1="64" y1="38" x2="84" y2="26" />
+          <line x1="59" y1="54" x2="74" y2="72" />
+          <line x1="41" y1="54" x2="26" y2="72" />
+          <line x1="36" y1="38" x2="16" y2="26" />
+          {/* Hexágonos laterais (costuras secundárias) */}
+          <polyline points="50,4 64,10 84,26" />
+          <polyline points="84,26 92,48 74,72" />
+          <polyline points="74,72 60,96 40,96" />
+          <polyline points="40,96 16,72 8,48" />
+          <polyline points="8,48 16,26 50,4" />
         </svg>
       ),
     },
