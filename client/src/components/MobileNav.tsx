@@ -121,7 +121,7 @@ export function MobileNav({
       <SheetContent
         side="left"
         className="w-72 p-0 border-0 flex flex-col"
-        style={{ background: "rgba(10, 14, 26, 0.55)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRight: "1px solid rgba(255,255,255,0.08)" }}
+        style={{ background: "rgba(10, 14, 26, 0.25)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRight: "1px solid rgba(255,255,255,0.08)" }}
       >
         {/* Topo */}
         <div className="px-5 pt-6 pb-4 border-b border-white/10 flex items-center gap-2">
