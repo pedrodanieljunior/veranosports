@@ -2,11 +2,28 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Preview Mobile – Verano Sports</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
+
+  /* ── MOBILE: app direto, sem frame ── */
+  body.is-mobile {
+    background: #0a0a0f;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body.is-mobile iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+  body.is-mobile .desktop-only { display: none !important; }
+
+  /* ── DESKTOP: frame de telefone ── */
+  body.is-desktop {
     background: #0a0a0f;
     display: flex;
     flex-direction: column;
@@ -17,52 +34,37 @@
     font-family: system-ui, sans-serif;
     overflow-x: hidden;
   }
-  h1 {
+  body.is-desktop h1 {
     color: #666;
     font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
     margin-bottom: 16px;
   }
-
-  /* Wrapper que escala o celular para caber na tela */
-  .phone-wrapper {
-    transform-origin: top center;
-  }
-
+  .phone-wrapper { transform-origin: top center; }
   .phone {
     width: 390px;
     height: 844px;
     background: #111;
     border-radius: 48px;
     border: 8px solid #2a2a2a;
-    box-shadow:
-      0 0 0 1px #444,
-      0 20px 60px rgba(0,0,0,0.9),
-      inset 0 0 0 1px #333;
+    box-shadow: 0 0 0 1px #444, 0 20px 60px rgba(0,0,0,0.9);
     overflow: hidden;
     position: relative;
-    flex-shrink: 0;
   }
-  /* Notch */
   .phone::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 50%;
+    top: 0; left: 50%;
     transform: translateX(-50%);
-    width: 110px;
-    height: 28px;
+    width: 110px; height: 28px;
     background: #111;
     border-radius: 0 0 18px 18px;
     z-index: 10;
   }
-  /* Status bar */
   .status {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 44px;
     background: rgba(0,0,0,0.75);
     z-index: 9;
@@ -70,75 +72,68 @@
     align-items: flex-end;
     justify-content: space-between;
     padding: 0 24px 6px;
-    font-size: 12px;
-    color: white;
-    font-weight: 600;
+    font-size: 12px; color: white; font-weight: 600;
     pointer-events: none;
   }
   .status .icons { display: flex; gap: 5px; align-items: center; }
-  iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    border-radius: 40px;
-  }
-  .hint {
-    margin-top: 12px;
-    color: #444;
-    font-size: 11px;
-    text-align: center;
-  }
+  .phone iframe { width: 100%; height: 100%; border: none; border-radius: 40px; }
+  .hint { margin-top: 12px; color: #444; font-size: 11px; text-align: center; }
 </style>
 </head>
 <body>
+
+<!-- conteúdo desktop (frame de telefone) -->
+<div class="desktop-only">
   <h1>📱 Preview Android – Verano Sports</h1>
   <div class="phone-wrapper" id="wrapper">
     <div class="phone">
       <div class="status">
-        <span id="time">09:41</span>
+        <span id="time-d">09:41</span>
         <span class="icons">
-          <!-- Signal -->
           <svg width="15" height="11" fill="white" viewBox="0 0 15 11"><rect x="0" y="5" width="2.5" height="6" rx="0.5"/><rect x="4" y="3.5" width="2.5" height="7.5" rx="0.5"/><rect x="8" y="1.5" width="2.5" height="9.5" rx="0.5"/><rect x="12" y="0" width="2.5" height="11" rx="0.5"/></svg>
-          <!-- WiFi -->
-          <svg width="15" height="11" fill="white" viewBox="0 0 20 14"><path d="M10 11a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-4a6 6 0 015.66 4H4.34A6 6 0 0110 7zm0-4a10 10 0 019.19 6H.81A10 10 0 0110 3z" opacity=".9"/></svg>
-          <!-- Battery -->
+          <svg width="15" height="11" fill="white" viewBox="0 0 20 14"><path d="M10 11a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-4a6 6 0 015.66 4H4.34A6 6 0 0110 7zm0-4a10 10 0 019.19 6H.81A10 10 0 0110 3z"/></svg>
           <svg width="24" height="11" fill="white" viewBox="0 0 24 12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="white"/><rect x="22" y="4" width="2" height="4" rx="1" fill="white" opacity=".6"/></svg>
         </span>
       </div>
-      <iframe src="/copa?native=1" id="app-frame"></iframe>
+      <iframe src="/copa?native=1" id="frame-d"></iframe>
     </div>
   </div>
   <p class="hint">Faça login dentro do frame para ver como fica no app ↑</p>
+</div>
 
-  <script>
-    // Relógio
+<!-- iframe mobile (tela cheia, sem frame) -->
+<iframe src="/copa?native=1" id="frame-m" style="display:none; width:100%; height:100vh; border:none;"></iframe>
+
+<script>
+  const isMobile = window.innerWidth < 768;
+
+  if (isMobile) {
+    document.body.classList.add('is-mobile');
+    document.getElementById('frame-m').style.display = 'block';
+  } else {
+    document.body.classList.add('is-desktop');
+
+    // relógio
     function tick() {
       const now = new Date();
-      document.getElementById('time').textContent =
+      document.getElementById('time-d').textContent =
         now.getHours().toString().padStart(2,'0') + ':' +
         now.getMinutes().toString().padStart(2,'0');
     }
     tick(); setInterval(tick, 10000);
 
-    // Escalar o frame para caber na tela disponível
+    // escalar frame para caber na tela
     function scalePhone() {
       const wrapper = document.getElementById('wrapper');
-      const PHONE_W = 390 + 16; // largura do .phone + bordas
-      const PHONE_H = 844 + 16;
-
-      const availW = window.innerWidth - 32; // padding lateral do body
-      const availH = window.innerHeight - 80; // espaço para o título e hint
-
-      const scaleX = availW / PHONE_W;
-      const scaleY = availH / PHONE_H;
-      const scale = Math.min(scaleX, scaleY, 1); // nunca amplia além de 1:1
-
+      const availW = window.innerWidth - 32;
+      const availH = window.innerHeight - 80;
+      const scale = Math.min(availW / 406, availH / 860, 1);
       wrapper.style.transform = `scale(${scale})`;
-      wrapper.style.marginBottom = `${(PHONE_H * scale) - PHONE_H}px`;
+      wrapper.style.marginBottom = `${(860 * scale) - 860}px`;
     }
-
     scalePhone();
     window.addEventListener('resize', scalePhone);
-  </script>
+  }
+</script>
 </body>
 </html>
