@@ -27,9 +27,12 @@ async function getFirebaseApp() {
       _firebaseApp = admin.default.apps[0];
       return _firebaseApp;
     }
-    const serviceAccount = JSON.parse(
-      Buffer.from(serviceAccountEnv, "base64").toString("utf-8")
-    );
+    // Aceita JSON puro ou base64
+    let rawJson = serviceAccountEnv.trimStart();
+    if (!rawJson.startsWith("{")) {
+      rawJson = Buffer.from(serviceAccountEnv, "base64").toString("utf-8");
+    }
+    const serviceAccount = JSON.parse(rawJson);
     _firebaseApp = admin.default.initializeApp({
       credential: admin.default.credential.cert(serviceAccount),
     });
