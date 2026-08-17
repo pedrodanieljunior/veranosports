@@ -61,23 +61,17 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
       id: "jogos",
       label: "Jogos",
       icon: (
-        <svg width="22" height="22" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-          {/* Bola */}
-          <circle cx="50" cy="50" r="46" />
-          {/* Pentágono central */}
-          <polygon points="50,28 64,38 59,54 41,54 36,38" fill="currentColor" opacity="0.9" stroke="none"/>
-          {/* Costuras — do pentágono até a borda */}
-          <line x1="50" y1="28" x2="50" y2="4" />
-          <line x1="64" y1="38" x2="84" y2="26" />
-          <line x1="59" y1="54" x2="74" y2="72" />
-          <line x1="41" y1="54" x2="26" y2="72" />
-          <line x1="36" y1="38" x2="16" y2="26" />
-          {/* Hexágonos laterais (costuras secundárias) */}
-          <polyline points="50,4 64,10 84,26" />
-          <polyline points="84,26 92,48 74,72" />
-          <polyline points="74,72 60,96 40,96" />
-          <polyline points="40,96 16,72 8,48" />
-          <polyline points="8,48 16,26 50,4" />
+        <svg width="22" height="22" viewBox="0 0 100 100" fill="currentColor" stroke="none">
+          {/* Starball da Champions — estrela de 8 pontas + círculo */}
+          {/* Painéis escuros da estrela */}
+          <path d="M50,4 L56,44 L96,50 L56,56 L50,96 L44,56 L4,50 L44,44 Z" opacity="0.85"/>
+          {/* Losangos nos cantos (45°) */}
+          <path d="M50,4 L79,21 L56,44 L44,44 L21,21 Z" opacity="0.6"/>
+          <path d="M96,50 L79,79 L56,56 L56,44 L79,21 Z" opacity="0.6"/>
+          <path d="M50,96 L21,79 L44,56 L56,56 L79,79 Z" opacity="0.6"/>
+          <path d="M4,50 L21,21 L44,44 L44,56 L21,79 Z" opacity="0.6"/>
+          {/* Círculo da bola */}
+          <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4"/>
         </svg>
       ),
     },
