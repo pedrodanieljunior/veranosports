@@ -77,11 +77,11 @@ export function MobileNav({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
-          className="md:hidden inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors"
+          className="md:hidden inline-flex items-center gap-1 px-2 py-1.5 rounded-lg btn-gradient-animated shadow-sm"
           data-testid="button-mobile-menu"
         >
           <span className="text-sm">{triggerIcon}</span>
-          <span className="text-white font-bold text-[10px] whitespace-nowrap">{triggerLabel}</span>
+          <span className="font-bold text-[10px] whitespace-nowrap">{triggerLabel}</span>
         </button>
       </SheetTrigger>
 

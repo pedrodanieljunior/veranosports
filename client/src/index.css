@@ -25,6 +25,19 @@
   background-color: #60a5fa;
 }
 
+/* Animated gradient — botão Todas as Ligas */
+@keyframes gradient-slide {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.btn-gradient-animated {
+  background: linear-gradient(270deg, #ffffff, #93c5fd, #3b82f6, #bfdbfe, #ffffff);
+  background-size: 300% 300%;
+  animation: gradient-slide 3s ease infinite;
+  color: #1e3a8a !important;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);
