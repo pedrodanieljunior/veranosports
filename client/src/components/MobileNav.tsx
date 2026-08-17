@@ -4,7 +4,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef, useCallback } from "react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import { proxyLogoUrl } from "@/lib/imgProxy";
-import { isNative } from "@/lib/platform";
 
 interface MobileNavProps {
   sports: Sport[];
@@ -74,9 +73,6 @@ export function MobileNav({
       : 0;
     setScrollPct(pct);
   }, []);
-
-  // Drawer de ligas só aparece no app Android
-  if (!isNative()) return null;
 
   const pick = (key: string | null) => {
     onSelectSport(key);
