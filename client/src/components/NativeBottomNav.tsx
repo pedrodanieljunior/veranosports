@@ -43,7 +43,8 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
     setActiveTab(tab);
 
     if (tab === "jogos") {
-      setLocation("/");
+      const nativeParam = new URLSearchParams(window.location.search).get("native") === "1" ? "?native=1" : "";
+      setLocation("/" + nativeParam);
       dispatchNativeTabChange(tab);
       return;
     }
