@@ -7,6 +7,9 @@ import { useMarketSettings } from "@/hooks/use-market-settings";
 import { roundOdds } from "@/lib/formatOdds";
 import { useAuth } from "@/lib/auth";
 import { translateTeam } from "@/lib/teamTranslations";
+import { LEAGUE_IDS } from "@/lib/leagueIds";
+import { proxyLogoUrl } from "@/lib/imgProxy";
+import { useState } from "react";
 
 interface GameCardProps {
   game: Game;
@@ -48,6 +51,23 @@ function OddWithLock({ value, originalValue, isDark, locked }: { value: string; 
   );
 }
 
+function LeagueLogo({ sportKey, isDark }: { sportKey: string; isDark: boolean }) {
+  const [broken, setBroken] = useState(false);
+  const leagueId = LEAGUE_IDS[sportKey];
+  if (!leagueId || broken) return null;
+  const url = proxyLogoUrl(`https://media.api-sports.io/football/leagues/${leagueId}.png`);
+  return (
+    <img
+      src={url}
+      alt=""
+      width={16}
+      height={16}
+      className="w-4 h-4 object-contain flex-shrink-0"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 export function GameCard({ game, selections, onClick, isDark = false }: GameCardProps) {
   const { user } = useAuth();
   const { getBoostMultiplier, hasBoosted } = useMarketSettings();
@@ -79,9 +99,12 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
       data-testid={`card-game-${game.id}`}
     >
       <div className="p-2.5">
-        {/* Data/hora inline no topo */}
+        {/* Data/hora + logo da liga */}
         <div className="flex items-center justify-between mb-2">
-          <span className={`text-[11px] ${isDark ? "text-[#aaaaaa]" : "text-gray-400"}`}>{formattedDate}</span>
+          <div className="flex items-center gap-1.5">
+            <LeagueLogo sportKey={game.sportKey} isDark={isDark} />
+            <span className={`text-[11px] ${isDark ? "text-[#aaaaaa]" : "text-gray-400"}`}>{formattedDate}</span>
+          </div>
           {hasSelections && (
             <Badge className="text-white text-[10px] px-1.5 py-0 border-0" style={{ background: "linear-gradient(135deg, #d4960f, #8a5200)" }}>
               {selectionsForGame.length}
