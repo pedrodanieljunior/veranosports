@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Preview Mobile – Verano Sports</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 24px 16px;
+    font-family: system-ui, sans-serif;
+  }
+  h1 {
+    color: #888;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #111;
+    border-radius: 48px;
+    border: 8px solid #222;
+    box-shadow:
+      0 0 0 2px #333,
+      0 30px 80px rgba(0,0,0,0.8),
+      inset 0 0 0 1px #444;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  /* Notch */
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 30px;
+    background: #111;
+    border-radius: 0 0 20px 20px;
+    z-index: 10;
+  }
+  /* Status bar */
+  .status {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: rgba(0,0,0,0.7);
+    z-index: 9;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 6px;
+    font-size: 12px;
+    color: white;
+    font-weight: 600;
+    pointer-events: none;
+  }
+  .status .time { font-size: 13px; }
+  .status .icons { display: flex; gap: 5px; align-items: center; }
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 40px;
+    /* simula native: sem botões de browser */
+  }
+  .hint {
+    margin-top: 16px;
+    color: #555;
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <h1>📱 Preview Android – Verano Sports</h1>
+  <div class="phone">
+    <div class="status">
+      <span class="time" id="time">09:41</span>
+      <span class="icons">
+        <svg width="16" height="12" fill="white" viewBox="0 0 16 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="2.5" height="12" rx="1" opacity=".3"/></svg>
+        <svg width="16" height="12" fill="white" viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <svg width="25" height="12" fill="white" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="white" stroke-width="1.5" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="white"/><rect x="23" y="4" width="2" height="4" rx="1" fill="white" opacity=".5"/></svg>
+      </span>
+    </div>
+    <iframe src="/" id="app-frame"></iframe>
+  </div>
+  <p class="hint">Faça login dentro do frame para ver como fica no app ↑</p>
+
+  <script>
+    // Atualiza o relógio
+    function tick() {
+      const now = new Date();
+      document.getElementById('time').textContent =
+        now.getHours().toString().padStart(2,'0') + ':' +
+        now.getMinutes().toString().padStart(2,'0');
+    }
+    tick();
+    setInterval(tick, 10000);
+  </script>
+</body>
+</html>
