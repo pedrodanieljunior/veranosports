@@ -19,6 +19,8 @@ const LiveControl = lazy(() => import("@/pages/LiveControl"));
 const SPLASH_DONE_KEY = "verano_splash_done";
 function shouldShowSplash() {
   if (!isNative()) return false;
+  // No preview de browser (?native=1) pula o splash — só roda no Capacitor real
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("native") === "1") return false;
   if (sessionStorage.getItem(SPLASH_DONE_KEY)) return false;
   return true;
 }

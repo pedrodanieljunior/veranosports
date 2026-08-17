@@ -12,10 +12,14 @@ const getCapacitor = async () => {
   return _capacitorCore;
 };
 
-/** True somente dentro de um app nativo Capacitor (Android ou iOS). */
+/** True somente dentro de um app nativo Capacitor (Android ou iOS).
+ *  Também retorna true quando ?native=1 está na URL (para preview no browser). */
 export function isNative(): boolean {
-  // window.Capacitor é injetado pelo runtime nativo
-  return typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
+  if (typeof window === "undefined") return false;
+  // Flag de preview: carregue /?native=1 para simular o app nativo no browser
+  if (new URLSearchParams(window.location.search).get("native") === "1") return true;
+  // Runtime real: window.Capacitor é injetado pelo Capacitor nativo
+  return !!(window as any).Capacitor?.isNativePlatform?.();
 }
 
 /** True somente no Android nativo. */
