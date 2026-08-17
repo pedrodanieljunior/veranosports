@@ -40,11 +40,10 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
+      # O capacitor.settings.gradle referencia ../node_modules/@capacitor/*
+      # O npm install popula esses caminhos para o Gradle conseguir compilar
       - name: Instalar dependências Node
         run: npm install
-
-      - name: Sincronizar Capacitor → Android
-        run: node_modules/.bin/cap sync android
 
       - name: Permissão gradlew
         run: chmod +x android/gradlew
