@@ -9023,6 +9023,15 @@ function NotificationsAdminTab() {
     },
   });
 
+  const { data: pushStats } = useQuery<{ totalTokens: number; firebaseConfigured: boolean }>({
+    queryKey: ["/api/admin/push-stats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/push-stats");
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -9050,7 +9059,11 @@ function NotificationsAdminTab() {
       setImageFile(null);
       setImagePreview("");
       refetch();
-      toast({ title: "Notificação enviada!" });
+      const pushSent = typeof created?.pushSent === "number" ? created.pushSent : null;
+      toast({
+        title: "Notificação enviada!",
+        description: pushSent !== null ? `Push enviado para ${pushSent} dispositivo(s)` : undefined,
+      });
     } catch { toast({ title: "Erro ao enviar", variant: "destructive" }); }
     setSending(false);
   };
@@ -9074,6 +9087,20 @@ function NotificationsAdminTab() {
 
   return (
     <div className="space-y-6 p-4">
+      {/* Badge de status do Firebase/Push */}
+      {pushStats !== undefined && (
+        pushStats.firebaseConfigured ? (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-500/10 border border-green-500/30 text-green-400 text-sm">
+            <Bell className="w-4 h-4 flex-shrink-0" />
+            <span>🔔 Firebase ativo — <strong>{pushStats.totalTokens}</strong> dispositivo(s) registrado(s)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm">
+            <span>⚠️ Firebase não configurado — pushes não serão enviados</span>
+          </div>
+        )
+      )}
+
       {/* Formulário de criação */}
       <Card>
         <CardHeader className="pb-3">

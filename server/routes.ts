@@ -8288,6 +8288,14 @@ export async function registerRoutes(
   setInterval(runClubFwPayoutIfDue, 30 * 60 * 1000);
 
   // ── Notificações ─────────────────────────────────────────────────────────────
+  app.get("/api/admin/push-stats", requireAdmin, async (_req, res) => {
+    try {
+      const tokens = await storage.getAllPushTokens();
+      const firebaseConfigured = !!process.env.FIREBASE_SERVICE_ACCOUNT;
+      res.json({ totalTokens: tokens.length, firebaseConfigured });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   app.get("/api/admin/notifications", requireAdmin, async (_req, res) => {
     try { res.json(await storage.getNotifications()); }
     catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -8311,8 +8319,10 @@ export async function registerRoutes(
             )
           );
           console.log(`[FCM] Push enviado para ${tokens.length} dispositivo(s)`);
+          (notification as any).pushSent = tokens.length;
         } catch (pushErr) {
           console.error("[FCM] Erro ao enviar push da notificação admin:", pushErr);
+          (notification as any).pushSent = 0;
         }
       }
 
