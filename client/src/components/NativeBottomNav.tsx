@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { isNative, NativeTab, dispatchNativeTabChange, dispatchNativeOpenBetSlip, dispatchNativeOpenHistory, dispatchNativeOpenProfile, hapticLight, NATIVE_EVENTS } from "@/lib/platform";
 import { useAuth } from "@/lib/auth";
 
@@ -22,6 +23,7 @@ interface NativeBottomNavProps {
 export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
   const [activeTab, setActiveTab] = useState<NativeTab>("jogos");
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Ouvir mudanças externas de tab (por ex: Copa.tsx pode trocar a aba programaticamente)
   useEffect(() => {
@@ -40,6 +42,11 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
     await hapticLight();
     setActiveTab(tab);
 
+    if (tab === "jogos") {
+      setLocation("/");
+      dispatchNativeTabChange(tab);
+      return;
+    }
     if (tab === "apostas") {
       dispatchNativeOpenHistory();
       return;
