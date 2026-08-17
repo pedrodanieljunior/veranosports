@@ -1,6 +1,6 @@
 import { Game, Selection } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronRight, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { format } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { useMarketSettings } from "@/hooks/use-market-settings";
@@ -73,27 +73,21 @@ export function GameCard({ game, selections, onClick, isDark = false }: GameCard
 
   return (
     <div 
-      className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-gradient-to-b from-white to-blue-300 hover:shadow-md"} ${hasSelections ? "border-transparent" : isDark ? "border-[#5a5a5a]" : "border-blue-200"}`}
+      className={`rounded-lg border cursor-pointer transition-all ${isDark ? "bg-[#4a4a4a] hover:bg-[#505050]" : "bg-gradient-to-b from-white to-blue-200 hover:shadow-md"} ${hasSelections ? "border-transparent" : isDark ? "border-[#5a5a5a]" : "border-blue-200"}`}
       style={hasSelections ? { boxShadow: "0 0 0 2px #c9a227" } : undefined}
       onClick={onClick}
       data-testid={`card-game-${game.id}`}
     >
-      <div className={`flex items-center gap-2 px-3 py-1.5 border-b rounded-t-lg ${isDark ? "border-[#5a5a5a] bg-[#3d3d3d]" : "border-blue-200 bg-white/60"}`}>
-        <div className={`flex items-center gap-1 text-[11px] ${isDark ? "text-[#aaaaaa]" : "text-gray-500"}`}>
-          <Clock className="w-3 h-3" />
-          <span>{formattedDate}</span>
-        </div>
-        <div className="ml-auto flex items-center gap-1">
+      <div className="p-2.5">
+        {/* Data/hora inline no topo */}
+        <div className="flex items-center justify-between mb-2">
+          <span className={`text-[11px] ${isDark ? "text-[#aaaaaa]" : "text-gray-400"}`}>{formattedDate}</span>
           {hasSelections && (
             <Badge className="text-white text-[10px] px-1.5 py-0 border-0" style={{ background: "linear-gradient(135deg, #d4960f, #8a5200)" }}>
               {selectionsForGame.length}
             </Badge>
           )}
-          <ChevronRight className={`w-4 h-4 ${isDark ? "text-white/40" : "text-gray-400"}`} />
         </div>
-      </div>
-      
-      <div className="p-2.5">
         <div className="flex items-center gap-2 mb-1.5">
           <div className="w-6 h-6 shrink-0 flex items-center justify-center">
             <TeamBadge teamName={game.homeTeam} logoUrl={game.homeLogo} size={22} />
