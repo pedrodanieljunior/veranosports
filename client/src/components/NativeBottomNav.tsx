@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { Volleyball } from "lucide-react";
 import { isNative, NativeTab, dispatchNativeTabChange, dispatchNativeOpenBetSlip, dispatchNativeOpenHistory, dispatchNativeOpenProfile, hapticLight, NATIVE_EVENTS } from "@/lib/platform";
 import { useAuth } from "@/lib/auth";
 
@@ -60,20 +61,7 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
     {
       id: "jogos",
       label: "Jogos",
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 100 100" fill="currentColor" stroke="none">
-          {/* Starball da Champions — estrela de 8 pontas + círculo */}
-          {/* Painéis escuros da estrela */}
-          <path d="M50,4 L56,44 L96,50 L56,56 L50,96 L44,56 L4,50 L44,44 Z" opacity="0.85"/>
-          {/* Losangos nos cantos (45°) */}
-          <path d="M50,4 L79,21 L56,44 L44,44 L21,21 Z" opacity="0.6"/>
-          <path d="M96,50 L79,79 L56,56 L56,44 L79,21 Z" opacity="0.6"/>
-          <path d="M50,96 L21,79 L44,56 L56,56 L79,79 Z" opacity="0.6"/>
-          <path d="M4,50 L21,21 L44,44 L44,56 L21,79 Z" opacity="0.6"/>
-          {/* Círculo da bola */}
-          <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4"/>
-        </svg>
-      ),
+      icon: <Volleyball size={22} strokeWidth={1.8} />,
     },
     {
       id: "aovivo",
