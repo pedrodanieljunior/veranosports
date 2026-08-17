@@ -43,8 +43,8 @@ jobs:
       - name: Instalar dependências Node
         run: npm ci
 
-      - name: Build do app web
-        run: ./node_modules/.bin/tsx script/build.ts
+      - name: Build do app web (frontend)
+        run: npx vite build
 
       - name: Sincronizar Capacitor → Android
         run: npx cap sync android
