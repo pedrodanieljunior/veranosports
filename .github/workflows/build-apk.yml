@@ -40,9 +40,9 @@ jobs:
           restore-keys: gradle-
 
       # package-lock.json contém URLs do proxy interno do Replit (package-firewall.replit.local)
-      # que não são acessíveis no GitHub Actions — forçar registry público
-      - name: Instalar dependências Node (registry público)
-        run: npm install --legacy-peer-deps --registry https://registry.npmjs.org
+      # que não são acessíveis no GitHub Actions — ignorar o lockfile e instalar do zero
+      - name: Instalar dependências Node
+        run: npm install --no-package-lock --legacy-peer-deps
 
       - name: Verificar Capacitor CLI
         run: node_modules/.bin/cap --version
