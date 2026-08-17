@@ -1753,13 +1753,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async dismissAllNotifications(userCpf: string) {
-    const result = await pool.query(
-      `INSERT INTO notification_reads (notification_id, user_cpf, dismissed)
-       SELECT id, $1, true FROM notifications WHERE active = true
-       ON CONFLICT (notification_id, user_cpf) DO UPDATE SET dismissed = true`,
-      [userCpf]
-    );
-    console.log("[dismissAll] rowCount=", result.rowCount, "cpf=", userCpf);
+    // Buscar todas as notificações ativas
+    const activeNotifs = await db.select({ id: notificationsTable.id })
+      .from(notificationsTable)
+      .where(eq(notificationsTable.active, true));
+
+    if (activeNotifs.length === 0) return;
+
+    const activeIds = activeNotifs.map(n => n.id);
+
+    // Atualizar registros já existentes para dismissed = true
+    await db.update(notificationReadsTable)
+      .set({ dismissed: true })
+      .where(and(
+        eq(notificationReadsTable.userCpf, userCpf),
+        inArray(notificationReadsTable.notificationId, activeIds)
+      ));
+
+    // Verificar quais ainda não têm registro e inserir
+    const existingReads = await db.select({ notificationId: notificationReadsTable.notificationId })
+      .from(notificationReadsTable)
+      .where(and(
+        eq(notificationReadsTable.userCpf, userCpf),
+        inArray(notificationReadsTable.notificationId, activeIds)
+      ));
+
+    const existingIds = new Set(existingReads.map(r => r.notificationId));
+    const missing = activeIds.filter(id => !existingIds.has(id));
+
+    if (missing.length > 0) {
+      await db.insert(notificationReadsTable)
+        .values(missing.map(notificationId => ({ notificationId, userCpf, dismissed: true })));
+    }
+
+    console.log("[dismissAll] done for", userCpf, "— notifs:", activeIds.length, "missing:", missing.length);
   }
 
   async getUnreadCountForUser(userCpf: string) {
