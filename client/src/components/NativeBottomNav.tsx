@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { isNative, NativeTab, dispatchNativeTabChange, dispatchNativeOpenBetSlip, dispatchNativeOpenProfile, hapticLight, NATIVE_EVENTS } from "@/lib/platform";
+import { isNative, NativeTab, dispatchNativeTabChange, dispatchNativeOpenBetSlip, dispatchNativeOpenHistory, dispatchNativeOpenProfile, hapticLight, NATIVE_EVENTS } from "@/lib/platform";
 import { useAuth } from "@/lib/auth";
 
 interface NativeBottomNavProps {
@@ -41,7 +41,7 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
     setActiveTab(tab);
 
     if (tab === "apostas") {
-      dispatchNativeOpenBetSlip();
+      dispatchNativeOpenHistory();
       return;
     }
     if (tab === "conta") {
