@@ -125,19 +125,19 @@ export function MobileNav({
       <SheetContent
         side="left"
         className="w-72 p-0 border-0 flex flex-col"
-        style={{ background: "linear-gradient(160deg, rgba(30, 64, 175, 0.72) 0%, rgba(15, 30, 100, 0.85) 60%, rgba(10, 20, 70, 0.90) 100%)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRight: "1px solid rgba(99,140,255,0.25)" }}
+        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.88) 0%, rgba(147,197,253,0.92) 100%)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRight: "1px solid rgba(147,197,253,0.5)" }}
       >
         {/* Topo */}
-        <div className="px-5 pt-6 pb-4 border-b border-white/10 flex items-center gap-2">
+        <div className="px-5 pt-6 pb-4 border-b border-blue-200/60 flex items-center gap-2">
           <span className="text-lg">⚽</span>
-          <p className="text-white font-black text-base tracking-wide">Ligas</p>
+          <p className="text-blue-900 font-black text-base tracking-wide">Ligas</p>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="pb-6">
 
             {/* ══ Principais Ligas ══ */}
-            <p className="px-5 pt-5 pb-2 text-[10px] font-bold tracking-widest uppercase text-yellow-400/80">
+            <p className="px-5 pt-5 pb-2 text-[10px] font-bold tracking-widest uppercase text-blue-600/70">
               Principais Ligas
             </p>
 
@@ -145,7 +145,6 @@ export function MobileNav({
               const active = key === selectedSport || (key === null && selectedSport === null);
               const leagueId = key ? (LEAGUE_IDS[key] ?? undefined) : undefined;
 
-              // liga principal só aparece se existir na API (exceto "Todas as Ligas")
               if (key !== null && !isLoading && !sports.find(s => s.key === key)) return null;
 
               return (
@@ -154,7 +153,7 @@ export function MobileNav({
                   onClick={() => pick(key)}
                   className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors"
                   style={active
-                    ? { background: "rgba(250,200,0,0.12)", borderLeft: "3px solid #facc00" }
+                    ? { background: "rgba(30,64,175,0.12)", borderLeft: "3px solid #1d4ed8" }
                     : { borderLeft: "3px solid transparent" }}
                 >
                   {key === null
@@ -163,7 +162,7 @@ export function MobileNav({
                   }
                   <span
                     className="text-[13px] font-semibold text-left"
-                    style={{ color: active ? "#facc00" : "rgba(255,255,255,0.9)" }}
+                    style={{ color: active ? "#1d4ed8" : "#1e3a5f" }}
                   >
                     {label}
                   </span>
@@ -172,14 +171,14 @@ export function MobileNav({
             })}
 
             {/* ══ Todas as Ligas ══ */}
-            <p className="px-5 pt-6 pb-2 text-[10px] font-bold tracking-widest uppercase text-white/40">
+            <p className="px-5 pt-6 pb-2 text-[10px] font-bold tracking-widest uppercase text-blue-400/70">
               Todas as Ligas
             </p>
 
             {isLoading ? (
               <div className="px-4 space-y-3 pt-1">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <Skeleton key={i} className="h-9 w-full bg-white/10 rounded-lg" />
+                  <Skeleton key={i} className="h-9 w-full bg-blue-200/40 rounded-lg" />
                 ))}
               </div>
             ) : (
@@ -192,16 +191,16 @@ export function MobileNav({
                   <button
                     key={sport.key}
                     onClick={() => pick(sport.key)}
-                    className="w-full flex items-center gap-3 px-4 py-2 transition-colors hover:bg-white/5"
+                    className="w-full flex items-center gap-3 px-4 py-2 transition-colors hover:bg-blue-100/40"
                     style={active
-                      ? { background: "rgba(250,200,0,0.10)", borderLeft: "3px solid #facc00" }
+                      ? { background: "rgba(30,64,175,0.10)", borderLeft: "3px solid #1d4ed8" }
                       : { borderLeft: "3px solid transparent" }}
                     data-testid={`button-mobile-sport-${sport.key}`}
                   >
                     <LeagueIcon leagueId={leagueId} fallback="🏟️" />
                     <span
                       className="text-[13px] text-left leading-tight"
-                      style={{ color: active ? "#facc00" : "rgba(255,255,255,0.75)" }}
+                      style={{ color: active ? "#1d4ed8" : "#1e3a5f" }}
                     >
                       {label}
                     </span>
