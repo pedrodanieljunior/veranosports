@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { translateMarket, formatOutcome } from "@/lib/marketLabels";
 import { fmtOdds, roundOdds } from "@/lib/formatOdds";
 import { useComboBonus } from "@/hooks/use-combo-bonus";
-import { hapticMedium } from "@/lib/platform";
+import { hapticMedium, isNative } from "@/lib/platform";
 
 interface PlacedBetWithPix extends BetSlipType {
   pixCode?: string;
@@ -425,7 +425,7 @@ export function BetSlip({
     return (
       <>
         <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-        <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", color: "#111827" }}>
+        <Card className="fixed left-0 right-0 rounded-t-2xl md:rounded-lg md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", color: "#111827", bottom: isNative() ? "64px" : "0", height: isNative() ? "calc(92vh - 64px)" : "92vh" }}>
           <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
             <div className="w-10 h-1 rounded-full bg-blue-300/60" />
           </div>
@@ -494,8 +494,8 @@ export function BetSlip({
   if (isMinimized) {
     return (
       <div
-        className="fixed bottom-0 left-0 right-0 z-[9999] md:hidden"
-        style={{ pointerEvents: "auto" }}
+        className="fixed left-0 right-0 z-[9999] md:hidden"
+        style={{ pointerEvents: "auto", bottom: isNative() ? "64px" : "0" }}
         onClick={() => onToggleMinimize(false)}
         data-testid="betslip-minimized-bar"
       >
@@ -525,7 +525,7 @@ export function BetSlip({
   return (
     <>
     <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-    <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", color: "#111827" }} onClick={(e) => e.stopPropagation()}>
+    <Card className="fixed left-0 right-0 rounded-t-2xl md:rounded-lg md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "linear-gradient(to bottom, #ffffff, #93c5fd)", color: "#111827", bottom: isNative() ? "64px" : "0", height: isNative() ? "calc(92vh - 64px)" : "92vh" }} onClick={(e) => e.stopPropagation()}>
       <div
         className="flex flex-col items-center pt-2 pb-1 md:hidden flex-shrink-0 cursor-pointer active:opacity-70"
         onClick={() => onToggleMinimize(true)}
