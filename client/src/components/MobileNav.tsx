@@ -1,8 +1,7 @@
 import { Sport } from "@shared/schema";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import { proxyLogoUrl } from "@/lib/imgProxy";
 import { isNative } from "@/lib/platform";
@@ -64,6 +63,17 @@ export function MobileNav({
   triggerIcon = "⚽",
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
+  const [scrollPct, setScrollPct] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const pct = el.scrollHeight > el.clientHeight
+      ? (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100
+      : 0;
+    setScrollPct(pct);
+  }, []);
 
   // Drawer de ligas só aparece no app Android
   if (!isNative()) return null;
@@ -88,7 +98,15 @@ export function MobileNav({
       <SheetContent
         side="left"
         className="w-72 p-0 border-0 flex flex-col"
-        style={{ background: "linear-gradient(to bottom, rgba(239,246,255,0.93) 0%, rgba(191,219,254,0.95) 100%)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRight: "1px solid rgba(147,197,253,0.5)" }}
+        style={{
+          background: "linear-gradient(to bottom, rgba(239,246,255,0.93) 0%, rgba(191,219,254,0.95) 100%)",
+          backgroundSize: "100% 300%",
+          backgroundPosition: `0% ${scrollPct * 1.5}%`,
+          transition: "background-position 0.1s ease",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderRight: "1px solid rgba(147,197,253,0.5)"
+        }}
       >
         {/* Topo */}
         <div className="px-5 pt-6 pb-4 border-b border-blue-200/60 flex items-center gap-2">
@@ -96,7 +114,11 @@ export function MobileNav({
           <p className="text-blue-900 font-black text-base tracking-wide">Ligas</p>
         </div>
 
-        <ScrollArea className="flex-1">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto"
+        >
           <div className="pb-6">
 
             {/* ══ Principais Ligas ══ */}
@@ -173,7 +195,7 @@ export function MobileNav({
               })
             )}
           </div>
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );
