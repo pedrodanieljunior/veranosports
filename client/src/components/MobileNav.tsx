@@ -161,7 +161,7 @@ export function MobileNav({
                     : <LeagueIcon leagueId={leagueId} fallback="🏆" />
                   }
                   <span
-                    className="text-[13px] font-semibold text-left"
+                    className="text-[13px] text-left"
                     style={{ color: active ? "#1d4ed8" : "#1e3a5f" }}
                   >
                     {label}
