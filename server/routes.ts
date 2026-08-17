@@ -8313,12 +8313,13 @@ export async function registerRoutes(
             ? (Array.isArray(targetCpfs) ? targetCpfs : targetCpfs.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean))
             : undefined;
           const tokens = await storage.getAllPushTokens(cpfList);
-          await Promise.allSettled(
+          const results = await Promise.allSettled(
             tokens.map(({ pushToken }) =>
               sendPushNotification(pushToken, title, body, { type: "admin", notifId: String(notification.id) })
             )
           );
-          console.log(`[FCM] Push enviado para ${tokens.length} dispositivo(s)`);
+          const sent = results.filter(r => r.status === "fulfilled").length;
+          console.log(`[FCM] Push enviado para ${sent}/${tokens.length} dispositivo(s)`);
           (notification as any).pushSent = tokens.length;
         } catch (pushErr) {
           console.error("[FCM] Erro ao enviar push da notificação admin:", pushErr);
