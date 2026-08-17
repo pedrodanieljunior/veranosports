@@ -41,10 +41,10 @@
   100% { background-position: 0% 50%; }
 }
 .btn-gradient-animated {
-  background: linear-gradient(270deg, #ffffff, #fde68a, #f59e0b, #fbbf24, #ffffff);
+  background: linear-gradient(270deg, #ffffff, #93c5fd, #3b82f6, #bfdbfe, #ffffff);
   background-size: 300% 300%;
   animation: gradient-slide 3s ease infinite;
-  color: #78350f !important;
+  color: #1e3a8a !important;
 }
 
 /* LIGHT MODE */
