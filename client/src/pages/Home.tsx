@@ -306,7 +306,7 @@ export default function Home() {
     },
   });
 
-  const handleSelectSport = (sportKey: string) => setSelectedSport(sportKey);
+  const handleSelectSport = (sportKey: string | null) => setSelectedSport(sportKey);
   const handleGameClick = (game: Game) => {
     if (!user) {
       pendingGameRef.current = game;
@@ -439,34 +439,6 @@ export default function Home() {
           <div className="flex flex-col gap-1">
             <div className="flex flex-row flex-nowrap items-center gap-1">
               <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={handleSelectSport} isLoading={sportsLoading} />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 transition-colors" data-testid="button-top-leagues">
-                    <span className="text-sm">🏆</span>
-                    <span className="text-white font-bold text-[10px] whitespace-nowrap">Principais Ligas</span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent side="bottom" align="start" className="w-52 p-2 bg-[#2a2a2a] border-[#444] z-[9999]">
-                  <p className="text-yellow-400 font-bold text-xs mb-2 px-1">🏆 Principais Ligas</p>
-                  {[
-                    { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
-                    { key: "soccer_epl", label: "Premier League" },
-                    { key: "soccer_uefa_champs_league", label: "Champions League" },
-                    { key: "soccer_spain_la_liga", label: "La Liga" },
-                    { key: "soccer_italy_serie_a", label: "Serie A" },
-                    { key: "soccer_germany_bundesliga", label: "Bundesliga" },
-                  ].map(({ key, label }) => {
-                    const sport = sports.find(s => s.key === key);
-                    if (!sport) return null;
-                    return (
-                      <button key={key} onClick={() => handleSelectSport(key)}
-                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors ${selectedSport === key ? "bg-yellow-500 text-black" : "text-white hover:bg-white/10"}`}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
             </div>
             <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-2 shadow-sm">
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />

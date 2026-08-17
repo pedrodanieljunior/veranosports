@@ -404,41 +404,14 @@ export default function Copa() {
           </div>
         </div>
 
-        {/* Row 2: Ligas + Principais Ligas */}
+        {/* Row 2: Ligas */}
         <div className="flex flex-row flex-nowrap items-center gap-1" style={{ position: "relative", zIndex: 1 }}>
-          <MobileNav sports={sports} selectedSport={selectedSport} onSelectSport={(key) => { setSelectedSport(key); setActiveTab("todos"); }} isLoading={sportsLoading} />
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }} data-testid="button-top-leagues-copa">
-                <span className="text-sm">🏆</span>
-                <span className="font-bold text-[10px] whitespace-nowrap" style={{ color: "rgba(255,255,255,0.8)" }}>Principais Ligas</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent side="bottom" align="start" className="w-52 p-2 border-[#c9a227]/50 z-[9999]" style={{ background: "linear-gradient(160deg, #7c4a00 0%, #b8750a 30%, #d4960f 55%, #c47c05 75%, #8a5200 100%)", borderColor: "rgba(201,162,39,0.5)" }}>
-              <p className="font-bold text-xs mb-2 px-1" style={{ color: "#fff8dc", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>🏆 Principais Ligas</p>
-              {[
-                { key: "soccer_brazil_campeonato", label: "Brasileirão Série A" },
-                { key: "soccer_epl", label: "Premier League" },
-                { key: "soccer_uefa_champs_league", label: "Champions League" },
-                { key: "soccer_spain_la_liga", label: "La Liga" },
-                { key: "soccer_italy_serie_a", label: "Serie A" },
-                { key: "soccer_germany_bundesliga", label: "Bundesliga" },
-              ].map(({ key, label }) => {
-                const sport = sports.find(s => s.key === key);
-                if (!sport) return null;
-                return (
-                  <button key={key} onClick={() => { setSelectedSport(key); setActiveTab("todos"); }}
-                    className="w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                    style={selectedSport === key
-                      ? { background: "rgba(255,220,80,0.35)", color: "#fff8dc", border: "1px solid rgba(255,220,80,0.5)" }
-                      : { color: "#ffe9a0" }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </PopoverContent>
-          </Popover>
+          <MobileNav
+            sports={sports}
+            selectedSport={selectedSport}
+            onSelectSport={(key) => { setSelectedSport(key); setActiveTab("todos"); }}
+            isLoading={sportsLoading}
+          />
         </div>
 
         {/* Row 3: Search */}
