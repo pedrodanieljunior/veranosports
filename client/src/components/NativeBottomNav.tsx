@@ -61,10 +61,16 @@ export function NativeBottomNav({ selectionsCount = 0 }: NativeBottomNavProps) {
       id: "jogos",
       label: "Jogos",
       icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
-          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-          <path d="M2 12h20" />
+          {/* Pentágono central */}
+          <polygon points="12,7 15.5,9.5 14.2,13.5 9.8,13.5 8.5,9.5" fill="currentColor" stroke="none" opacity="0.85" />
+          {/* Linhas da bola de futebol */}
+          <line x1="12" y1="7" x2="12" y2="2" />
+          <line x1="15.5" y1="9.5" x2="19.5" y2="7.5" />
+          <line x1="14.2" y1="13.5" x2="17.5" y2="16.5" />
+          <line x1="9.8" y1="13.5" x2="6.5" y2="16.5" />
+          <line x1="8.5" y1="9.5" x2="4.5" y2="7.5" />
         </svg>
       ),
     },
