@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
+import { LEAGUE_IDS } from "@/lib/leagueIds";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 
 interface GamesListProps {
   games: Game[];
@@ -247,6 +249,15 @@ export function GamesList({
                   className={`flex items-center gap-2 mb-3 w-full text-left group`}
                   data-testid={`button-league-section-${leagueKey}`}
                 >
+                  {LEAGUE_IDS[leagueKey] && (
+                    <img
+                      src={proxyLogoUrl(`https://media.api-sports.io/football/leagues/${LEAGUE_IDS[leagueKey]}.png`)}
+                      alt=""
+                      width={18}
+                      height={18}
+                      className="w-[18px] h-[18px] object-contain flex-shrink-0"
+                    />
+                  )}
                   <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-800"}`}>
                     {displayName}
                   </h3>
