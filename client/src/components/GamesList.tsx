@@ -228,11 +228,38 @@ export function GamesList({
 
       {/* Jogos da aba selecionada */}
       {isTodayGames && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 mb-6">
-          {tabGames.map((game) => (
-            <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} onToggleSelection={onToggleSelection} isDark={isDark} />
-          ))}
-        </div>
+        <>
+          {/* Legenda da liga ativa com logo */}
+          {currentLeague && tabGames.length > 0 && (() => {
+            const activeKey = tabGames[0]?.sportKey || "";
+            const activeName = translateLeagueName(activeKey, currentLeague);
+            const activeLeagueId = LEAGUE_IDS[activeKey];
+            return (
+              <div className="flex items-center gap-2 mb-3">
+                {activeLeagueId && (
+                  <img
+                    src={proxyLogoUrl(`https://media.api-sports.io/football/leagues/${activeLeagueId}.png`)}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="w-[18px] h-[18px] object-contain flex-shrink-0"
+                  />
+                )}
+                <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-800"}`}>
+                  {activeName}
+                </h3>
+                <span className={`text-xs ml-1 ${isDark ? "text-white/50" : "text-gray-400"}`}>
+                  {tabGames.length} {tabGames.length === 1 ? "jogo" : "jogos"}
+                </span>
+              </div>
+            );
+          })()}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 mb-6">
+            {tabGames.map((game) => (
+              <GameCard key={game.id} game={game} selections={selections} onClick={() => onGameClick(game)} onToggleSelection={onToggleSelection} isDark={isDark} />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Seções por liga (todas as ligas exceto a já exibida na aba, uma abaixo da outra) */}
