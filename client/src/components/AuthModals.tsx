@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { SiWhatsapp } from "react-icons/si";
+import { registerPushToken } from "@/lib/platform";
 
 interface Props {
   mode: "login" | "register" | null;
@@ -59,6 +60,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await res.json();
       if (!res.ok) return toast({ title: data.message || "Erro ao entrar", variant: "destructive" });
       login(data);
+      registerPushToken(); // registra token FCM após login bem-sucedido
       toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
       onClose();
     } catch {
@@ -89,6 +91,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await res.json();
       if (!res.ok) return toast({ title: data.message || "Erro ao cadastrar", variant: "destructive" });
       login(data);
+      registerPushToken(); // registra token FCM após cadastro bem-sucedido
       toast({ title: "Cadastro realizado!", description: `Bem-vindo, ${data.name}!`, variant: "welcome" } as any);
       onClose();
     } catch {

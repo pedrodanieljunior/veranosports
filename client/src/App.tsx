@@ -48,8 +48,6 @@ function App() {
     setupNativeStatusBar();
     // No web ou quando splash já foi exibido, esconde a splash nativa imediatamente
     if (!showSplash) hideSplashScreen();
-    // Registra token FCM para push notifications (só executa no app nativo)
-    registerPushToken();
   }, [showSplash]);
 
   const handleSplashDone = useCallback(() => {
