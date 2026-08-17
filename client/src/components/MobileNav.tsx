@@ -137,7 +137,7 @@ export function MobileNav({
           <div className="pb-6">
 
             {/* ══ Principais Ligas ══ */}
-            <p className="px-5 pt-5 pb-2 text-[10px] font-bold tracking-widest uppercase text-blue-600/70">
+            <p className="px-5 pt-5 pb-2 text-[13px] font-extrabold tracking-widest uppercase text-blue-700">
               Principais Ligas
             </p>
 
@@ -171,7 +171,7 @@ export function MobileNav({
             })}
 
             {/* ══ Todas as Ligas ══ */}
-            <p className="px-5 pt-6 pb-2 text-[10px] font-bold tracking-widest uppercase text-blue-400/70">
+            <p className="px-5 pt-6 pb-2 text-[13px] font-extrabold tracking-widest uppercase text-blue-700">
               Todas as Ligas
             </p>
 
