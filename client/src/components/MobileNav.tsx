@@ -100,11 +100,11 @@ export function MobileNav({
           <div className="pb-6">
 
             {/* ══ Principais Ligas ══ */}
-            <p className="px-5 pt-5 pb-2 text-[13px] font-extrabold tracking-widest uppercase text-blue-700">
+            <p className="px-5 pt-5 pb-2 text-[13px] font-extrabold tracking-widest uppercase text-blue-700 drawer-item-enter" style={{ animationDelay: "0ms" }}>
               Principais Ligas
             </p>
 
-            {PRINCIPAIS.map(({ key, label }) => {
+            {PRINCIPAIS.map(({ key, label }, idx) => {
               const active = key === selectedSport || (key === null && selectedSport === null);
               const leagueId = key ? (LEAGUE_IDS[key] ?? undefined) : undefined;
 
@@ -114,10 +114,10 @@ export function MobileNav({
                 <button
                   key={String(key)}
                   onClick={() => pick(key)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors drawer-item-enter"
                   style={active
-                    ? { background: "rgba(30,64,175,0.12)", borderLeft: "3px solid #1d4ed8" }
-                    : { borderLeft: "3px solid transparent" }}
+                    ? { background: "rgba(30,64,175,0.12)", borderLeft: "3px solid #1d4ed8", animationDelay: `${(idx + 1) * 45}ms` }
+                    : { borderLeft: "3px solid transparent", animationDelay: `${(idx + 1) * 45}ms` }}
                 >
                   {key === null
                     ? <span className="w-7 h-7 flex items-center justify-center text-xl">🌐</span>
@@ -134,7 +134,7 @@ export function MobileNav({
             })}
 
             {/* ══ Todas as Ligas ══ */}
-            <p className="px-5 pt-6 pb-2 text-[13px] font-extrabold tracking-widest uppercase text-blue-700">
+            <p className="px-5 pt-6 pb-2 text-[13px] font-extrabold tracking-widest uppercase text-blue-700 drawer-item-enter" style={{ animationDelay: `${(PRINCIPAIS.length + 1) * 45}ms` }}>
               Todas as Ligas
             </p>
 
@@ -145,19 +145,20 @@ export function MobileNav({
                 ))}
               </div>
             ) : (
-              sports.map((sport) => {
+              sports.map((sport, idx) => {
                 const active = selectedSport === sport.key;
                 const leagueId = sport.leagueId ?? LEAGUE_IDS[sport.key];
                 const label = translateLeagueName(sport.key, sport.title);
+                const delay = (PRINCIPAIS.length + 2 + idx) * 45;
 
                 return (
                   <button
                     key={sport.key}
                     onClick={() => pick(sport.key)}
-                    className="w-full flex items-center gap-3 px-4 py-2 transition-colors hover:bg-blue-100/40"
+                    className="w-full flex items-center gap-3 px-4 py-2 transition-colors hover:bg-blue-100/40 drawer-item-enter"
                     style={active
-                      ? { background: "rgba(30,64,175,0.10)", borderLeft: "3px solid #1d4ed8" }
-                      : { borderLeft: "3px solid transparent" }}
+                      ? { background: "rgba(30,64,175,0.10)", borderLeft: "3px solid #1d4ed8", animationDelay: `${delay}ms` }
+                      : { borderLeft: "3px solid transparent", animationDelay: `${delay}ms` }}
                     data-testid={`button-mobile-sport-${sport.key}`}
                   >
                     <LeagueIcon leagueId={leagueId} fallback="🏟️" />
