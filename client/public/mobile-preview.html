@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Preview Mobile – Verano Sports</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,26 +13,33 @@
     align-items: center;
     justify-content: flex-start;
     min-height: 100vh;
-    padding: 24px 16px;
+    padding: 16px;
     font-family: system-ui, sans-serif;
+    overflow-x: hidden;
   }
   h1 {
-    color: #888;
-    font-size: 13px;
+    color: #666;
+    font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
+
+  /* Wrapper que escala o celular para caber na tela */
+  .phone-wrapper {
+    transform-origin: top center;
+  }
+
   .phone {
     width: 390px;
     height: 844px;
     background: #111;
     border-radius: 48px;
-    border: 8px solid #222;
+    border: 8px solid #2a2a2a;
     box-shadow:
-      0 0 0 2px #333,
-      0 30px 80px rgba(0,0,0,0.8),
-      inset 0 0 0 1px #444;
+      0 0 0 1px #444,
+      0 20px 60px rgba(0,0,0,0.9),
+      inset 0 0 0 1px #333;
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
@@ -43,10 +51,10 @@
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 120px;
-    height: 30px;
+    width: 110px;
+    height: 28px;
     background: #111;
-    border-radius: 0 0 20px 20px;
+    border-radius: 0 0 18px 18px;
     z-index: 10;
   }
   /* Status bar */
@@ -56,59 +64,81 @@
     left: 0;
     right: 0;
     height: 44px;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.75);
     z-index: 9;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    padding: 0 28px 6px;
+    padding: 0 24px 6px;
     font-size: 12px;
     color: white;
     font-weight: 600;
     pointer-events: none;
   }
-  .status .time { font-size: 13px; }
   .status .icons { display: flex; gap: 5px; align-items: center; }
   iframe {
     width: 100%;
     height: 100%;
     border: none;
     border-radius: 40px;
-    /* simula native: sem botões de browser */
   }
   .hint {
-    margin-top: 16px;
-    color: #555;
-    font-size: 12px;
+    margin-top: 12px;
+    color: #444;
+    font-size: 11px;
     text-align: center;
   }
 </style>
 </head>
 <body>
   <h1>📱 Preview Android – Verano Sports</h1>
-  <div class="phone">
-    <div class="status">
-      <span class="time" id="time">09:41</span>
-      <span class="icons">
-        <svg width="16" height="12" fill="white" viewBox="0 0 16 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="2.5" height="12" rx="1" opacity=".3"/></svg>
-        <svg width="16" height="12" fill="white" viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-        <svg width="25" height="12" fill="white" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="white" stroke-width="1.5" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="white"/><rect x="23" y="4" width="2" height="4" rx="1" fill="white" opacity=".5"/></svg>
-      </span>
+  <div class="phone-wrapper" id="wrapper">
+    <div class="phone">
+      <div class="status">
+        <span id="time">09:41</span>
+        <span class="icons">
+          <!-- Signal -->
+          <svg width="15" height="11" fill="white" viewBox="0 0 15 11"><rect x="0" y="5" width="2.5" height="6" rx="0.5"/><rect x="4" y="3.5" width="2.5" height="7.5" rx="0.5"/><rect x="8" y="1.5" width="2.5" height="9.5" rx="0.5"/><rect x="12" y="0" width="2.5" height="11" rx="0.5"/></svg>
+          <!-- WiFi -->
+          <svg width="15" height="11" fill="white" viewBox="0 0 20 14"><path d="M10 11a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-4a6 6 0 015.66 4H4.34A6 6 0 0110 7zm0-4a10 10 0 019.19 6H.81A10 10 0 0110 3z" opacity=".9"/></svg>
+          <!-- Battery -->
+          <svg width="24" height="11" fill="white" viewBox="0 0 24 12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-width="1.2" fill="none"/><rect x="1.5" y="2.5" width="15" height="7" rx="1.5" fill="white"/><rect x="22" y="4" width="2" height="4" rx="1" fill="white" opacity=".6"/></svg>
+        </span>
+      </div>
+      <iframe src="/" id="app-frame"></iframe>
     </div>
-    <iframe src="/" id="app-frame"></iframe>
   </div>
   <p class="hint">Faça login dentro do frame para ver como fica no app ↑</p>
 
   <script>
-    // Atualiza o relógio
+    // Relógio
     function tick() {
       const now = new Date();
       document.getElementById('time').textContent =
         now.getHours().toString().padStart(2,'0') + ':' +
         now.getMinutes().toString().padStart(2,'0');
     }
-    tick();
-    setInterval(tick, 10000);
+    tick(); setInterval(tick, 10000);
+
+    // Escalar o frame para caber na tela disponível
+    function scalePhone() {
+      const wrapper = document.getElementById('wrapper');
+      const PHONE_W = 390 + 16; // largura do .phone + bordas
+      const PHONE_H = 844 + 16;
+
+      const availW = window.innerWidth - 32; // padding lateral do body
+      const availH = window.innerHeight - 80; // espaço para o título e hint
+
+      const scaleX = availW / PHONE_W;
+      const scaleY = availH / PHONE_H;
+      const scale = Math.min(scaleX, scaleY, 1); // nunca amplia além de 1:1
+
+      wrapper.style.transform = `scale(${scale})`;
+      wrapper.style.marginBottom = `${(PHONE_H * scale) - PHONE_H}px`;
+    }
+
+    scalePhone();
+    window.addEventListener('resize', scalePhone);
   </script>
 </body>
 </html>
