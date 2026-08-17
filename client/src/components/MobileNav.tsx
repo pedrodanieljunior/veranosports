@@ -125,7 +125,7 @@ export function MobileNav({
       <SheetContent
         side="left"
         className="w-72 p-0 border-0 flex flex-col"
-        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.88) 0%, rgba(147,197,253,0.92) 100%)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRight: "1px solid rgba(147,197,253,0.5)" }}
+        style={{ background: "linear-gradient(to bottom, rgba(239,246,255,0.93) 0%, rgba(191,219,254,0.95) 100%)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRight: "1px solid rgba(147,197,253,0.5)" }}
       >
         {/* Topo */}
         <div className="px-5 pt-6 pb-4 border-b border-blue-200/60 flex items-center gap-2">
