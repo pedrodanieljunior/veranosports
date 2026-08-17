@@ -95,13 +95,15 @@ export function MobileNav({
         side="left"
         className="w-72 p-0 border-0 flex flex-col"
         style={{
-          background: "linear-gradient(to bottom, rgba(239,246,255,0.93) 0%, rgba(191,219,254,0.95) 100%)",
-          backgroundSize: "100% 300%",
-          backgroundPosition: `0% ${scrollPct * 1.5}%`,
-          transition: "background-position 0.1s ease",
+          background: `linear-gradient(to bottom,
+            rgba(248,252,255,0.96) 0%,
+            rgba(219,234,254,0.95) ${30 + scrollPct * 0.25}%,
+            rgba(191,219,254,0.94) ${65 + scrollPct * 0.2}%,
+            rgba(147,197,253,0.93) 100%)`,
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-          borderRight: "1px solid rgba(147,197,253,0.5)"
+          borderRight: "1px solid rgba(147,197,253,0.5)",
+          transition: "background 0.25s ease",
         }}
       >
         {/* Topo */}
