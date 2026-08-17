@@ -8,7 +8,7 @@ import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import NotFound from "@/pages/not-found";
-import { setupNativeStatusBar, hideSplashScreen, isNative } from "@/lib/platform";
+import { setupNativeStatusBar, hideSplashScreen, isNative, registerPushToken } from "@/lib/platform";
 import NativeSplash from "@/components/NativeSplash";
 
 // Lazy load páginas pesadas — só compilam quando o usuário navega até elas
@@ -48,6 +48,8 @@ function App() {
     setupNativeStatusBar();
     // No web ou quando splash já foi exibido, esconde a splash nativa imediatamente
     if (!showSplash) hideSplashScreen();
+    // Registra token FCM para push notifications (só executa no app nativo)
+    registerPushToken();
   }, [showSplash]);
 
   const handleSplashDone = useCallback(() => {
