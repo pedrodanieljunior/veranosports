@@ -8294,9 +8294,29 @@ export async function registerRoutes(
   });
   app.post("/api/admin/notifications", requireAdmin, async (req, res) => {
     try {
-      const { title, body, type = "info", targetCpfs, imageData, mimeType } = req.body;
+      const { title, body, type = "info", targetCpfs, imageData, mimeType, sendPush = true } = req.body;
       if (!title || !body) return res.status(400).json({ error: "title e body obrigatórios" });
-      res.json(await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null, imageData: imageData ?? null, mimeType: mimeType ?? null }));
+      const notification = await storage.createNotification({ title, body, type, targetCpfs: targetCpfs ?? null, imageData: imageData ?? null, mimeType: mimeType ?? null });
+
+      // Enviar push FCM para usuários com token registrado
+      if (sendPush) {
+        try {
+          const cpfList: string[] | undefined = targetCpfs
+            ? (Array.isArray(targetCpfs) ? targetCpfs : targetCpfs.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean))
+            : undefined;
+          const tokens = await storage.getAllPushTokens(cpfList);
+          await Promise.allSettled(
+            tokens.map(({ pushToken }) =>
+              sendPushNotification(pushToken, title, body, { type: "admin", notifId: String(notification.id) })
+            )
+          );
+          console.log(`[FCM] Push enviado para ${tokens.length} dispositivo(s)`);
+        } catch (pushErr) {
+          console.error("[FCM] Erro ao enviar push da notificação admin:", pushErr);
+        }
+      }
+
+      res.json(notification);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
   const notifImgUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });

@@ -89,6 +89,7 @@ export interface IStorage {
   updateUserData(cpf: string, data: { name?: string; phone?: string; referralCode?: string }): Promise<User | undefined>;
   updateUserPushToken(cpf: string, pushToken: string): Promise<void>;
   getUserPushToken(cpf: string): Promise<string | null>;
+  getAllPushTokens(cpfs?: string[]): Promise<{ cpf: string; pushToken: string }[]>;
   deleteUser(cpf: string): Promise<boolean>;
   markFirstDeposit(cpf: string): Promise<void>;
   getBetSlipsByUser(userId: string): Promise<BetSlip[]>;
@@ -882,6 +883,11 @@ export class DatabaseStorage implements IStorage {
   async getUserPushToken(cpf: string): Promise<string | null> {
     const [row] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.cpf, cpf));
     return row?.pushToken ?? null;
+  }
+
+  async getAllPushTokens(cpfs?: string[]): Promise<{ cpf: string; pushToken: string }[]> {
+    const rows = await db.select({ cpf: usersTable.cpf, pushToken: usersTable.pushToken }).from(usersTable);
+    return rows.filter(r => r.pushToken && (!cpfs || cpfs.includes(r.cpf))) as { cpf: string; pushToken: string }[];
   }
 
   async deleteUser(cpf: string): Promise<boolean> {
