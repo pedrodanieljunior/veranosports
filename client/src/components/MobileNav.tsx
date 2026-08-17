@@ -4,69 +4,92 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { translateLeagueName } from "@/lib/leagueTranslations";
+import { proxyLogoUrl } from "@/lib/imgProxy";
 
 interface MobileNavProps {
   sports: Sport[];
   selectedSport: string | null;
   onSelectSport: (sportKey: string | null) => void;
   isLoading: boolean;
-  /** Qual seção abrir por padrão ao clicar no trigger */
-  defaultSection?: "principais" | "todas";
-  /** Texto e ícone do botão trigger */
   triggerLabel?: string;
   triggerIcon?: string;
 }
 
-/* ── Bandeiras por liga ─────────────────────────────────────── */
-const leagueFlag: Record<string, string> = {
-  soccer_brazil_campeonato:              "🇧🇷",
-  soccer_brazil_serie_b:                 "🇧🇷",
-  soccer_brazil_copa_do_brasil:          "🇧🇷",
-  soccer_epl:                            "🏴󠁧󠁢󠁥󠁫󠁢󠁷󠁿",
-  soccer_fa_cup:                         "🏴󠁧󠁢󠁥󠁫󠁢󠁷󠁿",
-  soccer_england_efl_cup:                "🏴󠁧󠁢󠁥󠁫󠁢󠁷󠁿",
-  soccer_efl_champ:                      "🏴󠁧󠁢󠁥󠁫󠁢󠁷󠁿",
-  soccer_england_league1:                "🏴󠁧󠁢󠁥󠁫󠁢󠁷󠁿",
-  soccer_spain_la_liga:                  "🇪🇸",
-  soccer_spain_segunda_division:         "🇪🇸",
-  soccer_germany_bundesliga:             "🇩🇪",
-  soccer_germany_bundesliga2:            "🇩🇪",
-  soccer_italy_serie_a:                  "🇮🇹",
-  soccer_italy_serie_b:                  "🇮🇹",
-  soccer_france_ligue_one:              "🇫🇷",
-  soccer_france_ligue_two:              "🇫🇷",
-  soccer_portugal_primeira_liga:         "🇵🇹",
-  soccer_netherlands_eredivisie:         "🇳🇱",
-  soccer_turkey_super_league:            "🇹🇷",
-  soccer_argentina_primera_division:     "🇦🇷",
-  soccer_mexico_ligamx:                  "🇲🇽",
-  soccer_usa_mls:                        "🇺🇸",
-  soccer_japan_j_league:                 "🇯🇵",
-  soccer_conmebol_copa_libertadores:     "🏆",
-  soccer_conmebol_copa_sudamericana:     "🌎",
-  soccer_uefa_champs_league:             "⭐",
-  soccer_uefa_europa_league:             "🟠",
-  soccer_uefa_europa_conference_league:  "🔵",
-  soccer_international_friendlies:       "🌍",
-  soccer_fifa_world_cup:                 "🏆",
-  soccer_wc_qualifiers_conmebol:         "🌎",
-  soccer_wc_qualifiers_europe:           "🌍",
-  soccer_wc_qualifiers_concacaf:         "🌎",
-  soccer_wc_qualifiers_caf:              "🌍",
-  soccer_wc_qualifiers_afc:              "🌏",
-  soccer_wc_intercontinental:            "🌐",
+/* ── leagueId estático para itens da seção "Principais Ligas" ── */
+const LEAGUE_IDS: Record<string, number> = {
+  soccer_brazil_campeonato:              71,
+  soccer_brazil_serie_b:                 72,
+  soccer_brazil_copa_do_brasil:          73,
+  soccer_epl:                            39,
+  soccer_fa_cup:                         45,
+  soccer_england_efl_cup:                48,
+  soccer_efl_champ:                      40,
+  soccer_england_league1:                41,
+  soccer_spain_la_liga:                  140,
+  soccer_spain_segunda_division:         141,
+  soccer_germany_bundesliga:             78,
+  soccer_germany_bundesliga2:            79,
+  soccer_italy_serie_a:                  135,
+  soccer_italy_serie_b:                  136,
+  soccer_france_ligue_one:               61,
+  soccer_france_ligue_two:               62,
+  soccer_portugal_primeira_liga:         94,
+  soccer_netherlands_eredivisie:         88,
+  soccer_turkey_super_league:            203,
+  soccer_argentina_primera_division:     128,
+  soccer_mexico_ligamx:                  262,
+  soccer_usa_mls:                        253,
+  soccer_japan_j_league:                 98,
+  soccer_conmebol_copa_libertadores:     13,
+  soccer_conmebol_copa_sudamericana:     11,
+  soccer_uefa_champs_league:             2,
+  soccer_uefa_europa_league:             3,
+  soccer_uefa_europa_conference_league:  848,
+  soccer_international_friendlies:       10,
+  soccer_fifa_world_cup:                 1,
+  soccer_wc_qualifiers_conmebol:         31,
+  soccer_wc_qualifiers_europe:           32,
+  soccer_wc_qualifiers_concacaf:         30,
+  soccer_wc_qualifiers_caf:              29,
+  soccer_wc_qualifiers_afc:              28,
 };
 
 const PRINCIPAIS = [
-  { key: null,                             label: "Todas as Ligas",        icon: "🌐" },
-  { key: "soccer_brazil_campeonato",       label: "Brasileirão",           icon: "🇧🇷" },
-  { key: "soccer_conmebol_copa_libertadores", label: "Libertadores",       icon: "🏆" },
-  { key: "soccer_epl",                     label: "Premier League",        icon: "🏴󠁧󠁢󠁥󠁫󠁢󠁷󠁿" },
-  { key: "soccer_spain_la_liga",           label: "La Liga",               icon: "🇪🇸" },
-  { key: "soccer_uefa_champs_league",      label: "Champions League",      icon: "⭐" },
-  { key: "soccer_italy_serie_a",           label: "Serie A",               icon: "🇮🇹" },
-  { key: "soccer_germany_bundesliga",      label: "Bundesliga",            icon: "🇩🇪" },
+  { key: null,                                label: "Todas as Ligas"   },
+  { key: "soccer_brazil_campeonato",          label: "Brasileirão"      },
+  { key: "soccer_conmebol_copa_libertadores", label: "Libertadores"     },
+  { key: "soccer_epl",                        label: "Premier League"   },
+  { key: "soccer_spain_la_liga",              label: "La Liga"          },
+  { key: "soccer_uefa_champs_league",         label: "Champions League" },
+  { key: "soccer_italy_serie_a",              label: "Serie A"          },
+  { key: "soccer_germany_bundesliga",         label: "Bundesliga"       },
 ];
+
+/* ── Ícone de liga — imagem real da API ou fallback ── */
+function LeagueIcon({ leagueId, fallback }: { leagueId?: number; fallback: string }) {
+  const [broken, setBroken] = useState(false);
+
+  if (!leagueId || broken) {
+    return (
+      <span className="w-7 h-7 flex items-center justify-center text-base leading-none">
+        {fallback}
+      </span>
+    );
+  }
+
+  const url = proxyLogoUrl(`https://media.api-sports.io/football/leagues/${leagueId}.png`);
+
+  return (
+    <img
+      src={url}
+      alt=""
+      width={28}
+      height={28}
+      className="w-7 h-7 object-contain rounded-sm flex-shrink-0"
+      onError={() => setBroken(true)}
+    />
+  );
+}
 
 export function MobileNav({
   sports,
@@ -100,35 +123,43 @@ export function MobileNav({
         className="w-72 p-0 border-0 flex flex-col"
         style={{ background: "rgba(10, 14, 26, 0.97)", borderRight: "1px solid rgba(255,255,255,0.08)" }}
       >
-        {/* ── Logo / topo ─── */}
-        <div className="px-5 pt-6 pb-4 border-b border-white/10">
-          <p className="text-white font-black text-lg tracking-wide">⚽ Ligas</p>
+        {/* Topo */}
+        <div className="px-5 pt-6 pb-4 border-b border-white/10 flex items-center gap-2">
+          <span className="text-lg">⚽</span>
+          <p className="text-white font-black text-base tracking-wide">Ligas</p>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="pb-6">
 
             {/* ══ Principais Ligas ══ */}
-            <p className="px-5 pt-5 pb-2 text-[11px] font-bold tracking-widest uppercase text-yellow-400/80">
+            <p className="px-5 pt-5 pb-2 text-[10px] font-bold tracking-widest uppercase text-yellow-400/80">
               Principais Ligas
             </p>
-            {PRINCIPAIS.map(({ key, label, icon }) => {
+
+            {PRINCIPAIS.map(({ key, label }) => {
               const active = key === selectedSport || (key === null && selectedSport === null);
-              // só mostra se a liga existe na lista da API (exceto "Todas as Ligas")
+              const leagueId = key ? (LEAGUE_IDS[key] ?? undefined) : undefined;
+
+              // liga principal só aparece se existir na API (exceto "Todas as Ligas")
               if (key !== null && !isLoading && !sports.find(s => s.key === key)) return null;
+
               return (
                 <button
                   key={String(key)}
                   onClick={() => pick(key)}
-                  className="w-full flex items-center gap-3 px-5 py-3 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors"
                   style={active
                     ? { background: "rgba(250,200,0,0.12)", borderLeft: "3px solid #facc00" }
                     : { borderLeft: "3px solid transparent" }}
                 >
-                  <span className="text-xl leading-none w-7 text-center">{icon}</span>
+                  {key === null
+                    ? <span className="w-7 h-7 flex items-center justify-center text-xl">🌐</span>
+                    : <LeagueIcon leagueId={leagueId} fallback="🏆" />
+                  }
                   <span
-                    className="text-[13px] font-semibold"
-                    style={{ color: active ? "#facc00" : "rgba(255,255,255,0.88)" }}
+                    className="text-[13px] font-semibold text-left"
+                    style={{ color: active ? "#facc00" : "rgba(255,255,255,0.9)" }}
                   >
                     {label}
                   </span>
@@ -137,34 +168,35 @@ export function MobileNav({
             })}
 
             {/* ══ Todas as Ligas ══ */}
-            <p className="px-5 pt-6 pb-2 text-[11px] font-bold tracking-widest uppercase text-white/40">
+            <p className="px-5 pt-6 pb-2 text-[10px] font-bold tracking-widest uppercase text-white/40">
               Todas as Ligas
             </p>
 
             {isLoading ? (
-              <div className="px-5 space-y-3 pt-1">
+              <div className="px-4 space-y-3 pt-1">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <Skeleton key={i} className="h-8 w-full bg-white/10 rounded-lg" />
+                  <Skeleton key={i} className="h-9 w-full bg-white/10 rounded-lg" />
                 ))}
               </div>
             ) : (
               sports.map((sport) => {
                 const active = selectedSport === sport.key;
-                const flag = leagueFlag[sport.key] ?? "🏟️";
+                const leagueId = sport.leagueId ?? LEAGUE_IDS[sport.key];
                 const label = translateLeagueName(sport.key, sport.title);
+
                 return (
                   <button
                     key={sport.key}
                     onClick={() => pick(sport.key)}
-                    className="w-full flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-white/5"
+                    className="w-full flex items-center gap-3 px-4 py-2 transition-colors hover:bg-white/5"
                     style={active
                       ? { background: "rgba(250,200,0,0.10)", borderLeft: "3px solid #facc00" }
                       : { borderLeft: "3px solid transparent" }}
                     data-testid={`button-mobile-sport-${sport.key}`}
                   >
-                    <span className="text-xl leading-none w-7 text-center">{flag}</span>
+                    <LeagueIcon leagueId={leagueId} fallback="🏟️" />
                     <span
-                      className="text-[13px] text-left"
+                      className="text-[13px] text-left leading-tight"
                       style={{ color: active ? "#facc00" : "rgba(255,255,255,0.75)" }}
                     >
                       {label}

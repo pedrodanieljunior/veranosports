@@ -67,9 +67,10 @@ export const sportSchema = z.object({
   key: z.string(),
   group: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
   active: z.boolean(),
   hasOutrights: z.boolean().optional(),
+  leagueId: z.number().optional(),
 });
 
 export type Sport = z.infer<typeof sportSchema>;
