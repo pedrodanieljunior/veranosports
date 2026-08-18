@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { SiWhatsapp } from "react-icons/si";
 import {
   isNative,
-  isBiometricAvailable,
   isBiometricEnabledSync,
   saveBiometricCredentials,
   authenticateWithBiometric,
@@ -86,14 +85,12 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       login(data);
       toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
 
-      // Oferece biometria se disponível e ainda não ativada
+      // Oferece biometria sem chamar bridge nativo (checkBiometry freeze WebView)
+      // Se dispositivo não suportar, usuário toca "Agora não"
       if (isNative() && !biometricEnabled) {
-        const available = await isBiometricAvailable();
-        if (available) {
-          setPendingBiometricCredentials({ cpf: cpf.replace(/\D/g, ""), password });
-          setShowBiometricOffer(true);
-          return; // não fecha o modal — aguarda resposta do offer
-        }
+        setPendingBiometricCredentials({ cpf: cpf.replace(/\D/g, ""), password });
+        setShowBiometricOffer(true);
+        return; // não fecha o modal — aguarda resposta do offer
       }
 
       onClose();
