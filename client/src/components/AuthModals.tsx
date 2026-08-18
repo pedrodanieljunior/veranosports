@@ -191,7 +191,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
 
       {/* Modal de login — só monta quando aberto, evita overlay fantasma no Android */}
       {mode === "login" && (
-      <Dialog open={true} onOpenChange={open => !open && onClose()}>
+      <Dialog open={true} modal={false} onOpenChange={open => !open && onClose()}>
         <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-center text-gray-900">Entrar</DialogTitle>
@@ -274,7 +274,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
 
       {/* Modal de cadastro — só monta quando aberto, evita overlay fantasma no Android */}
       {mode === "register" && (
-      <Dialog open={true} onOpenChange={open => !open && onClose()}>
+      <Dialog open={true} modal={false} onOpenChange={open => !open && onClose()}>
         <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-center text-gray-900">Criar Conta</DialogTitle>
