@@ -36,7 +36,9 @@ function PushRegistrar() {
   useEffect(() => {
     if (user && !registered.current && isNative()) {
       registered.current = true;
-      const t = setTimeout(() => { registerPushToken(); }, 3000);
+      // 30s — dá tempo suficiente para o usuário navegar sem que o callback
+      // nativo do Firebase (evaluateJavascript) interrompa o toque do WebView.
+      const t = setTimeout(() => { registerPushToken(); }, 30000);
       return () => clearTimeout(t);
     }
   }, [user]);
