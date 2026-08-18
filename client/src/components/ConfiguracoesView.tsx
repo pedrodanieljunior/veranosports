@@ -24,61 +24,6 @@ const DEFAULT_PREFS: Record<string, boolean> = {
   live_game: true, bet_won: true, deposit_confirmed: true, admin: true,
 };
 
-// Toggle sem animação CSS — animação causa freeze no Android WebView após interação
-function Knob({ on }: { on: boolean }) {
-  return (
-    <div style={{
-      width: 44, height: 24, borderRadius: 12, flexShrink: 0,
-      background: on ? "#16a34a" : "#d1d5db",
-      position: "relative",
-    }}>
-      <div style={{
-        position: "absolute", top: 4, left: on ? 24 : 4,
-        width: 16, height: 16, background: "white",
-        borderRadius: 8, boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-      }} />
-    </div>
-  );
-}
-
-function Row({ label, desc, on, onTap, disabled = false }: {
-  label: string; desc: string; on: boolean; onTap: () => void; disabled?: boolean;
-}) {
-  return (
-    <div
-      onPointerDown={() => { if (!disabled) onTap(); }}
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "12px 16px", gap: 12,
-        touchAction: "manipulation",
-        WebkitTapHighlightColor: "transparent",
-        userSelect: "none", WebkitUserSelect: "none",
-        opacity: disabled ? 0.5 : 1,
-      } as React.CSSProperties}
-    >
-      <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "#1f2937", lineHeight: 1.2, margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 2, lineHeight: 1.2, margin: 0 }}>{desc}</p>
-      </div>
-      <Knob on={on} />
-    </div>
-  );
-}
-
-function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <span style={{ color: "#2563eb" }}>{icon}</span>
-        <h3 style={{ fontWeight: 700, color: "#1f2937", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{title}</h3>
-      </div>
-      <div style={{ borderRadius: 12, border: "1px solid #dbeafe", background: "white", overflow: "hidden" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export function ConfiguracoesView({ onBack }: Props) {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -89,15 +34,12 @@ export function ConfiguracoesView({ onBack }: Props) {
   const [bioLoading, setBioLoading] = useState(false);
 
   useEffect(() => {
-    // Carregar preferências (HTTP, não nativo — seguro rodar imediatamente)
     fetch("/api/user/push-preferences", { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setPrefs({ ...DEFAULT_PREFS, ...data }); })
       .catch(() => {});
 
-    // Chamadas ao bridge nativo atrasadas 600ms — garante que a tela já está
-    // totalmente renderizada e interativa antes de tocar no Capacitor bridge,
-    // evitando o freeze que ocorre quando chamadas nativas rodam no mount.
+    // Chamadas nativas atrasadas — evita interferência no mount
     if (!isNative()) return;
     const t = setTimeout(() => {
       isBiometricAvailable().then(v => setBioAvailable(v)).catch(() => {});
@@ -106,7 +48,6 @@ export function ConfiguracoesView({ onBack }: Props) {
     return () => clearTimeout(t);
   }, []);
 
-  // Fire-and-forget — sem async/await no handler, sem setSaving re-renders
   function toggleNotif(key: string) {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
@@ -144,59 +85,110 @@ export function ConfiguracoesView({ onBack }: Props) {
   }
 
   return (
-    <div style={{ maxHeight: "70vh", overflowY: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
-      <button
-        onPointerDown={onBack}
-        style={{
-          display: "flex", alignItems: "center", gap: 4,
-          color: "#4b5563", fontSize: 14, background: "none", border: "none",
-          padding: "8px 0", marginBottom: 12, cursor: "pointer",
-          touchAction: "manipulation",
-        }}
-      >
-        <ChevronLeft style={{ width: 16, height: 16 }} />
-        Voltar
+    <div className="space-y-4">
+      {/* Mesmo padrão do AccountView — button onClick, Tailwind */}
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
+        <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
 
       {isNative() && (
-        <Section icon={<Bell style={{ width: 16, height: 16 }} />} title="Notificações">
+        <div className="rounded-xl border border-blue-100 bg-white/80 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-blue-50">
+            <Bell className="w-4 h-4 text-blue-600" />
+            <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Notificações</p>
+          </div>
           {NOTIF_TYPES.map((t, i) => (
-            <div key={t.key}>
-              {i > 0 && <div style={{ height: 1, background: "#eff6ff", margin: "0 16px" }} />}
-              <Row
-                label={t.label}
-                desc={t.desc}
-                on={prefs[t.key] ?? true}
-                onTap={() => toggleNotif(t.key)}
-              />
-            </div>
+            <button
+              key={t.key}
+              onClick={() => toggleNotif(t.key)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left active:bg-blue-50"
+              style={{ borderTop: i > 0 ? "1px solid #eff6ff" : undefined }}
+            >
+              <div className="min-w-0 mr-3">
+                <p className="text-sm font-medium text-gray-800">{t.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t.desc}</p>
+              </div>
+              {/* Toggle visual — sem transition para evitar freeze no Android */}
+              <div className="shrink-0" style={{
+                width: 44, height: 24, borderRadius: 12,
+                background: prefs[t.key] ? "#16a34a" : "#d1d5db",
+                position: "relative",
+              }}>
+                <div style={{
+                  position: "absolute", top: 4,
+                  left: prefs[t.key] ? 24 : 4,
+                  width: 16, height: 16,
+                  background: "white", borderRadius: 8,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                }} />
+              </div>
+            </button>
           ))}
-        </Section>
+        </div>
       )}
 
       {isNative() && bioAvailable && (
-        <Section icon={<Fingerprint style={{ width: 16, height: 16 }} />} title="Biometria">
-          <Row
-            label="Login com reconhecimento facial"
-            desc={bioEnabled ? "Ativo — toque para desativar" : "Inativo — toque para ativar"}
-            on={bioEnabled}
-            onTap={toggleBiometric}
+        <div className="rounded-xl border border-blue-100 bg-white/80 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-blue-50">
+            <Fingerprint className="w-4 h-4 text-blue-600" />
+            <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Biometria</p>
+          </div>
+          <button
+            onClick={toggleBiometric}
             disabled={bioLoading}
-          />
-        </Section>
+            className="w-full flex items-center justify-between px-4 py-3 text-left active:bg-blue-50 disabled:opacity-50"
+          >
+            <div className="min-w-0 mr-3">
+              <p className="text-sm font-medium text-gray-800">Login com reconhecimento facial</p>
+              <p className="text-xs text-gray-500 mt-0.5">{bioEnabled ? "Ativo — toque para desativar" : "Inativo — toque para ativar"}</p>
+            </div>
+            <div className="shrink-0" style={{
+              width: 44, height: 24, borderRadius: 12,
+              background: bioEnabled ? "#16a34a" : "#d1d5db",
+              position: "relative",
+            }}>
+              <div style={{
+                position: "absolute", top: 4,
+                left: bioEnabled ? 24 : 4,
+                width: 16, height: 16,
+                background: "white", borderRadius: 8,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+              }} />
+            </div>
+          </button>
+        </div>
       )}
 
-      <Section icon={theme === "dark"
-        ? <Moon style={{ width: 16, height: 16 }} />
-        : <Sun style={{ width: 16, height: 16 }} />
-      } title="Tema">
-        <Row
-          label="Modo escuro"
-          desc={theme === "dark" ? "Ativo" : "Inativo"}
-          on={theme === "dark"}
-          onTap={() => setTheme(theme === "dark" ? "light" : "dark")}
-        />
-      </Section>
+      <div className="rounded-xl border border-blue-100 bg-white/80 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-blue-50">
+          {theme === "dark"
+            ? <Moon className="w-4 h-4 text-blue-600" />
+            : <Sun className="w-4 h-4 text-blue-600" />}
+          <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Tema</p>
+        </div>
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="w-full flex items-center justify-between px-4 py-3 text-left active:bg-blue-50"
+        >
+          <div className="min-w-0 mr-3">
+            <p className="text-sm font-medium text-gray-800">Modo escuro</p>
+            <p className="text-xs text-gray-500 mt-0.5">{theme === "dark" ? "Ativo" : "Inativo"}</p>
+          </div>
+          <div className="shrink-0" style={{
+            width: 44, height: 24, borderRadius: 12,
+            background: theme === "dark" ? "#16a34a" : "#d1d5db",
+            position: "relative",
+          }}>
+            <div style={{
+              position: "absolute", top: 4,
+              left: theme === "dark" ? 24 : 4,
+              width: 16, height: 16,
+              background: "white", borderRadius: 8,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            }} />
+          </div>
+        </button>
+      </div>
     </div>
   );
 }
