@@ -25,6 +25,15 @@ jobs:
         with:
           node-version: '22'
 
+      # npm install ANTES do Android SDK para evitar OOM (SDK consome ~760MB)
+      - name: Instalar dependências
+        run: |
+          set -e
+          rm -rf node_modules
+          NODE_OPTIONS="--max-old-space-size=2048" npm install --legacy-peer-deps --no-audit --no-fund
+          test -f node_modules/.bin/tsx || { echo "tsx não encontrado, instalando globalmente..."; npm install -g tsx; }
+          echo "✅ node_modules instalado"
+
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -33,14 +42,6 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Instalar dependências
-        run: |
-          set -e
-          rm -rf node_modules
-          npm install --legacy-peer-deps --no-audit --no-fund
-          # Garante que tsx está instalado (build depende dele)
-          test -f node_modules/.bin/tsx || npm install -g tsx
 
       - name: Configurar URL do servidor
         run: |
@@ -53,7 +54,7 @@ jobs:
               cfg = cfg.replace('allowMixedContent: true', 'allowMixedContent: false');
               fs.writeFileSync('capacitor.config.ts', cfg);
             "
-            echo "✅ Config: PRODUÇÃO"
+            echo "✅ Config: PRODUÇÃO (veranosports.replit.app)"
           else
             echo "✅ Config: DESENVOLVIMENTO"
           fi
@@ -62,7 +63,7 @@ jobs:
       - name: Build web assets
         run: |
           export PATH="$PATH:$(pwd)/node_modules/.bin"
-          npm run build
+          NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
       - name: Sync Capacitor
         run: |
@@ -89,4 +90,4 @@ jobs:
           echo "## ✅ APK gerado" >> $GITHUB_STEP_SUMMARY
           echo "- **Ambiente:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tamanho:** $SIZE" >> $GITHUB_STEP_SUMMARY
-          echo "- **Download:** na aba Artifacts acima" >> $GITHUB_STEP_SUMMARY
+          echo "- **Download:** aba Artifacts acima" >> $GITHUB_STEP_SUMMARY
