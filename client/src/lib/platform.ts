@@ -236,17 +236,26 @@ export async function clearBiometricCredentials(): Promise<void> {
 }
 
 /**
- * Login rápido com credenciais salvas — sem prompt nativo.
- * BiometricAuth.authenticate() congela o WebView Android via evaluateJavascript().
- * A proteção biométrica real é feita pelo sistema ao desbloquear o dispositivo.
+ * Exibe o prompt biométrico do sistema (digital / face) e retorna as credenciais salvas.
+ * Em produção (APK apontando para veranosports.replit.app) o WebView não usa proxy Replit,
+ * por isso o evaluateJavascript() do callback nativo não congela.
  */
 export async function authenticateWithBiometric(): Promise<{ cpf: string; password: string } | null> {
+  const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
+  const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
+  if (!cpf || !password) return null;
+  if (!isNative()) return { cpf, password };
+
   try {
-    const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
-    const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
-    if (!cpf || !password) return null;
+    const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
+    await BiometricAuth.authenticate({
+      reason: "Confirme sua identidade para entrar",
+      cancelTitle: "Cancelar",
+      allowDeviceCredential: true,
+    });
     return { cpf, password };
   } catch {
+    // Cancelado ou falhou — não loga
     return null;
   }
 }
