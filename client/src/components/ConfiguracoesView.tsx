@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Bell, Fingerprint, Sun, Moon } from "lucide-react";
 import {
@@ -15,84 +14,65 @@ import { useTheme } from "@/lib/theme";
 interface Props { onBack: () => void; }
 
 const NOTIF_TYPES = [
-  { key: "live_game",         label: "Jogo ao vivo",         desc: "Quando um jogo com aposta sua começa" },
-  { key: "bet_won",           label: "Aposta vencida",        desc: "Quando uma aposta é liquidada como ganha" },
-  { key: "deposit_confirmed", label: "Depósito confirmado",  desc: "Confirmação de depósito na conta" },
-  { key: "admin",             label: "Promoções e avisos",   desc: "Comunicados e novidades da plataforma" },
+  { key: "live_game",         label: "Jogo ao vivo",        desc: "Quando um jogo com aposta sua começa" },
+  { key: "bet_won",           label: "Aposta vencida",       desc: "Quando uma aposta é liquidada como ganha" },
+  { key: "deposit_confirmed", label: "Depósito confirmado", desc: "Confirmação de depósito na conta" },
+  { key: "admin",             label: "Promoções e avisos",  desc: "Comunicados e novidades da plataforma" },
 ];
 
 const DEFAULT_PREFS: Record<string, boolean> = {
   live_game: true, bet_won: true, deposit_confirmed: true, admin: true,
 };
 
-function ToggleKnob({ enabled, disabled }: { enabled: boolean; disabled?: boolean }) {
+// Toggle sem animação CSS — animação causa freeze no Android WebView após interação
+function Knob({ on }: { on: boolean }) {
   return (
-    <div
-      style={{
-        width: 44,
-        height: 24,
-        borderRadius: 12,
-        background: enabled ? "#16a34a" : "#d1d5db",
-        position: "relative",
-        flexShrink: 0,
-        transition: "background 0.2s",
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: 4,
-          left: enabled ? 24 : 4,
-          width: 16,
-          height: 16,
-          background: "white",
-          borderRadius: 8,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-          transition: "left 0.2s",
-        }}
-      />
+    <div style={{
+      width: 44, height: 24, borderRadius: 12, flexShrink: 0,
+      background: on ? "#16a34a" : "#d1d5db",
+      position: "relative",
+    }}>
+      <div style={{
+        position: "absolute", top: 4, left: on ? 24 : 4,
+        width: 16, height: 16, background: "white",
+        borderRadius: 8, boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }} />
     </div>
   );
 }
 
-// Linha inteira é clicável — resolve o problema de toque no Android WebView
-function ToggleRow({ label, desc, enabled, onChange, disabled = false }: {
-  label: string; desc: string; enabled: boolean; onChange: (v: boolean) => void; disabled?: boolean;
+function Row({ label, desc, on, onTap, disabled = false }: {
+  label: string; desc: string; on: boolean; onTap: () => void; disabled?: boolean;
 }) {
   return (
     <div
-      onClick={() => { if (!disabled) onChange(!enabled); }}
+      onPointerDown={() => { if (!disabled) onTap(); }}
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 16px",
-        gap: 12,
-        cursor: disabled ? "default" : "pointer",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 16px", gap: 12,
         touchAction: "manipulation",
         WebkitTapHighlightColor: "transparent",
-        userSelect: "none",
-        WebkitUserSelect: "none",
+        userSelect: "none", WebkitUserSelect: "none",
+        opacity: disabled ? 0.5 : 1,
       } as React.CSSProperties}
     >
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "#1f2937", lineHeight: 1.2 }}>{label}</p>
-        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 2, lineHeight: 1.2 }}>{desc}</p>
+        <p style={{ fontSize: 14, fontWeight: 500, color: "#1f2937", lineHeight: 1.2, margin: 0 }}>{label}</p>
+        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 2, lineHeight: 1.2, margin: 0 }}>{desc}</p>
       </div>
-      <ToggleKnob enabled={enabled} disabled={disabled} />
+      <Knob on={on} />
     </div>
   );
 }
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-blue-600">{icon}</span>
-        <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide">{title}</h3>
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <span style={{ color: "#2563eb" }}>{icon}</span>
+        <h3 style={{ fontWeight: 700, color: "#1f2937", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{title}</h3>
       </div>
-      <div className="rounded-xl border border-blue-100 bg-white overflow-hidden divide-y divide-blue-50">
+      <div style={{ borderRadius: 12, border: "1px solid #dbeafe", background: "white", overflow: "hidden" }}>
         {children}
       </div>
     </div>
@@ -104,60 +84,44 @@ export function ConfiguracoesView({ onBack }: Props) {
   const { theme, setTheme } = useTheme();
 
   const [prefs, setPrefs] = useState<Record<string, boolean>>(DEFAULT_PREFS);
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const [savingPrefs, setSavingPrefs] = useState(false);
-
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
 
-  // Carrega preferências de notificação e estado da biometria
   useEffect(() => {
-    if (isNative()) {
-      isBiometricAvailable().then(setBioAvailable);
-      isBiometricEnabled().then(setBioEnabled);
-    }
-
+    // Carregar preferências
     fetch("/api/user/push-preferences", { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) setPrefs({ ...DEFAULT_PREFS, ...data });
-        setPrefsLoaded(true);
-      })
-      .catch(() => setPrefsLoaded(true));
+      .then(data => { if (data) setPrefs({ ...DEFAULT_PREFS, ...data }); })
+      .catch(() => {});
+
+    // Checar biometria (nativo) — sem bloquear o resto
+    if (isNative()) {
+      isBiometricAvailable().then(v => setBioAvailable(v)).catch(() => {});
+      isBiometricEnabled().then(v => setBioEnabled(v)).catch(() => {});
+    }
   }, []);
 
-  const handleNotifToggle = async (key: string, value: boolean) => {
-    const next = { ...prefs, [key]: value };
+  // Fire-and-forget — sem async/await no handler, sem setSaving re-renders
+  function toggleNotif(key: string) {
+    const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
-    setSavingPrefs(true);
-    try {
-      await fetch("/api/user/push-preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(next),
-      });
-    } catch {
-      // silently ignore — state already updated locally
-    } finally {
-      setSavingPrefs(false);
-    }
-  };
+    fetch("/api/user/push-preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(next),
+    }).catch(() => {});
+  }
 
-  const handleBiometricToggle = async (enable: boolean) => {
+  async function toggleBiometric() {
+    if (bioLoading) return;
     setBioLoading(true);
     try {
-      if (enable) {
-        // Precisa autenticar com biometria e depois pedir credenciais
+      if (!bioEnabled) {
         const credentials = await authenticateWithBiometric();
         if (!credentials) {
-          // Biometria cancelada ou não há credenciais salvas — pedir login com CPF/senha
-          toast({
-            title: "Faça login com CPF e senha primeiro",
-            description: "Para ativar a biometria, saia e entre novamente com CPF e senha.",
-            variant: "destructive",
-          });
+          toast({ title: "Faça login com CPF e senha primeiro", variant: "destructive" });
           return;
         }
         await saveBiometricCredentials(credentials.cpf, credentials.password);
@@ -173,63 +137,62 @@ export function ConfiguracoesView({ onBack }: Props) {
     } finally {
       setBioLoading(false);
     }
-  };
+  }
 
   return (
-    <div style={{ maxHeight: "70vh", overflowY: "auto", WebkitOverflowScrolling: "touch" as any }}>
-      <div className="space-y-1 pr-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-3 -ml-1 text-gray-600"
-          onClick={onBack}
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Voltar
-        </Button>
+    <div style={{ maxHeight: "70vh", overflowY: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+      <button
+        onPointerDown={onBack}
+        style={{
+          display: "flex", alignItems: "center", gap: 4,
+          color: "#4b5563", fontSize: 14, background: "none", border: "none",
+          padding: "8px 0", marginBottom: 12, cursor: "pointer",
+          touchAction: "manipulation",
+        }}
+      >
+        <ChevronLeft style={{ width: 16, height: 16 }} />
+        Voltar
+      </button>
 
-        {/* Notificações — só no app nativo */}
-        {isNative() && (
-          <Section icon={<Bell className="w-4 h-4" />} title="Notificações">
-            {NOTIF_TYPES.map(t => (
-              <ToggleRow
-                key={t.key}
+      {isNative() && (
+        <Section icon={<Bell style={{ width: 16, height: 16 }} />} title="Notificações">
+          {NOTIF_TYPES.map((t, i) => (
+            <div key={t.key}>
+              {i > 0 && <div style={{ height: 1, background: "#eff6ff", margin: "0 16px" }} />}
+              <Row
                 label={t.label}
                 desc={t.desc}
-                enabled={prefsLoaded ? (prefs[t.key] ?? true) : true}
-                onChange={v => handleNotifToggle(t.key, v)}
+                on={prefs[t.key] ?? true}
+                onTap={() => toggleNotif(t.key)}
               />
-            ))}
-          </Section>
-        )}
+            </div>
+          ))}
+        </Section>
+      )}
 
-        {/* Biometria — só no app nativo e se disponível */}
-        {isNative() && bioAvailable && (
-          <Section icon={<Fingerprint className="w-4 h-4" />} title="Biometria">
-            <ToggleRow
-              label="Login com reconhecimento facial"
-              desc={bioEnabled ? "Ativo — toque para desativar" : "Inativo — toque para ativar"}
-              enabled={bioEnabled}
-              onChange={handleBiometricToggle}
-              disabled={bioLoading}
-            />
-          </Section>
-        )}
-
-        {/* Tema */}
-        <Section icon={theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />} title="Tema">
-          <ToggleRow
-            label="Modo escuro"
-            desc={theme === "dark" ? "Ativo" : "Inativo"}
-            enabled={theme === "dark"}
-            onChange={v => setTheme(v ? "dark" : "light")}
+      {isNative() && bioAvailable && (
+        <Section icon={<Fingerprint style={{ width: 16, height: 16 }} />} title="Biometria">
+          <Row
+            label="Login com reconhecimento facial"
+            desc={bioEnabled ? "Ativo — toque para desativar" : "Inativo — toque para ativar"}
+            on={bioEnabled}
+            onTap={toggleBiometric}
+            disabled={bioLoading}
           />
         </Section>
+      )}
 
-        {savingPrefs && (
-          <p className="text-xs text-center text-gray-400 pb-2">Salvando preferências...</p>
-        )}
-      </div>
+      <Section icon={theme === "dark"
+        ? <Moon style={{ width: 16, height: 16 }} />
+        : <Sun style={{ width: 16, height: 16 }} />
+      } title="Tema">
+        <Row
+          label="Modo escuro"
+          desc={theme === "dark" ? "Ativo" : "Inativo"}
+          on={theme === "dark"}
+          onTap={() => setTheme(theme === "dark" ? "light" : "dark")}
+        />
+      </Section>
     </div>
   );
 }
