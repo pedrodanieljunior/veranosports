@@ -10,7 +10,7 @@ import { SiWhatsapp } from "react-icons/si";
 import {
   isNative,
   isBiometricAvailable,
-  isBiometricEnabled,
+  isBiometricEnabledSync,
   saveBiometricCredentials,
   authenticateWithBiometric,
 } from "@/lib/platform";
@@ -59,10 +59,10 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
   const [showBiometricOffer, setShowBiometricOffer] = useState(false);
   const [pendingBiometricCredentials, setPendingBiometricCredentials] = useState<{ cpf: string; password: string } | null>(null);
 
-  // Verifica se biometria está ativa ao abrir o modal de login
+  // Leitura síncrona — sem bridge nativo, sem freeze
   useEffect(() => {
     if (mode === "login" && isNative()) {
-      isBiometricEnabled().then(setBiometricEnabled);
+      setBiometricEnabled(isBiometricEnabledSync());
     }
   }, [mode]);
 
@@ -85,8 +85,18 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await doLogin(cpf, password);
       login(data);
       toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
-      onClose(); // fecha o modal imediatamente — sem await em nada nativo
 
+      // Oferece biometria se disponível e ainda não ativada
+      if (isNative() && !biometricEnabled) {
+        const available = await isBiometricAvailable();
+        if (available) {
+          setPendingBiometricCredentials({ cpf: cpf.replace(/\D/g, ""), password });
+          setShowBiometricOffer(true);
+          return; // não fecha o modal — aguarda resposta do offer
+        }
+      }
+
+      onClose();
     } catch (err: any) {
       toast({ title: err.message || "Erro de conexão", variant: "destructive" });
     } finally {
