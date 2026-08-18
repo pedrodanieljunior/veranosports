@@ -236,18 +236,38 @@ export async function clearBiometricCredentials(): Promise<void> {
 }
 
 /**
- * Login rápido com credenciais salvas — sem prompt nativo.
- * BiometricAuth.authenticate() congela o WebView Android (confirmado em dev e produção).
- * A proteção é feita pelo desbloqueio do dispositivo (biometria/PIN do sistema).
+ * Exibe o prompt biométrico nativo via plugin customizado (NativeBiometricPlugin.java).
+ * O plugin adiciona delay de 500ms antes do callback JS, evitando o freeze do WebView.
  */
 export async function authenticateWithBiometric(): Promise<{ cpf: string; password: string } | null> {
+  const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
+  const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
+  if (!cpf || !password) return null;
+  if (!isNative()) return { cpf, password };
+
   try {
-    const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
-    const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
-    if (!cpf || !password) return null;
+    const { registerPlugin } = await import("@capacitor/core");
+    const NativeBiometric = registerPlugin<{ authenticate: () => Promise<void>; checkAvailability: () => Promise<{ available: boolean }> }>("NativeBiometric");
+    await NativeBiometric.authenticate();
     return { cpf, password };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Verifica disponibilidade biométrica via plugin nativo (sem freeze — resultado síncrono para o lado JS).
+ */
+export async function checkNativeBiometricAvailability(): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const { registerPlugin } = await import("@capacitor/core");
+    const NativeBiometric = registerPlugin<{ authenticate: () => Promise<void>; checkAvailability: () => Promise<{ available: boolean }> }>("NativeBiometric");
+    const result = await NativeBiometric.checkAvailability();
+    localStorage.setItem(BIOMETRIC_AVAILABLE_KEY, result.available ? "1" : "0");
+    return result.available;
+  } catch {
+    return false;
   }
 }
 
