@@ -96,8 +96,8 @@ export function ConfiguracoesView({ onBack }: Props) {
         </div>
       )}
 
-      {/* Biometria — só exibe se dispositivo tem biometria cadastrada (cache do startup) */}
-      {isNative() && isBiometricAvailableSync() && (
+      {/* Biometria */}
+      {isNative() && (
         <div className="rounded-xl border border-slate-100 bg-white/80 p-4 space-y-2">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Segurança</p>
           <button

@@ -9,7 +9,7 @@ import { lazy, Suspense, useEffect, useRef, useState, useCallback } from "react"
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import NotFound from "@/pages/not-found";
-import { setupNativeStatusBar, hideSplashScreen, isNative, registerPushToken, preloadBiometricAvailability } from "@/lib/platform";
+import { setupNativeStatusBar, hideSplashScreen, isNative, registerPushToken } from "@/lib/platform";
 import NativeSplash from "@/components/NativeSplash";
 
 // Lazy load páginas pesadas — só compilam quando o usuário navega até elas
@@ -63,12 +63,9 @@ function Router() {
 function App() {
   const [showSplash, setShowSplash] = useState(shouldShowSplash);
 
-  // Inicialização nativa — preload de disponibilidade biométrica antes de qualquer toque
   useEffect(() => {
     setupNativeStatusBar();
     if (!showSplash) hideSplashScreen();
-    // Pré-carrega disponibilidade biométrica no startup (sem freeze — nenhum toque ativo ainda)
-    if (isNative()) preloadBiometricAvailability();
   }, [showSplash]);
 
   const handleSplashDone = useCallback(() => {

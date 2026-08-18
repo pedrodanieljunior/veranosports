@@ -86,8 +86,8 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       login(data);
       toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
 
-      // Oferece biometria apenas se dispositivo tem biometria cadastrada (cache do startup)
-      if (isNative() && !biometricEnabled && isBiometricAvailableSync()) {
+      // Oferece biometria se não ativada (sem check nativo — evita freeze/crash)
+      if (isNative() && !biometricEnabled) {
         setPendingBiometricCredentials({ cpf: cpf.replace(/\D/g, ""), password });
         setShowBiometricOffer(true);
         return; // não fecha o modal — aguarda resposta do offer
