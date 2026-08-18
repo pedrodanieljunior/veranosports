@@ -5,9 +5,9 @@ const config: CapacitorConfig = {
   appName: "Verano Sports",
   webDir: "dist/public",
   server: {
-    // URL do servidor live — o APK carrega o site direto do servidor,
-    // garantindo assets atualizados e conexão com a API.
-    url: "https://veranosports.replit.app",
+    // URL do servidor de desenvolvimento — permite testar no APK sem publicar.
+    // Trocar de volta para https://veranosports.replit.app antes do build final.
+    url: "https://c0a88dbc-e110-4d58-a504-c0b93756fa27-00-3cl5a4bsvf0dt.picard.replit.dev",
     cleartext: false,
   },
   plugins: {
@@ -32,7 +32,7 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: false,
+    webContentsDebuggingEnabled: true,
   },
   ios: {
     contentInset: "automatic",
