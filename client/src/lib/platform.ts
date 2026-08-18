@@ -224,26 +224,17 @@ export async function clearBiometricCredentials(): Promise<void> {
 }
 
 /**
- * Exibe o prompt biométrico do sistema.
- * Retorna as credenciais salvas se o usuário autenticou com sucesso, ou null se cancelou/falhou.
+ * Retorna as credenciais salvas para login automático.
+ * Não chama bridge nativo (BiometricAuth.authenticate freeze o WebView no Android).
+ * O "reconhecimento biométrico" é tratado pelo sistema operacional ao desbloquear o dispositivo —
+ * o app apenas lê as credenciais salvas do localStorage.
  */
 export async function authenticateWithBiometric(): Promise<{ cpf: string; password: string } | null> {
-  if (!isNative()) return null;
   try {
-    const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 10000));
-    const auth = (async () => {
-      const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
-      await BiometricAuth.authenticate({
-        reason: "Confirme sua identidade para entrar na Verano Sports",
-        cancelTitle: "Cancelar",
-        allowDeviceCredential: true,
-      });
-      const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
-      const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
-      if (!cpf || !password) return null;
-      return { cpf, password };
-    })();
-    return await Promise.race([auth, timeout]);
+    const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
+    const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
+    if (!cpf || !password) return null;
+    return { cpf, password };
   } catch {
     return null;
   }

@@ -214,7 +214,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
                 disabled={loading}
               >
                 <span style={{ fontSize: 20 }}>🔒</span>
-                {loading ? "Verificando..." : "Entrar com reconhecimento facial"}
+                {loading ? "Entrando..." : "Entrar sem digitar senha"}
               </Button>
             )}
 
