@@ -3,8 +3,9 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/lib/auth";
-import { lazy, Suspense, useEffect, useState, useCallback } from "react";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { ThemeProvider } from "@/lib/theme";
+import { lazy, Suspense, useEffect, useRef, useState, useCallback } from "react";
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import NotFound from "@/pages/not-found";
@@ -23,6 +24,23 @@ function shouldShowSplash() {
   if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("native") === "1") return false;
   if (sessionStorage.getItem(SPLASH_DONE_KEY)) return false;
   return true;
+}
+
+// Registra o token de push FORA de qualquer fluxo de modal/login.
+// Chama registerPushToken 3s após o usuário autenticar para garantir
+// que nenhum dialog nativo do Android apareça enquanto o WebView está
+// processando animações de UI (o diálogo de permissão nativo congela o WebView).
+function PushRegistrar() {
+  const { user } = useAuth();
+  const registered = useRef(false);
+  useEffect(() => {
+    if (user && !registered.current && isNative()) {
+      registered.current = true;
+      const t = setTimeout(() => { registerPushToken(); }, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [user]);
+  return null;
 }
 
 function Router() {
@@ -56,15 +74,18 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          {showSplash && <NativeSplash onDone={handleSplashDone} />}
-          <Router />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <PushRegistrar />
+          <TooltipProvider>
+            <Toaster />
+            {showSplash && <NativeSplash onDone={handleSplashDone} />}
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

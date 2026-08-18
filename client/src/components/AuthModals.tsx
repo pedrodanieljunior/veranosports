@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { SiWhatsapp } from "react-icons/si";
-import { registerPushToken } from "@/lib/platform";
+import {
+  isNative,
+  isBiometricAvailable,
+  isBiometricEnabled,
+  saveBiometricCredentials,
+  authenticateWithBiometric,
+} from "@/lib/platform";
 
 interface Props {
   mode: "login" | "register" | null;
@@ -47,27 +54,79 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
   const [regPassword, setRegPassword] = useState("");
   const [regPassword2, setRegPassword2] = useState("");
 
+  // Estado da biometria
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [showBiometricOffer, setShowBiometricOffer] = useState(false);
+  const [pendingBiometricCredentials, setPendingBiometricCredentials] = useState<{ cpf: string; password: string } | null>(null);
+
+  // Verifica se biometria está ativa ao abrir o modal de login
+  useEffect(() => {
+    if (mode === "login" && isNative()) {
+      isBiometricEnabled().then(setBiometricEnabled);
+    }
+  }, [mode]);
+
+  const doLogin = async (cpfRaw: string, pwd: string) => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ cpf: cpfRaw.replace(/\D/g, ""), password: pwd }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Erro ao entrar");
+    return data;
+  };
+
   const handleLogin = async () => {
     if (!cpf || !password) return toast({ title: "Preencha CPF e senha", variant: "destructive" });
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ cpf, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) return toast({ title: data.message || "Erro ao entrar", variant: "destructive" });
+      const data = await doLogin(cpf, password);
       login(data);
-      registerPushToken(); // registra token FCM após login bem-sucedido
       toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
-      onClose();
-    } catch {
-      toast({ title: "Erro de conexão", variant: "destructive" });
+      onClose(); // fecha o modal imediatamente — sem await em nada nativo
+
+    } catch (err: any) {
+      toast({ title: err.message || "Erro de conexão", variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    try {
+      const credentials = await authenticateWithBiometric();
+      if (!credentials) {
+        toast({ title: "Biometria cancelada", variant: "destructive" });
+        return;
+      }
+      const data = await doLogin(credentials.cpf, credentials.password);
+      login(data);
+      toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
+      onClose();
+    } catch (err: any) {
+      toast({ title: err.message || "Erro ao entrar", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptBiometric = async () => {
+    if (pendingBiometricCredentials) {
+      await saveBiometricCredentials(pendingBiometricCredentials.cpf, pendingBiometricCredentials.password);
+      toast({ title: "Login biométrico ativado!", description: "Na próxima vez, use o reconhecimento facial para entrar.", duration: 3000 });
+    }
+    setShowBiometricOffer(false);
+    setPendingBiometricCredentials(null);
+    onClose();
+  };
+
+  const handleDeclineBiometric = () => {
+    setShowBiometricOffer(false);
+    setPendingBiometricCredentials(null);
+    onClose();
   };
 
   const handleRegister = async () => {
@@ -91,7 +150,6 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       const data = await res.json();
       if (!res.ok) return toast({ title: data.message || "Erro ao cadastrar", variant: "destructive" });
       login(data);
-      registerPushToken(); // registra token FCM após cadastro bem-sucedido
       toast({ title: "Cadastro realizado!", description: `Bem-vindo, ${data.name}!`, variant: "welcome" } as any);
       onClose();
     } catch {
@@ -103,12 +161,64 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
 
   return (
     <>
-      <Dialog open={mode === "login"} onOpenChange={open => !open && onClose()}>
+      {/* Dialog de oferta de biometria — só monta quando necessário, evita overlay fantasma no Android */}
+      {showBiometricOffer && (
+        <AlertDialog open={true} onOpenChange={() => {}}>
+          <AlertDialogContent style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)" }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-gray-900 text-center">Ativar login biométrico?</AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-gray-600">
+                Nas próximas vezes, entre com reconhecimento facial ou digital — sem precisar digitar CPF e senha.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+              <AlertDialogAction
+                onClick={handleAcceptBiometric}
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold"
+              >
+                Ativar
+              </AlertDialogAction>
+              <AlertDialogCancel
+                onClick={handleDeclineBiometric}
+                className="w-full"
+              >
+                Agora não
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* Modal de login — só monta quando aberto, evita overlay fantasma no Android */}
+      {mode === "login" && (
+      <Dialog open={true} onOpenChange={open => !open && onClose()}>
         <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-center text-gray-900">Entrar</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+
+            {/* Botão de biometria (só aparece se já foi ativado) */}
+            {biometricEnabled && (
+              <Button
+                className="w-full font-bold text-white flex items-center justify-center gap-2"
+                style={{ background: "#1565C0" }}
+                onClick={handleBiometricLogin}
+                disabled={loading}
+              >
+                <span style={{ fontSize: 20 }}>🔒</span>
+                {loading ? "Verificando..." : "Entrar com reconhecimento facial"}
+              </Button>
+            )}
+
+            {biometricEnabled && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-blue-200" />
+                <span className="text-xs text-gray-400">ou</span>
+                <div className="flex-1 h-px bg-blue-200" />
+              </div>
+            )}
+
             <div className="space-y-1">
               <Label className="text-gray-700">CPF</Label>
               <Input
@@ -160,8 +270,11 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
-      <Dialog open={mode === "register"} onOpenChange={open => !open && onClose()}>
+      {/* Modal de cadastro — só monta quando aberto, evita overlay fantasma no Android */}
+      {mode === "register" && (
+      <Dialog open={true} onOpenChange={open => !open && onClose()}>
         <DialogContent className="max-w-sm" style={{ background: "linear-gradient(to bottom, #f8fbff, #dbeafe)", borderColor: "rgba(147,197,253,0.5)", color: "#111827" }}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-center text-gray-900">Criar Conta</DialogTitle>
@@ -247,6 +360,7 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+      )}
     </>
   );
 }
