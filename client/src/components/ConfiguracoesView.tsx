@@ -4,20 +4,22 @@ import { useTheme } from "@/lib/theme";
 import {
   isNative,
   isBiometricEnabledSync,
-  isBiometricAvailable,
+  clearBiometricLocalSync,
   clearBiometricCredentials,
 } from "@/lib/platform";
 
 interface Props { onBack: () => void; }
 
+// Chaves alinhadas com o servidor (live_game, bet_won, deposit_confirmed, admin)
 const TOGGLES = [
-  { key: "matchStart",  label: "Início de partidas" },
-  { key: "goalsAlerts", label: "Alertas de gols" },
-  { key: "betResults",  label: "Resultados de apostas" },
-  { key: "promotions",  label: "Promoções e bônus" },
+  { key: "live_game",          label: "Jogos ao vivo" },
+  { key: "bet_won",            label: "Apostas ganhas" },
+  { key: "deposit_confirmed",  label: "Depósitos confirmados" },
+  { key: "admin",              label: "Comunicados da Verano" },
 ];
 
-const DEFAULT_PREFS = { matchStart: true, goalsAlerts: true, betResults: true, promotions: true };
+const DEFAULT_PREFS = { live_game: true, bet_won: true, deposit_confirmed: true, admin: true };
+type Prefs = typeof DEFAULT_PREFS;
 
 function Toggle({ on }: { on: boolean }) {
   return (
@@ -32,12 +34,12 @@ function Toggle({ on }: { on: boolean }) {
 
 export function ConfiguracoesView({ onBack }: Props) {
   const { theme, setTheme } = useTheme();
-  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
-  // Leitura síncrona via localStorage — sem chamada nativa, sem freeze
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
+  // Leitura síncrona via localStorage — zero bridge nativo, zero freeze
   const [bioEnabled, setBioEnabled] = useState(() => isBiometricEnabledSync());
   const [bioMsg, setBioMsg] = useState("");
 
-  // Carrega preferências de push do servidor — fetch normal, sem bridge nativo
+  // Carrega preferências do servidor
   useEffect(() => {
     fetch("/api/user/push-preferences", { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
@@ -45,8 +47,8 @@ export function ConfiguracoesView({ onBack }: Props) {
       .catch(() => {});
   }, []);
 
-  function togglePref(key: string) {
-    const next = { ...prefs, [key]: !prefs[key as keyof typeof prefs] };
+  function togglePref(key: keyof Prefs) {
+    const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     fetch("/api/user/push-preferences", {
       method: "PUT",
@@ -56,19 +58,15 @@ export function ConfiguracoesView({ onBack }: Props) {
     }).catch(() => {});
   }
 
-  // Chamada nativa só no tap — não no mount, evita freeze no Android WebView
-  async function toggleBiometric() {
+  // Sem await de bridge nativo no handler — zero freeze
+  function toggleBiometric() {
     if (bioEnabled) {
-      await clearBiometricCredentials();
       setBioEnabled(false);
       setBioMsg("Biometria desativada.");
+      clearBiometricLocalSync();                  // síncrono, sem bridge
+      clearBiometricCredentials().catch(() => {}); // fire-and-forget
     } else {
-      const available = await isBiometricAvailable();
-      if (!available) {
-        setBioMsg("Biometria não disponível neste dispositivo.");
-        return;
-      }
-      setBioMsg("Faça login normalmente para ativar a biometria.");
+      setBioMsg("Para ativar, faça login novamente no app.");
     }
   }
 
@@ -80,24 +78,24 @@ export function ConfiguracoesView({ onBack }: Props) {
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
 
-      {/* Notificações — só exibe no app nativo */}
+      {/* Notificações — só no nativo */}
       {isNative() && (
         <div className="rounded-xl border border-slate-100 bg-white/80 p-4 space-y-3">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notificações</p>
           {TOGGLES.map(t => (
             <button
               key={t.key}
-              onClick={() => togglePref(t.key)}
+              onClick={() => togglePref(t.key as keyof Prefs)}
               className="w-full flex items-center justify-between py-1"
             >
               <span className="text-sm text-slate-700">{t.label}</span>
-              <Toggle on={prefs[t.key as keyof typeof prefs]} />
+              <Toggle on={prefs[t.key as keyof Prefs]} />
             </button>
           ))}
         </div>
       )}
 
-      {/* Biometria — só no nativo, estado inicial via localStorage (sem bridge) */}
+      {/* Biometria — estado inicial via localStorage sync, tap é fire-and-forget */}
       {isNative() && (
         <div className="rounded-xl border border-slate-100 bg-white/80 p-4 space-y-2">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Segurança</p>
@@ -108,7 +106,7 @@ export function ConfiguracoesView({ onBack }: Props) {
             <span className="text-sm text-slate-700">Login biométrico</span>
             <Toggle on={bioEnabled} />
           </button>
-          {bioMsg ? <p className="text-xs text-slate-500">{bioMsg}</p> : null}
+          {bioMsg ? <p className="text-xs text-slate-500 mt-1">{bioMsg}</p> : null}
         </div>
       )}
 

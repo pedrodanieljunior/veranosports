@@ -175,6 +175,11 @@ export function isBiometricEnabledSync(): boolean {
   try { return localStorage.getItem(BIOMETRIC_LS_MIRROR) === "1"; } catch { return false; }
 }
 
+/** Limpa o mirror síncrono imediatamente — use antes de fire-and-forget no clearBiometricCredentials. */
+export function clearBiometricLocalSync(): void {
+  try { localStorage.removeItem(BIOMETRIC_LS_MIRROR); } catch {}
+}
+
 /** Verifica se o dispositivo tem biometria disponível (face, digital).
  *  Timeout de 3s para não travar quando o plugin não está no APK atual. */
 export async function isBiometricAvailable(): Promise<boolean> {
