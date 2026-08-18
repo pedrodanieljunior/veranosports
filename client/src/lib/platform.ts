@@ -236,34 +236,16 @@ export async function clearBiometricCredentials(): Promise<void> {
 }
 
 /**
- * Exibe o prompt biométrico do sistema (digital / face).
- * O setTimeout(0) garante que o evento de toque que acionou a chamada está
- * 100% finalizado antes do bridge nativo disparar — evita freeze do WebView.
+ * Login rápido com credenciais salvas — sem prompt nativo.
+ * BiometricAuth.authenticate() congela o WebView Android via evaluateJavascript().
+ * A proteção biométrica real é feita pelo sistema ao desbloquear o dispositivo.
  */
 export async function authenticateWithBiometric(): Promise<{ cpf: string; password: string } | null> {
-  const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
-  const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
-  if (!cpf || !password) return null;
-  if (!isNative()) return { cpf, password };
-
   try {
-    // Aguarda o evento de toque terminar antes de chamar o bridge nativo
-    const result = await new Promise<boolean>(resolve => {
-      setTimeout(async () => {
-        try {
-          const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
-          await BiometricAuth.authenticate({
-            reason: "Confirme sua identidade para entrar na Verano Sports",
-            cancelTitle: "Cancelar",
-            allowDeviceCredential: true,
-          });
-          resolve(true);
-        } catch {
-          resolve(false);
-        }
-      }, 0);
-    });
-    return result ? { cpf, password } : null;
+    const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
+    const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
+    if (!cpf || !password) return null;
+    return { cpf, password };
   } catch {
     return null;
   }
