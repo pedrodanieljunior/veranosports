@@ -34,12 +34,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Instalar dependências (com retry)
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          command: npm install --legacy-peer-deps
+      - name: Instalar dependências
+        run: |
+          for i in 1 2 3; do
+            echo "Tentativa $i..."
+            rm -rf node_modules
+            npm install --legacy-peer-deps --no-audit --no-fund && break
+            echo "Falhou, tentando novamente em 10s..."
+            sleep 10
+          done
 
       - name: Configurar URL do servidor
         run: |
@@ -47,7 +50,7 @@ jobs:
             node -e "
               const fs = require('fs');
               let cfg = fs.readFileSync('capacitor.config.ts', 'utf8');
-              cfg = cfg.replace(/url:.*picard\.replit\.dev.*/, 'url: \"https://veranosports.replit.app\",');
+              cfg = cfg.replace(/url:.*/, 'url: \"https://veranosports.replit.app\",');
               cfg = cfg.replace('webContentsDebuggingEnabled: true', 'webContentsDebuggingEnabled: false');
               cfg = cfg.replace('allowMixedContent: true', 'allowMixedContent: false');
               fs.writeFileSync('capacitor.config.ts', cfg);
@@ -68,7 +71,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -50
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
