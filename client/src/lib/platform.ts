@@ -162,6 +162,99 @@ export async function registerPushToken(): Promise<void> {
   }
 }
 
+// ── Biometria ─────────────────────────────────────────────────────────────────
+
+const BIOMETRIC_ENABLED_KEY = "verano_biometric_enabled";
+const BIOMETRIC_CPF_KEY     = "verano_biometric_cpf";
+const BIOMETRIC_PWD_KEY     = "verano_biometric_pwd";
+// Mirror em localStorage para leitura síncrona (sem bridge nativo, sem freeze no WebView)
+const BIOMETRIC_LS_MIRROR   = "verano_bio_ls";
+
+/** Leitura síncrona — não chama nenhum bridge nativo. Seguro usar em useState(). */
+export function isBiometricEnabledSync(): boolean {
+  try { return localStorage.getItem(BIOMETRIC_LS_MIRROR) === "1"; } catch { return false; }
+}
+
+/** Verifica se o dispositivo tem biometria disponível (face, digital).
+ *  Timeout de 3s para não travar quando o plugin não está no APK atual. */
+export async function isBiometricAvailable(): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const timeout = new Promise<false>(resolve => setTimeout(() => resolve(false), 3000));
+    const check = (async () => {
+      const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
+      const result = await BiometricAuth.checkBiometry();
+      return result.isAvailable;
+    })();
+    return await Promise.race([check, timeout]);
+  } catch {
+    return false;
+  }
+}
+
+/** True se o usuário já ativou o login biométrico neste dispositivo. */
+export async function isBiometricEnabled(): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    const { value } = await Preferences.get({ key: BIOMETRIC_ENABLED_KEY });
+    return value === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Salva as credenciais localmente e marca biometria como ativa. */
+export async function saveBiometricCredentials(cpf: string, password: string): Promise<void> {
+  const { Preferences } = await import("@capacitor/preferences");
+  await Promise.all([
+    Preferences.set({ key: BIOMETRIC_CPF_KEY, value: cpf }),
+    Preferences.set({ key: BIOMETRIC_PWD_KEY, value: password }),
+    Preferences.set({ key: BIOMETRIC_ENABLED_KEY, value: "1" }),
+  ]);
+  try { localStorage.setItem(BIOMETRIC_LS_MIRROR, "1"); } catch {}
+}
+
+/** Remove as credenciais salvas e desativa a biometria. */
+export async function clearBiometricCredentials(): Promise<void> {
+  const { Preferences } = await import("@capacitor/preferences");
+  await Promise.all([
+    Preferences.remove({ key: BIOMETRIC_CPF_KEY }),
+    Preferences.remove({ key: BIOMETRIC_PWD_KEY }),
+    Preferences.remove({ key: BIOMETRIC_ENABLED_KEY }),
+  ]);
+  try { localStorage.removeItem(BIOMETRIC_LS_MIRROR); } catch {}
+}
+
+/**
+ * Exibe o prompt biométrico do sistema.
+ * Retorna as credenciais salvas se o usuário autenticou com sucesso, ou null se cancelou/falhou.
+ */
+export async function authenticateWithBiometric(): Promise<{ cpf: string; password: string } | null> {
+  if (!isNative()) return null;
+  try {
+    const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 10000));
+    const auth = (async () => {
+      const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
+      await BiometricAuth.authenticate({
+        reason: "Confirme sua identidade para entrar na Verano Sports",
+        cancelTitle: "Cancelar",
+        allowDeviceCredential: true,
+      });
+      const { Preferences } = await import("@capacitor/preferences");
+      const [{ value: cpf }, { value: password }] = await Promise.all([
+        Preferences.get({ key: BIOMETRIC_CPF_KEY }),
+        Preferences.get({ key: BIOMETRIC_PWD_KEY }),
+      ]);
+      if (!cpf || !password) return null;
+      return { cpf, password };
+    })();
+    return await Promise.race([auth, timeout]);
+  } catch {
+    return null;
+  }
+}
+
 // ── Eventos de comunicação com a NativeBottomNav ─────────────────────────────
 
 export const NATIVE_EVENTS = {
