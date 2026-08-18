@@ -197,38 +197,30 @@ export async function isBiometricAvailable(): Promise<boolean> {
   }
 }
 
-/** True se o usuário já ativou o login biométrico neste dispositivo. */
+/** True se o usuário já ativou o login biométrico neste dispositivo.
+ *  Usa localStorage — @capacitor/preferences não está disponível neste APK. */
 export async function isBiometricEnabled(): Promise<boolean> {
-  if (!isNative()) return false;
-  try {
-    const { Preferences } = await import("@capacitor/preferences");
-    const { value } = await Preferences.get({ key: BIOMETRIC_ENABLED_KEY });
-    return value === "1";
-  } catch {
-    return false;
-  }
+  return isBiometricEnabledSync();
 }
 
-/** Salva as credenciais localmente e marca biometria como ativa. */
+/** Salva as credenciais via localStorage — sem @capacitor/preferences. */
 export async function saveBiometricCredentials(cpf: string, password: string): Promise<void> {
-  const { Preferences } = await import("@capacitor/preferences");
-  await Promise.all([
-    Preferences.set({ key: BIOMETRIC_CPF_KEY, value: cpf }),
-    Preferences.set({ key: BIOMETRIC_PWD_KEY, value: password }),
-    Preferences.set({ key: BIOMETRIC_ENABLED_KEY, value: "1" }),
-  ]);
-  try { localStorage.setItem(BIOMETRIC_LS_MIRROR, "1"); } catch {}
+  try {
+    localStorage.setItem(BIOMETRIC_CPF_KEY, cpf);
+    localStorage.setItem(BIOMETRIC_PWD_KEY, password);
+    localStorage.setItem(BIOMETRIC_ENABLED_KEY, "1");
+    localStorage.setItem(BIOMETRIC_LS_MIRROR, "1");
+  } catch {}
 }
 
 /** Remove as credenciais salvas e desativa a biometria. */
 export async function clearBiometricCredentials(): Promise<void> {
-  const { Preferences } = await import("@capacitor/preferences");
-  await Promise.all([
-    Preferences.remove({ key: BIOMETRIC_CPF_KEY }),
-    Preferences.remove({ key: BIOMETRIC_PWD_KEY }),
-    Preferences.remove({ key: BIOMETRIC_ENABLED_KEY }),
-  ]);
-  try { localStorage.removeItem(BIOMETRIC_LS_MIRROR); } catch {}
+  try {
+    localStorage.removeItem(BIOMETRIC_CPF_KEY);
+    localStorage.removeItem(BIOMETRIC_PWD_KEY);
+    localStorage.removeItem(BIOMETRIC_ENABLED_KEY);
+    localStorage.removeItem(BIOMETRIC_LS_MIRROR);
+  } catch {}
 }
 
 /**
@@ -246,11 +238,8 @@ export async function authenticateWithBiometric(): Promise<{ cpf: string; passwo
         cancelTitle: "Cancelar",
         allowDeviceCredential: true,
       });
-      const { Preferences } = await import("@capacitor/preferences");
-      const [{ value: cpf }, { value: password }] = await Promise.all([
-        Preferences.get({ key: BIOMETRIC_CPF_KEY }),
-        Preferences.get({ key: BIOMETRIC_PWD_KEY }),
-      ]);
+      const cpf = localStorage.getItem(BIOMETRIC_CPF_KEY);
+      const password = localStorage.getItem(BIOMETRIC_PWD_KEY);
       if (!cpf || !password) return null;
       return { cpf, password };
     })();
