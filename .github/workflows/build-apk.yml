@@ -36,13 +36,11 @@ jobs:
 
       - name: Instalar dependências
         run: |
-          for i in 1 2 3; do
-            echo "Tentativa $i..."
-            rm -rf node_modules
-            npm install --legacy-peer-deps --no-audit --no-fund && break
-            echo "Falhou, tentando novamente em 10s..."
-            sleep 10
-          done
+          set -e
+          rm -rf node_modules
+          npm install --legacy-peer-deps --no-audit --no-fund
+          # Garante que tsx está instalado (build depende dele)
+          test -f node_modules/.bin/tsx || npm install -g tsx
 
       - name: Configurar URL do servidor
         run: |
@@ -62,10 +60,14 @@ jobs:
           grep -A4 "server:" capacitor.config.ts
 
       - name: Build web assets
-        run: npm run build
+        run: |
+          export PATH="$PATH:$(pwd)/node_modules/.bin"
+          npm run build
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: |
+          export PATH="$PATH:$(pwd)/node_modules/.bin"
+          npx cap sync android
 
       - name: Build APK
         run: |
