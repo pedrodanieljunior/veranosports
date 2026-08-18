@@ -89,17 +89,21 @@ export function ConfiguracoesView({ onBack }: Props) {
   const [bioLoading, setBioLoading] = useState(false);
 
   useEffect(() => {
-    // Carregar preferências
+    // Carregar preferências (HTTP, não nativo — seguro rodar imediatamente)
     fetch("/api/user/push-preferences", { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setPrefs({ ...DEFAULT_PREFS, ...data }); })
       .catch(() => {});
 
-    // Checar biometria (nativo) — sem bloquear o resto
-    if (isNative()) {
+    // Chamadas ao bridge nativo atrasadas 600ms — garante que a tela já está
+    // totalmente renderizada e interativa antes de tocar no Capacitor bridge,
+    // evitando o freeze que ocorre quando chamadas nativas rodam no mount.
+    if (!isNative()) return;
+    const t = setTimeout(() => {
       isBiometricAvailable().then(v => setBioAvailable(v)).catch(() => {});
       isBiometricEnabled().then(v => setBioEnabled(v)).catch(() => {});
-    }
+    }, 600);
+    return () => clearTimeout(t);
   }, []);
 
   // Fire-and-forget — sem async/await no handler, sem setSaving re-renders
