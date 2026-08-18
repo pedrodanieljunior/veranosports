@@ -1,4 +1,4 @@
-name: Build APK de Produção
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -14,33 +14,41 @@ on:
 
 jobs:
   build:
+    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Configurar Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 22
 
-      - name: Setup Java 17
+      - name: Configurar Java 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 21
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar dependências
+      - name: Instalar Android SDK 35
         run: |
-          npm install --legacy-peer-deps --ignore-scripts || {
-            echo "=== NPM DEBUG LOG ==="
-            cat /home/runner/.npm/_logs/*.log 2>/dev/null | tail -100
-            exit 1
-          }
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      # package-lock.json contém URLs do proxy interno do Replit que não funcionam no GitHub
+      - name: Instalar dependências Node
+        run: npm install --no-package-lock --legacy-peer-deps
 
       - name: Configurar URL do servidor
         run: |
@@ -59,30 +67,25 @@ jobs:
           fi
           grep -A4 "server:" capacitor.config.ts
 
-      - name: Build web assets
-        run: npm run build
+      - name: Verificar Capacitor CLI
+        run: node_modules/.bin/cap --version
 
-      - name: Sync Capacitor
-        run: npx cap sync android
+      - name: Criar webDir dummy para o cap sync
+        run: mkdir -p dist/public && echo "<html></html>" > dist/public/index.html
 
-      - name: Build APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+      - name: Cap sync Android
+        run: node_modules/.bin/cap sync android
+
+      - name: Permissão gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build APK (debug)
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: verano-sports-${{ github.event.inputs.environment }}-build${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 30
-
-      - name: Resumo
-        run: |
-          APK=$(find android/app/build/outputs/apk -name "*.apk" | head -1)
-          SIZE=$(du -sh "$APK" | cut -f1)
-          echo "## ✅ APK gerado" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ambiente:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tamanho:** $SIZE" >> $GITHUB_STEP_SUMMARY
-          echo "- **Download:** aba Artifacts acima" >> $GITHUB_STEP_SUMMARY
