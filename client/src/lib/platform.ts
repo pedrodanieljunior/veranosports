@@ -180,21 +180,33 @@ export function clearBiometricLocalSync(): void {
   try { localStorage.removeItem(BIOMETRIC_LS_MIRROR); } catch {}
 }
 
-/** Verifica se o dispositivo tem biometria disponível (face, digital).
- *  Timeout de 3s para não travar quando o plugin não está no APK atual. */
-export async function isBiometricAvailable(): Promise<boolean> {
-  if (!isNative()) return false;
+// Chave localStorage para cache de disponibilidade biométrica
+const BIOMETRIC_AVAILABLE_KEY = "verano_bio_avail";
+
+/**
+ * Pré-carrega disponibilidade biométrica UMA VEZ ao iniciar o app (antes de qualquer toque).
+ * Salva resultado no localStorage para uso síncrono posterior — sem bridge em interações.
+ * Chamar em App.tsx no useEffect de inicialização nativa.
+ */
+export async function preloadBiometricAvailability(): Promise<void> {
+  if (!isNative()) return;
   try {
-    const timeout = new Promise<false>(resolve => setTimeout(() => resolve(false), 3000));
-    const check = (async () => {
-      const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
-      const result = await BiometricAuth.checkBiometry();
-      return result.isAvailable;
-    })();
-    return await Promise.race([check, timeout]);
+    const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
+    const result = await BiometricAuth.checkBiometry();
+    localStorage.setItem(BIOMETRIC_AVAILABLE_KEY, result.isAvailable ? "1" : "0");
   } catch {
-    return false;
+    localStorage.setItem(BIOMETRIC_AVAILABLE_KEY, "0");
   }
+}
+
+/** Leitura síncrona do cache — não chama bridge. Usar em todo lugar após preload. */
+export function isBiometricAvailableSync(): boolean {
+  return localStorage.getItem(BIOMETRIC_AVAILABLE_KEY) === "1";
+}
+
+/** @deprecated Use preloadBiometricAvailability + isBiometricAvailableSync. */
+export async function isBiometricAvailable(): Promise<boolean> {
+  return isBiometricAvailableSync();
 }
 
 /** True se o usuário já ativou o login biométrico neste dispositivo.

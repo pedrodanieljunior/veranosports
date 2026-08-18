@@ -10,6 +10,7 @@ import { SiWhatsapp } from "react-icons/si";
 import {
   isNative,
   isBiometricEnabledSync,
+  isBiometricAvailableSync,
   saveBiometricCredentials,
   authenticateWithBiometric,
 } from "@/lib/platform";
@@ -85,9 +86,8 @@ export function AuthModals({ mode, onClose, onSwitch }: Props) {
       login(data);
       toast({ title: `Bem-vindo, ${data.name}!`, duration: 2000, variant: "welcome" } as any);
 
-      // Oferece biometria sem chamar bridge nativo (checkBiometry freeze WebView)
-      // Se dispositivo não suportar, usuário toca "Agora não"
-      if (isNative() && !biometricEnabled) {
+      // Oferece biometria apenas se dispositivo tem biometria cadastrada (cache do startup)
+      if (isNative() && !biometricEnabled && isBiometricAvailableSync()) {
         setPendingBiometricCredentials({ cpf: cpf.replace(/\D/g, ""), password });
         setShowBiometricOffer(true);
         return; // não fecha o modal — aguarda resposta do offer
