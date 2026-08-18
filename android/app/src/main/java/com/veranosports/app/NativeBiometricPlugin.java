@@ -66,7 +66,10 @@ public class NativeBiometricPlugin extends Plugin {
         BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
             .setTitle("Verano Sports")
             .setSubtitle("Confirme sua identidade para entrar")
-            .setNegativeButtonText("Cancelar")
+            .setAllowedAuthenticators(
+                androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK |
+                androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
             .setConfirmationRequired(false)
             .build();
 
