@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { translateLeagueName } from "@/lib/leagueTranslations";
 import { getSessionId } from "@/lib/session";
-import fwSportsLogo from "@assets/verano-logo-transparent.png";
+import veranoSportsLogo from "@assets/verano-logo-transparent.png";
 import { DesktopBannerCarousel } from "@/components/DesktopBannerCarousel";
 import { LiveTestCard } from "@/components/LiveTestCard";
 import { hapticLight, hapticSuccess, NATIVE_EVENTS, isNative } from "@/lib/platform";
@@ -288,7 +288,7 @@ export default function Home() {
       setGameLimitRemaining(null);
       queryClient.invalidateQueries({ queryKey: ["/api/bets", user?.cpf ?? sessionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/limits"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/club-fw/progress"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/club-verano/progress"] });
       if (user) {
         refreshUser();
       }
@@ -407,7 +407,7 @@ export default function Home() {
         <header className="sticky top-0 z-50 px-3 py-2 flex flex-col gap-1.5" style={{ background: "linear-gradient(135deg, #0d1629 0%, #12204a 60%, #1a2f6a 100%)" }}>
           {/* Row 1: Logo + Auth buttons */}
           <div className="flex items-center justify-between">
-            <img src={fwSportsLogo} alt="Verano Sports" className="h-14 w-auto cursor-pointer object-contain" onClick={() => setSelectedSport(null)} />
+            <img src={veranoSportsLogo} alt="Verano Sports" className="h-14 w-auto cursor-pointer object-contain" onClick={() => setSelectedSport(null)} />
             <div className="flex flex-row flex-nowrap items-center gap-2">
               {!user ? (
                 <>

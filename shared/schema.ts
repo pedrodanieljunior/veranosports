@@ -55,7 +55,6 @@ export const betSlipsTable = pgTable("bet_slips", {
   bonusUsed: real("bonus_used").notNull().default(0),
   status: text("status").notNull().default("pending"),
   verified: boolean("verified").notNull().default(false),
-  telegramChatId: text("telegram_chat_id"),
   pixKey: text("pix_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   cashOutValue: real("cash_out_value"),
@@ -142,7 +141,6 @@ export const betSlipSchema = z.object({
   bonusUsed: z.number().default(0),
   status: z.enum(["pending", "won", "lost", "cashed_out"]).default("pending"),
   verified: z.boolean().default(false),
-  telegramChatId: z.string().optional().nullable(),
   pixKey: z.string().optional().nullable(),
   createdAt: z.string(),
   cashOutValue: z.number().nullable().optional(),
@@ -311,6 +309,7 @@ export const usersTable = pgTable("users", {
   bonusBalance: real("bonus_balance").notNull().default(0),
   firstDepositDone: boolean("first_deposit_done").notNull().default(false),
   pushToken: text("push_token"),
+  pushPreferences: text("push_preferences"), // JSON: { live_game, bet_won, deposit_confirmed, admin }
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -465,7 +464,7 @@ export const insertDefesaSchema = z.object({
 export type InsertDefesa = z.infer<typeof insertDefesaSchema>;
 
 // ─── Clube FW – Weekly Reward Claims ─────────────────────────────────────────
-export const clubFwClaimsTable = pgTable("club_fw_claims", {
+export const clubVeranoClaimsTable = pgTable("club_verano_claims", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
   weekStart: text("week_start").notNull(),    // "YYYY-MM-DD" Monday in Brasília
@@ -474,7 +473,7 @@ export const clubFwClaimsTable = pgTable("club_fw_claims", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const CLUB_FW_LEVELS = [
+export const CLUB_VERANO_LEVELS = [
   { level: 1, threshold: 100,  bonus: 10  },
   { level: 2, threshold: 250,  bonus: 20  },
   { level: 3, threshold: 600,  bonus: 50  },

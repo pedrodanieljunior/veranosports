@@ -1,4 +1,4 @@
-const SESSION_KEY = "fw_session_id";
+const SESSION_KEY = "verano_session_id";
 
 /**
  * Retorna o ID de sessão único deste usuário/navegador.

@@ -45,7 +45,7 @@ app.use(session({
     tableName: "sessions",
     createTableIfMissing: true,
   }),
-  secret: process.env.SESSION_SECRET || "fw-sports-secret-key",
+  secret: process.env.SESSION_SECRET || "verano-sports-secret-key",
   resave: false,
   saveUninitialized: false,
   cookie: {
