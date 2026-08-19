@@ -5,7 +5,29 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
-import { lazy, Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+
+// Força modo claro enquanto montado (ex: painel admin).
+// Usa MutationObserver para remover a classe "dark" imediatamente
+// caso o ThemeProvider pai tente re-adicioná-la.
+function ForceLight({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    root.classList.remove("dark");
+
+    const observer = new MutationObserver(() => {
+      if (root.classList.contains("dark")) root.classList.remove("dark");
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    return () => {
+      observer.disconnect();
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
+  return <>{children}</>;
+}
 import Home from "@/pages/Home";
 import Copa from "@/pages/Copa";
 import NotFound from "@/pages/not-found";
@@ -52,7 +74,9 @@ function Router() {
         <Route path="/"><Redirect to="/copa" /></Route>
         <Route path="/home" component={Home} />
         <Route path="/copa" component={Copa} />
-        <Route path="/painel-gm7x9k2" component={Admin} />
+        <Route path="/painel-gm7x9k2">
+          <ForceLight><Admin /></ForceLight>
+        </Route>
         <Route path="/live-control" component={LiveControl} />
         <Route component={NotFound} />
       </Switch>
