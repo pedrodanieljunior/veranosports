@@ -7,23 +7,22 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 
-// Força modo claro enquanto montado (ex: painel admin).
-// Usa MutationObserver para remover a classe "dark" imediatamente
-// caso o ThemeProvider pai tente re-adicioná-la.
-function ForceLight({ children }: { children: ReactNode }) {
+// Força modo escuro enquanto o admin estiver montado.
+// MutationObserver garante que a classe "dark" nunca seja removida pelo ThemeProvider.
+function ForceDark({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     const hadDark = root.classList.contains("dark");
-    root.classList.remove("dark");
+    root.classList.add("dark");
 
     const observer = new MutationObserver(() => {
-      if (root.classList.contains("dark")) root.classList.remove("dark");
+      if (!root.classList.contains("dark")) root.classList.add("dark");
     });
     observer.observe(root, { attributes: true, attributeFilter: ["class"] });
 
     return () => {
       observer.disconnect();
-      if (hadDark) root.classList.add("dark");
+      if (!hadDark) root.classList.remove("dark");
     };
   }, []);
   return <>{children}</>;
@@ -75,7 +74,7 @@ function Router() {
         <Route path="/home" component={Home} />
         <Route path="/copa" component={Copa} />
         <Route path="/painel-gm7x9k2">
-          <ForceLight><Admin /></ForceLight>
+          <ForceDark><Admin /></ForceDark>
         </Route>
         <Route path="/live-control" component={LiveControl} />
         <Route component={NotFound} />
