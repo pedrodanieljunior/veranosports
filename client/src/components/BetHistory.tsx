@@ -126,7 +126,7 @@ function BetCard({ bet, earlyExitPct, cashOutPct, corrMatrix = {} }: { bet: BetS
 
   return (
     <div data-testid={`bet-history-item-${bet.id}`} className="rounded-xl border overflow-hidden"
-      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : bet.status === "anulado" ? "rgba(156,163,175,0.25)" : bet.status === "cashed_out" ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)" }}>
+      style={{ borderColor: bet.status === "won" ? "rgba(34,197,94,0.35)" : bet.status === "lost" ? "rgba(239,68,68,0.25)" : bet.status === "anulado" ? "rgba(156,163,175,0.35)" : bet.status === "cashed_out" ? "rgba(52,211,153,0.3)" : "rgba(156,163,175,0.35)" }}>
 
       {/* ── Preview (sempre visível) ── */}
       <div
@@ -570,7 +570,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
                           <div
                             key={`bolao-${entry.id}`}
                             className="rounded-xl border overflow-hidden"
-                            style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.1)" }}
+                            style={{ borderColor: isWon ? "rgba(34,197,94,0.35)" : isLost ? "rgba(239,68,68,0.25)" : "rgba(156,163,175,0.35)" }}
                           >
                             <div className="flex items-center gap-3 px-4 py-3">
                               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isWon ? "bg-green-400" : isLost ? "bg-red-400" : entry.bolaoStatus === "closed" ? "bg-orange-400" : "bg-yellow-400"}`} />
