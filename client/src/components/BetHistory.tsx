@@ -428,7 +428,7 @@ export function BetHistory({ bets, isLoading, onClose }: BetHistoryProps) {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-[9998] md:hidden" onClick={onClose} />
-      <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl">
+      <Card className="fixed bottom-0 left-0 right-0 h-[92vh] rounded-t-2xl md:rounded-lg md:bottom-4 md:left-auto md:right-4 md:top-20 md:w-96 md:h-auto z-[9999] flex flex-col shadow-xl" style={{ background: "hsl(220,25%,12%)", color: "hsl(220,10%,95%)", borderColor: "hsl(220,20%,18%)" }}>
         <div className="flex justify-center pt-2 pb-1 md:hidden flex-shrink-0">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
